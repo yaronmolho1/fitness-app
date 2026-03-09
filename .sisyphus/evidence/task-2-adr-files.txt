@@ -1,0 +1,18 @@
+Task 2 - ADR Files Verification
+Date: Sun Mar  8 12:14:59 IST 2026
+---
+   33 docs/adrs/001-sqlite.md
+   33 docs/adrs/002-mesocycle-scoped-templates.md
+   30 docs/adrs/003-deload-separate-schedule.md
+   35 docs/adrs/004-hybrid-api.md
+   33 docs/adrs/005-snapshot-plus-normalized.md
+   32 docs/adrs/006-canonical-name.md
+   30 docs/adrs/007-drizzle-v2-define-relations.md
+   33 docs/adrs/008-modular-architecture.md
+  259 total
+Index references: 8
+ADR-004 hybrid: 4
+ADR-004 old text: 0
+ADR-008 V2 design: 0
+Placeholders: 0
+VERDICT: PASS
