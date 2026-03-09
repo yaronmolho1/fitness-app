@@ -75,11 +75,11 @@ Single user. Two usage contexts that drive distinct UX requirements:
 ### Activity 3: Track Daily Habits (Coach + Athlete)
 
 - Task 3.1: Manage routine items (Coach)
-  - Story: As a coach, I want to create daily routine items (shoulder mobility, hip stretches, cold exposure) with category, value type, and frequency target.
+  - Story: As a coach, I want to create daily routine items (shoulder mobility, hip stretches, cold exposure) with category, custom input fields (weight, length, duration, sets, reps — pick 1+), and frequency target.
   - Story: As a coach, I want flexible scoping — global, per-mesocycle, date-range, or skip-on-deload — so routines appear only when relevant.
 
 - Task 3.2: Check off daily routines (Athlete)
-  - Story: As an athlete, I want to see today's active routines and quickly mark done/skipped with optional value (duration, count), so tracking takes seconds.
+  - Story: As an athlete, I want to see today's active routines and quickly fill in values (= done) or explicitly skip, so tracking takes seconds.
   - Story: As an athlete, I want to see my weekly completion count or streak, so I stay motivated.
 
 ### Activity 4: Execute Today's Training (Athlete)

@@ -1,0 +1,48 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# next.js
+.next/
+out/
+
+# build
+dist/
+standalone/
+
+# env
+.env
+.env.*
+!.env.example
+
+# sqlite
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+data/
+
+# os
+.DS_Store
+Thumbs.db
+
+# debug
+npm-debug.log*
+pnpm-debug.log*
+
+# testing
+coverage/
+playwright-report/
+test-results/
+
+# drizzle
+drizzle/meta/_journal.json.bak
+
+# editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# misc
+*.tsbuildinfo
+next-env.d.ts

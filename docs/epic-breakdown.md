@@ -199,11 +199,11 @@ Parallel to workout training — daily habit tracking (mobility, stretches, cold
 
 ### Daily Routines > Routine Item CRUD
 **Depends:** Create Mesocycle
-**Description:** Create routine items with category, value type, frequency target, and flexible scope (global, per-mesocycle, date-range, skip-on-deload).
+**Description:** Create routine items with category, custom input fields (weight, length, duration, sets, reps — multi-select), frequency target, and flexible scope (global, per-mesocycle, date-range, skip-on-deload).
 
 ### Daily Routines > Daily Routine Check-off
 **Depends:** Routine Item CRUD
-**Description:** View today's active routines and mark done/skipped with optional numeric value (duration, count) — takes seconds.
+**Description:** View today's active routines and fill in configured input fields (= done) or explicitly skip — takes seconds. No entry = not yet logged.
 
 ### Daily Routines > Routine Streaks & Counts
 **Depends:** Daily Routine Check-off

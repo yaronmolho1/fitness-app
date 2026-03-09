@@ -85,7 +85,7 @@ erDiagram
 | `logged_workouts` | Immutable workout record; stores full `template_snapshot` JSON (with `version` field) and `canonical_name` string for cross-phase queries |
 | `logged_exercises` | Normalized per-exercise log row enabling SQL analytics (progression charts, volume tracking) |
 | `logged_sets` | Normalized per-set log row with actual reps, weight, and RPE |
-| `routine_logs` | Daily routine completion records (done/skipped + optional numeric value) |
+| `routine_logs` | Daily routine completion records (done via field entry / explicitly skipped) with per-field values: weight, length, duration, sets, reps |
 
 **Cross-layer link**: `workout_templates.canonical_name` ↔ `logged_workouts.canonical_name` — string slug match, not a foreign key. See ADR-006.
 

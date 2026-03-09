@@ -17,7 +17,7 @@ As an athlete, on rest days I can see a "Rest Day" message alongside today's act
 - [ ] The page displays a clear "Rest Day" heading or label
 - [ ] No workout targets, exercise lists, or logging prompts are shown
 - [ ] Today's active daily routines are displayed below the "Rest Day" indicator, using the same scope-filtering logic as the Daily Routine Check-off (specs/daily-routine-check-off.md)
-- [ ] The daily routines section on a rest day is fully functional: athlete can mark routines done/skipped with optional numeric value
+- [ ] The daily routines section on a rest day is fully functional: athlete can fill in configured input fields (= done) or explicitly skip each routine
 - [ ] If no routines are active today, the routines section shows an empty state (not hidden entirely)
 - [ ] The view is optimized for mobile
 
