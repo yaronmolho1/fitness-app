@@ -74,5 +74,5 @@ docker compose up -d   # containerized run
 
 ## Current Status
 
-Greenfield — planning complete, no code yet. Implementation starts at Wave 1 (DB foundation).
-See `.plan/progress.md` for task-level status.
+Greenfield — planning complete, no code yet. Implementation starts at Wave 0 (project infrastructure).
+See `.plan/progress.md` for task-level status (77 tasks, 15 waves).

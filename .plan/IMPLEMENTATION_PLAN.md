@@ -1,6 +1,6 @@
 # Implementation Plan
 
-> 74 tasks across 13 waves. Each task = one TDD cycle.
+> 78 tasks across 15 waves (Wave 0 infra + 14 feature waves). Each feature task = one TDD cycle.
 > Waves are sequential; tracks within a wave are parallel.
 
 ## Critical Path
@@ -8,15 +8,24 @@
 The longest dependency chain through the project:
 
 ```
-db-schema → auth → app-shell → create-mesocycle → resistance-templates
+scaffold → docker → db-schema → auth → app-shell → create-mesocycle → resistance-templates
 → exercise-slots (joins exercise-search-filter) → 7-day-assignment-grid (joins mesocycle-status)
 → view-todays-workout → pre-filled-resistance-logging → save-workout + log-immutability
 → exercise-progression-chart → phase-boundary-markers
 ```
 
-12 spec-level dependencies on the critical path. Everything else branches off as parallel work.
+14 dependencies on the critical path. Everything else branches off as parallel work.
 
 ---
+
+## Wave 0: Project Infrastructure
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T0001 | Next.js 16 scaffold: package.json (pnpm, all scripts), next.config.ts (standalone), tsconfig, eslint, Tailwind v4, shadcn/ui, placeholder app + /api/health. Test infra: vitest.config.ts (projects: unit + integration), playwright.config.ts (webServer, storageState auth), SQLite :memory: test helpers, transaction rollback hooks, placeholder tests. | medium | Infrastructure | — | — |
+| T0002 | Docker: Dockerfile (dev), Dockerfile.production (multi-stage, standalone, SQLite volume /app/data/), docker-compose.yml (dev), docker-compose.production.yml (prod, app-network, healthcheck), docker-entrypoint.sh (migrate + start), .dockerignore | small | Infrastructure | T0001 | — |
+| T0003 | GitHub Actions CI/CD: ci.yml (lint + type-check, vitest unit/integration, build, e2e — all parallel, SQLite :memory: no service containers), deploy.yml (SSH on CI success on main, docker compose up, healthcheck). Caching: pnpm store, .next/cache. | small | Infrastructure | T0001 | — |
+| T0004 | nginx config (cross-repo): fitness-app.conf in docker-app-stack/infrastructure/nginx/sites/. HTTP→HTTPS redirect, proxy to fitness-app:3000, static caching. Document certbot command. | small | Infrastructure | T0002 | — |
 
 ## Wave 1: Database Foundation
 

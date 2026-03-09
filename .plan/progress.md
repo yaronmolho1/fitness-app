@@ -1,6 +1,12 @@
 # Progress Tracker
 
-> 73 tasks across 14 waves. Check off as completed.
+> 77 tasks across 15 waves. Check off as completed.
+
+## Wave 0: Project Infrastructure
+- [ ] **T0001** — Next.js scaffold + test infrastructure `(medium)` `[infrastructure]`
+- [ ] **T0002** — Docker setup (dev + production) `(small)` `[infrastructure]`
+- [ ] **T0003** — GitHub Actions CI/CD `(small)` `[infrastructure]`
+- [ ] **T0004** — nginx site config (cross-repo) `(small)` `[infrastructure]`
 
 ## Wave 1: Database Foundation
 - [ ] **T001** — SQLite connection + PRAGMAs `(small)` `[db-schema-migrations]`

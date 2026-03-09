@@ -2,13 +2,13 @@
 
 ## TL;DR
 
-> **Summary**: 73 TDD-cycle tasks across 14 waves. Each task maps to one or more acceptance-tested specs. Replaces Excel with template-based workout planning (cascade edits) + immutable snapshot logging. Desktop for coaching/planning, mobile for post-workout logging.
+> **Summary**: 77 tasks across 15 waves (Wave 0 infrastructure + 14 feature waves). Each feature task maps to one or more acceptance-tested specs. Replaces Excel with template-based workout planning (cascade edits) + immutable snapshot logging. Desktop for coaching/planning, mobile for post-workout logging.
 >
 > **Stack**: Next.js 16 App Router, SQLite (WAL), Drizzle ORM v2, shadcn/ui, Tailwind v4, Docker
 >
-> **Estimated Effort**: ~160 hours
-> **Parallel Execution**: YES — 14 waves, up to 3 parallel tracks per wave
-> **Critical Path**: Schema → Auth → Shell → Mesocycle → Templates → Slots → Schedule → Today's View → Logging → Progression
+> **Estimated Effort**: ~165 hours
+> **Parallel Execution**: YES — 15 waves, up to 3 parallel tracks per wave
+> **Critical Path**: Scaffold → Docker → Schema → Auth → Shell → Mesocycle → Templates → Slots → Schedule → Today's View → Logging → Progression
 
 ---
 
@@ -80,7 +80,8 @@ db-schema → auth → app-shell → create-mesocycle → resistance-templates
 ### Wave Summary
 | Wave | Tasks | Parallel Tracks | Depends On |
 |------|-------|-----------------|------------|
-| 1 | T001-T004 | 1 | — |
+| 0 | T0001-T0004 | 2 (Scaffold→Docker, Scaffold→CI) | — |
+| 1 | T001-T004 | 1 | Wave 0 |
 | 2 | T005-T009 | 1 | Wave 1 |
 | 3 | T010-T012 | 1 | Wave 2 |
 | 4 | T013-T017 | 1 (Exercise Library) | Wave 3 |
@@ -98,6 +99,130 @@ db-schema → auth → app-shell → create-mesocycle → resistance-templates
 ---
 
 ## TODOs
+
+### Wave 0 — Project Infrastructure
+
+- [ ] T0001. Next.js Project Scaffold + Test Infrastructure
+
+  **Spec**: none (infrastructure)
+  **Category**: `deep` | **Skills**: []
+  **Deps**: — | **Blocks**: T0002, T0003, T001
+
+  Initialize Next.js 16 project. Create `package.json` (pnpm) with scripts: `dev` (`next dev -H 0.0.0.0`), `build`, `start`, `lint`, `test` (`vitest run`), `test:unit` (`vitest run --project unit`), `test:integration` (`vitest run --project integration`), `test:e2e` (`playwright test`), `type-check` (`tsc --noEmit`), `db:generate`, `db:migrate`. `next.config.ts` with `output: 'standalone'`. `tsconfig.json`. `eslint.config.mjs`. `postcss.config.mjs` + Tailwind v4 setup. shadcn/ui init (`components.json`).
+
+  Minimal app: `app/layout.tsx` (root layout with Tailwind), `app/page.tsx` (placeholder), `app/api/health/route.ts` (returns `{"status":"ok"}`). `.env.example` with all env vars: `DATABASE_URL`, `AUTH_USERNAME`, `AUTH_PASSWORD_HASH`, `JWT_SECRET`, `JWT_EXPIRES_IN`.
+
+  Test infrastructure (adapted from expense-tracker, improved for SQLite):
+  - `vitest.config.ts` with Vitest `projects` API: `unit` project (no DB, env mocks) + `integration` project (SQLite `:memory:`, transaction hooks). Single config, no `npm_lifecycle_event` branching.
+  - `playwright.config.ts`: `webServer` with `pnpm dev`, `storageState` auth pattern, chromium only, `reuseExistingServer: !process.env.CI`.
+  - `tests/setup.ts` — unit test env var mocks (JWT_SECRET, AUTH_USERNAME, etc.)
+  - `tests/setup-integration.ts` — SQLite `:memory:` DB init + transaction rollback hooks per test
+  - `tests/setup/test-db.ts` — helper: creates in-memory SQLite, runs migrations via `drizzle-kit push` or raw SQL, returns typed Drizzle instance
+  - `tests/setup/global-setup.ts` — Playwright global setup: seed test DB, no external DB process needed
+  - `tests/setup/auth.setup.ts` — Playwright auth setup: login, save `storageState` to `playwright/.auth/user.json`
+  - One placeholder test per project that passes (e.g., `health.test.ts` for unit, `health.integration.test.ts` for integration)
+
+  Run `pnpm install` to generate lockfile.
+
+  **Acceptance**:
+  - [ ] `pnpm install` succeeds
+  - [ ] `pnpm lint` passes
+  - [ ] `pnpm type-check` passes
+  - [ ] `pnpm build` succeeds (standalone output at `.next/standalone/server.js`)
+  - [ ] `pnpm test:unit` passes (placeholder test)
+  - [ ] `pnpm test:integration` passes (placeholder test with SQLite :memory:)
+  - [ ] `pnpm dev` starts on port 3000
+  - [ ] `curl localhost:3000/api/health` returns `{"status":"ok"}`
+
+  **Commit**: `feat: initialize Next.js 16 project with test infrastructure`
+
+- [ ] T0002. Docker Setup
+
+  **Spec**: none (infrastructure)
+  **Category**: `quick` | **Skills**: []
+  **Deps**: T0001 | **Blocks**: T0004
+
+  Create Docker files adapted from expense-tracker, simplified for SQLite (no postgres service, no worker):
+
+  `Dockerfile` (dev):
+  - `FROM node:20-alpine`, corepack enable + pnpm, `WORKDIR /app`, copy package.json + lockfile, `pnpm install --frozen-lockfile`, copy all, `EXPOSE 3000`, `ENV HOSTNAME=0.0.0.0 PORT=3000`, `CMD ["pnpm", "run", "dev"]`
+
+  `Dockerfile.production` (multi-stage):
+  - Stage 1 (deps): install production deps only
+  - Stage 2 (builder): install all deps, copy source, `pnpm run build`
+  - Stage 3 (runner): `node:20-alpine`, non-root user (nextjs:nodejs), copy standalone + static + public + migrations + entrypoint. SQLite data dir at `/app/data/` with correct permissions. `ENTRYPOINT ["./docker-entrypoint.sh"]`
+
+  `docker-compose.yml` (dev): bind mount source, SQLite volume for `/app/data/`, port 3000.
+
+  `docker-compose.production.yml` (prod): build from `Dockerfile.production`, SQLite volume, port 3000, joins `docker-app-stack_app-network` (external), healthcheck via `wget /api/health`, restart always, env_file.
+
+  `docker-entrypoint.sh`: run `pnpm exec drizzle-kit migrate` then `exec node server.js`. Don't fail on migration errors (log warning, start anyway).
+
+  `.dockerignore`: node_modules, .next, .git, .env*.local, *.log, data/, playwright-report/, test-results/
+
+  **Acceptance**:
+  - [ ] `docker compose up` starts app on port 3000
+  - [ ] `docker compose -f docker-compose.production.yml build` succeeds
+  - [ ] `/api/health` responds from container
+  - [ ] SQLite data persists across container restarts
+
+  **Commit**: `feat: add Docker infrastructure`
+
+- [ ] T0003. GitHub Actions CI/CD
+
+  **Spec**: none (infrastructure)
+  **Category**: `quick` | **Skills**: []
+  **Deps**: T0001 | **Blocks**: —
+
+  `.github/workflows/ci.yml` — triggers on push/PR to main. 3 parallel jobs:
+  - `lint`: checkout → pnpm/action-setup → cache pnpm store → install → `pnpm lint` + `pnpm type-check`
+  - `test`: checkout → pnpm setup → cache → install → `pnpm test:unit` → `pnpm test:integration`. No service container needed (SQLite :memory:). Set env vars: JWT_SECRET, AUTH_USERNAME, AUTH_PASSWORD_HASH for auth tests.
+  - `build`: checkout → pnpm setup → cache pnpm + .next/cache → install → `pnpm build`. Verify `.next/standalone/server.js` exists.
+  - `e2e`: depends on build. Install Playwright chromium → `pnpm test:e2e`. Upload playwright-report on failure.
+
+  `.github/workflows/deploy.yml`:
+  - Triggers on `workflow_run` CI success on main (+ manual dispatch)
+  - SSH to VPS via `appleboy/ssh-action`, cd to app dir, git pull, `docker compose -f docker-compose.production.yml up -d --build`, healthcheck curl `/api/health`, `docker image prune -f`
+
+  Caching strategy: pnpm store keyed on lockfile hash, .next/cache keyed on lockfile+source hash.
+
+  **Acceptance**:
+  - [ ] Push to main triggers CI
+  - [ ] lint, test, build jobs all pass
+  - [ ] e2e job passes (after build)
+  - [ ] Deploy triggers on CI success on main
+  - [ ] Playwright report uploaded on e2e failure
+
+  **Commit**: `ci: add GitHub Actions CI/CD workflows`
+
+- [ ] T0004. nginx Site Config
+
+  **Spec**: none (infrastructure, cross-repo)
+  **Category**: `quick` | **Skills**: []
+  **Deps**: T0002 | **Blocks**: —
+
+  **NOTE**: This task modifies the PARENT repo (`docker-app-stack`), not fitness-app.
+
+  Create `infrastructure/nginx/sites/fitness-app.conf` in docker-app-stack:
+  - HTTP server: `listen 80`, `server_name fitness.devyaron.cloud`, ACME challenge location, redirect to HTTPS
+  - HTTPS server: `listen 443 ssl http2`, `server_name fitness.devyaron.cloud`, SSL cert paths at `/etc/letsencrypt/live/fitness.devyaron.cloud/`, proxy to `fitness-app:3000` with WebSocket upgrade headers, `_next/static` caching (1y, public immutable), static asset caching
+
+  Pattern: clone `expense-tracker.conf`, replace `expenses.devyaron.cloud` → `fitness.devyaron.cloud`, `expense-tracker-app:3000` → `fitness-app:3000`.
+
+  Document certbot command for SSL cert provisioning:
+  ```
+  docker compose -f docker-compose.orchestration.yml -f docker-compose.orchestration.prod.yml exec certbot \
+    certbot certonly --webroot -w /var/www/certbot -d fitness.devyaron.cloud --email yaron@devyaron.cloud --agree-tos
+  ```
+
+  After cert obtained: `docker compose exec nginx nginx -s reload`
+
+  **Acceptance**:
+  - [ ] `fitness-app.conf` exists in `infrastructure/nginx/sites/`
+  - [ ] nginx config test passes: `docker compose exec nginx nginx -t`
+  - [ ] After DNS + SSL: `https://fitness.devyaron.cloud` serves the app
+
+  **Commit**: `feat: add nginx config for fitness-app` (committed to docker-app-stack repo)
 
 ### Wave 1 — Database Foundation
 
