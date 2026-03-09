@@ -29,13 +29,18 @@ specs/                 # 43 feature specs (status/epic/depends/AC/tests)
 
 ## Commands
 
+**pnpm ONLY — do NOT use npm or yarn. `npm install` will fail (blocked by preinstall hook).**
+
 ```bash
 pnpm install           # install deps
 pnpm dev               # dev server (port 3000)
 pnpm build             # production build
-pnpm test              # vitest
+pnpm test              # vitest (unit + integration)
+pnpm test:unit         # vitest unit only
+pnpm test:integration  # vitest integration only
 pnpm test:e2e          # playwright
 pnpm lint              # eslint
+pnpm type-check        # tsc --noEmit
 pnpm db:generate       # drizzle-kit generate
 pnpm db:migrate        # drizzle-kit migrate
 docker compose up -d   # containerized run
