@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.env*.local
+.env.local
+*.log
+data/
+playwright-report/
+test-results/
+playwright/.auth/
+coverage/
+.nyc_output/

@@ -1,0 +1,21 @@
+name: fitness-app-dev
+services:
+  app:
+    build: .
+    container_name: fitness-app-dev
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: /app/data/db.sqlite
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+      - sqlite_data:/app/data
+    restart: unless-stopped
+
+volumes:
+  sqlite_data:
+    driver: local
