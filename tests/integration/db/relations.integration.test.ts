@@ -123,7 +123,7 @@ describe('Drizzle v2 Relations', () => {
     })
 
     // Query with eager loading
-    const result = await db.query.mesocycles.findFirst({
+    const result = await (db.query as any).mesocycles.findFirst({
       with: { workout_templates: true },
     })
 
@@ -170,8 +170,8 @@ describe('Drizzle v2 Relations', () => {
     })
 
     // Query with nested relations
-    const result = await db.query.mesocycles.findFirst({
-      where: (fields, { eq }) => eq(fields.id, meso.id),
+    const result = await (db.query as any).mesocycles.findFirst({
+      where: (fields: any, { eq }: any) => eq(fields.id, meso.id),
       with: {
         workout_templates: {
           with: {
