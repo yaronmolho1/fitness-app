@@ -4,10 +4,13 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: { '@': path.resolve(__dirname, './') },
+  },
   test: {
+    globals: true,
     projects: [
       {
-        extends: true,
         test: {
           name: 'unit',
           include: ['tests/unit/**/*.test.ts', 'tests/unit/**/*.test.tsx'],
@@ -16,7 +19,6 @@ export default defineConfig({
         },
       },
       {
-        extends: true,
         test: {
           name: 'integration',
           include: ['tests/integration/**/*.integration.test.ts'],
@@ -25,8 +27,5 @@ export default defineConfig({
         },
       },
     ],
-  },
-  resolve: {
-    alias: { '@': path.resolve(__dirname, './') },
   },
 })
