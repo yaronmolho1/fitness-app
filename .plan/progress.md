@@ -19,7 +19,7 @@
 - [x] **T006** — JWT issuance + verification (jose) `(small)` `[auth-system]`
 - [x] **T007** — Login/logout API routes + cookie `(small)` `[auth-system]`
 - [x] **T008** — Auth middleware (Edge, route protection) `(small)` `[auth-system]`
-- [~] **T009** — Login page UI + logout action `(medium)` `[auth-system]` _(started 2026-03-11)_
+- [x] **T009** — Login page UI + logout action `(medium)` `[auth-system]`
 
 ## Wave 3: App Shell
 - [ ] **T010** — Route groups (app)/(auth) + layouts `(medium)` `[app-shell-navigation]`
