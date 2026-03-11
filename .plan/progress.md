@@ -3,19 +3,19 @@
 > 77 tasks across 15 waves. Check off as completed.
 
 ## Wave 0: Project Infrastructure
-- [ ] **T0001** — Next.js scaffold + test infrastructure `(medium)` `[infrastructure]`
-- [ ] **T0002** — Docker setup (dev + production) `(small)` `[infrastructure]`
-- [ ] **T0003** — GitHub Actions CI/CD `(small)` `[infrastructure]`
+- [x] **T0001** — Next.js scaffold + test infrastructure `(medium)` `[infrastructure]`
+- [x] **T0002** — Docker setup (dev + production) `(small)` `[infrastructure]`
+- [x] **T0003** — GitHub Actions CI/CD `(small)` `[infrastructure]`
 - [ ] **T0004** — nginx site config (cross-repo) `(small)` `[infrastructure]`
 
 ## Wave 1: Database Foundation
-- [ ] **T001** — SQLite connection + PRAGMAs `(small)` `[db-schema-migrations]`
-- [ ] **T002** — Planning layer schema (6 tables) `(medium)` `[db-schema-migrations]`
-- [ ] **T003** — Logging layer schema (4 tables) `(medium)` `[db-schema-migrations]`
-- [ ] **T004** — Drizzle v2 relations + migration `(small)` `[db-schema-migrations]`
+- [x] **T001** — SQLite connection + PRAGMAs `(small)` `[db-schema-migrations]`
+- [x] **T002** — Planning layer schema (6 tables) `(medium)` `[db-schema-migrations]`
+- [x] **T003** — Logging layer schema (4 tables) `(medium)` `[db-schema-migrations]`
+- [x] **T004** — Drizzle v2 relations + migration `(small)` `[db-schema-migrations]`
 
 ## Wave 2: Auth
-- [ ] **T005** — Env config + credential validation `(small)` `[auth-system]`
+- [x] **T005** — Env config + credential validation `(small)` `[auth-system]`
 - [ ] **T006** — JWT issuance + verification (jose) `(small)` `[auth-system]`
 - [ ] **T007** — Login/logout API routes + cookie `(small)` `[auth-system]`
 - [ ] **T008** — Auth middleware (Edge, route protection) `(small)` `[auth-system]`
@@ -129,9 +129,9 @@
 
 | Status | Count |
 |--------|-------|
-| Done | 0 |
+| Done | 8 |
 | In Progress | 0 |
-| Remaining | 73 |
+| Remaining | 69 |
 
 | Scope | Count |
 |-------|-------|
