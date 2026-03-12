@@ -21,8 +21,8 @@ docs/
   adrs/                # 8 individual architecture decision records
 specs/                 # 43 feature specs (status/epic/depends/AC/tests)
 .plan/
-  IMPLEMENTATION_PLAN.md  # 73 tasks across 14 waves with dependency graph
-  progress.md             # Checkbox tracker (T001-T073)
+  IMPLEMENTATION_PLAN.md  # 77 tasks across 15 waves with dependency graph
+  progress.md             # Task status table (T0001-T0004, T001-T073)
 .sisyphus/plans/
   fitness-app.md       # Detailed execution plan (Prometheus format)
 ```
@@ -80,4 +80,4 @@ docker compose up -d   # containerized run
 ## Current Status
 
 Greenfield — planning complete, no code yet. Implementation starts at Wave 0 (project infrastructure).
-See `.plan/progress.md` for task-level status (77 tasks, 15 waves).
+See `.plan/progress.md` for task-level status (77 tasks: 4 infra + 73 feature, 15 waves).

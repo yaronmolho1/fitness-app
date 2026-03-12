@@ -1,6 +1,6 @@
 # Implementation Plan
 
-> 78 tasks across 15 waves (Wave 0 infra + 14 feature waves). Each feature task = one TDD cycle.
+> 77 tasks across 15 waves (Wave 0 infra + 14 feature waves). Each feature task = one TDD cycle.
 > Waves are sequential; tracks within a wave are parallel.
 
 ## Critical Path
