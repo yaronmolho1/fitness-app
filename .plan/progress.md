@@ -17,7 +17,7 @@
 | T007 | Login/logout API routes + cookie | 2 | [x] | | | | |
 | T008 | Auth middleware (Edge, route protection) | 2 | [x] | | | | |
 | T009 | Login page UI + logout action | 2 | [x] | | | | |
-| T010 | Route groups (app)/(auth) + layouts | 3 | [ ] | | | | |
+| T010 | Route groups (app)/(auth) + layouts | 3 | [~] | feat/task-010-route-groups | 2026-03-12T10:00 | | |
 | T011 | Health endpoint | 3 | [ ] | | | | |
 | T012 | Navigation (sidebar + bottom bar) | 3 | [ ] | | | | |
 | T013 | Create exercise SA + validation | 4 | [ ] | | | | |
