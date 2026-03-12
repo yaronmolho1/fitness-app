@@ -1,0 +1,10 @@
+{
+  "active_plan": "/home/yaron/projects/personal/servers/hostinger/docker-app-stack/apps/fitness-app/.sisyphus/plans/fitness-app.md",
+  "started_at": "2026-03-09T09:36:37.772Z",
+  "session_ids": [
+    "ses_32e0b5b61ffeK2JiRKId5YxX3z"
+  ],
+  "plan_name": "fitness-app",
+  "worktree_path": "/home/yaron/projects/personal/servers/hostinger/docker-app-stack/apps/fitness-app-work",
+  "agent": "atlas"
+}

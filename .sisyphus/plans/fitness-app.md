@@ -102,7 +102,7 @@ db-schema → auth → app-shell → create-mesocycle → resistance-templates
 
 ### Wave 0 — Project Infrastructure
 
-- [ ] T0001. Next.js Project Scaffold + Test Infrastructure
+- [x] T0001. Next.js Project Scaffold + Test Infrastructure
 
   **Spec**: none (infrastructure)
   **Category**: `deep` | **Skills**: []
@@ -136,7 +136,7 @@ db-schema → auth → app-shell → create-mesocycle → resistance-templates
 
   **Commit**: `feat: initialize Next.js 16 project with test infrastructure`
 
-- [ ] T0002. Docker Setup
+- [x] T0002. Docker Setup
 
   **Spec**: none (infrastructure)
   **Category**: `quick` | **Skills**: []
@@ -168,7 +168,7 @@ db-schema → auth → app-shell → create-mesocycle → resistance-templates
 
   **Commit**: `feat: add Docker infrastructure`
 
-- [ ] T0003. GitHub Actions CI/CD
+- [x] T0003. GitHub Actions CI/CD
 
   **Spec**: none (infrastructure)
   **Category**: `quick` | **Skills**: []
@@ -195,7 +195,7 @@ db-schema → auth → app-shell → create-mesocycle → resistance-templates
 
   **Commit**: `ci: add GitHub Actions CI/CD workflows`
 
-- [ ] T0004. nginx Site Config
+- [x] T0004. nginx Site Config
 
   **Spec**: none (infrastructure, cross-repo)
   **Category**: `quick` | **Skills**: []
@@ -226,7 +226,7 @@ db-schema → auth → app-shell → create-mesocycle → resistance-templates
 
 ### Wave 1 — Database Foundation
 
-- [ ] 1. SQLite Connection + PRAGMAs
+- [x] 1. SQLite Connection + PRAGMAs
 
   **Spec**: `specs/db-schema-migrations.md`
   **Category**: `quick` | **Skills**: []
@@ -242,7 +242,7 @@ db-schema → auth → app-shell → create-mesocycle → resistance-templates
 
   **Commit**: `feat: add SQLite connection with WAL mode + PRAGMAs`
 
-- [ ] 2. Planning Layer Schema (6 tables)
+- [x] 2. Planning Layer Schema (6 tables)
 
   **Spec**: `specs/db-schema-migrations.md`
   **Category**: `deep` | **Skills**: []
@@ -259,7 +259,7 @@ db-schema → auth → app-shell → create-mesocycle → resistance-templates
 
   **Commit**: grouped with T003, T004
 
-- [ ] 3. Logging Layer Schema (4 tables)
+- [x] 3. Logging Layer Schema (4 tables)
 
   **Spec**: `specs/db-schema-migrations.md`
   **Category**: `deep` | **Skills**: []
@@ -275,7 +275,7 @@ db-schema → auth → app-shell → create-mesocycle → resistance-templates
 
   **Commit**: grouped with T002, T004
 
-- [ ] 4. Drizzle v2 Relations + Migration
+- [x] 4. Drizzle v2 Relations + Migration
 
   **Spec**: `specs/db-schema-migrations.md`
   **Category**: `quick` | **Skills**: []
