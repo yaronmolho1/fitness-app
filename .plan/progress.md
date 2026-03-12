@@ -7,7 +7,7 @@
 | T0001 | Next.js scaffold + test infrastructure | 0 | [x] | | | | |
 | T0002 | Docker setup (dev + production) | 0 | [x] | | | | |
 | T0003 | GitHub Actions CI/CD | 0 | [x] | | | | |
-| T0004 | nginx site config (cross-repo) | 0 | [ ] | | | | |
+| T0004 | nginx site config (cross-repo) | 0 | [~] | feat/task-0004-nginx-config | 2026-03-12T19:10 | | |
 | T001 | SQLite connection + PRAGMAs | 1 | [x] | | | | |
 | T002 | Planning layer schema (6 tables) | 1 | [x] | | | | |
 | T003 | Logging layer schema (4 tables) | 1 | [x] | | | | |
