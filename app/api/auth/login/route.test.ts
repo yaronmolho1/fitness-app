@@ -29,7 +29,7 @@ describe('Login route', () => {
   })
 
   it('returns 200 and sets auth-token cookie on valid credentials', async () => {
-    const { POST } = await import('../../../app/api/auth/login/route')
+    const { POST } = await import('./route')
     const req = new Request('http://localhost/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ username: 'testuser', password: 'testpass' }),
@@ -46,7 +46,7 @@ describe('Login route', () => {
   })
 
   it('sets cookie with httpOnly, secure, sameSite=lax attributes', async () => {
-    const { POST } = await import('../../../app/api/auth/login/route')
+    const { POST } = await import('./route')
     const req = new Request('http://localhost/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ username: 'testuser', password: 'testpass' }),
@@ -64,7 +64,7 @@ describe('Login route', () => {
   })
 
   it('sets cookie maxAge matching JWT_EXPIRES_IN (7d = 604800)', async () => {
-    const { POST } = await import('../../../app/api/auth/login/route')
+    const { POST } = await import('./route')
     const req = new Request('http://localhost/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ username: 'testuser', password: 'testpass' }),
@@ -80,7 +80,7 @@ describe('Login route', () => {
   })
 
   it('returns 401 with generic error on wrong password', async () => {
-    const { POST } = await import('../../../app/api/auth/login/route')
+    const { POST } = await import('./route')
     const req = new Request('http://localhost/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ username: 'testuser', password: 'wrongpass' }),
@@ -99,7 +99,7 @@ describe('Login route', () => {
   })
 
   it('returns 401 with generic error on wrong username', async () => {
-    const { POST } = await import('../../../app/api/auth/login/route')
+    const { POST } = await import('./route')
     const req = new Request('http://localhost/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ username: 'wronguser', password: 'testpass' }),
@@ -114,7 +114,7 @@ describe('Login route', () => {
   })
 
   it('returns 400 on missing body fields', async () => {
-    const { POST } = await import('../../../app/api/auth/login/route')
+    const { POST } = await import('./route')
     const req = new Request('http://localhost/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({}),
@@ -126,7 +126,7 @@ describe('Login route', () => {
   })
 
   it('returns 400 on empty username/password', async () => {
-    const { POST } = await import('../../../app/api/auth/login/route')
+    const { POST } = await import('./route')
     const req = new Request('http://localhost/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ username: '', password: '' }),
@@ -151,7 +151,7 @@ describe('Logout route', () => {
   })
 
   it('clears the auth-token cookie', async () => {
-    const { POST } = await import('../../../app/api/auth/logout/route')
+    const { POST } = await import('../logout/route')
     const req = new Request('http://localhost/api/auth/logout', {
       method: 'POST',
     })

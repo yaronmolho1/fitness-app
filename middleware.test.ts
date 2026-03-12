@@ -44,14 +44,14 @@ beforeAll(() => {
 describe('Auth middleware', () => {
   describe('protected routes', () => {
     it('redirects to /login without a cookie', async () => {
-      const { middleware } = await import('../../../middleware')
+      const { middleware } = await import('./middleware')
       const req = createRequest('/mesocycles')
       const res = await middleware(req)
       expect(isRedirectTo(res, '/login')).toBe(true)
     })
 
     it('passes through with a valid JWT cookie', async () => {
-      const { middleware } = await import('../../../middleware')
+      const { middleware } = await import('./middleware')
       const token = await createToken()
       const req = createRequest('/mesocycles', token)
       const res = await middleware(req)
@@ -60,7 +60,7 @@ describe('Auth middleware', () => {
     })
 
     it('redirects to /login with an expired JWT', async () => {
-      const { middleware } = await import('../../../middleware')
+      const { middleware } = await import('./middleware')
       const token = await createToken({ expired: true })
       const req = createRequest('/mesocycles', token)
       const res = await middleware(req)
@@ -68,7 +68,7 @@ describe('Auth middleware', () => {
     })
 
     it('redirects to /login with a tampered JWT', async () => {
-      const { middleware } = await import('../../../middleware')
+      const { middleware } = await import('./middleware')
       const token = await createToken()
       const tampered = token + 'tampered'
       const req = createRequest('/mesocycles', tampered)
@@ -79,7 +79,7 @@ describe('Auth middleware', () => {
 
   describe('public routes', () => {
     it('/login passes through without a cookie', async () => {
-      const { middleware } = await import('../../../middleware')
+      const { middleware } = await import('./middleware')
       const req = createRequest('/login')
       const res = await middleware(req)
       expect(res.status).toBe(200)
@@ -87,7 +87,7 @@ describe('Auth middleware', () => {
     })
 
     it('/login redirects authenticated user to /', async () => {
-      const { middleware } = await import('../../../middleware')
+      const { middleware } = await import('./middleware')
       const token = await createToken()
       const req = createRequest('/login', token)
       const res = await middleware(req)
@@ -95,14 +95,14 @@ describe('Auth middleware', () => {
     })
 
     it('/api/health passes through regardless of auth', async () => {
-      const { middleware } = await import('../../../middleware')
+      const { middleware } = await import('./middleware')
       const req = createRequest('/api/health')
       const res = await middleware(req)
       expect(res.status).toBe(200)
     })
 
     it('/api/auth/login passes through regardless of auth', async () => {
-      const { middleware } = await import('../../../middleware')
+      const { middleware } = await import('./middleware')
       const req = createRequest('/api/auth/login')
       const res = await middleware(req)
       expect(res.status).toBe(200)

@@ -15,7 +15,7 @@ describe('JWT issuance and verification', () => {
 
   describe('issueToken', () => {
     it('returns a JWT string', async () => {
-      const { issueToken } = await import('../../../lib/auth/jwt')
+      const { issueToken } = await import('./jwt')
       const token = await issueToken('testuser')
       expect(typeof token).toBe('string')
       // JWTs have 3 dot-separated parts
@@ -23,14 +23,14 @@ describe('JWT issuance and verification', () => {
     })
 
     it('contains sub matching the username', async () => {
-      const { issueToken } = await import('../../../lib/auth/jwt')
+      const { issueToken } = await import('./jwt')
       const token = await issueToken('testuser')
       const payload = decodeJwt(token)
       expect(payload.sub).toBe('testuser')
     })
 
     it('contains iat and exp claims', async () => {
-      const { issueToken } = await import('../../../lib/auth/jwt')
+      const { issueToken } = await import('./jwt')
       const token = await issueToken('testuser')
       const payload = decodeJwt(token)
       expect(payload.iat).toBeDefined()
@@ -38,7 +38,7 @@ describe('JWT issuance and verification', () => {
     })
 
     it('exp - iat matches configured expiry (7d)', async () => {
-      const { issueToken } = await import('../../../lib/auth/jwt')
+      const { issueToken } = await import('./jwt')
       const token = await issueToken('testuser')
       const payload = decodeJwt(token)
       const sevenDaysInSeconds = 7 * 24 * 60 * 60
@@ -48,7 +48,7 @@ describe('JWT issuance and verification', () => {
 
   describe('verifyToken', () => {
     it('returns payload for a valid token', async () => {
-      const { issueToken, verifyToken } = await import('../../../lib/auth/jwt')
+      const { issueToken, verifyToken } = await import('./jwt')
       const token = await issueToken('testuser')
       const payload = await verifyToken(token)
       expect(payload.sub).toBe('testuser')
@@ -59,7 +59,7 @@ describe('JWT issuance and verification', () => {
     it('rejects an expired token', async () => {
       // Issue a token with very short expiry
       process.env.JWT_EXPIRES_IN = '0s'
-      const { issueToken, verifyToken } = await import('../../../lib/auth/jwt')
+      const { issueToken, verifyToken } = await import('./jwt')
       const token = await issueToken('testuser')
 
       // Wait a tick so the token is expired
@@ -72,7 +72,7 @@ describe('JWT issuance and verification', () => {
     })
 
     it('rejects a tampered token', async () => {
-      const { issueToken, verifyToken } = await import('../../../lib/auth/jwt')
+      const { issueToken, verifyToken } = await import('./jwt')
       const token = await issueToken('testuser')
 
       // Tamper with the payload (middle segment)

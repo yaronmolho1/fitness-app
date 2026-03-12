@@ -20,32 +20,32 @@ describe('validateCredentials', () => {
 
   it('returns true for correct username and password', async () => {
     // Dynamic import to pick up updated env vars
-    const { validateCredentials } = await import('../../../lib/auth/config')
+    const { validateCredentials } = await import('./config')
     const result = await validateCredentials('testuser', 'testpassword')
     expect(result).toBe(true)
   })
 
   it('returns false for wrong password', async () => {
-    const { validateCredentials } = await import('../../../lib/auth/config')
+    const { validateCredentials } = await import('./config')
     const result = await validateCredentials('testuser', 'wrongpassword')
     expect(result).toBe(false)
   })
 
   it('returns false for wrong username', async () => {
-    const { validateCredentials } = await import('../../../lib/auth/config')
+    const { validateCredentials } = await import('./config')
     const result = await validateCredentials('wronguser', 'testpassword')
     expect(result).toBe(false)
   })
 
   it('returns false for both wrong', async () => {
-    const { validateCredentials } = await import('../../../lib/auth/config')
+    const { validateCredentials } = await import('./config')
     const result = await validateCredentials('wronguser', 'wrongpassword')
     expect(result).toBe(false)
   })
 
   it('throws error when AUTH_USERNAME is missing', async () => {
     delete process.env.AUTH_USERNAME
-    const { validateCredentials } = await import('../../../lib/auth/config')
+    const { validateCredentials } = await import('./config')
     await expect(validateCredentials('user', 'pass')).rejects.toThrow(
       'AUTH_USERNAME environment variable is required'
     )
@@ -54,7 +54,7 @@ describe('validateCredentials', () => {
   it('throws error when AUTH_PASSWORD_HASH is missing', async () => {
     process.env.AUTH_USERNAME = 'testuser'
     delete process.env.AUTH_PASSWORD_HASH
-    const { validateCredentials } = await import('../../../lib/auth/config')
+    const { validateCredentials } = await import('./config')
     await expect(validateCredentials('user', 'pass')).rejects.toThrow(
       'AUTH_PASSWORD_HASH environment variable is required'
     )
@@ -64,7 +64,7 @@ describe('validateCredentials', () => {
     process.env.AUTH_USERNAME = 'testuser'
     process.env.AUTH_PASSWORD_HASH = validHash
     delete process.env.JWT_SECRET
-    const { validateCredentials } = await import('../../../lib/auth/config')
+    const { validateCredentials } = await import('./config')
     await expect(validateCredentials('user', 'pass')).rejects.toThrow(
       'JWT_SECRET environment variable is required'
     )
