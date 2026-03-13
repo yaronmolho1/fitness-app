@@ -13,7 +13,7 @@ export default defineConfig({
   reporter: process.env.CI ? 'github' : 'html',
 
   use: {
-    baseURL: 'http://127.0.0.1:3000',
+    baseURL: 'http://127.0.0.1:3100',
     viewport: { width: 1280, height: 720 },
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
@@ -27,6 +27,7 @@ export default defineConfig({
       name: 'setup',
       testMatch: /.*\.setup\.ts$/,
       testDir: './tests/setup',
+      timeout: 120 * 1000,
     },
     {
       name: 'chromium',
@@ -39,9 +40,9 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'pnpm dev',
-    url: 'http://127.0.0.1:3000/api/health',
-    reuseExistingServer: !process.env.CI,
+    command: 'pnpm dev --port 3100',
+    url: 'http://127.0.0.1:3100/api/health',
+    reuseExistingServer: false,
     timeout: 180 * 1000,
     stdout: 'pipe',
     stderr: 'pipe',
@@ -52,8 +53,8 @@ export default defineConfig({
       JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
       AUTH_USERNAME: E2E_AUTH.username,
       AUTH_PASSWORD_HASH: E2E_AUTH.passwordHash,
-      NODE_ENV: 'test',
-      PORT: '3000',
+      E2E_TEST: 'true',
+      PORT: '3100',
     },
   },
 })

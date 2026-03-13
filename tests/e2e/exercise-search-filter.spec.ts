@@ -1,17 +1,23 @@
 import { test, expect } from '@playwright/test'
 
+const SEED_EXERCISES = [
+  { name: 'Bench Press', modality: 'resistance' },
+  { name: 'Overhead Press', modality: 'resistance' },
+  { name: 'Squat', modality: 'resistance' },
+  { name: '5K Tempo Run', modality: 'running' },
+  { name: 'Heavy Bag Rounds', modality: 'mma' },
+]
+
 test.describe('Exercise search & filter', () => {
-  test.beforeEach(async ({ page, request }) => {
-    // Reset DB state before each test
+  test('shows empty state when no exercises exist', async ({ page, request }) => {
     await request.post('/api/test/reset')
     await page.goto('/exercises')
-  })
-
-  test('shows empty state when no exercises exist', async ({ page }) => {
     await expect(page.getByText('No exercises yet')).toBeVisible()
   })
 
-  test('search input and modality filter are visible', async ({ page }) => {
+  test('search input and modality filter are visible', async ({ page, request }) => {
+    await request.post('/api/test/reset')
+    await page.goto('/exercises')
     await expect(page.getByPlaceholder('Search exercises...')).toBeVisible()
     await expect(page.getByRole('button', { name: 'All' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Resistance' })).toBeVisible()
@@ -20,21 +26,12 @@ test.describe('Exercise search & filter', () => {
   })
 
   test.describe('with exercises', () => {
-    test.beforeEach(async ({ page }) => {
-      const exercises = [
-        { name: 'Bench Press', modality: 'resistance' },
-        { name: 'Overhead Press', modality: 'resistance' },
-        { name: 'Squat', modality: 'resistance' },
-        { name: '5K Tempo Run', modality: 'running' },
-        { name: 'Heavy Bag Rounds', modality: 'mma' },
-      ]
-
-      for (const ex of exercises) {
-        await page.getByPlaceholder('e.g. Bench Press').fill(ex.name)
-        await page.locator('#exercise-modality').selectOption(ex.modality)
-        await page.getByRole('button', { name: 'Create Exercise' }).click()
-        await expect(page.getByText(ex.name)).toBeVisible()
-      }
+    test.beforeEach(async ({ page, request }) => {
+      await request.post('/api/test/reset', {
+        data: { seed: SEED_EXERCISES },
+      })
+      await page.goto('/exercises')
+      await expect(page.locator('.divide-y')).toBeVisible()
     })
 
     test('search filters exercises by name as-you-type', async ({ page }) => {

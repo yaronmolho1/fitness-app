@@ -9,13 +9,20 @@ if (!DATABASE_URL) {
   throw new Error('DATABASE_URL environment variable is required')
 }
 
-const sqlite = new Database(DATABASE_URL)
+const globalForDb = globalThis as unknown as {
+  _sqlite: Database.Database | undefined
+}
 
-// Apply required PRAGMAs on every connection
-sqlite.pragma('journal_mode = WAL')
-sqlite.pragma('busy_timeout = 5000')
-sqlite.pragma('synchronous = NORMAL')
-sqlite.pragma('foreign_keys = ON')
+const sqlite = globalForDb._sqlite ?? new Database(DATABASE_URL)
+
+if (!globalForDb._sqlite) {
+  // Apply required PRAGMAs on first connection only
+  sqlite.pragma('journal_mode = WAL')
+  sqlite.pragma('busy_timeout = 5000')
+  sqlite.pragma('synchronous = NORMAL')
+  sqlite.pragma('foreign_keys = ON')
+  globalForDb._sqlite = sqlite
+}
 
 export const db = drizzle(sqlite, {
   schema: {
