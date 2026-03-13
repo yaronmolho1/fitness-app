@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test'
 
 test.describe('Exercise search & filter', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, request }) => {
+    // Reset DB state before each test
+    await request.post('/api/test/reset')
     await page.goto('/exercises')
   })
 
@@ -19,7 +21,6 @@ test.describe('Exercise search & filter', () => {
 
   test.describe('with exercises', () => {
     test.beforeEach(async ({ page }) => {
-      // Create test exercises via the form
       const exercises = [
         { name: 'Bench Press', modality: 'resistance' },
         { name: 'Overhead Press', modality: 'resistance' },
@@ -32,7 +33,6 @@ test.describe('Exercise search & filter', () => {
         await page.getByPlaceholder('e.g. Bench Press').fill(ex.name)
         await page.locator('#exercise-modality').selectOption(ex.modality)
         await page.getByRole('button', { name: 'Create Exercise' }).click()
-        // Wait for exercise to appear in the list
         await expect(page.getByText(ex.name)).toBeVisible()
       }
     })

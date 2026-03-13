@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test'
+import { E2E_DB_PATH, E2E_AUTH } from './tests/e2e/e2e-config'
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -46,13 +47,11 @@ export default defineConfig({
     stderr: 'pipe',
     env: {
       ...process.env,
-      DATABASE_URL: process.env.DATABASE_URL || '.e2e-test.db',
-      JWT_SECRET: process.env.JWT_SECRET || 'test-secret-key-for-e2e-testing-only',
+      DATABASE_URL: E2E_DB_PATH,
+      JWT_SECRET: E2E_AUTH.jwtSecret,
       JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
-      AUTH_USERNAME: process.env.AUTH_USERNAME || 'testuser',
-      AUTH_PASSWORD_HASH:
-        process.env.AUTH_PASSWORD_HASH ||
-        '$2b$10$z0rEew3QLGyjSs0gSDRqouN4FBccLYDU8slZn96SMY4bMKgJXbBz2',
+      AUTH_USERNAME: E2E_AUTH.username,
+      AUTH_PASSWORD_HASH: E2E_AUTH.passwordHash,
       NODE_ENV: 'test',
       PORT: '3000',
     },
