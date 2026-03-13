@@ -91,7 +91,7 @@ export async function addExerciseSlot(
       template_id,
       exercise_id,
       sets,
-      reps: String(reps),
+      reps: String(reps), // stored as text to support future range notation (e.g. "8-12")
       weight: weight ?? null,
       rpe: rpe ?? null,
       rest_seconds: rest_seconds ?? null,
@@ -151,7 +151,7 @@ export async function updateExerciseSlot(
   // Build update object with only provided fields
   const updates: Record<string, unknown> = {}
   if (sets !== undefined) updates.sets = sets
-  if (reps !== undefined) updates.reps = String(reps)
+  if (reps !== undefined) updates.reps = String(reps) // text for future range notation
   if (weight !== undefined) updates.weight = weight
   if (rpe !== undefined) updates.rpe = rpe
   if (rest_seconds !== undefined) updates.rest_seconds = rest_seconds
