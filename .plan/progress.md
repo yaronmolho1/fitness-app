@@ -7,7 +7,7 @@
 | T0001 | Next.js scaffold + test infrastructure | 0 | [x] | | | | |
 | T0002 | Docker setup (dev + production) | 0 | [x] | | | | |
 | T0003 | GitHub Actions CI/CD | 0 | [x] | | | | |
-| T0004 | nginx site config (cross-repo) | 0 | [ ] | | | | |
+| T0004 | nginx site config (cross-repo) | 0 | [x] | | 2026-03-12T19:10 | 2026-03-12T19:15 | committed in docker-app-stack repo |
 | T001 | SQLite connection + PRAGMAs | 1 | [x] | | | | |
 | T002 | Planning layer schema (6 tables) | 1 | [x] | | | | |
 | T003 | Logging layer schema (4 tables) | 1 | [x] | | | | |
@@ -17,9 +17,9 @@
 | T007 | Login/logout API routes + cookie | 2 | [x] | | | | |
 | T008 | Auth middleware (Edge, route protection) | 2 | [x] | | | | |
 | T009 | Login page UI + logout action | 2 | [x] | | | | |
-| T010 | Route groups (app)/(auth) + layouts | 3 | [~] | feat/task-010-route-groups | 2026-03-12T10:00 | | |
-| T011 | Health endpoint | 3 | [ ] | | | | |
-| T012 | Navigation (sidebar + bottom bar) | 3 | [ ] | | | | |
+| T010 | Route groups (app)/(auth) + layouts | 3 | [x] | feat/task-010-route-groups | 2026-03-12T10:00 | 2026-03-12T18:55 | PR #1 |
+| T011 | Health endpoint | 3 | [x] | feat/task-011-health-endpoint | 2026-03-13T10:00 | 2026-03-13T10:30 | PR #2 |
+| T012 | Navigation (sidebar + bottom bar) | 3 | [x] | feat/task-012-navigation | 2026-03-13T10:00 | 2026-03-13T10:45 | PR #3 |
 | T013 | Create exercise SA + validation | 4 | [ ] | | | | |
 | T014 | Exercise list + empty state + form UI | 4 | [ ] | | | | |
 | T015 | Edit exercise SA + form | 4 | [ ] | | | | |
