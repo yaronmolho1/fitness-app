@@ -1,14 +1,14 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
-import { sql } from 'drizzle-orm'
+import { sql, eq } from 'drizzle-orm'
 import * as schema from '@/lib/db/schema'
 
 // We need our own in-memory DB since the setup file's DB isn't exported
 let sqlite: Database.Database
 let db: ReturnType<typeof drizzle>
 
-const CREATE_TABLE = `
+const CREATE_EXERCISES = `
   CREATE TABLE IF NOT EXISTS exercises (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
@@ -19,15 +19,63 @@ const CREATE_TABLE = `
   )
 `
 
+const CREATE_MESOCYCLES = `
+  CREATE TABLE IF NOT EXISTS mesocycles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    start_date TEXT NOT NULL,
+    end_date TEXT NOT NULL,
+    work_weeks INTEGER NOT NULL,
+    has_deload INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'planned',
+    created_at INTEGER
+  )
+`
+
+const CREATE_WORKOUT_TEMPLATES = `
+  CREATE TABLE IF NOT EXISTS workout_templates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    mesocycle_id INTEGER NOT NULL REFERENCES mesocycles(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    canonical_name TEXT NOT NULL,
+    modality TEXT NOT NULL,
+    notes TEXT,
+    created_at INTEGER
+  )
+`
+
+const CREATE_EXERCISE_SLOTS = `
+  CREATE TABLE IF NOT EXISTS exercise_slots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    template_id INTEGER NOT NULL REFERENCES workout_templates(id) ON DELETE CASCADE,
+    exercise_id INTEGER NOT NULL REFERENCES exercises(id),
+    sets INTEGER,
+    reps TEXT,
+    weight REAL,
+    rpe REAL,
+    rest_seconds INTEGER,
+    guidelines TEXT,
+    "order" INTEGER NOT NULL,
+    is_main INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER
+  )
+`
+
 beforeAll(() => {
   sqlite = new Database(':memory:')
   sqlite.pragma('journal_mode = WAL')
   sqlite.pragma('foreign_keys = ON')
-  sqlite.exec(CREATE_TABLE)
+  sqlite.exec(CREATE_EXERCISES)
+  sqlite.exec(CREATE_MESOCYCLES)
+  sqlite.exec(CREATE_WORKOUT_TEMPLATES)
+  sqlite.exec(CREATE_EXERCISE_SLOTS)
   db = drizzle(sqlite, { schema })
 })
 
 beforeEach(() => {
+  sqlite.exec('DELETE FROM exercise_slots')
+  sqlite.exec('DELETE FROM workout_templates')
+  sqlite.exec('DELETE FROM mesocycles')
   sqlite.exec('DELETE FROM exercises')
 })
 
@@ -178,4 +226,140 @@ async function setupActionWithTestDb() {
   }
 
   return { createExerciseWithDb }
+}
+
+// Helper: insert a mesocycle + template + slot referencing an exercise
+async function insertExerciseWithSlot(exerciseId: number) {
+  const [meso] = await db
+    .insert(schema.mesocycles)
+    .values({
+      name: 'Test Meso',
+      start_date: '2026-01-01',
+      end_date: '2026-03-01',
+      work_weeks: 4,
+      created_at: new Date(),
+    })
+    .returning()
+
+  const [template] = await db
+    .insert(schema.workout_templates)
+    .values({
+      mesocycle_id: meso.id,
+      name: 'Push Day',
+      canonical_name: 'push-day',
+      modality: 'resistance',
+      created_at: new Date(),
+    })
+    .returning()
+
+  const [slot] = await db
+    .insert(schema.exercise_slots)
+    .values({
+      template_id: template.id,
+      exercise_id: exerciseId,
+      order: 1,
+      created_at: new Date(),
+    })
+    .returning()
+
+  return { meso, template, slot }
+}
+
+describe('exercise deletion integration', () => {
+  it('FK constraint prevents deleting exercise referenced by slot', async () => {
+    const [exercise] = await db
+      .insert(schema.exercises)
+      .values({ name: 'Bench Press', modality: 'resistance', created_at: new Date() })
+      .returning()
+
+    await insertExerciseWithSlot(exercise.id)
+
+    await expect(
+      db.delete(schema.exercises).where(eq(schema.exercises.id, exercise.id))
+    ).rejects.toThrow(/FOREIGN KEY constraint failed/)
+  })
+
+  it('allows deleting exercise after slot removal', async () => {
+    const [exercise] = await db
+      .insert(schema.exercises)
+      .values({ name: 'Squat', modality: 'resistance', created_at: new Date() })
+      .returning()
+
+    const { slot } = await insertExerciseWithSlot(exercise.id)
+
+    await db.delete(schema.exercise_slots).where(eq(schema.exercise_slots.id, slot.id))
+    await db.delete(schema.exercises).where(eq(schema.exercises.id, exercise.id))
+
+    const rows = await db.select().from(schema.exercises)
+    expect(rows).toHaveLength(0)
+  })
+
+  it('deleteExercise action returns not-found for missing exercise', async () => {
+    const { deleteExerciseWithDb } = await setupDeleteActionWithTestDb()
+    const result = await deleteExerciseWithDb(999)
+    expect(result).toEqual({ success: false, error: 'Exercise not found' })
+  })
+
+  it('deleteExercise action returns protection error for in-use exercise', async () => {
+    const { deleteExerciseWithDb } = await setupDeleteActionWithTestDb()
+
+    const [exercise] = await db
+      .insert(schema.exercises)
+      .values({ name: 'Deadlift', modality: 'resistance', created_at: new Date() })
+      .returning()
+
+    await insertExerciseWithSlot(exercise.id)
+
+    const result = await deleteExerciseWithDb(exercise.id)
+    expect(result).toEqual({
+      success: false,
+      error: 'Exercise is in use and cannot be deleted',
+    })
+  })
+
+  it('deleteExercise action successfully deletes unused exercise', async () => {
+    const { deleteExerciseWithDb } = await setupDeleteActionWithTestDb()
+
+    const [exercise] = await db
+      .insert(schema.exercises)
+      .values({ name: 'OHP', modality: 'resistance', created_at: new Date() })
+      .returning()
+
+    const result = await deleteExerciseWithDb(exercise.id)
+    expect(result).toEqual({ success: true })
+
+    const rows = await db.select().from(schema.exercises)
+    expect(rows).toHaveLength(0)
+  })
+})
+
+// Helper: creates deleteExercise that uses the test DB
+async function setupDeleteActionWithTestDb() {
+  async function deleteExerciseWithDb(id: number) {
+    const existing = await db
+      .select()
+      .from(schema.exercises)
+      .where(eq(schema.exercises.id, id))
+
+    if (existing.length === 0) {
+      return { success: false as const, error: 'Exercise not found' }
+    }
+
+    const slots = await db
+      .select()
+      .from(schema.exercise_slots)
+      .where(eq(schema.exercise_slots.exercise_id, id))
+
+    if (slots.length > 0) {
+      return {
+        success: false as const,
+        error: 'Exercise is in use and cannot be deleted',
+      }
+    }
+
+    await db.delete(schema.exercises).where(eq(schema.exercises.id, id))
+    return { success: true as const }
+  }
+
+  return { deleteExerciseWithDb }
 }

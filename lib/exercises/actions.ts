@@ -1,10 +1,10 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '@/lib/db'
-import { exercises } from '@/lib/db/schema'
+import { exercises, exercise_slots } from '@/lib/db/schema'
 
 const createExerciseSchema = z.object({
   name: z
@@ -70,4 +70,33 @@ export async function createExercise(input: CreateExerciseInput): Promise<Create
     }
     return { success: false, error: 'Failed to create exercise' }
   }
+}
+
+type DeleteExerciseResult =
+  | { success: true }
+  | { success: false; error: string }
+
+export async function deleteExercise(id: number): Promise<DeleteExerciseResult> {
+  const existing = await db
+    .select()
+    .from(exercises)
+    .where(eq(exercises.id, id))
+
+  if (existing.length === 0) {
+    return { success: false, error: 'Exercise not found' }
+  }
+
+  const slots = await db
+    .select()
+    .from(exercise_slots)
+    .where(eq(exercise_slots.exercise_id, id))
+
+  if (slots.length > 0) {
+    return { success: false, error: 'Exercise is in use and cannot be deleted' }
+  }
+
+  await db.delete(exercises).where(eq(exercises.id, id))
+
+  revalidatePath('/exercises')
+  return { success: true }
 }
