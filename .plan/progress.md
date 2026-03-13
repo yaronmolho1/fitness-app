@@ -22,7 +22,7 @@
 | T012 | Navigation (sidebar + bottom bar) | 3 | [x] | feat/task-012-navigation | 2026-03-13T10:00 | 2026-03-13T10:45 | PR #3 |
 | T013 | Create exercise SA + validation | 4 | [x] | feat/task-013-create-exercise-sa | 2026-03-13T12:00 | 2026-03-13T12:30 | PR #7 |
 | T014 | Exercise list + empty state + form UI | 4 | [x] | feat/task-014-exercise-list-ui | 2026-03-13T13:30 | 2026-03-13T14:00 | PR #11 |
-| T015 | Edit exercise SA + form | 4 | [ ] | | | | |
+| T015 | Edit exercise SA + form | 4 | [~] | feat/task-015-edit-exercise | 2026-03-13T22:00 | | |
 | T016 | Delete exercise + deletion protection | 4 | [x] | feat/task-016-delete-exercise | 2026-03-13T14:30 | 2026-03-13T15:10 | PR #10 |
 | T017 | Exercise search & filter | 4 | [x] | feat/task-017-exercise-search-filter | 2026-03-13T16:00 | 2026-03-13T17:00 | PR #12 |
 | T018 | Create mesocycle SA + end date calc | 5 | [x] | feat/task-018-create-mesocycle | 2026-03-13T11:00 | 2026-03-13T11:45 | PR #6 |
