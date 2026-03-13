@@ -28,7 +28,7 @@
 | T018 | Create mesocycle SA + end date calc | 5 | [~] | feat/task-018-create-mesocycle | 2026-03-13T11:00 | | |
 | T019 | Mesocycle list + detail view | 5 | [ ] | | | | |
 | T020 | Create mesocycle form + end date preview | 5 | [ ] | | | | |
-| T021 | Status transitions + one-active constraint | 5 | [ ] | | | | |
+| T021 | Status transitions + one-active constraint | 5 | [~] | feat/task-021-mesocycle-status | 2026-03-13T13:00 | | |
 | T022 | Status transition UI | 5 | [ ] | | | | |
 | T023 | Create resistance template SA + canonical slug | 6 | [ ] | | | | |
 | T024 | Template list + edit + delete | 6 | [ ] | | | | |
