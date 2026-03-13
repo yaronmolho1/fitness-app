@@ -228,6 +228,84 @@ async function setupActionWithTestDb() {
   return { createExerciseWithDb }
 }
 
+describe('exercise edit integration', () => {
+  it('updates exercise fields in database', async () => {
+    const [exercise] = await db
+      .insert(schema.exercises)
+      .values({ name: 'Bench Press', modality: 'resistance', muscle_group: 'Chest', equipment: 'Barbell', created_at: new Date() })
+      .returning()
+
+    const { editExerciseWithDb } = await setupEditActionWithTestDb()
+    const result = await editExerciseWithDb({
+      id: exercise.id, name: 'Incline Bench', modality: 'resistance',
+      muscle_group: 'Upper Chest', equipment: 'Dumbbell',
+    })
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.name).toBe('Incline Bench')
+      expect(result.data.muscle_group).toBe('Upper Chest')
+      expect(result.data.equipment).toBe('Dumbbell')
+    }
+
+    const rows = await db.select().from(schema.exercises)
+    expect(rows).toHaveLength(1)
+    expect(rows[0].name).toBe('Incline Bench')
+  })
+
+  it('rejects duplicate name belonging to different exercise', async () => {
+    await db.insert(schema.exercises).values({ name: 'Squat', modality: 'resistance', created_at: new Date() })
+    const [bench] = await db
+      .insert(schema.exercises)
+      .values({ name: 'Bench Press', modality: 'resistance', created_at: new Date() })
+      .returning()
+
+    const { editExerciseWithDb } = await setupEditActionWithTestDb()
+    const result = await editExerciseWithDb({ id: bench.id, name: 'Squat', modality: 'resistance' })
+
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toMatch(/exists/i)
+  })
+
+  it('allows saving with same name (no change)', async () => {
+    const [exercise] = await db
+      .insert(schema.exercises)
+      .values({ name: 'Deadlift', modality: 'resistance', created_at: new Date() })
+      .returning()
+
+    const { editExerciseWithDb } = await setupEditActionWithTestDb()
+    const result = await editExerciseWithDb({ id: exercise.id, name: 'Deadlift', modality: 'running' })
+
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.modality).toBe('running')
+  })
+
+  it('clears muscle_group and equipment when set to empty', async () => {
+    const [exercise] = await db
+      .insert(schema.exercises)
+      .values({ name: 'OHP', modality: 'resistance', muscle_group: 'Shoulders', equipment: 'Barbell', created_at: new Date() })
+      .returning()
+
+    const { editExerciseWithDb } = await setupEditActionWithTestDb()
+    const result = await editExerciseWithDb({
+      id: exercise.id, name: 'OHP', modality: 'resistance',
+      muscle_group: '', equipment: '',
+    })
+
+    expect(result.success).toBe(true)
+    const rows = await db.select().from(schema.exercises)
+    expect(rows[0].muscle_group).toBeNull()
+    expect(rows[0].equipment).toBeNull()
+  })
+
+  it('returns not-found for non-existent exercise', async () => {
+    const { editExerciseWithDb } = await setupEditActionWithTestDb()
+    const result = await editExerciseWithDb({ id: 999, name: 'Ghost', modality: 'resistance' })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toMatch(/not found/i)
+  })
+})
+
 // Helper: insert a mesocycle + template + slot referencing an exercise
 async function insertExerciseWithSlot(exerciseId: number) {
   const [meso] = await db
@@ -438,4 +516,74 @@ async function setupDeleteActionWithTestDb() {
   }
 
   return { deleteExerciseWithDb }
+}
+
+// Helper: creates editExercise that uses the test DB (mirrors action logic)
+async function setupEditActionWithTestDb() {
+  const { z } = await import('zod')
+
+  const editExerciseSchema = z.object({
+    id: z.number().int().positive('Invalid exercise ID'),
+    name: z
+      .string()
+      .transform((s) => s.trim())
+      .pipe(z.string().min(1, 'Name is required').max(255, 'Name must be 255 characters or fewer')),
+    modality: z.enum(['resistance', 'running', 'mma'], {
+      message: 'Modality must be resistance, running, or mma',
+    }),
+    muscle_group: z.string().optional(),
+    equipment: z.string().optional(),
+  })
+
+  async function editExerciseWithDb(input: {
+    id: number
+    name: string
+    modality: string
+    muscle_group?: string
+    equipment?: string
+  }) {
+    const parsed = editExerciseSchema.safeParse(input)
+    if (!parsed.success) {
+      return { success: false as const, error: parsed.error.issues[0].message }
+    }
+
+    const { id, name, modality, muscle_group, equipment } = parsed.data
+
+    // Case-insensitive duplicate check excluding self
+    const existing = await db
+      .select()
+      .from(schema.exercises)
+      .where(sql`lower(${schema.exercises.name}) = lower(${name})`)
+
+    const duplicate = existing.find((e) => e.id !== id)
+    if (duplicate) {
+      return { success: false as const, error: `Exercise "${name}" already exists` }
+    }
+
+    try {
+      const [updated] = await db
+        .update(schema.exercises)
+        .set({
+          name,
+          modality,
+          muscle_group: muscle_group || null,
+          equipment: equipment || null,
+        })
+        .where(eq(schema.exercises.id, id))
+        .returning()
+
+      if (!updated) {
+        return { success: false as const, error: 'Exercise not found' }
+      }
+
+      return { success: true as const, data: updated }
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message.includes('UNIQUE constraint failed')) {
+        return { success: false as const, error: `Exercise "${name}" already exists` }
+      }
+      return { success: false as const, error: 'Failed to update exercise' }
+    }
+  }
+
+  return { editExerciseWithDb }
 }
