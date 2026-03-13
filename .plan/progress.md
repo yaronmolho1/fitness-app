@@ -20,7 +20,7 @@
 | T010 | Route groups (app)/(auth) + layouts | 3 | [x] | feat/task-010-route-groups | 2026-03-12T10:00 | 2026-03-12T18:55 | PR #1 |
 | T011 | Health endpoint | 3 | [x] | feat/task-011-health-endpoint | 2026-03-13T10:00 | 2026-03-13T10:30 | PR #2 |
 | T012 | Navigation (sidebar + bottom bar) | 3 | [x] | feat/task-012-navigation | 2026-03-13T10:00 | 2026-03-13T10:45 | PR #3 |
-| T013 | Create exercise SA + validation | 4 | [~] | feat/task-013-create-exercise-sa | 2026-03-13T12:00 | | |
+| T013 | Create exercise SA + validation | 4 | [x] | feat/task-013-create-exercise-sa | 2026-03-13T12:00 | 2026-03-13T12:30 | PR #7 |
 | T014 | Exercise list + empty state + form UI | 4 | [ ] | | | | |
 | T015 | Edit exercise SA + form | 4 | [ ] | | | | |
 | T016 | Delete exercise + deletion protection | 4 | [ ] | | | | |
