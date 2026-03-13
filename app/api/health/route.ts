@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server'
-import { sqlite } from '@/lib/db/index'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
+    const { sqlite } = await import('@/lib/db/index')
     sqlite.prepare('SELECT 1').get()
     return NextResponse.json({ status: 'ok', db: 'connected' })
   } catch {
