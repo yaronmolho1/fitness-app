@@ -20,7 +20,7 @@
 | T010 | Route groups (app)/(auth) + layouts | 3 | [x] | feat/task-010-route-groups | 2026-03-12T10:00 | 2026-03-12T18:55 | PR #1 |
 | T011 | Health endpoint | 3 | [x] | feat/task-011-health-endpoint | 2026-03-13T10:00 | 2026-03-13T10:30 | PR #2 |
 | T012 | Navigation (sidebar + bottom bar) | 3 | [x] | feat/task-012-navigation | 2026-03-13T10:00 | 2026-03-13T10:45 | PR #3 |
-| T013 | Create exercise SA + validation | 4 | [ ] | | | | |
+| T013 | Create exercise SA + validation | 4 | [x] | feat/task-013-create-exercise-sa | 2026-03-13T12:00 | 2026-03-13T12:30 | PR #7 |
 | T014 | Exercise list + empty state + form UI | 4 | [ ] | | | | |
 | T015 | Edit exercise SA + form | 4 | [ ] | | | | |
 | T016 | Delete exercise + deletion protection | 4 | [ ] | | | | |
@@ -28,7 +28,7 @@
 | T018 | Create mesocycle SA + end date calc | 5 | [~] | feat/task-018-create-mesocycle | 2026-03-13T11:00 | | |
 | T019 | Mesocycle list + detail view | 5 | [ ] | | | | |
 | T020 | Create mesocycle form + end date preview | 5 | [ ] | | | | |
-| T021 | Status transitions + one-active constraint | 5 | [ ] | | | | |
+| T021 | Status transitions + one-active constraint | 5 | [~] | feat/task-021-mesocycle-status | 2026-03-13T13:00 | | |
 | T022 | Status transition UI | 5 | [ ] | | | | |
 | T023 | Create resistance template SA + canonical slug | 6 | [ ] | | | | |
 | T024 | Template list + edit + delete | 6 | [ ] | | | | |
