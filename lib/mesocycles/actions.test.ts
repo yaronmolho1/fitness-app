@@ -24,6 +24,11 @@ vi.mock('next/headers', () => ({
   headers: vi.fn(),
 }))
 
+// Mock next/cache for revalidatePath
+vi.mock('next/cache', () => ({
+  revalidatePath: vi.fn(),
+}))
+
 import { createMesocycle, activateMesocycle, completeMesocycle } from './actions'
 
 function makeFormData(data: Record<string, string>): FormData {

@@ -1,6 +1,7 @@
 'use server'
 
 import { eq, and, ne } from 'drizzle-orm'
+import { revalidatePath } from 'next/cache'
 import { db } from '@/lib/db/index'
 import { mesocycles } from '@/lib/db/schema'
 import { calculateEndDate } from './utils'
@@ -67,39 +68,50 @@ type StatusResult =
   | { success: false; error: string }
 
 export async function activateMesocycle(id: number): Promise<StatusResult> {
-  const meso = db
-    .select({ id: mesocycles.id, status: mesocycles.status })
-    .from(mesocycles)
-    .where(eq(mesocycles.id, id))
-    .get()
-
-  if (!meso) {
-    return { success: false, error: 'Mesocycle not found' }
+  if (!Number.isInteger(id) || id < 1) {
+    return { success: false, error: 'Invalid mesocycle ID' }
   }
 
-  if (meso.status !== 'planned') {
-    return { success: false, error: `Cannot activate a mesocycle with status "${meso.status}"` }
-  }
+  return db.transaction((tx) => {
+    const meso = tx
+      .select({ id: mesocycles.id, status: mesocycles.status })
+      .from(mesocycles)
+      .where(eq(mesocycles.id, id))
+      .get()
 
-  const existing = db
-    .select({ id: mesocycles.id })
-    .from(mesocycles)
-    .where(and(eq(mesocycles.status, 'active'), ne(mesocycles.id, id)))
-    .get()
+    if (!meso) {
+      return { success: false, error: 'Mesocycle not found' } as const
+    }
 
-  if (existing) {
-    return { success: false, error: 'Another mesocycle is already active' }
-  }
+    if (meso.status !== 'planned') {
+      return { success: false, error: `Cannot activate a mesocycle with status "${meso.status}"` } as const
+    }
 
-  db.update(mesocycles)
-    .set({ status: 'active' })
-    .where(eq(mesocycles.id, id))
-    .run()
+    const existing = tx
+      .select({ id: mesocycles.id })
+      .from(mesocycles)
+      .where(and(eq(mesocycles.status, 'active'), ne(mesocycles.id, id)))
+      .get()
 
-  return { success: true }
+    if (existing) {
+      return { success: false, error: 'Another mesocycle is already active' } as const
+    }
+
+    tx.update(mesocycles)
+      .set({ status: 'active' })
+      .where(eq(mesocycles.id, id))
+      .run()
+
+    revalidatePath('/mesocycles')
+    return { success: true } as const
+  })
 }
 
 export async function completeMesocycle(id: number): Promise<StatusResult> {
+  if (!Number.isInteger(id) || id < 1) {
+    return { success: false, error: 'Invalid mesocycle ID' }
+  }
+
   const meso = db
     .select({ id: mesocycles.id, status: mesocycles.status })
     .from(mesocycles)
@@ -119,5 +131,6 @@ export async function completeMesocycle(id: number): Promise<StatusResult> {
     .where(eq(mesocycles.id, id))
     .run()
 
+  revalidatePath('/mesocycles')
   return { success: true }
 }
