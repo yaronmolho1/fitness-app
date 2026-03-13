@@ -25,7 +25,7 @@
 | T015 | Edit exercise SA + form | 4 | [ ] | | | | |
 | T016 | Delete exercise + deletion protection | 4 | [ ] | | | | |
 | T017 | Exercise search & filter | 4 | [ ] | | | | |
-| T018 | Create mesocycle SA + end date calc | 5 | [~] | feat/task-018-create-mesocycle | 2026-03-13T11:00 | | |
+| T018 | Create mesocycle SA + end date calc | 5 | [x] | feat/task-018-create-mesocycle | 2026-03-13T11:00 | 2026-03-13T11:45 | PR #6 |
 | T019 | Mesocycle list + detail view | 5 | [ ] | | | | |
 | T020 | Create mesocycle form + end date preview | 5 | [ ] | | | | |
 | T021 | Status transitions + one-active constraint | 5 | [~] | feat/task-021-mesocycle-status | 2026-03-13T13:00 | | |
