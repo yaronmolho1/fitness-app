@@ -18,7 +18,7 @@
 | T008 | Auth middleware (Edge, route protection) | 2 | [x] | | | | |
 | T009 | Login page UI + logout action | 2 | [x] | | | | |
 | T010 | Route groups (app)/(auth) + layouts | 3 | [x] | feat/task-010-route-groups | 2026-03-12T10:00 | 2026-03-12T18:55 | PR #1 |
-| T011 | Health endpoint | 3 | [~] | feat/task-011-health-endpoint | 2026-03-13T10:00 | | |
+| T011 | Health endpoint | 3 | [x] | feat/task-011-health-endpoint | 2026-03-13T10:00 | 2026-03-13T10:30 | PR #2 |
 | T012 | Navigation (sidebar + bottom bar) | 3 | [~] | feat/task-012-navigation | 2026-03-13T10:00 | | |
 | T013 | Create exercise SA + validation | 4 | [ ] | | | | |
 | T014 | Exercise list + empty state + form UI | 4 | [ ] | | | | |
