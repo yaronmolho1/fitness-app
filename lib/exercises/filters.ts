@@ -13,11 +13,11 @@ export function filterExercises(
   modality: Modality
 ): Exercise[] {
   const trimmed = search.trim()
+  const pattern = trimmed ? new RegExp(escapeRegex(trimmed), 'i') : null
 
   return list.filter((exercise) => {
     if (modality !== 'all' && exercise.modality !== modality) return false
-    if (trimmed === '') return true
-    const pattern = new RegExp(escapeRegex(trimmed), 'i')
+    if (!pattern) return true
     return pattern.test(exercise.name)
   })
 }

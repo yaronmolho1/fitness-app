@@ -4,7 +4,10 @@ import path from 'path'
 const authFile = path.join(__dirname, '../../playwright/.auth/user.json')
 
 setup('authenticate', async ({ page }) => {
-  // TODO: implement login flow (Wave 2)
   await page.goto('/login')
+  await page.getByLabel('Username').fill('testuser')
+  await page.getByLabel('Password').fill('testpass123')
+  await page.getByRole('button', { name: 'Sign in' }).click()
+  await page.waitForURL('/')
   await page.context().storageState({ path: authFile })
 })

@@ -46,11 +46,13 @@ export default defineConfig({
     stderr: 'pipe',
     env: {
       ...process.env,
-      DATABASE_URL: process.env.DATABASE_URL || ':memory:',
+      DATABASE_URL: process.env.DATABASE_URL || '.e2e-test.db',
       JWT_SECRET: process.env.JWT_SECRET || 'test-secret-key-for-e2e-testing-only',
       JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
       AUTH_USERNAME: process.env.AUTH_USERNAME || 'testuser',
-      AUTH_PASSWORD_HASH: process.env.AUTH_PASSWORD_HASH || '$2b$10$placeholder',
+      AUTH_PASSWORD_HASH:
+        process.env.AUTH_PASSWORD_HASH ||
+        '$2b$10$z0rEew3QLGyjSs0gSDRqouN4FBccLYDU8slZn96SMY4bMKgJXbBz2',
       NODE_ENV: 'test',
       PORT: '3000',
     },
