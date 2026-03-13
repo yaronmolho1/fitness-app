@@ -2,14 +2,8 @@
 import { render, screen, cleanup } from '@testing-library/react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
 
-vi.mock('@/lib/db', () => ({
-  db: {
-    select: vi.fn(() => ({
-      from: vi.fn(() => ({
-        orderBy: vi.fn(() => []),
-      })),
-    })),
-  },
+vi.mock('@/lib/exercises/queries', () => ({
+  getExercises: vi.fn(() => []),
 }))
 
 vi.mock('@/lib/exercises/actions', () => ({
@@ -21,15 +15,7 @@ vi.mock('next/navigation', () => ({
   useRouter: vi.fn(() => ({ push: vi.fn(), refresh: vi.fn() })),
 }))
 
-import { db } from '@/lib/db'
-
-function mockDbSelect(data: unknown[]) {
-  vi.mocked(db.select).mockReturnValue({
-    from: vi.fn(() => ({
-      orderBy: vi.fn(() => data),
-    })),
-  } as unknown as ReturnType<typeof db.select>)
-}
+import { getExercises } from '@/lib/exercises/queries'
 
 describe('ExercisesPage', () => {
   afterEach(() => {
@@ -38,7 +24,7 @@ describe('ExercisesPage', () => {
   })
 
   it('renders empty state when no exercises exist', async () => {
-    mockDbSelect([])
+    vi.mocked(getExercises).mockResolvedValue([])
 
     const { default: ExercisesPage } = await import('./page')
     const page = await ExercisesPage()
@@ -55,14 +41,8 @@ describe('ExercisesPage', () => {
     ]
 
     vi.resetModules()
-    vi.doMock('@/lib/db', () => ({
-      db: {
-        select: vi.fn(() => ({
-          from: vi.fn(() => ({
-            orderBy: vi.fn(() => mockExercises),
-          })),
-        })),
-      },
+    vi.doMock('@/lib/exercises/queries', () => ({
+      getExercises: vi.fn(() => mockExercises),
     }))
     vi.doMock('@/lib/exercises/actions', () => ({
       createExercise: vi.fn(),
@@ -85,7 +65,7 @@ describe('ExercisesPage', () => {
   })
 
   it('renders page heading', async () => {
-    mockDbSelect([])
+    vi.mocked(getExercises).mockResolvedValue([])
 
     const { default: ExercisesPage } = await import('./page')
     const page = await ExercisesPage()

@@ -1,13 +1,10 @@
-import { desc } from 'drizzle-orm'
-import { db } from '@/lib/db'
-import { exercises } from '@/lib/db/schema'
+import { getExercises } from '@/lib/exercises/queries'
 import { ExerciseForm } from '@/components/exercise-form'
 
+export const dynamic = 'force-dynamic'
+
 export default async function ExercisesPage() {
-  const allExercises = await db
-    .select()
-    .from(exercises)
-    .orderBy(desc(exercises.created_at))
+  const allExercises = await getExercises()
 
   return (
     <div className="mx-auto max-w-4xl space-y-8 p-6">
