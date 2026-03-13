@@ -1,5 +1,5 @@
 # Auth System
-**Status:** ready
+**Status:** done
 **Epic:** Foundation
 **Depends:** specs/db-schema-migrations.md
 

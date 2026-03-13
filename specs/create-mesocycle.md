@@ -1,5 +1,5 @@
 # Create Mesocycle
-**Status:** ready
+**Status:** done
 **Epic:** Mesocycle Lifecycle
 **Depends:** specs/app-shell-navigation.md
 

@@ -1,5 +1,5 @@
 # DB Schema & Migrations
-**Status:** ready
+**Status:** done
 **Epic:** Foundation
 **Depends:** none
 

@@ -1,5 +1,5 @@
 # Exercise CRUD
-**Status:** ready
+**Status:** partial
 **Epic:** Exercise Library
 **Depends:** specs/app-shell-navigation.md
 
