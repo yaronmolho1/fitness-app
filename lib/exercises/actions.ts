@@ -1,10 +1,10 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '@/lib/db'
-import { exercises } from '@/lib/db/schema'
+import { exercises, exercise_slots } from '@/lib/db/schema'
 
 const createExerciseSchema = z.object({
   name: z
@@ -69,5 +69,50 @@ export async function createExercise(input: CreateExerciseInput): Promise<Create
       return { success: false, error: `Exercise "${name}" already exists` }
     }
     return { success: false, error: 'Failed to create exercise' }
+  }
+}
+
+type DeleteExerciseResult =
+  | { success: true }
+  | { success: false; error: string }
+
+export async function deleteExercise(id: number): Promise<DeleteExerciseResult> {
+  if (!Number.isInteger(id) || id < 1) {
+    return { success: false, error: 'Invalid exercise ID' }
+  }
+
+  try {
+    const result = db.transaction((tx) => {
+      const existing = tx
+        .select()
+        .from(exercises)
+        .where(eq(exercises.id, id))
+        .all()
+
+      if (existing.length === 0) {
+        return { success: false as const, error: 'Exercise not found' }
+      }
+
+      const slots = tx
+        .select()
+        .from(exercise_slots)
+        .where(eq(exercise_slots.exercise_id, id))
+        .all()
+
+      if (slots.length > 0) {
+        return { success: false as const, error: 'Exercise is in use and cannot be deleted' }
+      }
+
+      tx.delete(exercises).where(eq(exercises.id, id)).run()
+      return { success: true as const }
+    })
+
+    if (result.success) {
+      revalidatePath('/exercises')
+    }
+
+    return result
+  } catch {
+    return { success: false, error: 'Failed to delete exercise' }
   }
 }
