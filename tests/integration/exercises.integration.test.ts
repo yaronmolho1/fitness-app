@@ -331,34 +331,110 @@ describe('exercise deletion integration', () => {
     const rows = await db.select().from(schema.exercises)
     expect(rows).toHaveLength(0)
   })
+
+  it('deleteExercise action rejects invalid IDs', async () => {
+    const { deleteExerciseWithDb } = await setupDeleteActionWithTestDb()
+
+    expect(deleteExerciseWithDb(0)).toEqual({ success: false, error: 'Invalid exercise ID' })
+    expect(deleteExerciseWithDb(-1)).toEqual({ success: false, error: 'Invalid exercise ID' })
+    expect(deleteExerciseWithDb(1.5)).toEqual({ success: false, error: 'Invalid exercise ID' })
+  })
+
+  it('protects exercise referenced in slots across multiple mesocycles', async () => {
+    const { deleteExerciseWithDb } = await setupDeleteActionWithTestDb()
+
+    const [exercise] = await db
+      .insert(schema.exercises)
+      .values({ name: 'Bench Press', modality: 'resistance', created_at: new Date() })
+      .returning()
+
+    // First mesocycle + template + slot
+    const [meso1] = await db
+      .insert(schema.mesocycles)
+      .values({ name: 'Meso A', start_date: '2026-01-01', end_date: '2026-03-01', work_weeks: 4, created_at: new Date() })
+      .returning()
+    const [template1] = await db
+      .insert(schema.workout_templates)
+      .values({ mesocycle_id: meso1.id, name: 'Push A', canonical_name: 'push-a', modality: 'resistance', created_at: new Date() })
+      .returning()
+    await db.insert(schema.exercise_slots).values({ template_id: template1.id, exercise_id: exercise.id, order: 1, created_at: new Date() })
+
+    // Second mesocycle + template + slot referencing same exercise
+    const [meso2] = await db
+      .insert(schema.mesocycles)
+      .values({ name: 'Meso B', start_date: '2026-04-01', end_date: '2026-06-01', work_weeks: 4, created_at: new Date() })
+      .returning()
+    const [template2] = await db
+      .insert(schema.workout_templates)
+      .values({ mesocycle_id: meso2.id, name: 'Push B', canonical_name: 'push-b', modality: 'resistance', created_at: new Date() })
+      .returning()
+    await db.insert(schema.exercise_slots).values({ template_id: template2.id, exercise_id: exercise.id, order: 1, created_at: new Date() })
+
+    const result = await deleteExerciseWithDb(exercise.id)
+    expect(result).toEqual({ success: false, error: 'Exercise is in use and cannot be deleted' })
+  })
+
+  it('protects exercise referenced in completed mesocycle', async () => {
+    const { deleteExerciseWithDb } = await setupDeleteActionWithTestDb()
+
+    const [exercise] = await db
+      .insert(schema.exercises)
+      .values({ name: 'Squat', modality: 'resistance', created_at: new Date() })
+      .returning()
+
+    const [meso] = await db
+      .insert(schema.mesocycles)
+      .values({ name: 'Completed Meso', start_date: '2025-01-01', end_date: '2025-03-01', work_weeks: 4, status: 'completed', created_at: new Date() })
+      .returning()
+    const [template] = await db
+      .insert(schema.workout_templates)
+      .values({ mesocycle_id: meso.id, name: 'Leg Day', canonical_name: 'leg-day', modality: 'resistance', created_at: new Date() })
+      .returning()
+    await db.insert(schema.exercise_slots).values({ template_id: template.id, exercise_id: exercise.id, order: 1, created_at: new Date() })
+
+    const result = await deleteExerciseWithDb(exercise.id)
+    expect(result).toEqual({ success: false, error: 'Exercise is in use and cannot be deleted' })
+  })
 })
 
-// Helper: creates deleteExercise that uses the test DB
+// Helper: creates deleteExercise that uses the test DB (mirrors action logic)
 async function setupDeleteActionWithTestDb() {
-  async function deleteExerciseWithDb(id: number) {
-    const existing = await db
-      .select()
-      .from(schema.exercises)
-      .where(eq(schema.exercises.id, id))
-
-    if (existing.length === 0) {
-      return { success: false as const, error: 'Exercise not found' }
+  function deleteExerciseWithDb(id: number) {
+    if (!Number.isInteger(id) || id < 1) {
+      return { success: false as const, error: 'Invalid exercise ID' }
     }
 
-    const slots = await db
-      .select()
-      .from(schema.exercise_slots)
-      .where(eq(schema.exercise_slots.exercise_id, id))
+    try {
+      return db.transaction((tx) => {
+        const existing = tx
+          .select()
+          .from(schema.exercises)
+          .where(eq(schema.exercises.id, id))
+          .all()
 
-    if (slots.length > 0) {
-      return {
-        success: false as const,
-        error: 'Exercise is in use and cannot be deleted',
-      }
+        if (existing.length === 0) {
+          return { success: false as const, error: 'Exercise not found' }
+        }
+
+        const slots = tx
+          .select()
+          .from(schema.exercise_slots)
+          .where(eq(schema.exercise_slots.exercise_id, id))
+          .all()
+
+        if (slots.length > 0) {
+          return {
+            success: false as const,
+            error: 'Exercise is in use and cannot be deleted',
+          }
+        }
+
+        tx.delete(schema.exercises).where(eq(schema.exercises.id, id)).run()
+        return { success: true as const }
+      })
+    } catch {
+      return { success: false as const, error: 'Failed to delete exercise' }
     }
-
-    await db.delete(schema.exercises).where(eq(schema.exercises.id, id))
-    return { success: true as const }
   }
 
   return { deleteExerciseWithDb }

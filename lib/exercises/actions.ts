@@ -77,26 +77,42 @@ type DeleteExerciseResult =
   | { success: false; error: string }
 
 export async function deleteExercise(id: number): Promise<DeleteExerciseResult> {
-  const existing = await db
-    .select()
-    .from(exercises)
-    .where(eq(exercises.id, id))
-
-  if (existing.length === 0) {
-    return { success: false, error: 'Exercise not found' }
+  if (!Number.isInteger(id) || id < 1) {
+    return { success: false, error: 'Invalid exercise ID' }
   }
 
-  const slots = await db
-    .select()
-    .from(exercise_slots)
-    .where(eq(exercise_slots.exercise_id, id))
+  try {
+    const result = db.transaction((tx) => {
+      const existing = tx
+        .select()
+        .from(exercises)
+        .where(eq(exercises.id, id))
+        .all()
 
-  if (slots.length > 0) {
-    return { success: false, error: 'Exercise is in use and cannot be deleted' }
+      if (existing.length === 0) {
+        return { success: false as const, error: 'Exercise not found' }
+      }
+
+      const slots = tx
+        .select()
+        .from(exercise_slots)
+        .where(eq(exercise_slots.exercise_id, id))
+        .all()
+
+      if (slots.length > 0) {
+        return { success: false as const, error: 'Exercise is in use and cannot be deleted' }
+      }
+
+      tx.delete(exercises).where(eq(exercises.id, id)).run()
+      return { success: true as const }
+    })
+
+    if (result.success) {
+      revalidatePath('/exercises')
+    }
+
+    return result
+  } catch {
+    return { success: false, error: 'Failed to delete exercise' }
   }
-
-  await db.delete(exercises).where(eq(exercises.id, id))
-
-  revalidatePath('/exercises')
-  return { success: true }
 }

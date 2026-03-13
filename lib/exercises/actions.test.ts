@@ -15,11 +15,18 @@ const mockDeleteWhere = vi.fn()
 const mockDeleteReturning = vi.fn()
 const mockDelete = vi.fn()
 
+const mockTx = {
+  select: (...args: unknown[]) => mockSelect(...args),
+  insert: (...args: unknown[]) => mockInsert(...args),
+  delete: (...args: unknown[]) => mockDelete(...args),
+}
+
 vi.mock('@/lib/db', () => ({
   db: {
     select: (...args: unknown[]) => mockSelect(...args),
     insert: (...args: unknown[]) => mockInsert(...args),
     delete: (...args: unknown[]) => mockDelete(...args),
+    transaction: (fn: (tx: typeof mockTx) => unknown) => fn(mockTx),
   },
   sqlite: {},
 }))
@@ -101,29 +108,37 @@ describe('createExercise', () => {
 })
 
 describe('deleteExercise', () => {
+  const mockAll = vi.fn()
+  const mockRun = vi.fn()
+
   beforeEach(() => {
     vi.clearAllMocks()
-    // Default: select chain for existence + slots checks
+    // Inside transaction, select uses .all() instead of awaiting
     mockSelect.mockReturnValue({ from: mockFrom })
     mockFrom.mockReturnValue({ where: mockWhere })
-    // Default: delete chain
+    mockWhere.mockReturnValue({ all: mockAll })
+    // Delete chain uses .run()
     mockDelete.mockReturnValue({ where: mockDeleteWhere })
-    mockDeleteWhere.mockReturnValue({ returning: mockDeleteReturning })
+    mockDeleteWhere.mockReturnValue({ run: mockRun })
+  })
+
+  it('returns invalid ID error for bad input', async () => {
+    const result = await deleteExercise(0)
+    expect(result).toEqual({ success: false, error: 'Invalid exercise ID' })
   })
 
   it('returns not-found error for non-existent exercise', async () => {
-    // First select (existence check) returns empty
-    mockWhere.mockResolvedValueOnce([])
+    mockAll.mockReturnValueOnce([])
 
     const result = await deleteExercise(999)
     expect(result).toEqual({ success: false, error: 'Exercise not found' })
   })
 
   it('returns protection error when exercise has associated slots', async () => {
-    // First select (existence check) returns exercise
-    mockWhere.mockResolvedValueOnce([{ id: 1, name: 'Squat' }])
-    // Second select (slots check) returns a slot
-    mockWhere.mockResolvedValueOnce([{ id: 10, exercise_id: 1 }])
+    // First .all() (existence check) returns exercise
+    mockAll.mockReturnValueOnce([{ id: 1, name: 'Squat' }])
+    // Second .all() (slots check) returns a slot
+    mockAll.mockReturnValueOnce([{ id: 10, exercise_id: 1 }])
 
     const result = await deleteExercise(1)
     expect(result).toEqual({
@@ -133,21 +148,16 @@ describe('deleteExercise', () => {
   })
 
   it('successfully deletes exercise with no slots', async () => {
-    // Existence check returns exercise
-    mockWhere.mockResolvedValueOnce([{ id: 1, name: 'Squat' }])
-    // Slots check returns empty
-    mockWhere.mockResolvedValueOnce([])
-    // Delete returns affected row
-    mockDeleteReturning.mockResolvedValueOnce([{ id: 1 }])
+    mockAll.mockReturnValueOnce([{ id: 1, name: 'Squat' }])
+    mockAll.mockReturnValueOnce([])
 
     const result = await deleteExercise(1)
     expect(result).toEqual({ success: true })
   })
 
   it('revalidates path on successful delete', async () => {
-    mockWhere.mockResolvedValueOnce([{ id: 1, name: 'Squat' }])
-    mockWhere.mockResolvedValueOnce([])
-    mockDeleteReturning.mockResolvedValueOnce([{ id: 1 }])
+    mockAll.mockReturnValueOnce([{ id: 1, name: 'Squat' }])
+    mockAll.mockReturnValueOnce([])
 
     await deleteExercise(1)
     expect(revalidatePath).toHaveBeenCalledWith('/exercises')
