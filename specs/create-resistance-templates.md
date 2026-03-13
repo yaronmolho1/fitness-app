@@ -1,5 +1,5 @@
 # Create Resistance Templates
-**Status:** ready
+**Status:** done
 **Epic:** Workout Templates
 **Depends:** specs/create-mesocycle.md
 

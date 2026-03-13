@@ -1,5 +1,5 @@
 # Exercise Search & Filter
-**Status:** ready
+**Status:** done
 **Epic:** Exercise Library
 **Depends:** specs/exercise-crud.md
 

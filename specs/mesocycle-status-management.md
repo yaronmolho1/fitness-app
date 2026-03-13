@@ -1,5 +1,5 @@
 # Mesocycle Status Management
-**Status:** ready
+**Status:** done
 **Epic:** Mesocycle Lifecycle
 **Depends:** specs/create-mesocycle.md
 
