@@ -25,6 +25,9 @@ specs/                 # 43 feature specs (status/epic/depends/AC/tests)
   progress.md             # Task status table (T0001-T0004, T001-T073)
 .sisyphus/plans/
   fitness-app.md       # Detailed execution plan (Prometheus format)
+app/                   # Next.js App Router routes (README.md)
+lib/                   # Server-side logic — auth, db, exercises, mesocycles, templates (README.md → submodule READMEs)
+components/            # Shared React components — nav, forms (README.md)
 ```
 
 ## Commands
@@ -79,5 +82,5 @@ docker compose up -d   # containerized run
 
 ## Current Status
 
-Greenfield — planning complete, no code yet. Implementation starts at Wave 0 (project infrastructure).
+Waves 0–6 partially complete (23/77 tasks done). Foundation, auth, exercise library, mesocycle lifecycle, and resistance templates implemented. Next up: T015 (edit exercise), T019–T020 (mesocycle UI), T024–T026 (template UI).
 See `.plan/progress.md` for task-level status (77 tasks: 4 infra + 73 feature, 15 waves).

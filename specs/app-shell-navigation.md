@@ -1,5 +1,5 @@
 # App Shell & Navigation
-**Status:** ready
+**Status:** done
 **Epic:** Foundation
 **Depends:** specs/auth-system.md
 
