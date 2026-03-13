@@ -49,6 +49,9 @@ jobs:
         run: |
           pnpm exec playwright install chromium --with-deps
           pnpm test:e2e
+        env:
+          E2E_TEST: 'true'
+          DATABASE_URL: .e2e-test.db
 
       - name: Upload Playwright report on failure
         if: failure()
