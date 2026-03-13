@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { jwtVerify } from 'jose'
 
-const publicPaths = ['/login', '/api/auth', '/api/health']
+const publicPaths = ['/login', '/api/auth', '/api/health', '/api/test']
 
 function isPublicPath(pathname: string): boolean {
   return publicPaths.some(p => pathname === p || pathname.startsWith(p + '/'))
