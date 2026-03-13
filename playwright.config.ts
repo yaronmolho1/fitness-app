@@ -4,6 +4,7 @@ import { E2E_DB_PATH, E2E_AUTH } from './tests/e2e/e2e-config'
 export default defineConfig({
   testDir: './tests/e2e',
   globalSetup: require.resolve('./tests/setup/global-setup.ts'),
+  globalTeardown: require.resolve('./tests/setup/global-teardown.ts'),
   timeout: 30 * 1000,
   fullyParallel: true,
   testMatch: /.*\.spec\.ts/,
