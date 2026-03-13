@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
+import { eq } from 'drizzle-orm'
 import * as schema from '../../../lib/db/schema'
 import * as relationsModule from '../../../lib/db/relations'
 import {
@@ -10,19 +11,16 @@ import {
   exercise_slots,
 } from '../../../lib/db/schema'
 
+const fullSchema = { ...schema, ...relationsModule }
+
 describe('Drizzle v2 Relations', () => {
   let sqlite: Database.Database
-  let db: ReturnType<typeof drizzle>
+  let db: ReturnType<typeof drizzle<typeof fullSchema>>
 
   beforeAll(async () => {
     sqlite = new Database(':memory:')
     sqlite.pragma('foreign_keys = ON')
-    db = drizzle(sqlite, {
-      schema: {
-        ...schema,
-        ...relationsModule,
-      },
-    })
+    db = drizzle(sqlite, { schema: fullSchema })
 
     // Create tables manually for in-memory test
     sqlite.exec(`
@@ -123,7 +121,7 @@ describe('Drizzle v2 Relations', () => {
     })
 
     // Query with eager loading
-    const result = await (db.query as any).mesocycles.findFirst({
+    const result = await db.query.mesocycles.findFirst({
       with: { workout_templates: true },
     })
 
@@ -170,8 +168,8 @@ describe('Drizzle v2 Relations', () => {
     })
 
     // Query with nested relations
-    const result = await (db.query as any).mesocycles.findFirst({
-      where: (fields: any, { eq }: any) => eq(fields.id, meso.id),
+    const result = await db.query.mesocycles.findFirst({
+      where: eq(mesocycles.id, meso.id),
       with: {
         workout_templates: {
           with: {
