@@ -1,5 +1,7 @@
 'use server'
 
+import { eq, and, ne } from 'drizzle-orm'
+import { revalidatePath } from 'next/cache'
 import { db } from '@/lib/db/index'
 import { mesocycles } from '@/lib/db/schema'
 import { calculateEndDate } from './utils'
@@ -59,4 +61,76 @@ export async function createMesocycle(formData: FormData): Promise<CreateResult>
     .get()
 
   return { success: true, id: result.id }
+}
+
+type StatusResult =
+  | { success: true }
+  | { success: false; error: string }
+
+export async function activateMesocycle(id: number): Promise<StatusResult> {
+  if (!Number.isInteger(id) || id < 1) {
+    return { success: false, error: 'Invalid mesocycle ID' }
+  }
+
+  return db.transaction((tx) => {
+    const meso = tx
+      .select({ id: mesocycles.id, status: mesocycles.status })
+      .from(mesocycles)
+      .where(eq(mesocycles.id, id))
+      .get()
+
+    if (!meso) {
+      return { success: false, error: 'Mesocycle not found' } as const
+    }
+
+    if (meso.status !== 'planned') {
+      return { success: false, error: `Cannot activate a mesocycle with status "${meso.status}"` } as const
+    }
+
+    const existing = tx
+      .select({ id: mesocycles.id })
+      .from(mesocycles)
+      .where(and(eq(mesocycles.status, 'active'), ne(mesocycles.id, id)))
+      .get()
+
+    if (existing) {
+      return { success: false, error: 'Another mesocycle is already active' } as const
+    }
+
+    tx.update(mesocycles)
+      .set({ status: 'active' })
+      .where(eq(mesocycles.id, id))
+      .run()
+
+    revalidatePath('/mesocycles')
+    return { success: true } as const
+  })
+}
+
+export async function completeMesocycle(id: number): Promise<StatusResult> {
+  if (!Number.isInteger(id) || id < 1) {
+    return { success: false, error: 'Invalid mesocycle ID' }
+  }
+
+  const meso = db
+    .select({ id: mesocycles.id, status: mesocycles.status })
+    .from(mesocycles)
+    .where(eq(mesocycles.id, id))
+    .get()
+
+  if (!meso) {
+    return { success: false, error: 'Mesocycle not found' }
+  }
+
+  if (meso.status !== 'active') {
+    return { success: false, error: `Cannot complete a mesocycle with status "${meso.status}"` }
+  }
+
+  db.update(mesocycles)
+    .set({ status: 'completed' })
+    .where(eq(mesocycles.id, id))
+    .run()
+
+  revalidatePath('/mesocycles')
+  return { success: true }
 }
