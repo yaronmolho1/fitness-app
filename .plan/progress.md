@@ -34,7 +34,7 @@
 | T024 | Template list + edit + delete | 6 | [ ] | | | | |
 | T025 | Running template SA + form | 6 | [ ] | | | | |
 | T026 | MMA/BJJ template SA + form | 6 | [ ] | | | | |
-| T027 | Add exercise slot SA + picker | 7 | [ ] | | | | |
+| T027 | Add exercise slot SA + picker | 7 | [~] | feat/task-027-exercise-slot-sa | 2026-03-13T21:00 | | |
 | T028 | Slot editing + remove | 7 | [ ] | | | | |
 | T029 | Drag-reorder slots (SA + UI) | 7 | [ ] | | | | |
 | T030 | Main/complementary role toggle | 7 | [ ] | | | | |
