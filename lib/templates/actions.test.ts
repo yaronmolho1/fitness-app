@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { revalidatePath } from 'next/cache'
 import { sql } from 'drizzle-orm'
 import * as schema from '@/lib/db/schema'
 
@@ -165,6 +166,7 @@ describe('createResistanceTemplate', () => {
         expect(result.data.canonical_name).toBe('push-a-main')
         expect(result.data.mesocycle_id).toBe(meso.id)
       }
+      expect(revalidatePath).toHaveBeenCalledWith('/mesocycles')
     })
 
     it('always sets modality to resistance', async () => {

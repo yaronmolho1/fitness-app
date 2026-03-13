@@ -2,9 +2,15 @@
 
 import { revalidatePath } from 'next/cache'
 import { eq, and } from 'drizzle-orm'
+import { z } from 'zod'
 import { db } from '@/lib/db/index'
 import { workout_templates, mesocycles } from '@/lib/db/schema'
 import { generateCanonicalName } from './utils'
+
+const createResistanceTemplateSchema = z.object({
+  name: z.string().transform((s) => s.trim()).pipe(z.string().min(1, 'Name is required')),
+  mesocycle_id: z.number().int().positive('Invalid mesocycle ID'),
+})
 
 type CreateResistanceTemplateInput = {
   name: string
@@ -20,10 +26,13 @@ type CreateResistanceTemplateResult =
 export async function createResistanceTemplate(
   input: CreateResistanceTemplateInput
 ): Promise<CreateResistanceTemplateResult> {
-  const name = input.name.trim()
-  if (!name) {
-    return { success: false, error: 'Name is required' }
+  const parsed = createResistanceTemplateSchema.safeParse(input)
+  if (!parsed.success) {
+    const firstError = parsed.error.issues[0]
+    return { success: false, error: firstError.message }
   }
+
+  const { name, mesocycle_id } = parsed.data
 
   const canonicalName = generateCanonicalName(name)
   if (!canonicalName) {
@@ -34,7 +43,7 @@ export async function createResistanceTemplate(
   const meso = db
     .select()
     .from(mesocycles)
-    .where(eq(mesocycles.id, input.mesocycle_id))
+    .where(eq(mesocycles.id, mesocycle_id))
     .get()
 
   if (!meso) {
@@ -51,7 +60,7 @@ export async function createResistanceTemplate(
     .from(workout_templates)
     .where(
       and(
-        eq(workout_templates.mesocycle_id, input.mesocycle_id),
+        eq(workout_templates.mesocycle_id, mesocycle_id),
         eq(workout_templates.canonical_name, canonicalName)
       )
     )
@@ -64,18 +73,25 @@ export async function createResistanceTemplate(
     }
   }
 
-  const created = db
-    .insert(workout_templates)
-    .values({
-      mesocycle_id: input.mesocycle_id,
-      name,
-      canonical_name: canonicalName,
-      modality: 'resistance',
-      created_at: new Date(),
-    })
-    .returning()
-    .get()
+  try {
+    const created = db
+      .insert(workout_templates)
+      .values({
+        mesocycle_id,
+        name,
+        canonical_name: canonicalName,
+        modality: 'resistance',
+        created_at: new Date(),
+      })
+      .returning()
+      .get()
 
-  revalidatePath('/templates')
-  return { success: true, data: created }
+    revalidatePath('/mesocycles')
+    return { success: true, data: created }
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message.includes('UNIQUE constraint failed')) {
+      return { success: false, error: `A template with this name already exists in this mesocycle` }
+    }
+    return { success: false, error: 'Failed to create template' }
+  }
 }
