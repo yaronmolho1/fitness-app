@@ -37,7 +37,7 @@
 | T027 | Add exercise slot SA + picker | 7 | [x] | feat/task-027-exercise-slot-sa | 2026-03-13T21:00 | 2026-03-14 | merged via PR #14 |
 | T028 | Slot editing + remove | 7 | [~] | feat/task-028-slot-editing-remove | 2026-03-14T20:30 | | |
 | T029 | Drag-reorder slots (SA + UI) | 7 | [ ] | | | | |
-| T030 | Main/complementary role toggle | 7 | [ ] | | | | |
+| T030 | Main/complementary role toggle | 7 | [~] | feat/task-030-role-toggle | 2026-03-15T00:30 | | |
 | T031 | Assign/remove/replace template SA | 7 | [x] | feat/task-031-assign-template-sa | 2026-03-14T17:00 | 2026-03-14 | merged via PR #98 |
 | T032 | 7-day schedule grid UI | 7 | [x] | feat/task-032-schedule-grid-ui | 2026-03-14 | 2026-03-14 | merged via PR #100 |
 | T033 | Normal/deload tabs | 7 | [~] | feat/task-033-normal-deload-tabs | 2026-03-15T00:15 | | |
