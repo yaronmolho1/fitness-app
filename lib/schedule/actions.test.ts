@@ -247,6 +247,42 @@ describe('assignTemplate', () => {
     })
   })
 
+  describe('deload week_type', () => {
+    it('assigns with week_type=deload', async () => {
+      const meso = seedMesocycle()
+      const tmpl = seedTemplate(meso.id)
+      const result = await assignTemplate({
+        mesocycle_id: meso.id,
+        day_of_week: 1,
+        template_id: tmpl.id,
+        week_type: 'deload',
+      })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.week_type).toBe('deload')
+      }
+    })
+
+    it('keeps normal and deload assignments independent', async () => {
+      const meso = seedMesocycle()
+      const tmpl = seedTemplate(meso.id)
+      await assignTemplate({
+        mesocycle_id: meso.id,
+        day_of_week: 0,
+        template_id: tmpl.id,
+        week_type: 'normal',
+      })
+      await assignTemplate({
+        mesocycle_id: meso.id,
+        day_of_week: 0,
+        template_id: tmpl.id,
+        week_type: 'deload',
+      })
+      const rows = testDb.select().from(schema.weekly_schedule).all()
+      expect(rows).toHaveLength(2)
+    })
+  })
+
   describe('replace existing assignment', () => {
     it('replaces existing assignment on same day (no duplicate)', async () => {
       const meso = seedMesocycle()
@@ -347,6 +383,20 @@ describe('removeAssignment', () => {
       const rows = testDb.select().from(schema.weekly_schedule).all()
       expect(rows).toHaveLength(1)
       expect(rows[0].day_of_week).toBe(1)
+    })
+
+    it('removes deload assignment without affecting normal', async () => {
+      const meso = seedMesocycle()
+      const tmpl = seedTemplate(meso.id)
+      await assignTemplate({ mesocycle_id: meso.id, day_of_week: 0, template_id: tmpl.id, week_type: 'normal' })
+      await assignTemplate({ mesocycle_id: meso.id, day_of_week: 0, template_id: tmpl.id, week_type: 'deload' })
+
+      const result = await removeAssignment({ mesocycle_id: meso.id, day_of_week: 0, week_type: 'deload' })
+      expect(result.success).toBe(true)
+
+      const rows = testDb.select().from(schema.weekly_schedule).all()
+      expect(rows).toHaveLength(1)
+      expect(rows[0].week_type).toBe('normal')
     })
 
     it('succeeds even if day has no assignment (idempotent)', async () => {
