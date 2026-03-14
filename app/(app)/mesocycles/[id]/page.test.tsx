@@ -6,6 +6,11 @@ vi.mock('@/lib/mesocycles/queries', () => ({
   getMesocycleById: vi.fn(),
 }))
 
+vi.mock('@/lib/schedule/queries', () => ({
+  getScheduleForMesocycle: vi.fn().mockResolvedValue([]),
+  getTemplatesForMesocycle: vi.fn().mockResolvedValue([]),
+}))
+
 vi.mock('next/navigation', () => ({
   usePathname: vi.fn(() => '/mesocycles/1'),
   useRouter: vi.fn(() => ({ push: vi.fn(), refresh: vi.fn() })),

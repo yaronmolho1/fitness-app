@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getMesocycleById } from '@/lib/mesocycles/queries'
+import { getScheduleForMesocycle, getTemplatesForMesocycle } from '@/lib/schedule/queries'
+import { ScheduleGrid } from '@/components/schedule-grid'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,6 +21,11 @@ export default async function MesocycleDetailPage({
     notFound()
   }
 
+  const [schedule, templates] = await Promise.all([
+    getScheduleForMesocycle(numericId),
+    getTemplatesForMesocycle(numericId),
+  ])
+
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-6">
       <Link href="/mesocycles" className="text-sm text-muted-foreground hover:underline">
@@ -34,6 +41,13 @@ export default async function MesocycleDetailPage({
         <p>{meso.work_weeks} weeks</p>
         {meso.has_deload && <p>+ deload</p>}
       </div>
+
+      <ScheduleGrid
+        mesocycleId={numericId}
+        templates={templates}
+        schedule={schedule}
+        isCompleted={meso.status === 'completed'}
+      />
     </div>
   )
 }
