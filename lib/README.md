@@ -11,3 +11,4 @@ Server-side business logic, database, and auth.
 - `exercises/` — Exercise CRUD actions and queries ([README](./exercises/README.md))
 - `mesocycles/` — Mesocycle lifecycle and date utils ([README](./mesocycles/README.md))
 - `templates/` — Workout template actions and canonical naming ([README](./templates/README.md))
+- `schedule/` — Weekly schedule assignment actions (assign/remove template per day slot) ([README](./schedule/README.md))

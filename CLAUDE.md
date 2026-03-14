@@ -82,5 +82,5 @@ docker compose up -d   # containerized run
 
 ## Current Status
 
-Waves 0–6 partially complete (25/77 tasks done). Foundation, auth, exercise library (CRUD + search/filter), mesocycle lifecycle (create + status transitions), resistance templates, and exercise slots implemented. T019 (mesocycle list + detail UI) in progress. Next up: T020 (create mesocycle form), T022 (status transition UI), T024–T026 (template UI).
+Waves 0–7 partially complete (25/77 tasks done). Foundation, auth, exercise library, mesocycle lifecycle, resistance templates, and exercise slots implemented. T031 (assign/remove/replace template SA) in progress. Next up: T019–T020 (mesocycle UI), T024–T026 (template UI), T032–T034 (schedule grid UI).
 See `.plan/progress.md` for task-level status (77 tasks: 4 infra + 73 feature, 15 waves).

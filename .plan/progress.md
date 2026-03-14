@@ -38,7 +38,7 @@
 | T028 | Slot editing + remove | 7 | [ ] | | | | |
 | T029 | Drag-reorder slots (SA + UI) | 7 | [ ] | | | | |
 | T030 | Main/complementary role toggle | 7 | [ ] | | | | |
-| T031 | Assign/remove/replace template SA | 7 | [ ] | | | | |
+| T031 | Assign/remove/replace template SA | 7 | [~] | feat/task-031-assign-template-sa | 2026-03-14T17:00 | | |
 | T032 | 7-day schedule grid UI | 7 | [ ] | | | | |
 | T033 | Normal/deload tabs | 7 | [ ] | | | | |
 | T034 | Rest day display in grid | 7 | [ ] | | | | |
