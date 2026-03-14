@@ -35,12 +35,12 @@
 | T025 | Running template SA + form | 6 | [x] | feat/task-025-running-templates | 2026-03-14T23:00 | 2026-03-14 | merged via PR #106 |
 | T026 | MMA/BJJ template SA + form | 6 | [x] | feat/task-026-mma-bjj-templates | 2026-03-14T23:30 | 2026-03-14 | merged via PR #107 |
 | T027 | Add exercise slot SA + picker | 7 | [x] | feat/task-027-exercise-slot-sa | 2026-03-13T21:00 | 2026-03-14 | merged via PR #14 |
-| T028 | Slot editing + remove | 7 | [ ] | | | | |
+| T028 | Slot editing + remove | 7 | [~] | feat/task-028-slot-editing-remove | 2026-03-14T20:30 | | |
 | T029 | Drag-reorder slots (SA + UI) | 7 | [ ] | | | | |
 | T030 | Main/complementary role toggle | 7 | [ ] | | | | |
 | T031 | Assign/remove/replace template SA | 7 | [x] | feat/task-031-assign-template-sa | 2026-03-14T17:00 | 2026-03-14 | merged via PR #98 |
 | T032 | 7-day schedule grid UI | 7 | [x] | feat/task-032-schedule-grid-ui | 2026-03-14 | 2026-03-14 | merged via PR #100 |
-| T033 | Normal/deload tabs | 7 | [ ] | | | | |
+| T033 | Normal/deload tabs | 7 | [~] | feat/task-033-normal-deload-tabs | 2026-03-15T00:15 | | |
 | T034 | Rest day display in grid | 7 | [ ] | | | | |
 | T035 | Cascade sibling query (3 scopes) | 8 | [ ] | | | | |
 | T036 | Cascade atomic execution SA | 8 | [ ] | | | | |
@@ -52,7 +52,7 @@
 | T042 | Canonical name preservation | 8 | [ ] | | | | |
 | T043 | Routine item CRUD SA + scope validation | 8 | [ ] | | | | |
 | T044 | Routine item list + edit + delete | 8 | [ ] | | | | |
-| T045 | GET /api/today (lookup chain + deload) | 9 | [~] | feat/task-045-api-today | 2026-03-14T22:00 | | PR #104 awaiting review |
+| T045 | GET /api/today (lookup chain + deload) | 9 | [x] | feat/task-045-api-today | 2026-03-14T22:00 | 2026-03-14 | merged via PR #104 |
 | T046 | Today's resistance workout display | 9 | [ ] | | | | |
 | T047 | Today's running + MMA/BJJ display | 9 | [ ] | | | | |
 | T048 | Logging form + pre-fill from template | 10 | [ ] | | | | |
