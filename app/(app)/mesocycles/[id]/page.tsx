@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getMesocycleById } from '@/lib/mesocycles/queries'
 import { getScheduleForMesocycle, getTemplatesForMesocycle } from '@/lib/schedule/queries'
-import { ScheduleGrid } from '@/components/schedule-grid'
+import { ScheduleTabs } from '@/components/schedule-tabs'
 import { StatusBadge } from '@/components/status-badge'
 import { StatusTransitionButton } from '@/components/status-transition-button'
 import { TemplateSection } from '@/components/template-section'
@@ -24,8 +24,9 @@ export default async function MesocycleDetailPage({
     notFound()
   }
 
-  const [schedule, templates] = await Promise.all([
-    getScheduleForMesocycle(numericId),
+  const [normalSchedule, deloadSchedule, templates] = await Promise.all([
+    getScheduleForMesocycle(numericId, 'normal'),
+    meso.has_deload ? getScheduleForMesocycle(numericId, 'deload') : Promise.resolve([]),
     getTemplatesForMesocycle(numericId),
   ])
 
@@ -57,10 +58,12 @@ export default async function MesocycleDetailPage({
         isCompleted={meso.status === 'completed'}
       />
 
-      <ScheduleGrid
+      <ScheduleTabs
         mesocycleId={numericId}
         templates={templates}
-        schedule={schedule}
+        normalSchedule={normalSchedule}
+        deloadSchedule={deloadSchedule}
+        hasDeload={meso.has_deload}
         isCompleted={meso.status === 'completed'}
       />
     </div>

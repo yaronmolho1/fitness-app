@@ -12,9 +12,10 @@ type Props = {
   templates: TemplateOption[]
   schedule: ScheduleEntry[]
   isCompleted: boolean
+  variant: 'normal' | 'deload'
 }
 
-export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule, isCompleted }: Props) {
+export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule, isCompleted, variant }: Props) {
   const [schedule, setSchedule] = useState(initialSchedule)
   const [pickerDay, setPickerDay] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -39,7 +40,7 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
         mesocycle_id: mesocycleId,
         day_of_week: day,
         template_id: templateId,
-        week_type: 'normal',
+        week_type: variant,
       })
 
       if (result.success) {
@@ -68,7 +69,7 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
       const result = await removeAssignment({
         mesocycle_id: mesocycleId,
         day_of_week: day,
-        week_type: 'normal',
+        week_type: variant,
       })
 
       if (result.success) {
@@ -81,8 +82,6 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold tracking-tight">Weekly Schedule</h2>
-
       {error && (
         <p className="text-sm text-destructive">{error}</p>
       )}

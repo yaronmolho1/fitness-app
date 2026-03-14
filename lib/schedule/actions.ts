@@ -58,6 +58,10 @@ export async function assignTemplate(input: {
     return { success: false, error: 'Cannot modify schedule of a completed mesocycle' }
   }
 
+  if (week_type === 'deload' && !meso.has_deload) {
+    return { success: false, error: 'Mesocycle does not have a deload week' }
+  }
+
   // Verify template exists and belongs to this mesocycle
   const tmpl = db
     .select()
@@ -120,6 +124,10 @@ export async function removeAssignment(input: {
 
   if (meso.status === 'completed') {
     return { success: false, error: 'Cannot modify schedule of a completed mesocycle' }
+  }
+
+  if (week_type === 'deload' && !meso.has_deload) {
+    return { success: false, error: 'Mesocycle does not have a deload week' }
   }
 
   // Delete the row if it exists (idempotent)
