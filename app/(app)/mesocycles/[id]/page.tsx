@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation'
 import { getMesocycleById } from '@/lib/mesocycles/queries'
 import { getScheduleForMesocycle, getTemplatesForMesocycle } from '@/lib/schedule/queries'
 import { ScheduleGrid } from '@/components/schedule-grid'
+import { StatusBadge } from '@/components/status-badge'
+import { StatusTransitionButton } from '@/components/status-transition-button'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,14 +34,20 @@ export default async function MesocycleDetailPage({
         Mesocycles
       </Link>
 
-      <h1 className="text-2xl font-bold">{meso.name}</h1>
-
-      <div className="space-y-2 text-sm">
-        <p>{meso.status}</p>
-        <p>{meso.start_date}</p>
-        <p>{meso.end_date}</p>
-        <p>{meso.work_weeks} weeks</p>
-        {meso.has_deload && <p>+ deload</p>}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold">{meso.name}</h1>
+            <StatusBadge status={meso.status} />
+          </div>
+          <div className="mt-2 flex flex-wrap gap-4 text-sm text-muted-foreground">
+            <span>{meso.start_date}</span>
+            <span>{meso.end_date}</span>
+            <span>{meso.work_weeks} weeks</span>
+            {meso.has_deload && <span>+ deload</span>}
+          </div>
+        </div>
+        <StatusTransitionButton mesocycleId={meso.id} status={meso.status} />
       </div>
 
       <ScheduleGrid

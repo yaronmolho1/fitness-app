@@ -6,6 +6,17 @@ vi.mock('@/lib/mesocycles/queries', () => ({
   getMesocycles: vi.fn(() => []),
 }))
 
+vi.mock('@/lib/mesocycles/actions', () => ({
+  activateMesocycle: vi.fn(),
+  completeMesocycle: vi.fn(),
+}))
+
+vi.mock('@/components/status-transition-button', () => ({
+  StatusTransitionButton: ({ status }: { status: string }) => (
+    <div data-testid="status-transition">{status}</div>
+  ),
+}))
+
 vi.mock('next/navigation', () => ({
   usePathname: vi.fn(() => '/mesocycles'),
   useRouter: vi.fn(() => ({ push: vi.fn(), refresh: vi.fn() })),
@@ -80,9 +91,9 @@ describe('MesocyclesPage', () => {
     expect(screen.getByText('Hypertrophy Block')).toBeInTheDocument()
     expect(screen.getByText('Strength Phase')).toBeInTheDocument()
 
-    // Statuses
-    expect(screen.getByText('planned')).toBeInTheDocument()
-    expect(screen.getByText('active')).toBeInTheDocument()
+    // Statuses (rendered via StatusBadge)
+    expect(screen.getByText('Planned')).toBeInTheDocument()
+    expect(screen.getByText('Active')).toBeInTheDocument()
 
     // Dates
     expect(screen.getByText('2026-03-01')).toBeInTheDocument()
