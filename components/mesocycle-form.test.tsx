@@ -133,6 +133,18 @@ describe('MesocycleForm', () => {
     expect(createMesocycle).not.toHaveBeenCalled()
   })
 
+  it('shows validation error when work_weeks is a decimal', async () => {
+    render(<MesocycleForm />)
+
+    setInputValue(screen.getByLabelText(/name/i), 'Test Meso')
+    setInputValue(screen.getByLabelText(/start date/i), '2026-03-01')
+    setInputValue(screen.getByLabelText(/work weeks/i), '4.5')
+    fireEvent.submit(screen.getByRole('button', { name: /create/i }).closest('form')!)
+
+    expect(await screen.findByText(/work weeks must be a whole number/i)).toBeInTheDocument()
+    expect(createMesocycle).not.toHaveBeenCalled()
+  })
+
   it('shows validation error when work_weeks is 0', async () => {
     const user = userEvent.setup()
     render(<MesocycleForm />)

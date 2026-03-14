@@ -28,7 +28,7 @@ export function MesocycleForm() {
   const [submitting, setSubmitting] = useState(false)
 
   // Live end date preview
-  const workWeeksNum = parseInt(workWeeks, 10)
+  const workWeeksNum = Number(workWeeks)
   const canComputeEndDate =
     DATE_REGEX.test(startDate) && Number.isInteger(workWeeksNum) && workWeeksNum >= 1
   const endDate = canComputeEndDate
@@ -46,9 +46,11 @@ export function MesocycleForm() {
     if (!startDate || !DATE_REGEX.test(startDate)) {
       clientErrors.start_date = 'Start date is required'
     }
-    const ww = parseInt(workWeeks, 10)
-    if (!workWeeks || !Number.isInteger(ww) || ww < 1) {
-      clientErrors.work_weeks = 'Work weeks must be at least 1'
+    const wwRaw = Number(workWeeks)
+    if (!workWeeks || !Number.isInteger(wwRaw) || wwRaw < 1) {
+      clientErrors.work_weeks = Number.isFinite(wwRaw) && !Number.isInteger(wwRaw)
+        ? 'Work weeks must be a whole number'
+        : 'Work weeks must be at least 1'
     }
 
     if (Object.keys(clientErrors).length > 0) {
