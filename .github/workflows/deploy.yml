@@ -8,10 +8,18 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Only deploy if CI passed
+  check-ci:
+    name: Verify CI Passed
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    steps:
+      - run: echo "CI passed, proceeding with deployment"
+
   deploy:
     name: Deploy to Production
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    needs: check-ci
     steps:
       - name: Deploy to production server
         uses: appleboy/ssh-action@v1
@@ -45,3 +53,16 @@ jobs:
             docker image prune -f
 
             echo "✅ Deployment complete!"
+
+      - name: Notify success
+        if: success()
+        run: |
+          echo "✅ Production deployment successful!"
+          echo "Commit: ${{ github.sha }}"
+          echo "Branch: ${{ github.ref_name }}"
+
+      - name: Notify failure
+        if: failure()
+        run: |
+          echo "❌ Production deployment failed!"
+          echo "Check server logs for details"
