@@ -21,7 +21,7 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
-import { addExerciseSlot, updateExerciseSlot, removeExerciseSlot } from './slot-actions'
+import { addExerciseSlot, updateExerciseSlot, removeExerciseSlot, toggleSlotRole } from './slot-actions'
 
 function seedMesocycle() {
   return testDb
@@ -546,6 +546,98 @@ describe('updateExerciseSlot', () => {
         expect(result.data.rpe).toBeNull()
       }
     })
+  })
+})
+
+describe('addExerciseSlot — is_main default', () => {
+  it('defaults is_main to false (complementary)', async () => {
+    const meso = seedMesocycle()
+    const tmpl = seedTemplate(meso.id)
+    const ex = seedExercise()
+    const result = await addExerciseSlot({
+      template_id: tmpl.id,
+      exercise_id: ex.id,
+      sets: 3,
+      reps: 10,
+    })
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.is_main).toBe(false)
+  })
+})
+
+describe('toggleSlotRole', () => {
+  it('toggles complementary to main', async () => {
+    const meso = seedMesocycle()
+    const tmpl = seedTemplate(meso.id)
+    const ex = seedExercise()
+    const added = await addExerciseSlot({ template_id: tmpl.id, exercise_id: ex.id, sets: 3, reps: 10 })
+    if (!added.success) throw new Error('setup failed')
+
+    const result = await toggleSlotRole(added.data.id)
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.is_main).toBe(true)
+  })
+
+  it('toggles main back to complementary', async () => {
+    const meso = seedMesocycle()
+    const tmpl = seedTemplate(meso.id)
+    const ex = seedExercise()
+    const added = await addExerciseSlot({ template_id: tmpl.id, exercise_id: ex.id, sets: 3, reps: 10 })
+    if (!added.success) throw new Error('setup failed')
+
+    await toggleSlotRole(added.data.id)
+    const result = await toggleSlotRole(added.data.id)
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.is_main).toBe(false)
+  })
+
+  it('returns error for non-existent slot', async () => {
+    const result = await toggleSlotRole(999)
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toMatch(/slot/i)
+  })
+
+  it('rejects invalid ID', async () => {
+    const result = await toggleSlotRole(0)
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects negative ID', async () => {
+    const result = await toggleSlotRole(-1)
+    expect(result.success).toBe(false)
+  })
+
+  it('allows multiple slots to be main in the same template', async () => {
+    const meso = seedMesocycle()
+    const tmpl = seedTemplate(meso.id)
+    const ex1 = seedExercise('Bench Press')
+    const ex2 = seedExercise('Squat')
+
+    const s1 = await addExerciseSlot({ template_id: tmpl.id, exercise_id: ex1.id, sets: 3, reps: 10 })
+    const s2 = await addExerciseSlot({ template_id: tmpl.id, exercise_id: ex2.id, sets: 3, reps: 10 })
+    if (!s1.success || !s2.success) throw new Error('setup failed')
+
+    await toggleSlotRole(s1.data.id)
+    await toggleSlotRole(s2.data.id)
+
+    // Both should be main — drizzle returns boolean in mode:'boolean'
+    const rows = testDb.select().from(schema.exercise_slots).all()
+    expect(rows.every((r: { is_main: boolean | number }) => Boolean(r.is_main))).toBe(true)
+  })
+
+  it('allows all slots to be complementary (zero main)', async () => {
+    const meso = seedMesocycle()
+    const tmpl = seedTemplate(meso.id)
+    const ex1 = seedExercise('Bench Press')
+    const ex2 = seedExercise('Squat')
+
+    const s1 = await addExerciseSlot({ template_id: tmpl.id, exercise_id: ex1.id, sets: 3, reps: 10 })
+    const s2 = await addExerciseSlot({ template_id: tmpl.id, exercise_id: ex2.id, sets: 3, reps: 10 })
+    if (!s1.success || !s2.success) throw new Error('setup failed')
+
+    // Neither toggled — both should be complementary (is_main=false)
+    const rows = testDb.select().from(schema.exercise_slots).all()
+    expect(rows.every((r: { is_main: boolean | number }) => !r.is_main)).toBe(true)
   })
 })
 

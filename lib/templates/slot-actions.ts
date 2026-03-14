@@ -172,6 +172,32 @@ export async function updateExerciseSlot(
   return { success: true, data: updated }
 }
 
+export async function toggleSlotRole(slotId: number): Promise<SlotResult> {
+  if (!Number.isInteger(slotId) || slotId < 1) {
+    return { success: false, error: 'Invalid slot ID' }
+  }
+
+  const existing = db
+    .select()
+    .from(exercise_slots)
+    .where(eq(exercise_slots.id, slotId))
+    .get()
+
+  if (!existing) {
+    return { success: false, error: 'Slot not found' }
+  }
+
+  const updated = db
+    .update(exercise_slots)
+    .set({ is_main: !existing.is_main })
+    .where(eq(exercise_slots.id, slotId))
+    .returning()
+    .get()
+
+  revalidatePath('/mesocycles')
+  return { success: true, data: updated }
+}
+
 export async function removeExerciseSlot(slotId: number): Promise<RemoveResult> {
   if (!Number.isInteger(slotId) || slotId < 1) {
     return { success: false, error: 'Invalid slot ID' }
