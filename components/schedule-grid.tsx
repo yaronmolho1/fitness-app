@@ -117,7 +117,7 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
                         className="h-7 px-2 text-xs"
                         onClick={() => handleAssignClick(dayIndex)}
                         disabled={isPending}
-                        aria-label="Assign template"
+                        aria-label="Replace template"
                       >
                         Replace
                       </Button>
@@ -153,12 +153,10 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
               )}
 
               {showPicker && (
-                <div className="mt-2 rounded-md border bg-background p-2 shadow-md" role="listbox">
+                <div className="mt-2 rounded-md border bg-background p-2 shadow-md">
                   {templates.map((tmpl) => (
                     <div
                       key={tmpl.id}
-                      role="option"
-                      aria-selected={false}
                       className="cursor-pointer rounded px-2 py-1.5 text-sm hover:bg-accent"
                       onClick={() => handleTemplatePick(tmpl.id)}
                     >

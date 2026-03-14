@@ -112,7 +112,7 @@ describe('ScheduleGrid', () => {
     await user.click(assignBtn)
 
     // Select a template from the picker
-    const templateOption = screen.getByRole('option', { name: /pull a/i })
+    const templateOption = screen.getByText(/pull a/i)
     await user.click(templateOption)
 
     await waitFor(() => {
@@ -201,12 +201,12 @@ describe('ScheduleGrid', () => {
     const assignBtn = within(mondayCell).getByRole('button', { name: /assign/i })
     await user.click(assignBtn)
 
-    // All 3 templates should be listed
-    const options = screen.getAllByRole('option')
-    expect(options).toHaveLength(3)
-    expect(screen.getByRole('option', { name: /push a/i })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: /pull a/i })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: /legs a/i })).toBeInTheDocument()
+    // All 3 templates should be listed in the picker
+    const picker = mondayCell.querySelector('.mt-2.rounded-md')!
+    const pickerEl = within(picker as HTMLElement)
+    expect(pickerEl.getByText('Push A')).toBeInTheDocument()
+    expect(pickerEl.getByText('Pull A')).toBeInTheDocument()
+    expect(pickerEl.getByText('Legs A')).toBeInTheDocument()
   })
 
   it('displays error when assignTemplate fails', async () => {
@@ -229,7 +229,7 @@ describe('ScheduleGrid', () => {
     const assignBtn = within(mondayCell).getByRole('button', { name: /assign/i })
     await user.click(assignBtn)
 
-    const templateOption = screen.getByRole('option', { name: /push a/i })
+    const templateOption = screen.getByText(/push a/i)
     await user.click(templateOption)
 
     await waitFor(() => {

@@ -13,7 +13,7 @@ export async function getScheduleForMesocycle(
   mesocycleId: number,
   weekType: 'normal' | 'deload' = 'normal'
 ): Promise<ScheduleEntry[]> {
-  const rows = db
+  const rows = await db
     .select({
       day_of_week: weekly_schedule.day_of_week,
       template_id: weekly_schedule.template_id,
@@ -43,7 +43,7 @@ export type TemplateOption = {
 export async function getTemplatesForMesocycle(
   mesocycleId: number
 ): Promise<TemplateOption[]> {
-  return db
+  return await db
     .select({
       id: workout_templates.id,
       name: workout_templates.name,
