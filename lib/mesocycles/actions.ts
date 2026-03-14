@@ -60,6 +60,7 @@ export async function createMesocycle(formData: FormData): Promise<CreateResult>
     .returning({ id: mesocycles.id })
     .get()
 
+  revalidatePath('/mesocycles')
   return { success: true, id: result.id }
 }
 
