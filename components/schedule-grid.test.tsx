@@ -14,9 +14,9 @@ import { assignTemplate, removeAssignment } from '@/lib/schedule/actions'
 const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
 const mockTemplates = [
-  { id: 1, name: 'Push A', modality: 'resistance' as const },
-  { id: 2, name: 'Pull A', modality: 'resistance' as const },
-  { id: 3, name: 'Legs A', modality: 'resistance' as const },
+  { id: 1, name: 'Push A', canonical_name: 'push-a', modality: 'resistance' as const },
+  { id: 2, name: 'Pull A', canonical_name: 'pull-a', modality: 'resistance' as const },
+  { id: 3, name: 'Legs A', canonical_name: 'legs-a', modality: 'resistance' as const },
 ]
 
 function buildSchedule(

@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { eq, and } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '@/lib/db/index'
-import { workout_templates, mesocycles } from '@/lib/db/schema'
+import { workout_templates, mesocycles, exercise_slots, weekly_schedule } from '@/lib/db/schema'
 import { generateCanonicalName } from './utils'
 
 const createResistanceTemplateSchema = z.object({
@@ -366,4 +366,182 @@ export async function createRunningTemplate(
     }
     return { success: false, error: 'Failed to create template' }
   }
+}
+
+// ============================================================================
+// Update template
+// ============================================================================
+
+const updateTemplateSchema = z.object({
+  id: z.number().int().positive(),
+  name: z
+    .string()
+    .transform((s) => s.trim())
+    .pipe(z.string().min(1, 'Name is required'))
+    .optional(),
+  canonical_name: z
+    .string()
+    .transform((s) => s.trim())
+    .pipe(z.string().min(1, 'Canonical name is required'))
+    .optional(),
+})
+
+type UpdateTemplateInput = {
+  id: number
+  name?: string
+  canonical_name?: string
+}
+
+type UpdateTemplateResult =
+  | { success: true; data: TemplateRow }
+  | { success: false; error: string }
+
+export async function updateTemplate(
+  input: UpdateTemplateInput
+): Promise<UpdateTemplateResult> {
+  const parsed = updateTemplateSchema.safeParse(input)
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message }
+  }
+
+  const { id, name, canonical_name } = parsed.data
+
+  if (!name && !canonical_name) {
+    return { success: false, error: 'Nothing to update' }
+  }
+
+  const template = db
+    .select()
+    .from(workout_templates)
+    .where(eq(workout_templates.id, id))
+    .get()
+
+  if (!template) {
+    return { success: false, error: 'Template not found' }
+  }
+
+  const meso = db
+    .select()
+    .from(mesocycles)
+    .where(eq(mesocycles.id, template.mesocycle_id))
+    .get()
+
+  if (meso?.status === 'completed') {
+    return { success: false, error: 'Cannot edit template on a completed mesocycle' }
+  }
+
+  // Validate and slug canonical_name if provided
+  const newCanonical = canonical_name ?? template.canonical_name
+  const slugged = generateCanonicalName(newCanonical)
+  if (!slugged) {
+    return { success: false, error: 'Canonical name produces an empty slug' }
+  }
+
+  // Check uniqueness within mesocycle (excluding self)
+  if (canonical_name && slugged !== template.canonical_name) {
+    const dup = db
+      .select()
+      .from(workout_templates)
+      .where(
+        and(
+          eq(workout_templates.mesocycle_id, template.mesocycle_id),
+          eq(workout_templates.canonical_name, slugged)
+        )
+      )
+      .get()
+
+    if (dup && dup.id !== id) {
+      return {
+        success: false,
+        error: `A template with canonical name "${slugged}" already exists in this mesocycle`,
+      }
+    }
+  }
+
+  try {
+    const updated = db
+      .update(workout_templates)
+      .set({
+        ...(name ? { name } : {}),
+        ...(canonical_name ? { canonical_name: slugged } : {}),
+      })
+      .where(eq(workout_templates.id, id))
+      .returning()
+      .get()
+
+    revalidatePath('/mesocycles')
+    return { success: true, data: updated }
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message.includes('UNIQUE constraint failed')) {
+      return { success: false, error: 'A template with this canonical name already exists' }
+    }
+    return { success: false, error: 'Failed to update template' }
+  }
+}
+
+// ============================================================================
+// Delete template
+// ============================================================================
+
+type DeleteTemplateResult =
+  | { success: true }
+  | { success: false; error: string }
+
+export async function deleteTemplate(id: number): Promise<DeleteTemplateResult> {
+  if (!id || !Number.isInteger(id) || id < 1) {
+    return { success: false, error: 'Invalid template ID' }
+  }
+
+  const template = db
+    .select()
+    .from(workout_templates)
+    .where(eq(workout_templates.id, id))
+    .get()
+
+  if (!template) {
+    return { success: false, error: 'Template not found' }
+  }
+
+  const meso = db
+    .select()
+    .from(mesocycles)
+    .where(eq(mesocycles.id, template.mesocycle_id))
+    .get()
+
+  if (meso?.status === 'completed') {
+    return { success: false, error: 'Cannot delete template on a completed mesocycle' }
+  }
+
+  // Block if has exercise slots
+  const slots = db
+    .select({ id: exercise_slots.id })
+    .from(exercise_slots)
+    .where(eq(exercise_slots.template_id, id))
+    .all()
+
+  if (slots.length > 0) {
+    return {
+      success: false,
+      error: `Cannot delete: template has ${slots.length} exercise slot${slots.length === 1 ? '' : 's'}. Remove slots first.`,
+    }
+  }
+
+  // Block if has schedule assignments
+  const scheduleRefs = db
+    .select({ id: weekly_schedule.id })
+    .from(weekly_schedule)
+    .where(eq(weekly_schedule.template_id, id))
+    .all()
+
+  if (scheduleRefs.length > 0) {
+    return {
+      success: false,
+      error: `Cannot delete: template is assigned to ${scheduleRefs.length} schedule slot${scheduleRefs.length === 1 ? '' : 's'}. Remove assignments first.`,
+    }
+  }
+
+  db.delete(workout_templates).where(eq(workout_templates.id, id)).run()
+
+  revalidatePath('/mesocycles')
+  return { success: true }
 }
