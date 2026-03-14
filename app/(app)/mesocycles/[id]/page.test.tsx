@@ -6,6 +6,17 @@ vi.mock('@/lib/mesocycles/queries', () => ({
   getMesocycleById: vi.fn(),
 }))
 
+vi.mock('@/lib/mesocycles/actions', () => ({
+  activateMesocycle: vi.fn(),
+  completeMesocycle: vi.fn(),
+}))
+
+vi.mock('@/components/status-transition-button', () => ({
+  StatusTransitionButton: ({ status }: { status: string }) => (
+    <div data-testid="status-transition">{status}</div>
+  ),
+}))
+
 vi.mock('@/lib/schedule/queries', () => ({
   getScheduleForMesocycle: vi.fn().mockResolvedValue([]),
   getTemplatesForMesocycle: vi.fn().mockResolvedValue([]),
@@ -44,7 +55,7 @@ describe('MesocycleDetailPage', () => {
     render(page)
 
     expect(screen.getByRole('heading', { name: /hypertrophy block/i })).toBeInTheDocument()
-    expect(screen.getByText('planned')).toBeInTheDocument()
+    expect(screen.getByText('Planned')).toBeInTheDocument()
     expect(screen.getByText('2026-03-01')).toBeInTheDocument()
     expect(screen.getByText('2026-03-28')).toBeInTheDocument()
     expect(screen.getByText('4 weeks')).toBeInTheDocument()
