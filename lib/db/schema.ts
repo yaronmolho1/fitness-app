@@ -60,8 +60,8 @@ export const exercise_slots = sqliteTable('exercise_slots', {
   exercise_id: integer('exercise_id')
     .notNull()
     .references(() => exercises.id), // NO cascade
-  sets: integer('sets'),
-  reps: text('reps'),
+  sets: integer('sets').notNull(),
+  reps: text('reps').notNull(),
   weight: real('weight'),
   rpe: real('rpe'),
   rest_seconds: integer('rest_seconds'),

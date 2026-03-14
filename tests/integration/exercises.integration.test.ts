@@ -345,6 +345,8 @@ async function insertExerciseWithSlot(exerciseId: number) {
     .values({
       template_id: template.id,
       exercise_id: exerciseId,
+      sets: 3,
+      reps: '10',
       order: 1,
       created_at: new Date(),
     })
@@ -445,7 +447,7 @@ describe('exercise deletion integration', () => {
       .insert(schema.workout_templates)
       .values({ mesocycle_id: meso1.id, name: 'Push A', canonical_name: 'push-a', modality: 'resistance', created_at: new Date() })
       .returning()
-    await db.insert(schema.exercise_slots).values({ template_id: template1.id, exercise_id: exercise.id, order: 1, created_at: new Date() })
+    await db.insert(schema.exercise_slots).values({ template_id: template1.id, exercise_id: exercise.id, sets: 3, reps: '10', order: 1, created_at: new Date() })
 
     // Second mesocycle + template + slot referencing same exercise
     const [meso2] = await db
@@ -456,7 +458,7 @@ describe('exercise deletion integration', () => {
       .insert(schema.workout_templates)
       .values({ mesocycle_id: meso2.id, name: 'Push B', canonical_name: 'push-b', modality: 'resistance', created_at: new Date() })
       .returning()
-    await db.insert(schema.exercise_slots).values({ template_id: template2.id, exercise_id: exercise.id, order: 1, created_at: new Date() })
+    await db.insert(schema.exercise_slots).values({ template_id: template2.id, exercise_id: exercise.id, sets: 3, reps: '10', order: 1, created_at: new Date() })
 
     const result = await deleteExerciseWithDb(exercise.id)
     expect(result).toEqual({ success: false, error: 'Exercise is in use and cannot be deleted' })
@@ -478,7 +480,7 @@ describe('exercise deletion integration', () => {
       .insert(schema.workout_templates)
       .values({ mesocycle_id: meso.id, name: 'Leg Day', canonical_name: 'leg-day', modality: 'resistance', created_at: new Date() })
       .returning()
-    await db.insert(schema.exercise_slots).values({ template_id: template.id, exercise_id: exercise.id, order: 1, created_at: new Date() })
+    await db.insert(schema.exercise_slots).values({ template_id: template.id, exercise_id: exercise.id, sets: 3, reps: '10', order: 1, created_at: new Date() })
 
     const result = await deleteExerciseWithDb(exercise.id)
     expect(result).toEqual({ success: false, error: 'Exercise is in use and cannot be deleted' })
