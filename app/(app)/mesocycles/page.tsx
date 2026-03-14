@@ -10,6 +10,12 @@ export default async function MesocyclesPage() {
     <div className="mx-auto max-w-4xl space-y-8 p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Mesocycles</h1>
+        <Link
+          href="/mesocycles/new"
+          className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+        >
+          New Mesocycle
+        </Link>
       </div>
 
       {allMesocycles.length === 0 ? (
