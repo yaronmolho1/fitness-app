@@ -1,5 +1,5 @@
 # Auto-calculate End Date
-**Status:** ready
+**Status:** in-progress
 **Epic:** Mesocycle Lifecycle
 **Depends:** specs/create-mesocycle.md
 
