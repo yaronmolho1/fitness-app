@@ -62,8 +62,49 @@ describe('ScheduleGrid', () => {
       />
     )
 
-    const restLabels = screen.getAllByText(/rest/i)
+    const restLabels = screen.getAllByTestId('rest-label')
     expect(restLabels).toHaveLength(7)
+    for (const label of restLabels) {
+      expect(label).toHaveTextContent('Rest')
+    }
+  })
+
+  it('rest days show no template name', () => {
+    const schedule = buildSchedule([
+      { day_of_week: 0, template_id: 1, template_name: 'Push A' },
+    ])
+
+    render(
+      <ScheduleGrid
+        mesocycleId={1}
+        templates={mockTemplates}
+        schedule={schedule}
+        isCompleted={false}
+        variant="normal"
+      />
+    )
+
+    // Tuesday (day 1) is a rest day — no template name shown
+    const tuesdayCell = screen.getByTestId('day-cell-1')
+    expect(within(tuesdayCell).getByTestId('rest-label')).toHaveTextContent('Rest')
+    expect(within(tuesdayCell).queryByText('Push A')).not.toBeInTheDocument()
+    expect(within(tuesdayCell).queryByText('Pull A')).not.toBeInTheDocument()
+    expect(within(tuesdayCell).queryByText('Legs A')).not.toBeInTheDocument()
+  })
+
+  it('rest days have dashed border styling', () => {
+    render(
+      <ScheduleGrid
+        mesocycleId={1}
+        templates={mockTemplates}
+        schedule={[]}
+        isCompleted={false}
+        variant="normal"
+      />
+    )
+
+    const dayCell = screen.getByTestId('day-cell-0')
+    expect(dayCell.className).toContain('border-dashed')
   })
 
   it('shows template name for assigned days', () => {
