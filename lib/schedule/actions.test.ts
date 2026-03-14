@@ -24,7 +24,7 @@ vi.mock('next/cache', () => ({
 import { assignTemplate, removeAssignment } from './actions'
 
 function seedMesocycle(
-  overrides: Partial<{ name: string; status: string }> = {}
+  overrides: Partial<{ name: string; status: string; has_deload: number }> = {}
 ) {
   const defaults = {
     name: 'Test Meso',
