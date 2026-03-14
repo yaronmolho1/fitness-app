@@ -26,7 +26,7 @@
 | T016 | Delete exercise + deletion protection | 4 | [x] | feat/task-016-delete-exercise | 2026-03-13T14:30 | 2026-03-13T15:10 | PR #10 |
 | T017 | Exercise search & filter | 4 | [x] | feat/task-017-exercise-search-filter | 2026-03-13T16:00 | 2026-03-13T17:00 | PR #12 |
 | T018 | Create mesocycle SA + end date calc | 5 | [x] | feat/task-018-create-mesocycle | 2026-03-13T11:00 | 2026-03-13T11:45 | PR #6 |
-| T019 | Mesocycle list + detail view | 5 | [ ] | | | | |
+| T019 | Mesocycle list + detail view | 5 | [~] | feat/task-019-mesocycle-list-detail | 2026-03-14T14:00 | | |
 | T020 | Create mesocycle form + end date preview | 5 | [ ] | | | | |
 | T021 | Status transitions + one-active constraint | 5 | [x] | feat/task-021-mesocycle-status | 2026-03-13T13:00 | 2026-03-13T14:30 | PR #8 |
 | T022 | Status transition UI | 5 | [ ] | | | | |
