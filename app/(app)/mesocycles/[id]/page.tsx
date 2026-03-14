@@ -10,7 +10,10 @@ export default async function MesocycleDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const meso = await getMesocycleById(Number(id))
+  const numericId = Number(id)
+  if (Number.isNaN(numericId)) notFound()
+
+  const meso = await getMesocycleById(numericId)
 
   if (!meso) {
     notFound()
