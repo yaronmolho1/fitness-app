@@ -6,6 +6,6 @@ Next.js App Router entry point. Route groups separate authenticated and public p
 - `layout.tsx` — root layout with global styles
 
 ## Subdirectories
-- `(app)/` — authenticated routes: dashboard, exercises, future mesocycles/calendar/routines
+- `(app)/` — authenticated routes: dashboard, exercises, mesocycles, future calendar/routines
 - `(auth)/` — public routes: login page
 - `api/` — route handlers: auth (login/logout), health check
