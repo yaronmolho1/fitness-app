@@ -42,6 +42,7 @@ describe('ScheduleGrid', () => {
         templates={mockTemplates}
         schedule={[]}
         isCompleted={false}
+        variant="normal"
       />
     )
 
@@ -57,6 +58,7 @@ describe('ScheduleGrid', () => {
         templates={mockTemplates}
         schedule={[]}
         isCompleted={false}
+        variant="normal"
       />
     )
 
@@ -76,6 +78,7 @@ describe('ScheduleGrid', () => {
         templates={mockTemplates}
         schedule={schedule}
         isCompleted={false}
+        variant="normal"
       />
     )
 
@@ -103,6 +106,7 @@ describe('ScheduleGrid', () => {
         templates={mockTemplates}
         schedule={[]}
         isCompleted={false}
+        variant="normal"
       />
     )
 
@@ -139,6 +143,7 @@ describe('ScheduleGrid', () => {
         templates={mockTemplates}
         schedule={schedule}
         isCompleted={false}
+        variant="normal"
       />
     )
 
@@ -166,6 +171,7 @@ describe('ScheduleGrid', () => {
         templates={mockTemplates}
         schedule={schedule}
         isCompleted={true}
+        variant="normal"
       />
     )
 
@@ -194,6 +200,7 @@ describe('ScheduleGrid', () => {
         templates={mockTemplates}
         schedule={[]}
         isCompleted={false}
+        variant="normal"
       />
     )
 
@@ -222,6 +229,7 @@ describe('ScheduleGrid', () => {
         templates={mockTemplates}
         schedule={[]}
         isCompleted={false}
+        variant="normal"
       />
     )
 

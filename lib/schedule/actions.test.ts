@@ -256,7 +256,7 @@ describe('assignTemplate', () => {
 
   describe('deload week_type', () => {
     it('assigns with week_type=deload', async () => {
-      const meso = seedMesocycle()
+      const meso = seedMesocycle({ has_deload: 1 })
       const tmpl = seedTemplate(meso.id)
       const result = await assignTemplate({
         mesocycle_id: meso.id,
@@ -270,8 +270,36 @@ describe('assignTemplate', () => {
       }
     })
 
+    it('rejects deload assignment on mesocycle without deload', async () => {
+      const meso = seedMesocycle({ has_deload: 0 })
+      const tmpl = seedTemplate(meso.id)
+      const result = await assignTemplate({
+        mesocycle_id: meso.id,
+        day_of_week: 1,
+        template_id: tmpl.id,
+        week_type: 'deload',
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toBe('Mesocycle does not have a deload week')
+      }
+    })
+
+    it('rejects deload removal on mesocycle without deload', async () => {
+      const meso = seedMesocycle({ has_deload: 0 })
+      const result = await removeAssignment({
+        mesocycle_id: meso.id,
+        day_of_week: 1,
+        week_type: 'deload',
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toBe('Mesocycle does not have a deload week')
+      }
+    })
+
     it('keeps normal and deload assignments independent', async () => {
-      const meso = seedMesocycle()
+      const meso = seedMesocycle({ has_deload: 1 })
       const tmpl = seedTemplate(meso.id)
       await assignTemplate({
         mesocycle_id: meso.id,
@@ -393,7 +421,7 @@ describe('removeAssignment', () => {
     })
 
     it('removes deload assignment without affecting normal', async () => {
-      const meso = seedMesocycle()
+      const meso = seedMesocycle({ has_deload: 1 })
       const tmpl = seedTemplate(meso.id)
       await assignTemplate({ mesocycle_id: meso.id, day_of_week: 0, template_id: tmpl.id, week_type: 'normal' })
       await assignTemplate({ mesocycle_id: meso.id, day_of_week: 0, template_id: tmpl.id, week_type: 'deload' })
