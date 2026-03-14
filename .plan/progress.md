@@ -22,11 +22,11 @@
 | T012 | Navigation (sidebar + bottom bar) | 3 | [x] | feat/task-012-navigation | 2026-03-13T10:00 | 2026-03-13T10:45 | PR #3 |
 | T013 | Create exercise SA + validation | 4 | [x] | feat/task-013-create-exercise-sa | 2026-03-13T12:00 | 2026-03-13T12:30 | PR #7 |
 | T014 | Exercise list + empty state + form UI | 4 | [x] | feat/task-014-exercise-list-ui | 2026-03-13T13:30 | 2026-03-13T14:00 | PR #11 |
-| T015 | Edit exercise SA + form | 4 | [~] | feat/task-015-edit-exercise | 2026-03-13T22:00 | | |
+| T015 | Edit exercise SA + form | 4 | [x] | feat/task-015-edit-exercise | 2026-03-13T22:00 | 2026-03-14 | merged via PR #18 |
 | T016 | Delete exercise + deletion protection | 4 | [x] | feat/task-016-delete-exercise | 2026-03-13T14:30 | 2026-03-13T15:10 | PR #10 |
 | T017 | Exercise search & filter | 4 | [x] | feat/task-017-exercise-search-filter | 2026-03-13T16:00 | 2026-03-13T17:00 | PR #12 |
 | T018 | Create mesocycle SA + end date calc | 5 | [x] | feat/task-018-create-mesocycle | 2026-03-13T11:00 | 2026-03-13T11:45 | PR #6 |
-| T019 | Mesocycle list + detail view | 5 | [ ] | | | | |
+| T019 | Mesocycle list + detail view | 5 | [~] | feat/task-019-mesocycle-list-detail | 2026-03-14T14:00 | | |
 | T020 | Create mesocycle form + end date preview | 5 | [ ] | | | | |
 | T021 | Status transitions + one-active constraint | 5 | [x] | feat/task-021-mesocycle-status | 2026-03-13T13:00 | 2026-03-13T14:30 | PR #8 |
 | T022 | Status transition UI | 5 | [ ] | | | | |
@@ -34,11 +34,11 @@
 | T024 | Template list + edit + delete | 6 | [ ] | | | | |
 | T025 | Running template SA + form | 6 | [ ] | | | | |
 | T026 | MMA/BJJ template SA + form | 6 | [ ] | | | | |
-| T027 | Add exercise slot SA + picker | 7 | [~] | feat/task-027-exercise-slot-sa | 2026-03-13T21:00 | | |
+| T027 | Add exercise slot SA + picker | 7 | [x] | feat/task-027-exercise-slot-sa | 2026-03-13T21:00 | 2026-03-14 | merged via PR #14 |
 | T028 | Slot editing + remove | 7 | [ ] | | | | |
 | T029 | Drag-reorder slots (SA + UI) | 7 | [ ] | | | | |
 | T030 | Main/complementary role toggle | 7 | [ ] | | | | |
-| T031 | Assign/remove/replace template SA | 7 | [ ] | | | | |
+| T031 | Assign/remove/replace template SA | 7 | [~] | feat/task-031-assign-template-sa | 2026-03-14T17:00 | | |
 | T032 | 7-day schedule grid UI | 7 | [ ] | | | | |
 | T033 | Normal/deload tabs | 7 | [ ] | | | | |
 | T034 | Rest day display in grid | 7 | [ ] | | | | |
