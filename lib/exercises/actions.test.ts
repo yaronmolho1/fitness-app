@@ -14,11 +14,16 @@ const mockInsert = vi.fn()
 const mockDeleteWhere = vi.fn()
 const mockDeleteReturning = vi.fn()
 const mockDelete = vi.fn()
+const mockUpdateSet = vi.fn()
+const mockUpdateWhere = vi.fn()
+const mockUpdateReturning = vi.fn()
+const mockUpdate = vi.fn()
 
 const mockTx = {
   select: (...args: unknown[]) => mockSelect(...args),
   insert: (...args: unknown[]) => mockInsert(...args),
   delete: (...args: unknown[]) => mockDelete(...args),
+  update: (...args: unknown[]) => mockUpdate(...args),
 }
 
 vi.mock('@/lib/db', () => ({
@@ -26,16 +31,17 @@ vi.mock('@/lib/db', () => ({
     select: (...args: unknown[]) => mockSelect(...args),
     insert: (...args: unknown[]) => mockInsert(...args),
     delete: (...args: unknown[]) => mockDelete(...args),
+    update: (...args: unknown[]) => mockUpdate(...args),
     transaction: (fn: (tx: typeof mockTx) => unknown) => fn(mockTx),
   },
   sqlite: {},
 }))
 
-import { createExercise, deleteExercise } from './actions'
+import { createExercise, deleteExercise, editExercise } from './actions'
 
 describe('createExercise', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
     mockSelect.mockReturnValue({ from: mockFrom })
     mockFrom.mockReturnValue({ where: mockWhere })
     mockWhere.mockResolvedValue([])
@@ -107,12 +113,114 @@ describe('createExercise', () => {
   })
 })
 
+describe('editExercise', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    // select().from().where() for duplicate check
+    mockSelect.mockReturnValue({ from: mockFrom })
+    mockFrom.mockReturnValue({ where: mockWhere })
+    mockWhere.mockResolvedValue([])
+    // update().set().where().returning()
+    mockUpdate.mockReturnValue({ set: mockUpdateSet })
+    mockUpdateSet.mockReturnValue({ where: mockUpdateWhere })
+    mockUpdateWhere.mockReturnValue({ returning: mockUpdateReturning })
+    mockUpdateReturning.mockResolvedValue([{
+      id: 1, name: 'Squat Updated', modality: 'resistance',
+      muscle_group: null, equipment: null, created_at: new Date(),
+    }])
+  })
+
+  it('returns error when name is empty', async () => {
+    const result = await editExercise({ id: 1, name: '', modality: 'resistance' })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toMatch(/name/i)
+  })
+
+  it('returns error when name is whitespace only', async () => {
+    const result = await editExercise({ id: 1, name: '   ', modality: 'resistance' })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toMatch(/name/i)
+  })
+
+  it('returns error for invalid modality', async () => {
+    const result = await editExercise({ id: 1, name: 'Squat', modality: 'yoga' as 'resistance' })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toMatch(/modality/i)
+  })
+
+  it('returns error when name belongs to a different exercise', async () => {
+    // Duplicate check returns a different exercise with same name
+    mockWhere.mockResolvedValueOnce([{ id: 2, name: 'Bench Press' }])
+    const result = await editExercise({ id: 1, name: 'Bench Press', modality: 'resistance' })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toMatch(/exists/i)
+  })
+
+  it('allows saving with same name as current exercise', async () => {
+    // Duplicate check returns the same exercise (id matches)
+    mockWhere.mockResolvedValueOnce([{ id: 1, name: 'Squat' }])
+    const result = await editExercise({ id: 1, name: 'Squat', modality: 'resistance' })
+    expect(result.success).toBe(true)
+  })
+
+  it('updates exercise with valid data', async () => {
+    const result = await editExercise({
+      id: 1, name: 'Squat Updated', modality: 'running',
+      muscle_group: 'Legs', equipment: 'None',
+    })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.name).toBe('Squat Updated')
+    }
+  })
+
+  it('allows clearing muscle_group and equipment', async () => {
+    mockUpdateReturning.mockResolvedValueOnce([{
+      id: 1, name: 'Squat', modality: 'resistance',
+      muscle_group: null, equipment: null, created_at: new Date(),
+    }])
+    const result = await editExercise({
+      id: 1, name: 'Squat', modality: 'resistance',
+      muscle_group: '', equipment: '',
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('allows changing modality', async () => {
+    mockUpdateReturning.mockResolvedValueOnce([{
+      id: 1, name: 'Sprint', modality: 'running',
+      muscle_group: null, equipment: null, created_at: new Date(),
+    }])
+    const result = await editExercise({ id: 1, name: 'Sprint', modality: 'running' })
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.modality).toBe('running')
+  })
+
+  it('returns not-found when exercise does not exist', async () => {
+    mockUpdateReturning.mockResolvedValueOnce([])
+    const result = await editExercise({ id: 999, name: 'Ghost', modality: 'resistance' })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toMatch(/not found/i)
+  })
+
+  it('revalidates path on success', async () => {
+    await editExercise({ id: 1, name: 'Squat', modality: 'resistance' })
+    expect(revalidatePath).toHaveBeenCalledWith('/exercises')
+  })
+
+  it('returns error for invalid ID', async () => {
+    const result = await editExercise({ id: 0, name: 'Squat', modality: 'resistance' })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toMatch(/invalid/i)
+  })
+})
+
 describe('deleteExercise', () => {
   const mockAll = vi.fn()
   const mockRun = vi.fn()
 
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
     // Inside transaction, select uses .all() instead of awaiting
     mockSelect.mockReturnValue({ from: mockFrom })
     mockFrom.mockReturnValue({ where: mockWhere })

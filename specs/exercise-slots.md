@@ -1,5 +1,5 @@
 # Exercise Slots
-**Status:** ready
+**Status:** in-progress
 **Epic:** Workout Templates
 **Depends:** specs/create-resistance-templates.md, specs/exercise-search-filter.md
 
