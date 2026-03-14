@@ -1,8 +1,18 @@
-import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { sql, eq } from 'drizzle-orm'
 import * as schema from '@/lib/db/schema'
+
+// Mock next/cache (used by server actions)
+vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
+
+// Mock @/lib/db so server actions use our in-memory test DB
+vi.mock('@/lib/db', () => ({
+  get db() {
+    return db
+  },
+}))
 
 // We need our own in-memory DB since the setup file's DB isn't exported
 let sqlite: Database.Database
@@ -228,6 +238,84 @@ async function setupActionWithTestDb() {
   return { createExerciseWithDb }
 }
 
+describe('exercise edit integration', () => {
+  it('updates exercise fields in database', async () => {
+    const { editExercise } = await import('@/lib/exercises/actions')
+    const [exercise] = await db
+      .insert(schema.exercises)
+      .values({ name: 'Bench Press', modality: 'resistance', muscle_group: 'Chest', equipment: 'Barbell', created_at: new Date() })
+      .returning()
+
+    const result = await editExercise({
+      id: exercise.id, name: 'Incline Bench', modality: 'resistance',
+      muscle_group: 'Upper Chest', equipment: 'Dumbbell',
+    })
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.name).toBe('Incline Bench')
+      expect(result.data.muscle_group).toBe('Upper Chest')
+      expect(result.data.equipment).toBe('Dumbbell')
+    }
+
+    const rows = await db.select().from(schema.exercises)
+    expect(rows).toHaveLength(1)
+    expect(rows[0].name).toBe('Incline Bench')
+  })
+
+  it('rejects duplicate name belonging to different exercise', async () => {
+    const { editExercise } = await import('@/lib/exercises/actions')
+    await db.insert(schema.exercises).values({ name: 'Squat', modality: 'resistance', created_at: new Date() })
+    const [bench] = await db
+      .insert(schema.exercises)
+      .values({ name: 'Bench Press', modality: 'resistance', created_at: new Date() })
+      .returning()
+
+    const result = await editExercise({ id: bench.id, name: 'Squat', modality: 'resistance' })
+
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toMatch(/exists/i)
+  })
+
+  it('allows saving with same name (no change)', async () => {
+    const { editExercise } = await import('@/lib/exercises/actions')
+    const [exercise] = await db
+      .insert(schema.exercises)
+      .values({ name: 'Deadlift', modality: 'resistance', created_at: new Date() })
+      .returning()
+
+    const result = await editExercise({ id: exercise.id, name: 'Deadlift', modality: 'running' })
+
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.modality).toBe('running')
+  })
+
+  it('clears muscle_group and equipment when set to empty', async () => {
+    const { editExercise } = await import('@/lib/exercises/actions')
+    const [exercise] = await db
+      .insert(schema.exercises)
+      .values({ name: 'OHP', modality: 'resistance', muscle_group: 'Shoulders', equipment: 'Barbell', created_at: new Date() })
+      .returning()
+
+    const result = await editExercise({
+      id: exercise.id, name: 'OHP', modality: 'resistance',
+      muscle_group: '', equipment: '',
+    })
+
+    expect(result.success).toBe(true)
+    const rows = await db.select().from(schema.exercises)
+    expect(rows[0].muscle_group).toBeNull()
+    expect(rows[0].equipment).toBeNull()
+  })
+
+  it('returns not-found for non-existent exercise', async () => {
+    const { editExercise } = await import('@/lib/exercises/actions')
+    const result = await editExercise({ id: 999, name: 'Ghost', modality: 'resistance' })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toMatch(/not found/i)
+  })
+})
+
 // Helper: insert a mesocycle + template + slot referencing an exercise
 async function insertExerciseWithSlot(exerciseId: number) {
   const [meso] = await db
@@ -439,3 +527,4 @@ async function setupDeleteActionWithTestDb() {
 
   return { deleteExerciseWithDb }
 }
+
