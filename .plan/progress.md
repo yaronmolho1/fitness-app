@@ -27,7 +27,7 @@
 | T017 | Exercise search & filter | 4 | [x] | feat/task-017-exercise-search-filter | 2026-03-13T16:00 | 2026-03-13T17:00 | PR #12 |
 | T018 | Create mesocycle SA + end date calc | 5 | [x] | feat/task-018-create-mesocycle | 2026-03-13T11:00 | 2026-03-13T11:45 | PR #6 |
 | T019 | Mesocycle list + detail view | 5 | [x] | feat/task-019-mesocycle-list-detail | 2026-03-14T14:00 | 2026-03-14 | merged via PR #99 |
-| T020 | Create mesocycle form + end date preview | 5 | [ ] | | | | stale claim reset |
+| T020 | Create mesocycle form + end date preview | 5 | [~] | feat/task-020-mesocycle-form | 2026-03-14T21:30 | | |
 | T021 | Status transitions + one-active constraint | 5 | [x] | feat/task-021-mesocycle-status | 2026-03-13T13:00 | 2026-03-13T14:30 | PR #8 |
 | T022 | Status transition UI | 5 | [ ] | | | | |
 | T023 | Create resistance template SA + canonical slug | 6 | [x] | feat/task-023-resistance-templates | 2026-03-13T14:00 | 2026-03-13T14:45 | PR #9 |
