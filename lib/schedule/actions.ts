@@ -73,24 +73,8 @@ export async function assignTemplate(input: {
     return { success: false, error: 'Template does not belong to this mesocycle' }
   }
 
-  // Upsert: delete existing then insert (SQLite-friendly approach)
-  const existing = db
-    .select()
-    .from(weekly_schedule)
-    .where(
-      and(
-        eq(weekly_schedule.mesocycle_id, mesocycle_id),
-        eq(weekly_schedule.day_of_week, day_of_week),
-        eq(weekly_schedule.week_type, week_type)
-      )
-    )
-    .get()
-
-  if (existing) {
-    db.delete(weekly_schedule).where(eq(weekly_schedule.id, existing.id)).run()
-  }
-
-  const created = db
+  // Upsert via unique index (mesocycle_id, day_of_week, week_type)
+  const row = db
     .insert(weekly_schedule)
     .values({
       mesocycle_id,
@@ -99,11 +83,15 @@ export async function assignTemplate(input: {
       week_type,
       created_at: new Date(),
     })
+    .onConflictDoUpdate({
+      target: [weekly_schedule.mesocycle_id, weekly_schedule.day_of_week, weekly_schedule.week_type],
+      set: { template_id },
+    })
     .returning()
     .get()
 
-  revalidatePath('/mesocycles')
-  return { success: true, data: created }
+  revalidatePath('/mesocycles', 'layout')
+  return { success: true, data: row }
 }
 
 export async function removeAssignment(input: {
@@ -145,6 +133,6 @@ export async function removeAssignment(input: {
     )
     .run()
 
-  revalidatePath('/mesocycles')
+  revalidatePath('/mesocycles', 'layout')
   return { success: true }
 }
