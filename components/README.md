@@ -10,6 +10,8 @@ Shared React components — app-level UI and navigation.
 - `exercise-picker.tsx` — `ExercisePicker` searchable exercise selector, resistance-only filter, onSelect callback
 - `mesocycle-form.tsx` — `MesocycleForm` create form with name, start date, work weeks, deload toggle, live end date preview
 - `schedule-grid.tsx` — `ScheduleGrid` 7-day weekly schedule grid; assign/replace/remove template per day slot via `assignTemplate`/`removeAssignment` actions; read-only when mesocycle is completed
+- `status-badge.tsx` — `StatusBadge` colored pill for mesocycle status (planned/active/completed)
+- `status-transition-button.tsx` — `StatusTransitionButton` activates or completes a mesocycle via server actions, with confirmation dialog on complete
 
 ## Subdirectories
 - `ui/` — shadcn/ui primitives (Button, Card, Input, Label)
