@@ -22,6 +22,14 @@ vi.mock('@/lib/schedule/queries', () => ({
   getTemplatesForMesocycle: vi.fn().mockResolvedValue([]),
 }))
 
+vi.mock('@/lib/exercises/queries', () => ({
+  getExercises: vi.fn().mockResolvedValue([]),
+}))
+
+vi.mock('@/lib/templates/slot-queries', () => ({
+  getSlotsByTemplate: vi.fn().mockReturnValue([]),
+}))
+
 vi.mock('next/navigation', () => ({
   usePathname: vi.fn(() => '/mesocycles/1'),
   useRouter: vi.fn(() => ({ push: vi.fn(), refresh: vi.fn() })),
