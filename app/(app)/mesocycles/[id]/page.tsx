@@ -5,6 +5,7 @@ import { getScheduleForMesocycle, getTemplatesForMesocycle } from '@/lib/schedul
 import { ScheduleGrid } from '@/components/schedule-grid'
 import { StatusBadge } from '@/components/status-badge'
 import { StatusTransitionButton } from '@/components/status-transition-button'
+import { TemplateSection } from '@/components/template-section'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,6 +50,12 @@ export default async function MesocycleDetailPage({
         </div>
         <StatusTransitionButton mesocycleId={meso.id} status={meso.status} />
       </div>
+
+      <TemplateSection
+        mesocycleId={numericId}
+        templates={templates}
+        isCompleted={meso.status === 'completed'}
+      />
 
       <ScheduleGrid
         mesocycleId={numericId}
