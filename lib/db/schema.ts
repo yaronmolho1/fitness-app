@@ -58,6 +58,8 @@ export const workout_templates = sqliteTable('workout_templates', {
   interval_count: integer('interval_count'),
   interval_rest: integer('interval_rest'),
   coaching_cues: text('coaching_cues'),
+  // MMA/BJJ-specific (null for non-mma templates)
+  planned_duration: integer('planned_duration'),
   created_at: integer('created_at', { mode: 'timestamp' }),
 })
 
