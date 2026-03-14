@@ -1,8 +1,18 @@
-import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { sql, eq } from 'drizzle-orm'
 import * as schema from '@/lib/db/schema'
+
+// Mock next/cache (used by server actions)
+vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
+
+// Mock @/lib/db so server actions use our in-memory test DB
+vi.mock('@/lib/db', () => ({
+  get db() {
+    return db
+  },
+}))
 
 // We need our own in-memory DB since the setup file's DB isn't exported
 let sqlite: Database.Database
@@ -230,13 +240,13 @@ async function setupActionWithTestDb() {
 
 describe('exercise edit integration', () => {
   it('updates exercise fields in database', async () => {
+    const { editExercise } = await import('@/lib/exercises/actions')
     const [exercise] = await db
       .insert(schema.exercises)
       .values({ name: 'Bench Press', modality: 'resistance', muscle_group: 'Chest', equipment: 'Barbell', created_at: new Date() })
       .returning()
 
-    const { editExerciseWithDb } = await setupEditActionWithTestDb()
-    const result = await editExerciseWithDb({
+    const result = await editExercise({
       id: exercise.id, name: 'Incline Bench', modality: 'resistance',
       muscle_group: 'Upper Chest', equipment: 'Dumbbell',
     })
@@ -254,40 +264,40 @@ describe('exercise edit integration', () => {
   })
 
   it('rejects duplicate name belonging to different exercise', async () => {
+    const { editExercise } = await import('@/lib/exercises/actions')
     await db.insert(schema.exercises).values({ name: 'Squat', modality: 'resistance', created_at: new Date() })
     const [bench] = await db
       .insert(schema.exercises)
       .values({ name: 'Bench Press', modality: 'resistance', created_at: new Date() })
       .returning()
 
-    const { editExerciseWithDb } = await setupEditActionWithTestDb()
-    const result = await editExerciseWithDb({ id: bench.id, name: 'Squat', modality: 'resistance' })
+    const result = await editExercise({ id: bench.id, name: 'Squat', modality: 'resistance' })
 
     expect(result.success).toBe(false)
     if (!result.success) expect(result.error).toMatch(/exists/i)
   })
 
   it('allows saving with same name (no change)', async () => {
+    const { editExercise } = await import('@/lib/exercises/actions')
     const [exercise] = await db
       .insert(schema.exercises)
       .values({ name: 'Deadlift', modality: 'resistance', created_at: new Date() })
       .returning()
 
-    const { editExerciseWithDb } = await setupEditActionWithTestDb()
-    const result = await editExerciseWithDb({ id: exercise.id, name: 'Deadlift', modality: 'running' })
+    const result = await editExercise({ id: exercise.id, name: 'Deadlift', modality: 'running' })
 
     expect(result.success).toBe(true)
     if (result.success) expect(result.data.modality).toBe('running')
   })
 
   it('clears muscle_group and equipment when set to empty', async () => {
+    const { editExercise } = await import('@/lib/exercises/actions')
     const [exercise] = await db
       .insert(schema.exercises)
       .values({ name: 'OHP', modality: 'resistance', muscle_group: 'Shoulders', equipment: 'Barbell', created_at: new Date() })
       .returning()
 
-    const { editExerciseWithDb } = await setupEditActionWithTestDb()
-    const result = await editExerciseWithDb({
+    const result = await editExercise({
       id: exercise.id, name: 'OHP', modality: 'resistance',
       muscle_group: '', equipment: '',
     })
@@ -299,8 +309,8 @@ describe('exercise edit integration', () => {
   })
 
   it('returns not-found for non-existent exercise', async () => {
-    const { editExerciseWithDb } = await setupEditActionWithTestDb()
-    const result = await editExerciseWithDb({ id: 999, name: 'Ghost', modality: 'resistance' })
+    const { editExercise } = await import('@/lib/exercises/actions')
+    const result = await editExercise({ id: 999, name: 'Ghost', modality: 'resistance' })
     expect(result.success).toBe(false)
     if (!result.success) expect(result.error).toMatch(/not found/i)
   })
@@ -518,72 +528,3 @@ async function setupDeleteActionWithTestDb() {
   return { deleteExerciseWithDb }
 }
 
-// Helper: creates editExercise that uses the test DB (mirrors action logic)
-async function setupEditActionWithTestDb() {
-  const { z } = await import('zod')
-
-  const editExerciseSchema = z.object({
-    id: z.number().int().positive('Invalid exercise ID'),
-    name: z
-      .string()
-      .transform((s) => s.trim())
-      .pipe(z.string().min(1, 'Name is required').max(255, 'Name must be 255 characters or fewer')),
-    modality: z.enum(['resistance', 'running', 'mma'], {
-      message: 'Modality must be resistance, running, or mma',
-    }),
-    muscle_group: z.string().optional(),
-    equipment: z.string().optional(),
-  })
-
-  async function editExerciseWithDb(input: {
-    id: number
-    name: string
-    modality: string
-    muscle_group?: string
-    equipment?: string
-  }) {
-    const parsed = editExerciseSchema.safeParse(input)
-    if (!parsed.success) {
-      return { success: false as const, error: parsed.error.issues[0].message }
-    }
-
-    const { id, name, modality, muscle_group, equipment } = parsed.data
-
-    // Case-insensitive duplicate check excluding self
-    const existing = await db
-      .select()
-      .from(schema.exercises)
-      .where(sql`lower(${schema.exercises.name}) = lower(${name})`)
-
-    const duplicate = existing.find((e) => e.id !== id)
-    if (duplicate) {
-      return { success: false as const, error: `Exercise "${name}" already exists` }
-    }
-
-    try {
-      const [updated] = await db
-        .update(schema.exercises)
-        .set({
-          name,
-          modality,
-          muscle_group: muscle_group || null,
-          equipment: equipment || null,
-        })
-        .where(eq(schema.exercises.id, id))
-        .returning()
-
-      if (!updated) {
-        return { success: false as const, error: 'Exercise not found' }
-      }
-
-      return { success: true as const, data: updated }
-    } catch (err: unknown) {
-      if (err instanceof Error && err.message.includes('UNIQUE constraint failed')) {
-        return { success: false as const, error: `Exercise "${name}" already exists` }
-      }
-      return { success: false as const, error: 'Failed to update exercise' }
-    }
-  }
-
-  return { editExerciseWithDb }
-}
