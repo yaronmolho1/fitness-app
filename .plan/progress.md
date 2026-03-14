@@ -29,10 +29,10 @@
 | T019 | Mesocycle list + detail view | 5 | [x] | feat/task-019-mesocycle-list-detail | 2026-03-14T14:00 | 2026-03-14 | merged via PR #99 |
 | T020 | Create mesocycle form + end date preview | 5 | [x] | feat/task-020-mesocycle-form | 2026-03-14T21:30 | 2026-03-14 | merged via PR #101 |
 | T021 | Status transitions + one-active constraint | 5 | [x] | feat/task-021-mesocycle-status | 2026-03-13T13:00 | 2026-03-13T14:30 | PR #8 |
-| T022 | Status transition UI | 5 | [~] | feat/task-022-status-transition-ui | 2026-03-14T22:30 | | |
+| T022 | Status transition UI | 5 | [x] | feat/task-022-status-transition-ui | 2026-03-14T22:30 | 2026-03-14 | merged via PR #105 |
 | T023 | Create resistance template SA + canonical slug | 6 | [x] | feat/task-023-resistance-templates | 2026-03-13T14:00 | 2026-03-13T14:45 | PR #9 |
 | T024 | Template list + edit + delete | 6 | [ ] | | | | |
-| T025 | Running template SA + form | 6 | [ ] | | | | |
+| T025 | Running template SA + form | 6 | [~] | feat/task-025-running-templates | 2026-03-14T23:00 | | |
 | T026 | MMA/BJJ template SA + form | 6 | [ ] | | | | |
 | T027 | Add exercise slot SA + picker | 7 | [x] | feat/task-027-exercise-slot-sa | 2026-03-13T21:00 | 2026-03-14 | merged via PR #14 |
 | T028 | Slot editing + remove | 7 | [ ] | | | | |
@@ -52,7 +52,7 @@
 | T042 | Canonical name preservation | 8 | [ ] | | | | |
 | T043 | Routine item CRUD SA + scope validation | 8 | [ ] | | | | |
 | T044 | Routine item list + edit + delete | 8 | [ ] | | | | |
-| T045 | GET /api/today (lookup chain + deload) | 9 | [ ] | | | | |
+| T045 | GET /api/today (lookup chain + deload) | 9 | [~] | feat/task-045-api-today | 2026-03-14T22:00 | | PR #104 awaiting review |
 | T046 | Today's resistance workout display | 9 | [ ] | | | | |
 | T047 | Today's running + MMA/BJJ display | 9 | [ ] | | | | |
 | T048 | Logging form + pre-fill from template | 10 | [ ] | | | | |

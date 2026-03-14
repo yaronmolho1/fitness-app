@@ -50,6 +50,12 @@ const CREATE_WORKOUT_TEMPLATES = `
     canonical_name TEXT NOT NULL,
     modality TEXT NOT NULL,
     notes TEXT,
+    run_type TEXT,
+    target_pace TEXT,
+    hr_zone INTEGER,
+    interval_count INTEGER,
+    interval_rest INTEGER,
+    coaching_cues TEXT,
     created_at INTEGER
   )
 `

@@ -22,7 +22,7 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
-import { createResistanceTemplate } from './actions'
+import { createResistanceTemplate, createRunningTemplate } from './actions'
 
 function seedMesocycle(
   overrides: Partial<{
@@ -71,6 +71,12 @@ describe('createResistanceTemplate', () => {
         canonical_name TEXT NOT NULL,
         modality TEXT NOT NULL,
         notes TEXT,
+        run_type TEXT,
+        target_pace TEXT,
+        hr_zone INTEGER,
+        interval_count INTEGER,
+        interval_rest INTEGER,
+        coaching_cues TEXT,
         created_at INTEGER
       )
     `)
@@ -211,6 +217,290 @@ describe('createResistanceTemplate', () => {
       expect(rows).toHaveLength(1)
       expect(rows[0].canonical_name).toBe('push-a')
       expect(rows[0].modality).toBe('resistance')
+    })
+  })
+})
+
+describe('createRunningTemplate', () => {
+  beforeEach(() => {
+    testDb.run(sql`DROP TABLE IF EXISTS workout_templates`)
+    testDb.run(sql`DROP TABLE IF EXISTS mesocycles`)
+    testDb.run(sql`
+      CREATE TABLE mesocycles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        start_date TEXT NOT NULL,
+        end_date TEXT NOT NULL,
+        work_weeks INTEGER NOT NULL,
+        has_deload INTEGER NOT NULL DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'planned',
+        created_at INTEGER
+      )
+    `)
+    testDb.run(sql`
+      CREATE TABLE workout_templates (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        mesocycle_id INTEGER NOT NULL REFERENCES mesocycles(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        canonical_name TEXT NOT NULL,
+        modality TEXT NOT NULL,
+        notes TEXT,
+        run_type TEXT,
+        target_pace TEXT,
+        hr_zone INTEGER,
+        interval_count INTEGER,
+        interval_rest INTEGER,
+        coaching_cues TEXT,
+        created_at INTEGER
+      )
+    `)
+  })
+
+  describe('validation', () => {
+    it('rejects empty name', async () => {
+      const meso = seedMesocycle()
+      const result = await createRunningTemplate({
+        name: '',
+        mesocycle_id: meso.id,
+        run_type: 'easy',
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toMatch(/name/i)
+    })
+
+    it('rejects invalid run_type', async () => {
+      const meso = seedMesocycle()
+      const result = await createRunningTemplate({
+        name: 'Test Run',
+        mesocycle_id: meso.id,
+        run_type: 'sprint' as 'easy',
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toMatch(/run type/i)
+    })
+
+    it('rejects hr_zone outside 1-5', async () => {
+      const meso = seedMesocycle()
+      const result = await createRunningTemplate({
+        name: 'Test Run',
+        mesocycle_id: meso.id,
+        run_type: 'easy',
+        hr_zone: 6,
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toMatch(/hr zone/i)
+    })
+
+    it('rejects hr_zone of 0', async () => {
+      const meso = seedMesocycle()
+      const result = await createRunningTemplate({
+        name: 'Test Run',
+        mesocycle_id: meso.id,
+        run_type: 'easy',
+        hr_zone: 0,
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toMatch(/hr zone/i)
+    })
+
+    it('rejects negative interval_count', async () => {
+      const meso = seedMesocycle()
+      const result = await createRunningTemplate({
+        name: 'Intervals',
+        mesocycle_id: meso.id,
+        run_type: 'interval',
+        interval_count: -1,
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toMatch(/interval count/i)
+    })
+
+    it('rejects zero interval_count', async () => {
+      const meso = seedMesocycle()
+      const result = await createRunningTemplate({
+        name: 'Intervals',
+        mesocycle_id: meso.id,
+        run_type: 'interval',
+        interval_count: 0,
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toMatch(/interval count/i)
+    })
+
+    it('rejects negative interval_rest', async () => {
+      const meso = seedMesocycle()
+      const result = await createRunningTemplate({
+        name: 'Intervals',
+        mesocycle_id: meso.id,
+        run_type: 'interval',
+        interval_rest: -10,
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toMatch(/interval rest/i)
+    })
+
+    it('rejects non-existent mesocycle', async () => {
+      const result = await createRunningTemplate({
+        name: 'Easy Run',
+        mesocycle_id: 999,
+        run_type: 'easy',
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toMatch(/mesocycle/i)
+    })
+  })
+
+  describe('completed mesocycle', () => {
+    it('blocks creation on completed mesocycle', async () => {
+      const meso = seedMesocycle({ status: 'completed' })
+      const result = await createRunningTemplate({
+        name: 'Easy Run',
+        mesocycle_id: meso.id,
+        run_type: 'easy',
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toMatch(/completed/i)
+    })
+  })
+
+  describe('canonical_name uniqueness', () => {
+    it('rejects duplicate canonical_name within mesocycle', async () => {
+      const meso = seedMesocycle()
+      await createRunningTemplate({
+        name: 'Easy Run',
+        mesocycle_id: meso.id,
+        run_type: 'easy',
+      })
+      const result = await createRunningTemplate({
+        name: 'Easy Run',
+        mesocycle_id: meso.id,
+        run_type: 'tempo',
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toMatch(/duplicate|exists/i)
+    })
+
+    it('rejects duplicate canonical_name across modalities within mesocycle', async () => {
+      const meso = seedMesocycle()
+      await createResistanceTemplate({ name: 'Session A', mesocycle_id: meso.id })
+      const result = await createRunningTemplate({
+        name: 'Session A',
+        mesocycle_id: meso.id,
+        run_type: 'easy',
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toMatch(/duplicate|exists/i)
+    })
+  })
+
+  describe('successful creation', () => {
+    it('creates easy run with correct fields', async () => {
+      const meso = seedMesocycle()
+      const result = await createRunningTemplate({
+        name: 'Tuesday Easy',
+        mesocycle_id: meso.id,
+        run_type: 'easy',
+        target_pace: '6:00/km',
+        hr_zone: 2,
+        coaching_cues: 'Keep it conversational',
+      })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.modality).toBe('running')
+        expect(result.data.run_type).toBe('easy')
+        expect(result.data.target_pace).toBe('6:00/km')
+        expect(result.data.hr_zone).toBe(2)
+        expect(result.data.coaching_cues).toBe('Keep it conversational')
+        expect(result.data.canonical_name).toBe('tuesday-easy')
+        expect(result.data.interval_count).toBeNull()
+        expect(result.data.interval_rest).toBeNull()
+      }
+    })
+
+    it('creates interval run with interval fields', async () => {
+      const meso = seedMesocycle()
+      const result = await createRunningTemplate({
+        name: 'Track Intervals',
+        mesocycle_id: meso.id,
+        run_type: 'interval',
+        interval_count: 6,
+        interval_rest: 90,
+        target_pace: '4:30/km',
+      })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.run_type).toBe('interval')
+        expect(result.data.interval_count).toBe(6)
+        expect(result.data.interval_rest).toBe(90)
+      }
+    })
+
+    it('clears interval fields for non-interval run_type', async () => {
+      const meso = seedMesocycle()
+      const result = await createRunningTemplate({
+        name: 'Tempo Run',
+        mesocycle_id: meso.id,
+        run_type: 'tempo',
+        interval_count: 5,
+        interval_rest: 60,
+      })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.interval_count).toBeNull()
+        expect(result.data.interval_rest).toBeNull()
+      }
+    })
+
+    it('accepts all valid run_type values', async () => {
+      const meso = seedMesocycle()
+      const types = ['easy', 'tempo', 'interval', 'long', 'race'] as const
+      for (const rt of types) {
+        const result = await createRunningTemplate({
+          name: `Run ${rt}`,
+          mesocycle_id: meso.id,
+          run_type: rt,
+        })
+        expect(result.success).toBe(true)
+      }
+    })
+
+    it('allows interval_rest of 0', async () => {
+      const meso = seedMesocycle()
+      const result = await createRunningTemplate({
+        name: 'No Rest Intervals',
+        mesocycle_id: meso.id,
+        run_type: 'interval',
+        interval_rest: 0,
+      })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.interval_rest).toBe(0)
+      }
+    })
+
+    it('stores optional fields as null when not provided', async () => {
+      const meso = seedMesocycle()
+      const result = await createRunningTemplate({
+        name: 'Minimal Run',
+        mesocycle_id: meso.id,
+        run_type: 'easy',
+      })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.target_pace).toBeNull()
+        expect(result.data.hr_zone).toBeNull()
+        expect(result.data.coaching_cues).toBeNull()
+      }
+    })
+
+    it('calls revalidatePath after creation', async () => {
+      const meso = seedMesocycle()
+      await createRunningTemplate({
+        name: 'Easy Run',
+        mesocycle_id: meso.id,
+        run_type: 'easy',
+      })
+      expect(revalidatePath).toHaveBeenCalledWith('/mesocycles')
     })
   })
 })

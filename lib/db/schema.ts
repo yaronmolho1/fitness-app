@@ -49,6 +49,15 @@ export const workout_templates = sqliteTable('workout_templates', {
     enum: ['resistance', 'running', 'mma'],
   }).notNull(),
   notes: text('notes'),
+  // Running-specific fields (null for non-running templates)
+  run_type: text('run_type', {
+    enum: ['easy', 'tempo', 'interval', 'long', 'race'],
+  }),
+  target_pace: text('target_pace'),
+  hr_zone: integer('hr_zone'),
+  interval_count: integer('interval_count'),
+  interval_rest: integer('interval_rest'),
+  coaching_cues: text('coaching_cues'),
   created_at: integer('created_at', { mode: 'timestamp' }),
 })
 
