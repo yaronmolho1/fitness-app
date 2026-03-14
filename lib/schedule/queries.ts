@@ -36,6 +36,7 @@ export async function getScheduleForMesocycle(
 export type TemplateOption = {
   id: number
   name: string
+  canonical_name: string
   modality: 'resistance' | 'running' | 'mma'
 }
 
@@ -47,6 +48,7 @@ export async function getTemplatesForMesocycle(
     .select({
       id: workout_templates.id,
       name: workout_templates.name,
+      canonical_name: workout_templates.canonical_name,
       modality: workout_templates.modality,
     })
     .from(workout_templates)

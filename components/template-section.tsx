@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RunningTemplateForm } from '@/components/running-template-form'
 import { MmaBjjTemplateForm } from '@/components/mma-bjj-template-form'
-import { createResistanceTemplate } from '@/lib/templates/actions'
+import { createResistanceTemplate, updateTemplate, deleteTemplate } from '@/lib/templates/actions'
 import type { TemplateOption } from '@/lib/schedule/queries'
 
 type Props = {
@@ -87,15 +87,12 @@ export function TemplateSection({ mesocycleId, templates, isCompleted }: Props) 
       {templates.length > 0 && (
         <div className="space-y-2">
           {templates.map((t) => (
-            <div
+            <TemplateRow
               key={t.id}
-              className="flex items-center justify-between rounded-lg border px-4 py-3"
-            >
-              <span className="text-sm font-medium">{t.name}</span>
-              <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                {t.modality}
-              </span>
-            </div>
+              template={t}
+              isCompleted={isCompleted}
+              onUpdated={() => router.refresh()}
+            />
           ))}
         </div>
       )}
@@ -166,6 +163,167 @@ export function TemplateSection({ mesocycleId, templates, isCompleted }: Props) 
           <MmaBjjTemplateForm mesocycleId={mesocycleId} onSuccess={handleCreated} />
         </div>
       )}
+    </div>
+  )
+}
+
+// ============================================================================
+// Individual template row with inline edit + delete
+// ============================================================================
+
+type TemplateRowProps = {
+  template: TemplateOption
+  isCompleted: boolean
+  onUpdated: () => void
+}
+
+function TemplateRow({ template, isCompleted, onUpdated }: TemplateRowProps) {
+  const [editing, setEditing] = useState(false)
+  const [confirming, setConfirming] = useState(false)
+  const [name, setName] = useState(template.name)
+  const [canonicalName, setCanonicalName] = useState(template.canonical_name)
+  const [error, setError] = useState('')
+  const [isPending, startTransition] = useTransition()
+
+  const canonicalChanged = canonicalName !== template.canonical_name
+
+  function handleSave() {
+    const nameChanged = name !== template.name
+    if (!nameChanged && !canonicalChanged) {
+      setEditing(false)
+      return
+    }
+
+    startTransition(async () => {
+      const result = await updateTemplate({
+        id: template.id,
+        ...(nameChanged ? { name } : {}),
+        ...(canonicalChanged ? { canonical_name: canonicalName } : {}),
+      })
+      if (result.success) {
+        setError('')
+        setEditing(false)
+        onUpdated()
+      } else {
+        setError(result.error)
+      }
+    })
+  }
+
+  function handleCancel() {
+    setName(template.name)
+    setCanonicalName(template.canonical_name)
+    setError('')
+    setEditing(false)
+  }
+
+  function handleDelete() {
+    startTransition(async () => {
+      const result = await deleteTemplate(template.id)
+      if (result.success) {
+        setConfirming(false)
+        onUpdated()
+      } else {
+        setError(result.error)
+        setConfirming(false)
+      }
+    })
+  }
+
+  // Edit mode
+  if (editing) {
+    return (
+      <div className="space-y-3 rounded-lg border p-4">
+        {error && (
+          <p className="text-sm text-destructive" role="alert">{error}</p>
+        )}
+        <div className="space-y-2">
+          <Label htmlFor={`name-${template.id}`}>Name</Label>
+          <Input
+            id={`name-${template.id}`}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor={`canonical-${template.id}`}>Canonical Name</Label>
+          <Input
+            id={`canonical-${template.id}`}
+            value={canonicalName}
+            onChange={(e) => setCanonicalName(e.target.value)}
+          />
+          {canonicalChanged && (
+            <p className="text-xs text-amber-600">
+              Changing canonical_name will break cross-phase linking for this template.
+            </p>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <Button size="sm" onClick={handleSave} disabled={isPending}>
+            {isPending ? 'Saving...' : 'Save'}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={handleCancel} disabled={isPending}>
+            Cancel
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  // Delete confirmation
+  if (confirming) {
+    return (
+      <div className="space-y-3 rounded-lg border border-destructive/50 p-4">
+        {error && (
+          <p className="text-sm text-destructive" role="alert">{error}</p>
+        )}
+        <p className="text-sm">
+          Delete <strong>{template.name}</strong>? This cannot be undone.
+        </p>
+        <div className="flex gap-2">
+          <Button size="sm" variant="destructive" onClick={handleDelete} disabled={isPending}>
+            {isPending ? 'Deleting...' : 'Delete'}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => { setConfirming(false); setError('') }} disabled={isPending}>
+            Cancel
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  // Default display
+  return (
+    <div className="flex items-center justify-between rounded-lg border px-4 py-3">
+      <div className="min-w-0 flex-1">
+        <span className="text-sm font-medium">{template.name}</span>
+        <span className="ml-2 text-xs text-muted-foreground">{template.canonical_name}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+          {template.modality}
+        </span>
+        {!isCompleted && (
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => setEditing(true)}
+            >
+              Edit
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+              onClick={() => setConfirming(true)}
+            >
+              Delete
+            </Button>
+          </>
+        )}
+      </div>
     </div>
   )
 }
