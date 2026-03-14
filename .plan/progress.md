@@ -29,7 +29,7 @@
 | T019 | Mesocycle list + detail view | 5 | [x] | feat/task-019-mesocycle-list-detail | 2026-03-14T14:00 | 2026-03-14 | merged via PR #99 |
 | T020 | Create mesocycle form + end date preview | 5 | [x] | feat/task-020-mesocycle-form | 2026-03-14T21:30 | 2026-03-14 | merged via PR #101 |
 | T021 | Status transitions + one-active constraint | 5 | [x] | feat/task-021-mesocycle-status | 2026-03-13T13:00 | 2026-03-13T14:30 | PR #8 |
-| T022 | Status transition UI | 5 | [~] | feat/task-022-status-transition-ui | 2026-03-14T22:30 | | |
+| T022 | Status transition UI | 5 | [x] | feat/task-022-status-transition-ui | 2026-03-14T22:30 | 2026-03-14 | merged via PR #105 |
 | T023 | Create resistance template SA + canonical slug | 6 | [x] | feat/task-023-resistance-templates | 2026-03-13T14:00 | 2026-03-13T14:45 | PR #9 |
 | T024 | Template list + edit + delete | 6 | [ ] | | | | |
 | T025 | Running template SA + form | 6 | [ ] | | | | |
