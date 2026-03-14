@@ -8,6 +8,7 @@ Shared React components — app-level UI and navigation.
 - `login-form.tsx` — `LoginForm` card with username/password, calls `/api/auth/login`
 - `exercise-form.tsx` — `ExerciseForm` create form with name, modality, muscle group, equipment fields
 - `exercise-picker.tsx` — `ExercisePicker` searchable exercise selector, resistance-only filter, onSelect callback
+- `mesocycle-form.tsx` — `MesocycleForm` create form with name, start date, work weeks, deload toggle, live end date preview
 
 ## Subdirectories
 - `ui/` — shadcn/ui primitives (Button, Card, Input, Label)
