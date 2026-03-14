@@ -22,7 +22,11 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
-import { createResistanceTemplate, createRunningTemplate } from './actions'
+import {
+  createResistanceTemplate,
+  createRunningTemplate,
+  createMmaBjjTemplate,
+} from './actions'
 
 function seedMesocycle(
   overrides: Partial<{
@@ -77,6 +81,7 @@ describe('createResistanceTemplate', () => {
         interval_count INTEGER,
         interval_rest INTEGER,
         coaching_cues TEXT,
+        planned_duration INTEGER,
         created_at INTEGER
       )
     `)
@@ -251,6 +256,7 @@ describe('createRunningTemplate', () => {
         interval_count INTEGER,
         interval_rest INTEGER,
         coaching_cues TEXT,
+        planned_duration INTEGER,
         created_at INTEGER
       )
     `)
@@ -501,6 +507,205 @@ describe('createRunningTemplate', () => {
         run_type: 'easy',
       })
       expect(revalidatePath).toHaveBeenCalledWith('/mesocycles')
+    })
+  })
+})
+
+describe('createMmaBjjTemplate', () => {
+  beforeEach(() => {
+    testDb.run(sql`DROP TABLE IF EXISTS workout_templates`)
+    testDb.run(sql`DROP TABLE IF EXISTS mesocycles`)
+    testDb.run(sql`
+      CREATE TABLE mesocycles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        start_date TEXT NOT NULL,
+        end_date TEXT NOT NULL,
+        work_weeks INTEGER NOT NULL,
+        has_deload INTEGER NOT NULL DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'planned',
+        created_at INTEGER
+      )
+    `)
+    testDb.run(sql`
+      CREATE TABLE workout_templates (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        mesocycle_id INTEGER NOT NULL REFERENCES mesocycles(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        canonical_name TEXT NOT NULL,
+        modality TEXT NOT NULL,
+        notes TEXT,
+        run_type TEXT,
+        target_pace TEXT,
+        hr_zone INTEGER,
+        interval_count INTEGER,
+        interval_rest INTEGER,
+        coaching_cues TEXT,
+        planned_duration INTEGER,
+        created_at INTEGER
+      )
+    `)
+  })
+
+  describe('validation', () => {
+    it('rejects empty name', async () => {
+      const meso = seedMesocycle()
+      const result = await createMmaBjjTemplate({ name: '', mesocycle_id: meso.id })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toMatch(/name/i)
+    })
+
+    it('rejects whitespace-only name', async () => {
+      const meso = seedMesocycle()
+      const result = await createMmaBjjTemplate({ name: '   ', mesocycle_id: meso.id })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toMatch(/name/i)
+    })
+
+    it('rejects name producing empty slug', async () => {
+      const meso = seedMesocycle()
+      const result = await createMmaBjjTemplate({ name: '!@#$%', mesocycle_id: meso.id })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toMatch(/canonical/i)
+    })
+
+    it('rejects non-existent mesocycle', async () => {
+      const result = await createMmaBjjTemplate({ name: 'BJJ Gi', mesocycle_id: 999 })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toMatch(/mesocycle/i)
+    })
+
+    it('rejects zero planned_duration', async () => {
+      const meso = seedMesocycle()
+      const result = await createMmaBjjTemplate({
+        name: 'BJJ Gi',
+        mesocycle_id: meso.id,
+        planned_duration: 0,
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toMatch(/duration|positive/i)
+    })
+
+    it('rejects negative planned_duration', async () => {
+      const meso = seedMesocycle()
+      const result = await createMmaBjjTemplate({
+        name: 'BJJ Gi',
+        mesocycle_id: meso.id,
+        planned_duration: -30,
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toMatch(/duration|positive/i)
+    })
+  })
+
+  describe('completed mesocycle', () => {
+    it('blocks creation on completed mesocycle', async () => {
+      const meso = seedMesocycle({ status: 'completed' })
+      const result = await createMmaBjjTemplate({ name: 'BJJ Gi', mesocycle_id: meso.id })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toMatch(/completed/i)
+    })
+
+    it('allows creation on planned mesocycle', async () => {
+      const meso = seedMesocycle({ status: 'planned' })
+      const result = await createMmaBjjTemplate({ name: 'BJJ Gi', mesocycle_id: meso.id })
+      expect(result.success).toBe(true)
+    })
+
+    it('allows creation on active mesocycle', async () => {
+      const meso = seedMesocycle({ status: 'active' })
+      const result = await createMmaBjjTemplate({ name: 'BJJ Gi', mesocycle_id: meso.id })
+      expect(result.success).toBe(true)
+    })
+  })
+
+  describe('canonical_name uniqueness', () => {
+    it('rejects duplicate canonical_name within mesocycle', async () => {
+      const meso = seedMesocycle()
+      await createMmaBjjTemplate({ name: 'BJJ Gi', mesocycle_id: meso.id })
+      const result = await createMmaBjjTemplate({ name: 'BJJ Gi', mesocycle_id: meso.id })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toMatch(/duplicate|exists/i)
+    })
+
+    it('rejects duplicate canonical_name across modalities', async () => {
+      const meso = seedMesocycle()
+      await createResistanceTemplate({ name: 'Session A', mesocycle_id: meso.id })
+      const result = await createMmaBjjTemplate({ name: 'Session A', mesocycle_id: meso.id })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toMatch(/duplicate|exists/i)
+    })
+
+    it('allows same canonical_name across different mesocycles', async () => {
+      const meso1 = seedMesocycle({ name: 'Meso 1' })
+      const meso2 = seedMesocycle({ name: 'Meso 2' })
+      const r1 = await createMmaBjjTemplate({ name: 'BJJ Gi', mesocycle_id: meso1.id })
+      const r2 = await createMmaBjjTemplate({ name: 'BJJ Gi', mesocycle_id: meso2.id })
+      expect(r1.success).toBe(true)
+      expect(r2.success).toBe(true)
+    })
+  })
+
+  describe('successful creation', () => {
+    it('creates template with correct modality and fields', async () => {
+      const meso = seedMesocycle()
+      const result = await createMmaBjjTemplate({
+        name: 'BJJ No-Gi',
+        mesocycle_id: meso.id,
+        planned_duration: 90,
+      })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.modality).toBe('mma')
+        expect(result.data.name).toBe('BJJ No-Gi')
+        expect(result.data.canonical_name).toBe('bjj-no-gi')
+        expect(result.data.planned_duration).toBe(90)
+      }
+    })
+
+    it('creates template without planned_duration', async () => {
+      const meso = seedMesocycle()
+      const result = await createMmaBjjTemplate({
+        name: 'MMA Sparring',
+        mesocycle_id: meso.id,
+      })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.modality).toBe('mma')
+        expect(result.data.planned_duration).toBeNull()
+      }
+    })
+
+    it('trims name whitespace', async () => {
+      const meso = seedMesocycle()
+      const result = await createMmaBjjTemplate({ name: '  BJJ Gi  ', mesocycle_id: meso.id })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.name).toBe('BJJ Gi')
+      }
+    })
+
+    it('returns auto-increment integer ids', async () => {
+      const meso = seedMesocycle()
+      const r1 = await createMmaBjjTemplate({ name: 'BJJ Gi', mesocycle_id: meso.id })
+      const r2 = await createMmaBjjTemplate({ name: 'MMA Sparring', mesocycle_id: meso.id })
+      expect(r1.success && r1.data.id).toBe(1)
+      expect(r2.success && r2.data.id).toBe(2)
+    })
+
+    it('calls revalidatePath after creation', async () => {
+      const meso = seedMesocycle()
+      await createMmaBjjTemplate({ name: 'BJJ Gi', mesocycle_id: meso.id })
+      expect(revalidatePath).toHaveBeenCalledWith('/mesocycles')
+    })
+
+    it('persists to database with no exercise slots', async () => {
+      const meso = seedMesocycle()
+      await createMmaBjjTemplate({ name: 'BJJ Gi', mesocycle_id: meso.id })
+      const rows = testDb.select().from(schema.workout_templates).all()
+      expect(rows).toHaveLength(1)
+      expect(rows[0].modality).toBe('mma')
+      expect(rows[0].run_type).toBeNull()
     })
   })
 })

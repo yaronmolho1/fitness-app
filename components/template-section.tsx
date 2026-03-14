@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RunningTemplateForm } from '@/components/running-template-form'
+import { MmaBjjTemplateForm } from '@/components/mma-bjj-template-form'
 import { createResistanceTemplate } from '@/lib/templates/actions'
 import type { TemplateOption } from '@/lib/schedule/queries'
 
@@ -17,7 +18,7 @@ type Props = {
 
 export function TemplateSection({ mesocycleId, templates, isCompleted }: Props) {
   const router = useRouter()
-  const [formType, setFormType] = useState<'resistance' | 'running' | null>(null)
+  const [formType, setFormType] = useState<'resistance' | 'running' | 'mma' | null>(null)
   const [resistanceName, setResistanceName] = useState('')
   const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
@@ -67,6 +68,13 @@ export function TemplateSection({ mesocycleId, templates, isCompleted }: Props) 
               onClick={() => { setFormType('running'); setError('') }}
             >
               + Running
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setFormType('mma'); setError('') }}
+            >
+              + MMA/BJJ
             </Button>
           </div>
         )}
@@ -139,6 +147,23 @@ export function TemplateSection({ mesocycleId, templates, isCompleted }: Props) 
             </Button>
           </div>
           <RunningTemplateForm mesocycleId={mesocycleId} onSuccess={handleCreated} />
+        </div>
+      )}
+
+      {formType === 'mma' && (
+        <div className="rounded-lg border p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-sm font-semibold">New MMA/BJJ Template</h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => { setFormType(null); setError('') }}
+            >
+              Cancel
+            </Button>
+          </div>
+          <MmaBjjTemplateForm mesocycleId={mesocycleId} onSuccess={handleCreated} />
         </div>
       )}
     </div>
