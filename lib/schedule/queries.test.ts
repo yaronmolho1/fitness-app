@@ -17,7 +17,7 @@ vi.mock('@/lib/db/index', () => ({
   db: testDb,
 }))
 
-import { getScheduleForMesocycle } from './queries'
+import { getScheduleForMesocycle, getTemplatesForMesocycle } from './queries'
 
 function seedMesocycle(name = 'Test Meso') {
   return testDb
@@ -170,5 +170,35 @@ describe('getScheduleForMesocycle', () => {
     const result = await getScheduleForMesocycle(meso1.id)
     expect(result).toHaveLength(1)
     expect(result[0].template_name).toBe('Push A')
+  })
+})
+
+describe('getTemplatesForMesocycle', () => {
+  it('returns templates scoped to mesocycle', async () => {
+    const meso = seedMesocycle()
+    seedTemplate(meso.id, 'Push A')
+    seedTemplate(meso.id, 'Pull A')
+
+    const result = await getTemplatesForMesocycle(meso.id)
+    expect(result).toHaveLength(2)
+    expect(result[0]).toMatchObject({ name: 'Push A', modality: 'resistance' })
+    expect(result[1]).toMatchObject({ name: 'Pull A', modality: 'resistance' })
+  })
+
+  it('returns empty array when no templates exist', async () => {
+    const meso = seedMesocycle()
+    const result = await getTemplatesForMesocycle(meso.id)
+    expect(result).toEqual([])
+  })
+
+  it('does not return templates from other mesocycles', async () => {
+    const meso1 = seedMesocycle('Meso 1')
+    const meso2 = seedMesocycle('Meso 2')
+    seedTemplate(meso1.id, 'Push A')
+    seedTemplate(meso2.id, 'Pull A')
+
+    const result = await getTemplatesForMesocycle(meso1.id)
+    expect(result).toHaveLength(1)
+    expect(result[0].name).toBe('Push A')
   })
 })
