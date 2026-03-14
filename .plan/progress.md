@@ -52,7 +52,7 @@
 | T042 | Canonical name preservation | 8 | [ ] | | | | |
 | T043 | Routine item CRUD SA + scope validation | 8 | [ ] | | | | |
 | T044 | Routine item list + edit + delete | 8 | [ ] | | | | |
-| T045 | GET /api/today (lookup chain + deload) | 9 | [ ] | | | | |
+| T045 | GET /api/today (lookup chain + deload) | 9 | [~] | feat/task-045-api-today | 2026-03-14T22:00 | | PR #104 awaiting review |
 | T046 | Today's resistance workout display | 9 | [ ] | | | | |
 | T047 | Today's running + MMA/BJJ display | 9 | [ ] | | | | |
 | T048 | Logging form + pre-fill from template | 10 | [ ] | | | | |
