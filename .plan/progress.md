@@ -26,8 +26,8 @@
 | T016 | Delete exercise + deletion protection | 4 | [x] | feat/task-016-delete-exercise | 2026-03-13T14:30 | 2026-03-13T15:10 | PR #10 |
 | T017 | Exercise search & filter | 4 | [x] | feat/task-017-exercise-search-filter | 2026-03-13T16:00 | 2026-03-13T17:00 | PR #12 |
 | T018 | Create mesocycle SA + end date calc | 5 | [x] | feat/task-018-create-mesocycle | 2026-03-13T11:00 | 2026-03-13T11:45 | PR #6 |
-| T019 | Mesocycle list + detail view | 5 | [~] | feat/task-019-mesocycle-list-detail | 2026-03-14T14:00 | | |
-| T020 | Create mesocycle form + end date preview | 5 | [ ] | | | | |
+| T019 | Mesocycle list + detail view | 5 | [x] | feat/task-019-mesocycle-list-detail | 2026-03-14T14:00 | 2026-03-14 | merged via PR #99 |
+| T020 | Create mesocycle form + end date preview | 5 | [ ] | | | | stale claim reset |
 | T021 | Status transitions + one-active constraint | 5 | [x] | feat/task-021-mesocycle-status | 2026-03-13T13:00 | 2026-03-13T14:30 | PR #8 |
 | T022 | Status transition UI | 5 | [ ] | | | | |
 | T023 | Create resistance template SA + canonical slug | 6 | [x] | feat/task-023-resistance-templates | 2026-03-13T14:00 | 2026-03-13T14:45 | PR #9 |
@@ -38,7 +38,7 @@
 | T028 | Slot editing + remove | 7 | [ ] | | | | |
 | T029 | Drag-reorder slots (SA + UI) | 7 | [ ] | | | | |
 | T030 | Main/complementary role toggle | 7 | [ ] | | | | |
-| T031 | Assign/remove/replace template SA | 7 | [~] | feat/task-031-assign-template-sa | 2026-03-14T17:00 | | |
+| T031 | Assign/remove/replace template SA | 7 | [x] | feat/task-031-assign-template-sa | 2026-03-14T17:00 | 2026-03-14 | merged via PR #98 |
 | T032 | 7-day schedule grid UI | 7 | [ ] | | | | |
 | T033 | Normal/deload tabs | 7 | [ ] | | | | |
 | T034 | Rest day display in grid | 7 | [ ] | | | | |
