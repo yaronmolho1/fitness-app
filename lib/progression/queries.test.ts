@@ -173,7 +173,7 @@ describe('getProgressionData', () => {
   it('returns empty array when no logs exist for canonical_name', async () => {
     seedTwoMesocycles()
     const result = await getProgressionData(db, { canonicalName: 'push-a' })
-    expect(result).toEqual({ data: [] })
+    expect(result).toEqual({ data: [], phases: [] })
   })
 
   it('returns time-ordered data points for a single mesocycle', async () => {
@@ -497,6 +497,88 @@ describe('getProgressionData', () => {
     seedTwoMesocycles()
     const result = await getProgressionData(db, { canonicalName: 'nonexistent' })
     expect(result.data).toEqual([])
+  })
+
+  it('returns phases array with mesocycle date boundaries', async () => {
+    seedTwoMesocycles()
+
+    // Log in both blocks
+    insertLoggedWorkout({
+      templateId: 1,
+      canonicalName: 'push-a',
+      logDate: '2026-01-10',
+      mesocycleName: 'Block A',
+      snapshot: {
+        version: 1,
+        name: 'Push A',
+        modality: 'resistance',
+        slots: [
+          { exercise_name: 'Bench Press', target_sets: 3, target_reps: '8', target_weight: 80, is_main: true },
+        ],
+      },
+      exercises: [
+        { exerciseId: 10, exerciseName: 'Bench Press', order: 1, sets: [{ reps: 8, weight: 80 }] },
+      ],
+    })
+
+    insertLoggedWorkout({
+      templateId: 2,
+      canonicalName: 'push-a',
+      logDate: '2026-02-10',
+      mesocycleName: 'Block B',
+      snapshot: {
+        version: 1,
+        name: 'Push A v2',
+        modality: 'resistance',
+        slots: [
+          { exercise_name: 'Bench Press', target_sets: 4, target_reps: '6', target_weight: 90, is_main: true },
+        ],
+      },
+      exercises: [
+        { exerciseId: 10, exerciseName: 'Bench Press', order: 1, sets: [{ reps: 6, weight: 90 }] },
+      ],
+    })
+
+    const result = await getProgressionData(db, { canonicalName: 'push-a' })
+    expect(result.phases).toBeDefined()
+    expect(result.phases).toHaveLength(2)
+    expect(result.phases).toEqual([
+      { mesocycleId: 1, mesocycleName: 'Block A', startDate: '2026-01-01', endDate: '2026-02-01' },
+      { mesocycleId: 2, mesocycleName: 'Block B', startDate: '2026-02-01', endDate: '2026-03-01' },
+    ])
+  })
+
+  it('phases only includes mesocycles with data points', async () => {
+    seedTwoMesocycles()
+
+    // Only log in Block A, not Block B
+    insertLoggedWorkout({
+      templateId: 1,
+      canonicalName: 'push-a',
+      logDate: '2026-01-10',
+      mesocycleName: 'Block A',
+      snapshot: {
+        version: 1,
+        name: 'Push A',
+        modality: 'resistance',
+        slots: [
+          { exercise_name: 'Bench Press', target_sets: 3, target_reps: '8', target_weight: 80, is_main: true },
+        ],
+      },
+      exercises: [
+        { exerciseId: 10, exerciseName: 'Bench Press', order: 1, sets: [{ reps: 8, weight: 80 }] },
+      ],
+    })
+
+    const result = await getProgressionData(db, { canonicalName: 'push-a' })
+    expect(result.phases).toHaveLength(1)
+    expect(result.phases[0].mesocycleId).toBe(1)
+  })
+
+  it('phases empty when no data', async () => {
+    seedTwoMesocycles()
+    const result = await getProgressionData(db, { canonicalName: 'push-a' })
+    expect(result.phases).toEqual([])
   })
 
   it('includes mesocycle info in each data point', async () => {

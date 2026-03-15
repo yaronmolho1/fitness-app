@@ -26,6 +26,12 @@ vi.mock('recharts', async () => {
     Tooltip: () => React.createElement('div', { 'data-testid': 'tooltip' }),
     Legend: () => React.createElement('div', { 'data-testid': 'legend' }),
     CartesianGrid: () => React.createElement('div', { 'data-testid': 'cartesian-grid' }),
+    ReferenceLine: ({ x, label, strokeDasharray }: { x: string; label?: { value: string }; strokeDasharray?: string }) =>
+      React.createElement('div', {
+        'data-testid': `reference-line-${x}`,
+        'data-label': label?.value ?? '',
+        'data-dash': strokeDasharray ?? '',
+      }),
     Dot: () => null,
   }
 })
@@ -40,6 +46,10 @@ const progressionData = {
     { date: '2025-01-15', mesocycleId: 1, mesocycleName: 'Hypertrophy A', plannedWeight: 80, actualWeight: 82.5, plannedVolume: 4800, actualVolume: 4950 },
     { date: '2025-01-22', mesocycleId: 1, mesocycleName: 'Hypertrophy A', plannedWeight: 82.5, actualWeight: 82.5, plannedVolume: 4950, actualVolume: 4950 },
     { date: '2025-02-05', mesocycleId: 2, mesocycleName: 'Strength B', plannedWeight: 90, actualWeight: 87.5, plannedVolume: 5400, actualVolume: 5250 },
+  ],
+  phases: [
+    { mesocycleId: 1, mesocycleName: 'Hypertrophy A', startDate: '2025-01-01', endDate: '2025-02-01' },
+    { mesocycleId: 2, mesocycleName: 'Strength B', startDate: '2025-02-01', endDate: '2025-03-01' },
   ],
 }
 
@@ -179,6 +189,45 @@ describe('ProgressionChart', () => {
       expect(global.fetch).toHaveBeenCalledWith(
         expect.stringContaining('canonical_name=bench-press')
       )
+    })
+  })
+
+  it('renders phase boundary reference lines for start and end dates', async () => {
+    render(<ProgressionChart exercises={exercises} />)
+
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('combobox'))
+    const option = await screen.findByRole('option', { name: 'Bench Press' })
+    await user.click(option)
+
+    await waitFor(() => {
+      // Start lines for each phase
+      expect(screen.getByTestId('reference-line-2025-01-01')).toBeInTheDocument()
+      expect(screen.getByTestId('reference-line-2025-02-01')).toBeInTheDocument()
+      // End lines
+      expect(screen.getByTestId('reference-line-2025-03-01')).toBeInTheDocument()
+    })
+
+    // Start lines have solid style (no dash)
+    const startLine = screen.getByTestId('reference-line-2025-01-01')
+    expect(startLine).toHaveAttribute('data-dash', '')
+
+    // End lines have dashed style
+    const endLine = screen.getByTestId('reference-line-2025-03-01')
+    expect(endLine).toHaveAttribute('data-dash', '4 4')
+  })
+
+  it('phase boundary lines have mesocycle name labels', async () => {
+    render(<ProgressionChart exercises={exercises} />)
+
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('combobox'))
+    const option = await screen.findByRole('option', { name: 'Bench Press' })
+    await user.click(option)
+
+    await waitFor(() => {
+      const startLine = screen.getByTestId('reference-line-2025-01-01')
+      expect(startLine).toHaveAttribute('data-label', 'Hypertrophy A')
     })
   })
 
