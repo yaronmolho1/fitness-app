@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getMesocycleById } from '@/lib/mesocycles/queries'
 import { getScheduleForMesocycle, getTemplatesForMesocycle } from '@/lib/schedule/queries'
+import { getExercises } from '@/lib/exercises/queries'
+import { getSlotsByTemplate } from '@/lib/templates/slot-queries'
 import { ScheduleTabs } from '@/components/schedule-tabs'
 import { StatusBadge } from '@/components/status-badge'
 import { StatusTransitionButton } from '@/components/status-transition-button'
@@ -24,11 +26,18 @@ export default async function MesocycleDetailPage({
     notFound()
   }
 
-  const [normalSchedule, deloadSchedule, templates] = await Promise.all([
+  const [normalSchedule, deloadSchedule, templates, exercises] = await Promise.all([
     getScheduleForMesocycle(numericId, 'normal'),
     meso.has_deload ? getScheduleForMesocycle(numericId, 'deload') : Promise.resolve([]),
     getTemplatesForMesocycle(numericId),
+    getExercises(),
   ])
+
+  // Fetch slots for each template
+  const slotsByTemplate: Record<number, Awaited<ReturnType<typeof getSlotsByTemplate>>> = {}
+  for (const t of templates) {
+    slotsByTemplate[t.id] = getSlotsByTemplate(t.id)
+  }
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-6">
@@ -55,6 +64,8 @@ export default async function MesocycleDetailPage({
       <TemplateSection
         mesocycleId={numericId}
         templates={templates}
+        exercises={exercises}
+        slotsByTemplate={slotsByTemplate}
         isCompleted={meso.status === 'completed'}
       />
 

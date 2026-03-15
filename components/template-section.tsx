@@ -7,16 +7,21 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RunningTemplateForm } from '@/components/running-template-form'
 import { MmaBjjTemplateForm } from '@/components/mma-bjj-template-form'
+import { SlotList } from '@/components/slot-list'
 import { createResistanceTemplate, updateTemplate, deleteTemplate } from '@/lib/templates/actions'
 import type { TemplateOption } from '@/lib/schedule/queries'
+import type { SlotWithExercise } from '@/lib/templates/slot-queries'
+import type { Exercise } from '@/lib/exercises/filters'
 
 type Props = {
   mesocycleId: number
   templates: TemplateOption[]
+  exercises: Exercise[]
+  slotsByTemplate: Record<number, SlotWithExercise[]>
   isCompleted: boolean
 }
 
-export function TemplateSection({ mesocycleId, templates, isCompleted }: Props) {
+export function TemplateSection({ mesocycleId, templates, exercises, slotsByTemplate, isCompleted }: Props) {
   const router = useRouter()
   const [formType, setFormType] = useState<'resistance' | 'running' | 'mma' | null>(null)
   const [resistanceName, setResistanceName] = useState('')
@@ -90,6 +95,8 @@ export function TemplateSection({ mesocycleId, templates, isCompleted }: Props) 
             <TemplateRow
               key={t.id}
               template={t}
+              slots={slotsByTemplate[t.id] ?? []}
+              exercises={exercises}
               isCompleted={isCompleted}
               onUpdated={() => router.refresh()}
             />
@@ -173,13 +180,16 @@ export function TemplateSection({ mesocycleId, templates, isCompleted }: Props) 
 
 type TemplateRowProps = {
   template: TemplateOption
+  slots: SlotWithExercise[]
+  exercises: Exercise[]
   isCompleted: boolean
   onUpdated: () => void
 }
 
-function TemplateRow({ template, isCompleted, onUpdated }: TemplateRowProps) {
+function TemplateRow({ template, slots, exercises, isCompleted, onUpdated }: TemplateRowProps) {
   const [editing, setEditing] = useState(false)
   const [confirming, setConfirming] = useState(false)
+  const [expanded, setExpanded] = useState(false)
   const [name, setName] = useState(template.name)
   const [canonicalName, setCanonicalName] = useState(template.canonical_name)
   const [error, setError] = useState('')
@@ -293,37 +303,60 @@ function TemplateRow({ template, isCompleted, onUpdated }: TemplateRowProps) {
   }
 
   // Default display
+  const isResistance = template.modality === 'resistance'
+
   return (
-    <div className="flex items-center justify-between rounded-lg border px-4 py-3">
-      <div className="min-w-0 flex-1">
-        <span className="text-sm font-medium">{template.name}</span>
-        <span className="ml-2 text-xs text-muted-foreground">{template.canonical_name}</span>
+    <div className="rounded-lg border">
+      <div
+        className="flex cursor-pointer items-center justify-between px-4 py-3"
+        onClick={() => isResistance && setExpanded(!expanded)}
+      >
+        <div className="min-w-0 flex-1">
+          <span className="text-sm font-medium">{template.name}</span>
+          <span className="ml-2 text-xs text-muted-foreground">{template.canonical_name}</span>
+          {isResistance && (
+            <span className="ml-2 text-xs text-muted-foreground">
+              {slots.length} exercise{slots.length !== 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+            {template.modality}
+          </span>
+          {!isCompleted && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={(e) => { e.stopPropagation(); setEditing(true) }}
+              >
+                Edit
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+                onClick={(e) => { e.stopPropagation(); setConfirming(true) }}
+              >
+                Delete
+              </Button>
+            </>
+          )}
+        </div>
       </div>
-      <div className="flex items-center gap-2">
-        <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-          {template.modality}
-        </span>
-        {!isCompleted && (
-          <>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={() => setEditing(true)}
-            >
-              Edit
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-xs text-destructive hover:text-destructive"
-              onClick={() => setConfirming(true)}
-            >
-              Delete
-            </Button>
-          </>
-        )}
-      </div>
+
+      {isResistance && expanded && (
+        <div className="border-t px-4 py-3">
+          <SlotList
+            slots={slots}
+            templateId={template.id}
+            exercises={exercises}
+            isCompleted={isCompleted}
+          />
+        </div>
+      )}
     </div>
   )
 }
