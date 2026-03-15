@@ -22,6 +22,8 @@ import { getTodayWorkout, isDeloadWeek } from './queries'
 // Helpers
 
 function createTables() {
+  testDb.run(sql`DROP TABLE IF EXISTS routine_logs`)
+  testDb.run(sql`DROP TABLE IF EXISTS routine_items`)
   testDb.run(sql`DROP TABLE IF EXISTS logged_sets`)
   testDb.run(sql`DROP TABLE IF EXISTS logged_exercises`)
   testDb.run(sql`DROP TABLE IF EXISTS logged_workouts`)
@@ -134,6 +136,42 @@ function createTables() {
       created_at INTEGER
     )
   `)
+  testDb.run(sql`
+    CREATE TABLE routine_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      category TEXT,
+      has_weight INTEGER NOT NULL DEFAULT 0,
+      has_length INTEGER NOT NULL DEFAULT 0,
+      has_duration INTEGER NOT NULL DEFAULT 0,
+      has_sets INTEGER NOT NULL DEFAULT 0,
+      has_reps INTEGER NOT NULL DEFAULT 0,
+      frequency_target INTEGER NOT NULL DEFAULT 1,
+      scope TEXT NOT NULL DEFAULT 'global',
+      mesocycle_id INTEGER REFERENCES mesocycles(id),
+      start_date TEXT,
+      end_date TEXT,
+      skip_on_deload INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER
+    )
+  `)
+  testDb.run(sql`
+    CREATE TABLE routine_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      routine_item_id INTEGER NOT NULL REFERENCES routine_items(id),
+      log_date TEXT NOT NULL,
+      status TEXT NOT NULL,
+      value_weight REAL,
+      value_length REAL,
+      value_duration REAL,
+      value_sets INTEGER,
+      value_reps INTEGER,
+      created_at INTEGER
+    )
+  `)
+  testDb.run(
+    sql`CREATE UNIQUE INDEX routine_logs_item_date_idx ON routine_logs(routine_item_id, log_date)`
+  )
 }
 
 function seedMesocycle(overrides: Partial<{
@@ -238,6 +276,62 @@ function seedSchedule(mesoId: number, day: number, templateId: number, weekType 
       day_of_week: day,
       template_id: templateId,
       week_type: weekType,
+      created_at: new Date(),
+    })
+    .returning()
+    .get()
+}
+
+function seedRoutineItem(overrides: Partial<{
+  name: string
+  category: string
+  scope: string
+  mesocycle_id: number
+  start_date: string
+  end_date: string
+  skip_on_deload: boolean
+  has_weight: boolean
+  has_duration: boolean
+}> = {}) {
+  return testDb
+    .insert(schema.routine_items)
+    .values({
+      name: overrides.name ?? 'Test Routine',
+      category: overrides.category ?? null,
+      has_weight: overrides.has_weight ?? false,
+      has_length: false,
+      has_duration: overrides.has_duration ?? true,
+      has_sets: false,
+      has_reps: false,
+      frequency_target: 1,
+      scope: overrides.scope ?? 'global',
+      mesocycle_id: overrides.mesocycle_id ?? null,
+      start_date: overrides.start_date ?? null,
+      end_date: overrides.end_date ?? null,
+      skip_on_deload: overrides.skip_on_deload ?? false,
+      created_at: new Date(),
+    })
+    .returning()
+    .get()
+}
+
+function seedRoutineLog(
+  routineItemId: number,
+  logDate: string,
+  status: 'done' | 'skipped',
+  values: Partial<{ value_weight: number; value_duration: number }> = {}
+) {
+  return testDb
+    .insert(schema.routine_logs)
+    .values({
+      routine_item_id: routineItemId,
+      log_date: logDate,
+      status,
+      value_weight: values.value_weight ?? null,
+      value_length: null,
+      value_duration: values.value_duration ?? null,
+      value_sets: null,
+      value_reps: null,
       created_at: new Date(),
     })
     .returning()
@@ -556,5 +650,97 @@ describe('getTodayWorkout', () => {
     // 2026-03-10 is Tuesday — no schedule = rest day
     const result = await getTodayWorkout('2026-03-10')
     expect(result.type).toBe('rest_day')
+  })
+
+  // ==========================================================================
+  // T063: Rest day includes active routines
+  // ==========================================================================
+
+  it('rest_day includes active routine items for today', async () => {
+    const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
+    const tmpl = seedTemplate(meso.id, 'Push A')
+    seedSchedule(meso.id, 1, tmpl.id) // Monday only
+
+    // Seed a global routine item
+    seedRoutineItem({ name: 'Body Weight', scope: 'global' })
+
+    // 2026-03-10 is Tuesday — rest day
+    const result = await getTodayWorkout('2026-03-10')
+    expect(result.type).toBe('rest_day')
+    if (result.type === 'rest_day') {
+      expect(result.routines).toBeDefined()
+      expect(result.routines.items).toHaveLength(1)
+      expect(result.routines.items[0].name).toBe('Body Weight')
+      expect(result.routines.logs).toHaveLength(0)
+    }
+  })
+
+  it('rest_day filters out inactive routine items', async () => {
+    const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01', end_date: '2026-03-28' })
+    const tmpl = seedTemplate(meso.id, 'Push A')
+    seedSchedule(meso.id, 1, tmpl.id)
+
+    // Global routine — active
+    seedRoutineItem({ name: 'Body Weight', scope: 'global' })
+    // Date range routine outside range — inactive
+    seedRoutineItem({ name: 'Old Routine', scope: 'date_range', start_date: '2025-01-01', end_date: '2025-12-31' })
+
+    const result = await getTodayWorkout('2026-03-10')
+    if (result.type === 'rest_day') {
+      expect(result.routines.items).toHaveLength(1)
+      expect(result.routines.items[0].name).toBe('Body Weight')
+    }
+  })
+
+  it('rest_day includes routine logs for the date', async () => {
+    const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
+    const tmpl = seedTemplate(meso.id, 'Push A')
+    seedSchedule(meso.id, 1, tmpl.id)
+
+    const item = seedRoutineItem({ name: 'Body Weight', scope: 'global', has_weight: true })
+    seedRoutineLog(item.id, '2026-03-10', 'done', { value_weight: 72.5 })
+
+    const result = await getTodayWorkout('2026-03-10')
+    if (result.type === 'rest_day') {
+      expect(result.routines.logs).toHaveLength(1)
+      expect(result.routines.logs[0].status).toBe('done')
+      expect(result.routines.logs[0].value_weight).toBe(72.5)
+    }
+  })
+
+  it('rest_day with no active routines returns empty arrays', async () => {
+    const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
+    const tmpl = seedTemplate(meso.id, 'Push A')
+    seedSchedule(meso.id, 1, tmpl.id)
+
+    const result = await getTodayWorkout('2026-03-10')
+    expect(result.type).toBe('rest_day')
+    if (result.type === 'rest_day') {
+      expect(result.routines.items).toHaveLength(0)
+      expect(result.routines.logs).toHaveLength(0)
+    }
+  })
+
+  it('rest_day skips skip_on_deload routines during deload week', async () => {
+    const meso = seedMesocycle({
+      status: 'active',
+      start_date: '2026-03-01',
+      end_date: '2026-04-04',
+      work_weeks: 4,
+      has_deload: true,
+    })
+    const tmpl = seedTemplate(meso.id, 'Push A')
+    seedSchedule(meso.id, 1, tmpl.id, 'normal') // Monday normal only
+
+    seedRoutineItem({ name: 'Heavy Mobility', scope: 'global', skip_on_deload: true })
+    seedRoutineItem({ name: 'Body Weight', scope: 'global', skip_on_deload: false })
+
+    // 2026-03-31 is Tuesday in deload week — no deload schedule = rest day
+    const result = await getTodayWorkout('2026-03-31')
+    expect(result.type).toBe('rest_day')
+    if (result.type === 'rest_day') {
+      expect(result.routines.items).toHaveLength(1)
+      expect(result.routines.items[0].name).toBe('Body Weight')
+    }
   })
 })

@@ -2,6 +2,15 @@
 import { render, screen, cleanup, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
+vi.mock('next/navigation', () => ({
+  useRouter: vi.fn(() => ({ refresh: vi.fn() })),
+}))
+
+vi.mock('@/lib/routines/actions', () => ({
+  markRoutineDone: vi.fn(() => Promise.resolve({ success: true, data: {} })),
+  markRoutineSkipped: vi.fn(() => Promise.resolve({ success: true, data: {} })),
+}))
+
 // Mock fetch globally
 const mockFetch = vi.fn()
 vi.stubGlobal('fetch', mockFetch)
@@ -53,6 +62,7 @@ describe('TodayWorkout', () => {
       type: 'rest_day',
       date: '2026-03-15',
       mesocycle: { id: 1, name: 'Block A', start_date: '2026-03-01', end_date: '2026-04-01', week_type: 'normal' },
+      routines: { items: [], logs: [] },
     })
     render(<TodayWorkout />)
 
@@ -60,6 +70,82 @@ describe('TodayWorkout', () => {
       expect(screen.getByTestId('rest-day')).toBeInTheDocument()
     })
     expect(screen.getByText(/rest day/i)).toBeInTheDocument()
+  })
+
+  it('renders rest day with active routines for check-off', async () => {
+    mockApiResponse({
+      type: 'rest_day',
+      date: '2026-03-15',
+      mesocycle: { id: 1, name: 'Block A', start_date: '2026-03-01', end_date: '2026-04-01', week_type: 'normal' },
+      routines: {
+        items: [
+          { id: 1, name: 'Body Weight', category: 'tracking', has_weight: true, has_length: false, has_duration: false, has_sets: false, has_reps: false },
+        ],
+        logs: [],
+      },
+    })
+    render(<TodayWorkout />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('rest-day')).toBeInTheDocument()
+    })
+    // Routine check-off section present
+    expect(screen.getByText('Body Weight')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /done/i })).toBeInTheDocument()
+  })
+
+  it('renders rest day routines empty state when no routines active', async () => {
+    mockApiResponse({
+      type: 'rest_day',
+      date: '2026-03-15',
+      mesocycle: { id: 1, name: 'Block A', start_date: '2026-03-01', end_date: '2026-04-01', week_type: 'normal' },
+      routines: { items: [], logs: [] },
+    })
+    render(<TodayWorkout />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('rest-day')).toBeInTheDocument()
+    })
+    expect(screen.getByText(/no routines for today/i)).toBeInTheDocument()
+  })
+
+  it('renders rest day with completed routines showing done badge', async () => {
+    mockApiResponse({
+      type: 'rest_day',
+      date: '2026-03-15',
+      mesocycle: { id: 1, name: 'Block A', start_date: '2026-03-01', end_date: '2026-04-01', week_type: 'normal' },
+      routines: {
+        items: [
+          { id: 1, name: 'Body Weight', category: 'tracking', has_weight: true, has_length: false, has_duration: false, has_sets: false, has_reps: false },
+        ],
+        logs: [
+          { id: 10, routine_item_id: 1, log_date: '2026-03-15', status: 'done', value_weight: 72.5, value_length: null, value_duration: null, value_sets: null, value_reps: null },
+        ],
+      },
+    })
+    render(<TodayWorkout />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('rest-day')).toBeInTheDocument()
+    })
+    expect(screen.getByText('Done')).toBeInTheDocument()
+    expect(screen.getByText('72.5 kg')).toBeInTheDocument()
+  })
+
+  it('does not show workout content on rest day', async () => {
+    mockApiResponse({
+      type: 'rest_day',
+      date: '2026-03-15',
+      mesocycle: { id: 1, name: 'Block A', start_date: '2026-03-01', end_date: '2026-04-01', week_type: 'normal' },
+      routines: { items: [], logs: [] },
+    })
+    render(<TodayWorkout />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('rest-day')).toBeInTheDocument()
+    })
+    expect(screen.queryByTestId('workout-display')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('start-logging-btn')).not.toBeInTheDocument()
   })
 
   it('renders resistance workout with template name prominently', async () => {
