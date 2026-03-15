@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { WorkoutLoggingForm } from '@/components/workout-logging-form'
 import { cn } from '@/lib/utils'
 
 // API response types matching lib/today/queries.ts
@@ -136,7 +137,13 @@ function TargetCell({ label, value }: { label: string; value: string }) {
   )
 }
 
-function ResistanceDisplay({ data }: { data: WorkoutResponse }) {
+function ResistanceDisplay({
+  data,
+  onStartLogging,
+}: {
+  data: WorkoutResponse
+  onStartLogging: () => void
+}) {
   return (
     <div data-testid="workout-display" className="space-y-4">
       {/* Header */}
@@ -187,6 +194,18 @@ function ResistanceDisplay({ data }: { data: WorkoutResponse }) {
           </CardContent>
         </Card>
       )}
+
+      {/* Log workout action */}
+      {data.template.modality === 'resistance' && (
+        <button
+          type="button"
+          data-testid="start-logging-btn"
+          onClick={onStartLogging}
+          className="w-full rounded-xl bg-primary py-3.5 text-base font-semibold text-primary-foreground shadow-lg active:scale-[0.98] transition-transform"
+        >
+          Log Workout
+        </button>
+      )}
     </div>
   )
 }
@@ -194,6 +213,7 @@ function ResistanceDisplay({ data }: { data: WorkoutResponse }) {
 export function TodayWorkout() {
   const [data, setData] = useState<TodayResponse | null>(null)
   const [error, setError] = useState(false)
+  const [isLogging, setIsLogging] = useState(false)
 
   useEffect(() => {
     fetch('/api/today')
@@ -266,9 +286,14 @@ export function TodayWorkout() {
     )
   }
 
-  // Workout — currently only resistance is implemented (T046)
+  // Workout display or logging form
   if (data?.type === 'workout') {
-    return <ResistanceDisplay data={data} />
+    if (isLogging && data.template.modality === 'resistance') {
+      return <WorkoutLoggingForm data={data} />
+    }
+    return (
+      <ResistanceDisplay data={data} onStartLogging={() => setIsLogging(true)} />
+    )
   }
 
   return null
