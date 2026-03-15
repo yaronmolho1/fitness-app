@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { eq } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '@/lib/db'
 import { routine_items, routine_logs, mesocycles } from '@/lib/db/schema'
@@ -201,6 +201,168 @@ export async function updateRoutineItem(
     return { success: true, data: updated }
   } catch {
     return { success: false, error: 'Failed to update routine item' }
+  }
+}
+
+// ============================================================================
+// Mark done / skipped
+// ============================================================================
+
+const VALUE_FIELDS = ['weight', 'length', 'duration', 'sets', 'reps'] as const
+type ValueField = (typeof VALUE_FIELDS)[number]
+
+const INTEGER_FIELDS: ValueField[] = ['sets', 'reps']
+
+const logDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format')
+const routineItemIdSchema = z.number().int().positive('Invalid routine item ID')
+
+export type MarkDoneInput = {
+  routine_item_id: number
+  log_date: string
+  values: Partial<Record<ValueField, number>>
+}
+
+export type MarkSkippedInput = {
+  routine_item_id: number
+  log_date: string
+}
+
+type RoutineLogRow = typeof routine_logs.$inferSelect
+
+type RoutineLogResult =
+  | { success: true; data: RoutineLogRow }
+  | { success: false; error: string }
+
+async function getItemAndCheckDuplicate(
+  routineItemId: number,
+  logDate: string
+): Promise<
+  | { ok: true; item: RoutineItemRow }
+  | { ok: false; error: string }
+> {
+  const [item] = await db
+    .select()
+    .from(routine_items)
+    .where(eq(routine_items.id, routineItemId))
+
+  if (!item) return { ok: false, error: 'Routine item not found' }
+
+  const existing = await db
+    .select()
+    .from(routine_logs)
+    .where(
+      and(
+        eq(routine_logs.routine_item_id, routineItemId),
+        eq(routine_logs.log_date, logDate)
+      )
+    )
+
+  if (existing.length > 0) {
+    return { ok: false, error: 'Already logged for this date' }
+  }
+
+  return { ok: true, item }
+}
+
+export async function markRoutineDone(
+  input: MarkDoneInput
+): Promise<RoutineLogResult> {
+  const idResult = routineItemIdSchema.safeParse(input.routine_item_id)
+  if (!idResult.success) return { success: false, error: idResult.error.issues[0].message }
+
+  const dateResult = logDateSchema.safeParse(input.log_date)
+  if (!dateResult.success) return { success: false, error: dateResult.error.issues[0].message }
+
+  const { values } = input
+
+  // Must provide at least one value
+  const providedFields = VALUE_FIELDS.filter(
+    (f) => values[f] !== undefined && values[f] !== null
+  )
+  if (providedFields.length === 0) {
+    return { success: false, error: 'At least one field value is required' }
+  }
+
+  // Validate no negative values
+  for (const field of providedFields) {
+    const v = values[field]!
+    if (v < 0) {
+      return { success: false, error: `Negative values are not allowed (${field})` }
+    }
+    if (INTEGER_FIELDS.includes(field) && !Number.isInteger(v)) {
+      return { success: false, error: `${field} must be an integer` }
+    }
+  }
+
+  const check = await getItemAndCheckDuplicate(input.routine_item_id, input.log_date)
+  if (!check.ok) return { success: false, error: check.error }
+
+  const { item } = check
+
+  // Only persist values for fields the item has enabled
+  const fieldToFlag: Record<ValueField, keyof RoutineItemRow> = {
+    weight: 'has_weight',
+    length: 'has_length',
+    duration: 'has_duration',
+    sets: 'has_sets',
+    reps: 'has_reps',
+  }
+
+  try {
+    const [log] = await db
+      .insert(routine_logs)
+      .values({
+        routine_item_id: input.routine_item_id,
+        log_date: input.log_date,
+        status: 'done',
+        value_weight: item[fieldToFlag.weight] ? (values.weight ?? null) : null,
+        value_length: item[fieldToFlag.length] ? (values.length ?? null) : null,
+        value_duration: item[fieldToFlag.duration] ? (values.duration ?? null) : null,
+        value_sets: item[fieldToFlag.sets] ? (values.sets ?? null) : null,
+        value_reps: item[fieldToFlag.reps] ? (values.reps ?? null) : null,
+        created_at: new Date(),
+      })
+      .returning()
+
+    revalidatePath('/routines')
+    return { success: true, data: log }
+  } catch {
+    return { success: false, error: 'Failed to create routine log' }
+  }
+}
+
+export async function markRoutineSkipped(
+  input: MarkSkippedInput
+): Promise<RoutineLogResult> {
+  const idResult = routineItemIdSchema.safeParse(input.routine_item_id)
+  if (!idResult.success) return { success: false, error: idResult.error.issues[0].message }
+
+  const dateResult = logDateSchema.safeParse(input.log_date)
+  if (!dateResult.success) return { success: false, error: dateResult.error.issues[0].message }
+
+  const check = await getItemAndCheckDuplicate(input.routine_item_id, input.log_date)
+  if (!check.ok) return { success: false, error: check.error }
+
+  try {
+    const [log] = await db
+      .insert(routine_logs)
+      .values({
+        routine_item_id: input.routine_item_id,
+        log_date: input.log_date,
+        status: 'skipped',
+        value_weight: null,
+        value_length: null,
+        value_duration: null,
+        value_sets: null,
+        value_reps: null,
+        created_at: new Date(),
+      })
+      .returning()
+
+    revalidatePath('/routines')
+    return { success: true, data: log }
+  } catch {
+    return { success: false, error: 'Failed to create routine log' }
   }
 }
 
