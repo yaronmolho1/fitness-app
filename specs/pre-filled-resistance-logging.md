@@ -10,7 +10,7 @@ As an athlete, I can open today's resistance workout and see every set pre-fille
 - [ ] The logging form is accessible from the "View Today's Planned Workout" screen via a "Start Workout" / "Log Workout" action
 - [ ] The logging form is only shown when today's workout modality is `resistance`; running and MMA/BJJ modalities use their own logging flows
 - [ ] The form is structured as a list of exercises in the same `sort_order` as the template's exercise slots
-- [ ] Each exercise section displays the exercise name and, if marked, its main/complementary designation
+- [ ] Each exercise section displays the exercise name and, if marked, its main/complementary designation. Note: `is_main` field available on slots — use for visual distinction (T030 deferred UI here)
 - [ ] Each exercise section contains one row per planned set, derived from `exercise_slots.target_sets`
 - [ ] Each set row is pre-filled with `target_weight` from the corresponding `exercise_slot` (may be null/empty if not set on the slot)
 - [ ] Each set row is pre-filled with `target_reps` from the corresponding `exercise_slot`

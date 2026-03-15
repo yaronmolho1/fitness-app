@@ -20,7 +20,7 @@ As an athlete, I can open the app on my phone and immediately see today's planne
 ### Resistance Workout Display
 - [ ] Template name is shown prominently
 - [ ] Each exercise slot is listed with: exercise name, sets target, reps target, weight target, RPE target (if set), rest period (if set), and text guidelines (if set)
-- [ ] Main vs complementary marking is visually distinct (per the Main vs Complementary Marking story)
+- [ ] Main vs complementary marking is visually distinct (per the Main vs Complementary Marking story). Note: `is_main` field is available on exercise slots via `getTodayWorkout()` query — use it for badge/styling (T030 deferred UI here)
 - [ ] Exercise slots are displayed in their defined order
 
 ### Running Workout Display

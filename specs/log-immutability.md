@@ -12,7 +12,7 @@ As an athlete, I want the saved workout to be immutable (no edits after save) so
 - [ ] If any part of the transaction fails, the entire transaction is rolled back — no partial log records are created
 - [ ] The `logged_workouts` row stores a `template_snapshot` JSON column containing the full planned template state at the time of logging
 - [ ] The `template_snapshot` JSON includes a `version` field set to `1` — per ADR-005 implementation notes
-- [ ] The `template_snapshot` JSON includes: template name, modality, all exercise slots (exercise name, target_sets, target_reps, target_weight, target_rpe, rest_seconds, guidelines, sort_order), and any template-level fields (coaching cues, etc.)
+- [ ] The `template_snapshot` JSON includes: template name, modality, all exercise slots (exercise name, target_sets, target_reps, target_weight, target_rpe, rest_seconds, guidelines, sort_order, is_main), and any template-level fields (coaching cues, etc.)
 - [ ] The `logged_workouts` row stores `canonical_name` copied from `workout_templates.canonical_name` at log time — per ADR-006
 - [ ] `canonical_name` on `logged_workouts` is a plain string copy, not a foreign key — per ADR-006
 - [ ] The `logged_exercises` rows store normalized per-exercise data enabling SQL analytics (exercise name, exercise_id reference, sort_order)
