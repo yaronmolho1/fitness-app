@@ -294,3 +294,36 @@ db-schema-migrations
 | Workout Logging | 10 | pre-filled-resistance-logging, actual-set-input, add-remove-sets, workout-rating-notes, log-immutability, running-logging, running-rating-notes, interval-logging, mma-bjj-logging |
 | Calendar & Progression | 8 | projected-calendar, day-detail-drill-in, completed-day-markers, deload-week-distinction, exercise-progression-chart, phase-boundary-markers |
 | Daily Routines | 5 | routine-item-crud, daily-routine-check-off, routine-streaks-counts |
+| UI Overhaul | 9 | ui-overhaul-shadcn-theme |
+
+---
+
+## Wave UI-1: Theme Foundation
+
+> No feature dependencies. Can run in parallel with any wave.
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T074 | OKLCH theme setup: globals.css with full CSS custom properties (primary, secondary, muted, accent, destructive, background, foreground, card, popover, border, ring, chart-1 through chart-5). Light + dark palettes. Dark mode via `prefers-color-scheme`. Base layer: `border-border`, `outline-ring/50`, body `bg-background text-foreground`. Copy expense-tracker's OKLCH color system. | medium | UI Overhaul | T012 | ui-overhaul-shadcn-theme |
+| T075 | Geist fonts + root layout: install `geist` font package, configure in root layout. Add Providers wrapper component. Install + mount Sonner Toaster. Add `suppressHydrationWarning` to html element. | small | UI Overhaul | T074 | ui-overhaul-shadcn-theme |
+| T076 | Install shadcn/ui components: select, checkbox, dialog, alert-dialog, tabs, sheet, dropdown-menu, popover, badge, skeleton, textarea. All must use OKLCH theme tokens. Verify each renders correctly in light + dark mode. | medium | UI Overhaul | T074 | ui-overhaul-shadcn-theme |
+
+## Wave UI-2: Navigation + Form Refactoring
+
+> Depends on Wave UI-1. All tasks in this wave are parallel.
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T077 | Navigation overhaul: replace fixed sidebar with collapsible sidebar (toggle, localStorage persistence). Replace bottom bar with top header bar (menu toggle left, logout right) + Sheet mobile nav (slide from left). Same 5 nav items. Active route indicator. Responsive breakpoint swap. | large | UI Overhaul | T075, T076 | ui-overhaul-shadcn-theme |
+| T078 | Exercise form refactor: replace raw `<select>` elements for modality and muscle_group with shadcn Select component. Match theme styling. | small | UI Overhaul | T076 | ui-overhaul-shadcn-theme |
+| T079 | Mesocycle form refactor: replace raw `<input type="checkbox">` with shadcn Checkbox for has_deload. Replace raw `<input type="date">` with themed date input (consistent with design system). | small | UI Overhaul | T076 | ui-overhaul-shadcn-theme |
+| T080 | Schedule tabs refactor: replace custom div-based tab switching in ScheduleTabs with shadcn Tabs component. Normal/deload tab content unchanged. | small | UI Overhaul | T076 | ui-overhaul-shadcn-theme |
+| T081 | Status indicators refactor: replace hardcoded color StatusBadge with shadcn Badge using semantic theme tokens. Add Skeleton loading states to replace `animate-pulse` divs across pages. | small | UI Overhaul | T076 | ui-overhaul-shadcn-theme |
+
+## Wave UI-3: Visual Polish
+
+> Depends on Wave UI-2. Final consistency pass.
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T082 | Visual consistency pass: ensure all cards use `rounded-xl` + `shadow-sm`. Normalize page spacing to `max-w-4xl` containers with `gap-4`/`gap-6`. Add theme-consistent hover/focus transitions to all interactive elements. Verify no raw HTML form elements remain. | medium | UI Overhaul | T077, T078, T079, T080, T081 | ui-overhaul-shadcn-theme |

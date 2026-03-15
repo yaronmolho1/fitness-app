@@ -81,3 +81,12 @@
 | T071 | Phase boundary markers | 13 | [ ] | | | | |
 | T072 | Weekly completion count | 14 | [ ] | | | | |
 | T073 | Streak calculation + display | 14 | [ ] | | | | |
+| T074 | OKLCH theme + dark mode setup | UI-1 | [ ] | | | | |
+| T075 | Geist fonts + Providers + Toaster | UI-1 | [ ] | | | | |
+| T076 | Install shadcn components (11) | UI-1 | [ ] | | | | |
+| T077 | Navigation overhaul (collapsible + Sheet) | UI-2 | [ ] | | | | |
+| T078 | Exercise form Select refactor | UI-2 | [ ] | | | | |
+| T079 | Mesocycle form Checkbox + date refactor | UI-2 | [ ] | | | | |
+| T080 | Schedule Tabs component refactor | UI-2 | [ ] | | | | |
+| T081 | Status Badge + Skeleton refactor | UI-2 | [ ] | | | | |
+| T082 | Visual consistency pass | UI-3 | [ ] | | | | |
