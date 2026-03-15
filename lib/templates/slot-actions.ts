@@ -96,6 +96,7 @@ export async function addExerciseSlot(
       rpe: rpe ?? null,
       rest_seconds: rest_seconds ?? null,
       guidelines: guidelines ?? null,
+      is_main: false,
       order: nextOrder,
       created_at: new Date(),
     })
