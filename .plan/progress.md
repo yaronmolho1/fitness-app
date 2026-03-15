@@ -43,7 +43,7 @@
 | T033 | Normal/deload tabs | 7 | [x] | feat/task-033-normal-deload-tabs | 2026-03-15T00:15 | 2026-03-15 | merged via PR #109 |
 | T034 | Rest day display in grid | 7 | [x] | feat/task-034-rest-day-display | 2026-03-15T00:30 | 2026-03-15 | merged via PR #111 |
 | T035 | Cascade sibling query (3 scopes) | 8 | [x] | feat/task-035-cascade-sibling-query | 2026-03-15T12:00 | 2026-03-15 | merged via PR #115 |
-| T036 | Cascade atomic execution SA | 8 | [ ] | | | | |
+| T036 | Cascade atomic execution SA | 8 | [~] | feat/task-036-cascade-atomic-execution | 2026-03-15T11:00 | | |
 | T037 | Cascade scope selection UI | 8 | [ ] | | | | |
 | T038 | Block edits on completed mesocycle | 8 | [ ] | | | | |
 | T039 | Cascade skips completed + summary | 8 | [ ] | | | | |
