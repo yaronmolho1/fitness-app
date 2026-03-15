@@ -1,0 +1,321 @@
+'use client'
+
+import { useState, useTransition } from 'react'
+import { cn } from '@/lib/utils'
+import { saveRunningWorkout } from '@/lib/workouts/actions'
+import type { SaveRunningWorkoutInput } from '@/lib/workouts/actions'
+
+type TemplateInfo = {
+  id: number
+  name: string
+  modality: string
+  notes: string | null
+  run_type: string | null
+  target_pace: string | null
+  hr_zone: number | null
+  interval_count: number | null
+  interval_rest: number | null
+  coaching_cues: string | null
+}
+
+export type RunningWorkoutData = {
+  date: string
+  mesocycle: {
+    id: number
+    name: string
+    start_date: string
+    end_date: string
+    week_type: 'normal' | 'deload'
+  }
+  template: TemplateInfo
+}
+
+const runTypeConfig: Record<string, { label: string; color: string }> = {
+  easy: { label: 'Easy', color: 'bg-green-500/15 text-green-700 dark:text-green-400' },
+  tempo: { label: 'Tempo', color: 'bg-orange-500/15 text-orange-700 dark:text-orange-400' },
+  interval: { label: 'Interval', color: 'bg-red-500/15 text-red-700 dark:text-red-400' },
+  long: { label: 'Long', color: 'bg-blue-500/15 text-blue-700 dark:text-blue-400' },
+  race: { label: 'Race', color: 'bg-purple-500/15 text-purple-700 dark:text-purple-400' },
+}
+
+function formatDate(dateStr: string): string {
+  const date = new Date(dateStr + 'T00:00:00')
+  return date.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
+function formatRest(seconds: number): string {
+  if (seconds >= 60) {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return secs > 0 ? `${mins}m${secs}s` : `${mins}m`
+  }
+  return `${seconds}s`
+}
+
+export function RunningLoggingForm({ data }: { data: RunningWorkoutData }) {
+  const { template } = data
+  const config = template.run_type ? runTypeConfig[template.run_type] : null
+  const isInterval = template.run_type === 'interval'
+
+  const [distance, setDistance] = useState('')
+  const [pace, setPace] = useState('')
+  const [hr, setHr] = useState('')
+  const [rating, setRating] = useState<number | null>(null)
+  const [notes, setNotes] = useState('')
+  const [isPending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
+
+  async function handleSave() {
+    setError(null)
+
+    const input: SaveRunningWorkoutInput = {
+      templateId: template.id,
+      logDate: data.date,
+      actualDistance: distance === '' ? null : parseFloat(distance),
+      actualAvgPace: pace === '' ? null : pace,
+      actualAvgHr: hr === '' ? null : parseInt(hr, 10),
+      rating,
+      notes: notes || null,
+    }
+
+    // Client-side validation for immediate feedback
+    if (input.actualDistance !== null && (isNaN(input.actualDistance) || input.actualDistance < 0)) {
+      setError('Distance must be a non-negative number')
+      return
+    }
+    if (input.actualAvgHr !== null && (isNaN(input.actualAvgHr) || input.actualAvgHr <= 0)) {
+      setError('Average HR must be a positive integer')
+      return
+    }
+
+    startTransition(async () => {
+      const result = await saveRunningWorkout(input)
+      if (result.success) {
+        setSaved(true)
+      } else {
+        setError(result.error)
+      }
+    })
+  }
+
+  return (
+    <div className="space-y-4 pb-24">
+      {/* Header */}
+      <div className="rounded-xl border bg-card p-4">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            {data.mesocycle.name}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {formatDate(data.date)}
+          </span>
+        </div>
+        <h1 className="mt-1 text-xl font-bold tracking-tight">
+          {template.name}
+        </h1>
+        {config && (
+          <span
+            data-testid="run-type-badge"
+            className={cn('mt-2 inline-block rounded-full px-3 py-1 text-sm font-semibold', config.color)}
+          >
+            {config.label}
+          </span>
+        )}
+      </div>
+
+      {/* Planned reference (read-only) */}
+      <div data-testid="planned-reference" className="rounded-xl border border-l-4 border-l-green-500 bg-card p-4 space-y-3">
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+          Planned
+        </h2>
+
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {template.target_pace && (
+            <div className="rounded-md bg-muted/50 px-3 py-2 text-center">
+              <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                Target Pace
+              </div>
+              <div className="mt-0.5 text-lg font-bold tabular-nums">
+                {template.target_pace}
+              </div>
+            </div>
+          )}
+          {template.hr_zone !== null && (
+            <div className="rounded-md bg-muted/50 px-3 py-2 text-center">
+              <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                HR Zone
+              </div>
+              <div className="mt-0.5 text-lg font-bold tabular-nums">
+                Zone {template.hr_zone}
+              </div>
+            </div>
+          )}
+          {isInterval && template.interval_count !== null && (
+            <div className="rounded-md bg-muted/50 px-3 py-2 text-center">
+              <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                Intervals
+              </div>
+              <div className="mt-0.5 text-lg font-bold tabular-nums">
+                {template.interval_count}
+              </div>
+            </div>
+          )}
+          {isInterval && template.interval_rest !== null && (
+            <div className="rounded-md bg-muted/50 px-3 py-2 text-center">
+              <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                Rest
+              </div>
+              <div className="mt-0.5 text-lg font-bold tabular-nums">
+                {formatRest(template.interval_rest)}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {template.coaching_cues && (
+          <div className="rounded-md bg-green-500/5 p-3">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Coaching Cues
+            </p>
+            <p className="mt-1 text-sm">{template.coaching_cues}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Actual fields */}
+      <div data-testid="actual-fields" className="rounded-xl border bg-card p-4 space-y-4">
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+          Actual
+        </h2>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="space-y-1.5">
+            <label
+              htmlFor="actual-distance"
+              className="text-sm font-medium"
+            >
+              Distance (km)
+            </label>
+            <input
+              id="actual-distance"
+              data-testid="actual-distance"
+              type="text"
+              inputMode="decimal"
+              placeholder="e.g. 8.5"
+              value={distance}
+              onChange={(e) => setDistance(e.target.value)}
+              className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:h-10 md:text-sm"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label
+              htmlFor="actual-avg-pace"
+              className="text-sm font-medium"
+            >
+              Avg Pace
+            </label>
+            <input
+              id="actual-avg-pace"
+              data-testid="actual-avg-pace"
+              type="text"
+              placeholder="e.g. 5:45/km"
+              value={pace}
+              onChange={(e) => setPace(e.target.value)}
+              className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base font-medium placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:h-10 md:text-sm"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label
+              htmlFor="actual-avg-hr"
+              className="text-sm font-medium"
+            >
+              Avg HR (bpm)
+            </label>
+            <input
+              id="actual-avg-hr"
+              data-testid="actual-avg-hr"
+              type="text"
+              inputMode="numeric"
+              placeholder="e.g. 155"
+              value={hr}
+              onChange={(e) => setHr(e.target.value)}
+              className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:h-10 md:text-sm"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Rating + notes */}
+      <div data-testid="rating-notes-section" className="rounded-xl border bg-card p-4 space-y-4">
+        <div>
+          <span className="text-sm font-medium">Workout Rating</span>
+          <div className="mt-2 flex gap-2">
+            {[1, 2, 3, 4, 5].map((value) => (
+              <button
+                key={value}
+                type="button"
+                aria-label={`Rate ${value}`}
+                aria-pressed={rating === value}
+                onClick={() => setRating(rating === value ? null : value)}
+                className={cn(
+                  'flex h-10 w-10 items-center justify-center rounded-lg border transition-colors',
+                  rating !== null && value <= rating
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-input bg-background text-muted-foreground hover:border-primary hover:text-primary'
+                )}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill={rating !== null && value <= rating ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <label htmlFor="running-notes" className="text-sm font-medium">
+            Notes
+          </label>
+          <textarea
+            id="running-notes"
+            placeholder="How did the run feel?"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className="mt-2 flex min-h-[80px] w-full rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+        </div>
+      </div>
+
+      {/* Error message */}
+      {error && (
+        <div data-testid="save-error" className="rounded-xl border border-destructive bg-destructive/10 p-4">
+          <p className="text-sm text-destructive">{error}</p>
+        </div>
+      )}
+
+      {/* Saved confirmation */}
+      {saved && (
+        <div data-testid="save-success" className="rounded-xl border border-primary bg-primary/10 p-4">
+          <p className="text-sm font-medium text-primary">Run logged!</p>
+        </div>
+      )}
+
+      {/* Sticky save button */}
+      <div className="fixed bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur-sm p-4 safe-area-pb">
+        <button
+          type="button"
+          data-testid="save-running-btn"
+          disabled={isPending || saved}
+          onClick={handleSave}
+          className="w-full rounded-xl bg-primary py-3.5 text-base font-semibold text-primary-foreground shadow-lg active:scale-[0.98] transition-all hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none"
+        >
+          {isPending ? 'Saving...' : saved ? 'Saved' : 'Save Run'}
+        </button>
+      </div>
+    </div>
+  )
+}

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { WorkoutLoggingForm } from '@/components/workout-logging-form'
+import { RunningLoggingForm } from '@/components/running-logging-form'
 import { cn } from '@/lib/utils'
 
 // API response types matching lib/today/queries.ts
@@ -233,7 +234,13 @@ function WorkoutHeader({ data }: { data: WorkoutResponse }) {
   )
 }
 
-function RunningDisplay({ data }: { data: WorkoutResponse }) {
+function RunningDisplay({
+  data,
+  onStartLogging,
+}: {
+  data: WorkoutResponse
+  onStartLogging: () => void
+}) {
   const { template } = data
   const config = template.run_type ? runTypeConfig[template.run_type] : null
   const isInterval = template.run_type === 'interval'
@@ -284,6 +291,15 @@ function RunningDisplay({ data }: { data: WorkoutResponse }) {
           )}
         </CardContent>
       </Card>
+
+      <button
+        type="button"
+        data-testid="start-running-logging-btn"
+        onClick={onStartLogging}
+        className="w-full rounded-xl bg-primary py-3.5 text-base font-semibold text-primary-foreground shadow-lg active:scale-[0.98] transition-transform"
+      >
+        Log Run
+      </button>
     </div>
   )
 }
@@ -313,6 +329,7 @@ export function TodayWorkout() {
   const [data, setData] = useState<TodayResponse | null>(null)
   const [error, setError] = useState(false)
   const [isLogging, setIsLogging] = useState(false)
+  const [isLoggingRun, setIsLoggingRun] = useState(false)
 
   useEffect(() => {
     fetch('/api/today')
@@ -388,7 +405,15 @@ export function TodayWorkout() {
   // Workout — route by modality
   if (data?.type === 'workout') {
     if (data.template.modality === 'running') {
-      return <RunningDisplay data={data} />
+      if (isLoggingRun) {
+        return <RunningLoggingForm data={data} />
+      }
+      return (
+        <RunningDisplay
+          data={data}
+          onStartLogging={() => setIsLoggingRun(true)}
+        />
+      )
     }
     if (data.template.modality === 'mma') {
       return <MmaDisplay data={data} />
