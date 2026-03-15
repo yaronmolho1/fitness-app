@@ -48,14 +48,14 @@
 | T038 | Block edits on completed mesocycle | 8 | [x] | feat/task-038-completed-meso-protection | 2026-03-15T14:00 | 2026-03-15 | merged via PR #129 |
 | T039 | Cascade skips completed + summary | 8 | [x] | feat/task-039-cascade-skips-completed | 2026-03-15T15:00 | 2026-03-15 | merged via PR #130 |
 | T040 | Clone mesocycle SA (atomic) | 8 | [x] | feat/task-040-clone-mesocycle | 2026-03-15T13:00 | 2026-03-15 | merged via PR #127 |
-| T041 | Clone form UI | 8 | [~] | feat/task-041-clone-form-ui | 2026-03-15T16:00 | | |
-| T042 | Canonical name preservation | 8 | [~] | feat/task-042-canonical-name-preservation | 2026-03-15T15:00 | | |
+| T041 | Clone form UI | 8 | [x] | feat/task-041-clone-form-ui | 2026-03-15T16:00 | 2026-03-15 | merged via PR #134 |
+| T042 | Canonical name preservation | 8 | [x] | feat/task-042-canonical-name-preservation | 2026-03-15T15:00 | 2026-03-15 | merged via PR #131 |
 | T043 | Routine item CRUD SA + scope validation | 8 | [x] | feat/task-043-routine-item-crud | 2026-03-15T13:00 | 2026-03-15 | merged via PR #125 |
 | T044 | Routine item list + edit + delete | 8 | [ ] | | | | |
 | T045 | GET /api/today (lookup chain + deload) | 9 | [x] | feat/task-045-api-today | 2026-03-14T22:00 | 2026-03-14 | merged via PR #104 |
 | T046 | Today's resistance workout display | 9 | [x] | feat/task-046-todays-resistance-display | 2026-03-15T10:00 | 2026-03-15 | merged via PR #119 |
-| T047 | Today's running + MMA/BJJ display | 9 | [ ] | | | | |
-| T048 | Logging form + pre-fill from template | 10 | [~] | feat/task-048-logging-form | 2026-03-15T13:00 | | |
+| T047 | Today's running + MMA/BJJ display | 9 | [x] | feat/task-047-running-mma-display | 2026-03-15 | 2026-03-15 | merged via PR #133 |
+| T048 | Logging form + pre-fill from template | 10 | [x] | feat/task-048-logging-form | 2026-03-15T13:00 | 2026-03-15 | merged via PR #132 |
 | T049 | Actual reps/weight/RPE inputs | 10 | [ ] | | | | |
 | T050 | Add/remove set rows | 10 | [ ] | | | | |
 | T051 | Rating + notes fields | 10 | [ ] | | | | |
@@ -81,3 +81,12 @@
 | T071 | Phase boundary markers | 13 | [ ] | | | | |
 | T072 | Weekly completion count | 14 | [ ] | | | | |
 | T073 | Streak calculation + display | 14 | [ ] | | | | |
+| T074 | OKLCH theme + dark mode setup | UI-1 | [~] | feat/task-074-oklch-theme | 2026-03-15T18:00 | | |
+| T075 | Geist fonts + Providers + Toaster | UI-1 | [ ] | | | | |
+| T076 | Install shadcn components (11) | UI-1 | [ ] | | | | |
+| T077 | Navigation overhaul (collapsible + Sheet) | UI-2 | [ ] | | | | |
+| T078 | Exercise form Select refactor | UI-2 | [ ] | | | | |
+| T079 | Mesocycle form Checkbox + date refactor | UI-2 | [ ] | | | | |
+| T080 | Schedule Tabs component refactor | UI-2 | [ ] | | | | |
+| T081 | Status Badge + Skeleton refactor | UI-2 | [ ] | | | | |
+| T082 | Visual consistency pass | UI-3 | [ ] | | | | |
