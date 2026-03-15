@@ -1,4 +1,4 @@
-import { eq, and, ne, gte, inArray } from 'drizzle-orm'
+import { eq, and, ne, gte, inArray, count } from 'drizzle-orm'
 import { db } from '@/lib/db/index'
 import { workout_templates, mesocycles, logged_workouts } from '@/lib/db/schema'
 import type { CascadeScope, CascadePreviewResult, CascadePreviewTarget } from './cascade-types'
@@ -12,7 +12,7 @@ type TemplateTarget = {
 }
 
 type CascadeResult =
-  | { success: true; data: TemplateTarget[] }
+  | { success: true; data: TemplateTarget[]; skippedCompleted: number }
   | { success: false; error: string }
 
 /**
@@ -39,9 +39,9 @@ export async function getCascadeTargets(
     return { success: false, error: 'Template not found' }
   }
 
-  // "this-only" always returns just the source
+  // "this-only" always returns just the source — no sibling query, no completed skips
   if (scope === 'this-only') {
-    return { success: true, data: [source] }
+    return { success: true, data: [source], skippedCompleted: 0 }
   }
 
   // Base query: siblings with same canonical_name in non-completed mesocycles
@@ -49,6 +49,21 @@ export async function getCascadeTargets(
     id: workout_templates.id,
     mesocycle_id: workout_templates.mesocycle_id,
     canonical_name: workout_templates.canonical_name,
+  }
+
+  // For this-and-future, look up the source mesocycle's created_at
+  let sourceCreatedAt: number | undefined
+  if (scope === 'this-and-future') {
+    const sourceMeso = db
+      .select({ created_at: mesocycles.created_at })
+      .from(mesocycles)
+      .where(eq(mesocycles.id, source.mesocycle_id))
+      .get()
+
+    if (!sourceMeso) {
+      return { success: false, error: 'Source mesocycle not found' }
+    }
+    sourceCreatedAt = sourceMeso.created_at?.getTime() ?? 0
   }
 
   let siblings: TemplateTarget[]
@@ -66,19 +81,6 @@ export async function getCascadeTargets(
       )
       .all()
   } else {
-    // this-and-future: source mesocycle + mesocycles created at/after it
-    const sourceMeso = db
-      .select({ created_at: mesocycles.created_at })
-      .from(mesocycles)
-      .where(eq(mesocycles.id, source.mesocycle_id))
-      .get()
-
-    if (!sourceMeso) {
-      return { success: false, error: 'Source mesocycle not found' }
-    }
-
-    const sourceCreatedAt = sourceMeso.created_at?.getTime() ?? 0
-
     siblings = db
       .select(templateColumns)
       .from(workout_templates)
@@ -87,23 +89,46 @@ export async function getCascadeTargets(
         and(
           eq(workout_templates.canonical_name, source.canonical_name),
           ne(mesocycles.status, 'completed'),
-          gte(mesocycles.created_at, new Date(sourceCreatedAt))
+          gte(mesocycles.created_at, new Date(sourceCreatedAt!))
         )
       )
       .all()
   }
 
+  // Count siblings in completed mesocycles that were excluded
+  const completedConditions = scope === 'all-phases'
+    ? and(
+        eq(workout_templates.canonical_name, source.canonical_name),
+        eq(mesocycles.status, 'completed')
+      )
+    : and(
+        eq(workout_templates.canonical_name, source.canonical_name),
+        eq(mesocycles.status, 'completed'),
+        gte(mesocycles.created_at, new Date(sourceCreatedAt!))
+      )
+
+  const completedCount = db
+    .select({ count: count() })
+    .from(workout_templates)
+    .innerJoin(mesocycles, eq(workout_templates.mesocycle_id, mesocycles.id))
+    .where(completedConditions)
+    .get()?.count ?? 0
+
   // When includeLogged is true, return all targets without filtering.
   // The execution layer (T036 SA) handles logged-workout skipping
   // inside its transaction for atomicity.
   if (options?.includeLogged) {
-    return { success: true, data: siblings.length > 0 ? siblings : [source] }
+    return {
+      success: true,
+      data: siblings.length > 0 ? siblings : [source],
+      skippedCompleted: completedCount,
+    }
   }
 
   // Exclude templates that have logged workouts (but always keep source)
   const siblingIds = siblings.map((s) => s.id)
   if (siblingIds.length === 0) {
-    return { success: true, data: [source] }
+    return { success: true, data: [source], skippedCompleted: completedCount }
   }
 
   const loggedTemplateIds = db
@@ -122,7 +147,7 @@ export async function getCascadeTargets(
     (t) => t.id === source.id || !loggedSet.has(t.id)
   )
 
-  return { success: true, data: filtered }
+  return { success: true, data: filtered, skippedCompleted: completedCount }
 }
 
 

@@ -10,6 +10,7 @@ export type CascadeUpdates = {
 export type CascadeSummary = {
   updated: number
   skipped: number
+  skippedCompleted: number
 }
 
 export type CascadePreviewTarget = {
