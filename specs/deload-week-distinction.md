@@ -1,5 +1,5 @@
 # Deload Week Distinction
-**Status:** ready
+**Status:** in-progress
 **Epic:** Calendar & Progression
 **Depends:** specs/projected-calendar.md, specs/normal-vs-deload-tabs.md
 
