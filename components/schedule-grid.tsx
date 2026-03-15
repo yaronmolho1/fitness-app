@@ -98,7 +98,7 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
               className={`rounded-lg border p-3 transition-colors ${
                 assignment
                   ? 'border-primary/30 bg-primary/5'
-                  : 'border-border bg-muted/30'
+                  : 'border-dashed border-muted-foreground/30 bg-muted/20'
               }`}
             >
               <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -135,7 +135,7 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">Rest</p>
+                  <p className="text-sm italic text-muted-foreground" data-testid="rest-label">Rest</p>
                   {!isCompleted && (
                     <Button
                       variant="outline"
