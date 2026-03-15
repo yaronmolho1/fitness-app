@@ -10,7 +10,7 @@ As an athlete, if today's workout is already logged, I can see a completion summ
 
 ### Detection Logic
 - [ ] After resolving today's planned workout (active mesocycle → day → variant → template), check whether a `logged_workouts` row exists for today's calendar date AND the active mesocycle
-- [ ] Detection uses today's calendar date (not timestamp) to match against `logged_workouts.logged_date`
+- [ ] Detection uses today's calendar date (not timestamp) to match against `logged_workouts.log_date`
 - [ ] If a matching `logged_workouts` row exists, the already-logged summary is shown instead of the log form
 - [ ] If no matching row exists, the normal workout view and log form are shown (per specs/view-todays-planned-workout.md)
 - [ ] The check is performed as part of the `GET /api/today` response: the response includes a `logged` boolean or `type: already_logged` state
