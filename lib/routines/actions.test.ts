@@ -31,6 +31,8 @@ import {
   createRoutineItem,
   updateRoutineItem,
   deleteRoutineItem,
+  markRoutineDone,
+  markRoutineSkipped,
 } from './actions'
 
 // Valid base input for reuse
@@ -509,5 +511,295 @@ describe('deleteRoutineItem', () => {
     }
     // Verify db.delete was NOT called — logs are preserved
     expect(mockDelete).not.toHaveBeenCalled()
+  })
+})
+
+// Shared routine item fixture for log tests
+const mockRoutineItem = {
+  id: 1, name: 'Body Weight', category: 'tracking',
+  has_weight: true, has_length: false, has_duration: false,
+  has_sets: false, has_reps: false,
+  frequency_target: 7, scope: 'global',
+  mesocycle_id: null, start_date: null, end_date: null,
+  skip_on_deload: false, created_at: new Date(),
+}
+
+const mockMultiFieldItem = {
+  ...mockRoutineItem,
+  id: 2, name: 'Shoulder Mobility',
+  has_weight: false, has_duration: true, has_sets: true, has_reps: true,
+}
+
+describe('markRoutineDone', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    // Default: item exists, no existing log
+    mockSelect.mockReturnValue({ from: mockFrom })
+    mockFrom.mockReturnValue({ where: mockWhere })
+    mockWhere.mockResolvedValue([])
+    mockInsert.mockReturnValue({ values: mockValues })
+    mockValues.mockReturnValue({ returning: mockReturning })
+    mockReturning.mockResolvedValue([{
+      id: 1, routine_item_id: 1, log_date: '2026-03-15',
+      status: 'done', value_weight: 72.5, value_length: null,
+      value_duration: null, value_sets: null, value_reps: null,
+      created_at: new Date(),
+    }])
+  })
+
+  it('creates routine_log with status done and field values', async () => {
+    // First call: item lookup; second call: duplicate check
+    mockWhere
+      .mockResolvedValueOnce([mockRoutineItem])
+      .mockResolvedValueOnce([]) // no existing log
+    const result = await markRoutineDone({
+      routine_item_id: 1,
+      log_date: '2026-03-15',
+      values: { weight: 72.5 },
+    })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.status).toBe('done')
+      expect(result.data.value_weight).toBe(72.5)
+    }
+  })
+
+  it('returns error when routine_item_id is invalid', async () => {
+    const result = await markRoutineDone({
+      routine_item_id: 0,
+      log_date: '2026-03-15',
+      values: { weight: 72.5 },
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('returns error for invalid date format', async () => {
+    const result = await markRoutineDone({
+      routine_item_id: 1,
+      log_date: '03-15-2026',
+      values: { weight: 72.5 },
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('returns error when routine item not found', async () => {
+    mockWhere.mockResolvedValueOnce([]) // item not found
+    const result = await markRoutineDone({
+      routine_item_id: 999,
+      log_date: '2026-03-15',
+      values: { weight: 72.5 },
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toMatch(/not found/i)
+  })
+
+  it('blocks duplicate: same item + same date', async () => {
+    mockWhere
+      .mockResolvedValueOnce([mockRoutineItem]) // item exists
+      .mockResolvedValueOnce([{ id: 10 }]) // existing log found
+    const result = await markRoutineDone({
+      routine_item_id: 1,
+      log_date: '2026-03-15',
+      values: { weight: 72.5 },
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toMatch(/already logged/i)
+  })
+
+  it('requires at least one field value', async () => {
+    mockWhere
+      .mockResolvedValueOnce([mockRoutineItem])
+      .mockResolvedValueOnce([])
+    const result = await markRoutineDone({
+      routine_item_id: 1,
+      log_date: '2026-03-15',
+      values: {},
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toMatch(/at least one/i)
+  })
+
+  it('rejects negative values', async () => {
+    mockWhere
+      .mockResolvedValueOnce([mockRoutineItem])
+      .mockResolvedValueOnce([])
+    const result = await markRoutineDone({
+      routine_item_id: 1,
+      log_date: '2026-03-15',
+      values: { weight: -1 },
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toMatch(/negative/i)
+  })
+
+  it('accepts value of 0', async () => {
+    mockWhere
+      .mockResolvedValueOnce([mockRoutineItem])
+      .mockResolvedValueOnce([])
+    mockReturning.mockResolvedValueOnce([{
+      id: 2, routine_item_id: 1, log_date: '2026-03-15',
+      status: 'done', value_weight: 0, value_length: null,
+      value_duration: null, value_sets: null, value_reps: null,
+      created_at: new Date(),
+    }])
+    const result = await markRoutineDone({
+      routine_item_id: 1,
+      log_date: '2026-03-15',
+      values: { weight: 0 },
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects non-integer sets value', async () => {
+    mockWhere
+      .mockResolvedValueOnce([mockMultiFieldItem])
+      .mockResolvedValueOnce([])
+    const result = await markRoutineDone({
+      routine_item_id: 2,
+      log_date: '2026-03-15',
+      values: { sets: 2.5 },
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toMatch(/integer/i)
+  })
+
+  it('rejects non-integer reps value', async () => {
+    mockWhere
+      .mockResolvedValueOnce([mockMultiFieldItem])
+      .mockResolvedValueOnce([])
+    const result = await markRoutineDone({
+      routine_item_id: 2,
+      log_date: '2026-03-15',
+      values: { reps: 1.5 },
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toMatch(/integer/i)
+  })
+
+  it('only saves values for fields the item has enabled', async () => {
+    // Item only has_weight=true, tries to set duration too
+    mockWhere
+      .mockResolvedValueOnce([mockRoutineItem])
+      .mockResolvedValueOnce([])
+    mockReturning.mockResolvedValueOnce([{
+      id: 3, routine_item_id: 1, log_date: '2026-03-15',
+      status: 'done', value_weight: 72.5, value_length: null,
+      value_duration: null, value_sets: null, value_reps: null,
+      created_at: new Date(),
+    }])
+    const result = await markRoutineDone({
+      routine_item_id: 1,
+      log_date: '2026-03-15',
+      values: { weight: 72.5, duration: 30 },
+    })
+    expect(result.success).toBe(true)
+    // Insert should only include weight, not duration
+    const insertValues = mockValues.mock.calls[0][0]
+    expect(insertValues.value_weight).toBe(72.5)
+    expect(insertValues.value_duration).toBeNull()
+  })
+
+  it('accepts partial field fill on multi-field item', async () => {
+    mockWhere
+      .mockResolvedValueOnce([mockMultiFieldItem])
+      .mockResolvedValueOnce([])
+    mockReturning.mockResolvedValueOnce([{
+      id: 4, routine_item_id: 2, log_date: '2026-03-15',
+      status: 'done', value_weight: null, value_length: null,
+      value_duration: 15, value_sets: null, value_reps: null,
+      created_at: new Date(),
+    }])
+    const result = await markRoutineDone({
+      routine_item_id: 2,
+      log_date: '2026-03-15',
+      values: { duration: 15 },
+    })
+    expect(result.success).toBe(true)
+  })
+})
+
+describe('markRoutineSkipped', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    mockSelect.mockReturnValue({ from: mockFrom })
+    mockFrom.mockReturnValue({ where: mockWhere })
+    mockWhere.mockResolvedValue([])
+    mockInsert.mockReturnValue({ values: mockValues })
+    mockValues.mockReturnValue({ returning: mockReturning })
+    mockReturning.mockResolvedValue([{
+      id: 1, routine_item_id: 1, log_date: '2026-03-15',
+      status: 'skipped', value_weight: null, value_length: null,
+      value_duration: null, value_sets: null, value_reps: null,
+      created_at: new Date(),
+    }])
+  })
+
+  it('creates routine_log with status skipped and null values', async () => {
+    mockWhere
+      .mockResolvedValueOnce([mockRoutineItem])
+      .mockResolvedValueOnce([])
+    const result = await markRoutineSkipped({
+      routine_item_id: 1,
+      log_date: '2026-03-15',
+    })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.status).toBe('skipped')
+      expect(result.data.value_weight).toBeNull()
+    }
+  })
+
+  it('returns error for invalid routine_item_id', async () => {
+    const result = await markRoutineSkipped({
+      routine_item_id: -1,
+      log_date: '2026-03-15',
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('returns error for invalid date format', async () => {
+    const result = await markRoutineSkipped({
+      routine_item_id: 1,
+      log_date: 'not-a-date',
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('returns error when routine item not found', async () => {
+    mockWhere.mockResolvedValueOnce([])
+    const result = await markRoutineSkipped({
+      routine_item_id: 999,
+      log_date: '2026-03-15',
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toMatch(/not found/i)
+  })
+
+  it('blocks duplicate: same item + same date', async () => {
+    mockWhere
+      .mockResolvedValueOnce([mockRoutineItem])
+      .mockResolvedValueOnce([{ id: 10 }])
+    const result = await markRoutineSkipped({
+      routine_item_id: 1,
+      log_date: '2026-03-15',
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toMatch(/already logged/i)
+  })
+
+  it('inserts all field values as null', async () => {
+    mockWhere
+      .mockResolvedValueOnce([mockRoutineItem])
+      .mockResolvedValueOnce([])
+    await markRoutineSkipped({
+      routine_item_id: 1,
+      log_date: '2026-03-15',
+    })
+    const insertValues = mockValues.mock.calls[0][0]
+    expect(insertValues.value_weight).toBeNull()
+    expect(insertValues.value_length).toBeNull()
+    expect(insertValues.value_duration).toBeNull()
+    expect(insertValues.value_sets).toBeNull()
+    expect(insertValues.value_reps).toBeNull()
   })
 })

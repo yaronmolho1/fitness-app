@@ -1,6 +1,6 @@
 import { desc, eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { routine_items, mesocycles } from '@/lib/db/schema'
+import { routine_items, routine_logs, mesocycles } from '@/lib/db/schema'
 
 export type RoutineItemWithMesocycle = {
   routine_item: typeof routine_items.$inferSelect
@@ -18,4 +18,11 @@ export async function getRoutineItems(): Promise<RoutineItemWithMesocycle[]> {
     .orderBy(desc(routine_items.created_at))
 
   return rows
+}
+
+export async function getRoutineLogsForDate(logDate: string) {
+  return db
+    .select()
+    .from(routine_logs)
+    .where(eq(routine_logs.log_date, logDate))
 }
