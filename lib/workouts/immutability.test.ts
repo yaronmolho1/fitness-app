@@ -229,6 +229,90 @@ describe('log immutability enforcement', () => {
     })
   })
 
+  describe('transaction rollback on DB error', () => {
+    it('no partial rows remain when transaction fails mid-way', async () => {
+      // Drop logged_sets table to force an error after logged_workouts + logged_exercises inserts
+      sqlite.exec('DROP TABLE logged_sets')
+
+      const result = await saveWorkoutCore(db, buildValidInput())
+      expect(result.success).toBe(false)
+
+      // Verify full rollback — no orphaned logged_workouts or logged_exercises rows
+      const workouts = sqlite.prepare('SELECT count(*) as cnt FROM logged_workouts').get() as { cnt: number }
+      const exercises = sqlite.prepare('SELECT count(*) as cnt FROM logged_exercises').get() as { cnt: number }
+      expect(workouts.cnt).toBe(0)
+      expect(exercises.cnt).toBe(0)
+    })
+  })
+
+  describe('template_snapshot shape and version', () => {
+    it('snapshot contains version: 1', async () => {
+      const result = await saveWorkoutCore(db, buildValidInput())
+      expect(result.success).toBe(true)
+
+      const [workout] = db.select().from(schema.logged_workouts).all()
+      const snapshot = workout.template_snapshot as { version: number }
+      expect(snapshot.version).toBe(1)
+    })
+
+    it('snapshot contains all exercise slot fields from the template', async () => {
+      const result = await saveWorkoutCore(db, buildValidInput())
+      expect(result.success).toBe(true)
+
+      const [workout] = db.select().from(schema.logged_workouts).all()
+      const snapshot = workout.template_snapshot as {
+        version: number
+        name: string
+        modality: string
+        notes: string | null
+        coaching_cues: string | null
+        slots: Array<{
+          exercise_name: string
+          target_sets: number
+          target_reps: string
+          target_weight: number | null
+          target_rpe: number | null
+          rest_seconds: number | null
+          guidelines: string | null
+          sort_order: number
+          is_main: number
+        }>
+      }
+
+      // Template-level fields
+      expect(snapshot.version).toBe(1)
+      expect(snapshot.name).toBe('Push Day')
+      expect(snapshot.modality).toBe('resistance')
+      expect(snapshot.notes).toBe('Focus on chest')
+      expect(snapshot.coaching_cues).toBe('Warm up properly')
+
+      // Slot-level: verify all fields on first slot (Bench Press — seeded with all values)
+      expect(snapshot.slots).toHaveLength(2)
+      const slot0 = snapshot.slots[0]
+      expect(slot0.exercise_name).toBe('Bench Press')
+      expect(slot0.target_sets).toBe(3)
+      expect(slot0.target_reps).toBe('8')
+      expect(slot0.target_weight).toBe(80)
+      expect(slot0.target_rpe).toBe(8)
+      expect(slot0.rest_seconds).toBe(120)
+      expect(slot0.guidelines).toBe('Pause at bottom')
+      expect(slot0.sort_order).toBe(1)
+      expect(slot0.is_main).toBeTruthy()
+
+      // Second slot (Overhead Press — nullable fields)
+      const slot1 = snapshot.slots[1]
+      expect(slot1.exercise_name).toBe('Overhead Press')
+      expect(slot1.target_sets).toBe(3)
+      expect(slot1.target_reps).toBe('10')
+      expect(slot1.target_weight).toBeNull()
+      expect(slot1.target_rpe).toBeNull()
+      expect(slot1.rest_seconds).toBe(90)
+      expect(slot1.guidelines).toBeNull()
+      expect(slot1.sort_order).toBe(2)
+      expect(slot1.is_main).toBeFalsy()
+    })
+  })
+
   describe('integration: full save and query', () => {
     it('save workout creates all rows with correct cross-references', async () => {
       const result = await saveWorkoutCore(db, buildValidInput())
