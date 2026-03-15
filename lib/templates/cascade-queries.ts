@@ -1,8 +1,9 @@
 import { eq, and, ne, gte, inArray } from 'drizzle-orm'
 import { db } from '@/lib/db/index'
 import { workout_templates, mesocycles, logged_workouts } from '@/lib/db/schema'
+import type { CascadeScope, CascadePreviewResult, CascadePreviewTarget } from './cascade-types'
 
-export type CascadeScope = 'this-only' | 'this-and-future' | 'all-phases'
+export type { CascadeScope, CascadePreviewData, CascadePreviewResult, CascadePreviewTarget } from './cascade-types'
 
 type TemplateTarget = {
   id: number
@@ -122,4 +123,67 @@ export async function getCascadeTargets(
   )
 
   return { success: true, data: filtered }
+}
+
+
+/**
+ * Fetch a preview of cascade targets with mesocycle names and logged-workout flags.
+ * Used by the cascade scope selection UI (T037) to show what will be affected.
+ */
+export async function getCascadePreview(
+  templateId: number,
+  scope: CascadeScope
+): Promise<CascadePreviewResult> {
+  // Get all targets including those with logged workouts for the preview
+  const targetsResult = await getCascadeTargets(templateId, scope, { includeLogged: true })
+
+  if (!targetsResult.success) {
+    return { success: false, error: targetsResult.error }
+  }
+
+  const targets = targetsResult.data
+
+  // Fetch mesocycle names for all targets
+  const mesoIds = [...new Set(targets.map((t) => t.mesocycle_id))]
+  const mesoRows = mesoIds.length > 0
+    ? db
+        .select({ id: mesocycles.id, name: mesocycles.name })
+        .from(mesocycles)
+        .where(inArray(mesocycles.id, mesoIds))
+        .all()
+    : []
+
+  const mesoNameMap = new Map(mesoRows.map((m) => [m.id, m.name]))
+
+  // Find which targets have logged workouts
+  const targetIds = targets.map((t) => t.id)
+  const loggedTemplateIds = targetIds.length > 0
+    ? db
+        .select({ template_id: logged_workouts.template_id })
+        .from(logged_workouts)
+        .where(inArray(logged_workouts.template_id, targetIds))
+        .all()
+        .map((r) => r.template_id)
+        .filter((id): id is number => id !== null)
+    : []
+
+  const loggedSet = new Set(loggedTemplateIds)
+
+  const previewTargets: CascadePreviewTarget[] = targets.map((t) => ({
+    id: t.id,
+    mesocycleId: t.mesocycle_id,
+    mesocycleName: mesoNameMap.get(t.mesocycle_id) ?? 'Unknown',
+    hasLoggedWorkouts: loggedSet.has(t.id),
+  }))
+
+  const skippedCount = previewTargets.filter((t) => t.hasLoggedWorkouts).length
+
+  return {
+    success: true,
+    data: {
+      totalTargets: previewTargets.length,
+      skippedCount,
+      targets: previewTargets,
+    },
+  }
 }

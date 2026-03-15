@@ -17,7 +17,7 @@ vi.mock('@/lib/db/index', () => ({
   db: testDb,
 }))
 
-import { getCascadeTargets } from './cascade-queries'
+import { getCascadeTargets, getCascadePreview } from './cascade-queries'
 
 // Seed helpers
 function seedMesocycle(
@@ -364,5 +364,89 @@ describe('getCascadeTargets', () => {
         expect(result.data[0].id).toBe(t1.id)
       }
     })
+  })
+})
+
+describe('getCascadePreview', () => {
+  beforeEach(() => {
+    resetTables()
+  })
+
+  it('returns preview with mesocycle names for all-phases scope', async () => {
+    const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
+    const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
+
+    const t1 = seedTemplate(meso1.id)
+    seedTemplate(meso2.id)
+
+    const result = await getCascadePreview(t1.id, 'all-phases')
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.totalTargets).toBe(2)
+      expect(result.data.targets).toHaveLength(2)
+      // Each target includes mesocycle name
+      const mesoNames = result.data.targets.map((t) => t.mesocycleName).sort()
+      expect(mesoNames).toEqual(['Phase 1', 'Phase 2'])
+    }
+  })
+
+  it('marks templates with logged workouts as hasLoggedWorkouts', async () => {
+    const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
+    const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
+
+    const t1 = seedTemplate(meso1.id)
+    const t2 = seedTemplate(meso2.id)
+    seedLoggedWorkout(t2.id)
+
+    const result = await getCascadePreview(t1.id, 'all-phases')
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.totalTargets).toBe(2)
+      expect(result.data.skippedCount).toBe(1)
+      const logged = result.data.targets.find((t) => t.id === t2.id)
+      expect(logged?.hasLoggedWorkouts).toBe(true)
+      const notLogged = result.data.targets.find((t) => t.id === t1.id)
+      expect(notLogged?.hasLoggedWorkouts).toBe(false)
+    }
+  })
+
+  it('returns single target for this-only scope', async () => {
+    const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
+    const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
+
+    const t1 = seedTemplate(meso1.id)
+    seedTemplate(meso2.id)
+
+    const result = await getCascadePreview(t1.id, 'this-only')
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.totalTargets).toBe(1)
+      expect(result.data.skippedCount).toBe(0)
+      expect(result.data.targets[0].id).toBe(t1.id)
+    }
+  })
+
+  it('returns error for non-existent template', async () => {
+    const result = await getCascadePreview(999, 'all-phases')
+    expect(result.success).toBe(false)
+  })
+
+  it('excludes completed mesocycles from preview', async () => {
+    const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
+    const meso2 = seedMesocycle({ name: 'Phase 2', status: 'completed', created_at: new Date(2000) })
+
+    const t1 = seedTemplate(meso1.id)
+    seedTemplate(meso2.id)
+
+    const result = await getCascadePreview(t1.id, 'all-phases')
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.totalTargets).toBe(1)
+      expect(result.data.targets[0].mesocycleName).toBe('Phase 1')
+    }
   })
 })

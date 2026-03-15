@@ -4,26 +4,23 @@ import { eq, inArray } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { db } from '@/lib/db/index'
 import { workout_templates, logged_workouts } from '@/lib/db/schema'
-import { getCascadeTargets, type CascadeScope } from './cascade-queries'
+import { getCascadeTargets, getCascadePreview as getCascadePreviewQuery } from './cascade-queries'
+import type { CascadeScope, CascadeUpdates, CascadePreviewResult, CascadeUpdateResult } from './cascade-types'
 
-export type CascadeUpdates = {
-  name?: string
-  notes?: string
-}
-
-export type CascadeSummary = {
-  updated: number
-  skipped: number
-}
-
-type CascadeUpdateResult =
-  | { success: true; data: CascadeSummary }
-  | { success: false; error: string }
+export type { CascadeScope, CascadeUpdates, CascadeSummary, CascadePreviewResult, CascadePreviewData, CascadeUpdateResult } from './cascade-types'
 
 type CascadeUpdateInput = {
   templateId: number
   scope: CascadeScope
   updates: CascadeUpdates
+}
+
+// Server action wrapper for getCascadePreview — safe to call from client components
+export async function getCascadePreview(
+  templateId: number,
+  scope: CascadeScope
+): Promise<CascadePreviewResult> {
+  return getCascadePreviewQuery(templateId, scope)
 }
 
 export async function cascadeUpdateTemplates(

@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label'
 import { RunningTemplateForm } from '@/components/running-template-form'
 import { MmaBjjTemplateForm } from '@/components/mma-bjj-template-form'
 import { SlotList } from '@/components/slot-list'
-import { createResistanceTemplate, updateTemplate, deleteTemplate } from '@/lib/templates/actions'
+import { CascadeScopeSelector } from '@/components/cascade-scope-selector'
+import { createResistanceTemplate, deleteTemplate } from '@/lib/templates/actions'
 import type { TemplateOption } from '@/lib/schedule/queries'
 import type { SlotWithExercise } from '@/lib/templates/slot-queries'
 import type { Exercise } from '@/lib/exercises/filters'
@@ -188,6 +189,7 @@ type TemplateRowProps = {
 
 function TemplateRow({ template, slots, exercises, isCompleted, onUpdated }: TemplateRowProps) {
   const [editing, setEditing] = useState(false)
+  const [cascading, setCascading] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [name, setName] = useState(template.name)
@@ -204,20 +206,21 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated }: Tem
       return
     }
 
-    startTransition(async () => {
-      const result = await updateTemplate({
-        id: template.id,
-        ...(nameChanged ? { name } : {}),
-        ...(canonicalChanged ? { canonical_name: canonicalName } : {}),
-      })
-      if (result.success) {
-        setError('')
-        setEditing(false)
-        onUpdated()
-      } else {
-        setError(result.error)
-      }
-    })
+    // Build cascade updates from changed fields
+    setEditing(false)
+    setCascading(true)
+  }
+
+  function handleCascadeComplete() {
+    setCascading(false)
+    setError('')
+    onUpdated()
+  }
+
+  function handleCascadeCancel() {
+    setCascading(false)
+    // Return to edit mode so user can modify or re-save
+    setEditing(true)
   }
 
   function handleCancel() {
@@ -225,6 +228,7 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated }: Tem
     setCanonicalName(template.canonical_name)
     setError('')
     setEditing(false)
+    setCascading(false)
   }
 
   function handleDelete() {
@@ -238,6 +242,23 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated }: Tem
         setConfirming(false)
       }
     })
+  }
+
+  // Cascade scope selection step (shown after clicking Save in edit mode)
+  if (cascading) {
+    const nameChanged = name !== template.name
+    const updates = {
+      ...(nameChanged ? { name } : {}),
+    }
+
+    return (
+      <CascadeScopeSelector
+        templateId={template.id}
+        updates={updates}
+        onComplete={handleCascadeComplete}
+        onCancel={handleCascadeCancel}
+      />
+    )
   }
 
   // Edit mode
