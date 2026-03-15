@@ -10,6 +10,7 @@ import {
   Tooltip,
   Legend,
   CartesianGrid,
+  ReferenceLine,
 } from 'recharts'
 import {
   Select,
@@ -38,6 +39,13 @@ type ProgressionDataPoint = {
   actualWeight: number | null
   plannedVolume: number | null
   actualVolume: number | null
+}
+
+type Phase = {
+  mesocycleId: number
+  mesocycleName: string
+  startDate: string
+  endDate: string
 }
 
 // Phase colors for distinguishing mesocycles
@@ -105,6 +113,7 @@ type ProgressionChartProps = {
 export function ProgressionChart({ exercises }: ProgressionChartProps) {
   const [selectedExercise, setSelectedExercise] = useState<string>('')
   const [data, setData] = useState<ProgressionDataPoint[]>([])
+  const [phases, setPhases] = useState<Phase[]>([])
   const [loading, setLoading] = useState(false)
   const [fetched, setFetched] = useState(false)
   const [view, setView] = useState<'weight' | 'volume'>('weight')
@@ -116,8 +125,10 @@ export function ProgressionChart({ exercises }: ProgressionChartProps) {
       const res = await fetch(`/api/progression?canonical_name=${encodeURIComponent(canonicalName)}`)
       const json = await res.json()
       setData(json.data ?? [])
+      setPhases(json.phases ?? [])
     } catch {
       setData([])
+      setPhases([])
     } finally {
       setLoading(false)
       setFetched(true)
@@ -136,7 +147,7 @@ export function ProgressionChart({ exercises }: ProgressionChartProps) {
   const phaseColors = buildPhaseColorMap(data)
 
   // Build legend items from mesocycle phases
-  const phases = Array.from(
+  const phaseLegend = Array.from(
     new Map(
       data
         .filter((d) => d.mesocycleId !== null)
@@ -204,9 +215,9 @@ export function ProgressionChart({ exercises }: ProgressionChartProps) {
         {selectedExercise && !loading && data.length > 0 && (
           <div className="space-y-4">
             {/* Phase legend */}
-            {phases.length > 1 && (
+            {phaseLegend.length > 1 && (
               <div className="flex flex-wrap gap-3 text-xs">
-                {phases.map(([id, name]) => (
+                {phaseLegend.map(([id, name]) => (
                   <div key={id} className="flex items-center gap-1.5">
                     <span
                       className="inline-block h-2.5 w-2.5 rounded-full"
@@ -253,6 +264,30 @@ export function ProgressionChart({ exercises }: ProgressionChartProps) {
                   }}
                 />
                 <Legend />
+                {/* Phase boundary markers */}
+                {phases.map((phase) => (
+                  <ReferenceLine
+                    key={`phase-start-${phase.mesocycleId}`}
+                    x={phase.startDate}
+                    stroke="var(--muted-foreground)"
+                    strokeWidth={1.5}
+                    label={{ value: phase.mesocycleName, position: 'top', fill: 'var(--muted-foreground)', fontSize: 10 }}
+                  />
+                ))}
+                {phases.map((phase) => {
+                  // Skip end line if another phase starts on the same date
+                  const isAlsoStart = phases.some((p) => p.startDate === phase.endDate)
+                  if (isAlsoStart) return null
+                  return (
+                    <ReferenceLine
+                      key={`phase-end-${phase.mesocycleId}`}
+                      x={phase.endDate}
+                      stroke="var(--muted-foreground)"
+                      strokeWidth={1}
+                      strokeDasharray="4 4"
+                    />
+                  )
+                })}
                 <Line
                   type="monotone"
                   dataKey={plannedKey}

@@ -17,8 +17,16 @@ type ProgressionDataPoint = {
   actualVolume: number | null
 }
 
+type Phase = {
+  mesocycleId: number
+  mesocycleName: string
+  startDate: string
+  endDate: string
+}
+
 type ProgressionResult = {
   data: ProgressionDataPoint[]
+  phases: Phase[]
 }
 
 type SnapshotSlot = {
@@ -47,7 +55,7 @@ export async function getProgressionData(
     .all()
 
   if (workouts.length === 0) {
-    return { data: [] }
+    return { data: [], phases: [] }
   }
 
   const dataPoints: ProgressionDataPoint[] = []
@@ -154,5 +162,36 @@ export async function getProgressionData(
     })
   }
 
-  return { data: dataPoints }
+  // Build phases from mesocycles that have data points
+  const seenMesocycleIds = new Set(
+    dataPoints.map((d) => d.mesocycleId).filter((id): id is number => id !== null)
+  )
+
+  const phases: Phase[] = []
+  for (const mesoId of seenMesocycleIds) {
+    const meso = database
+      .select({
+        id: mesocycles.id,
+        name: mesocycles.name,
+        start_date: mesocycles.start_date,
+        end_date: mesocycles.end_date,
+      })
+      .from(mesocycles)
+      .where(eq(mesocycles.id, mesoId))
+      .get()
+
+    if (meso) {
+      phases.push({
+        mesocycleId: meso.id,
+        mesocycleName: meso.name,
+        startDate: meso.start_date,
+        endDate: meso.end_date,
+      })
+    }
+  }
+
+  // Sort by start date
+  phases.sort((a, b) => a.startDate.localeCompare(b.startDate))
+
+  return { data: dataPoints, phases }
 }
