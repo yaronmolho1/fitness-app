@@ -37,6 +37,7 @@ export type WorkoutData = {
 type SetFormData = {
   weight: string
   reps: string
+  rpe: string
 }
 
 function buildInitialSets(slots: SlotData[]): SetFormData[][] {
@@ -44,6 +45,7 @@ function buildInitialSets(slots: SlotData[]): SetFormData[][] {
     Array.from({ length: slot.sets }, () => ({
       weight: slot.weight !== null ? String(slot.weight) : '',
       reps: slot.reps,
+      rpe: '',
     }))
   )
 }
@@ -124,7 +126,7 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
             </div>
 
             {/* Column headers */}
-            <div className="grid grid-cols-[2.5rem_1fr_1fr] gap-2 px-4 pb-1">
+            <div className="grid grid-cols-[2.5rem_1fr_1fr_1fr] gap-2 px-4 pb-1">
               <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider text-center">
                 Set
               </div>
@@ -134,6 +136,9 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
               <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider text-center">
                 Reps
               </div>
+              <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider text-center">
+                RPE
+              </div>
             </div>
 
             {/* Set rows */}
@@ -142,38 +147,80 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
                 <div
                   key={setIndex}
                   data-testid="set-row"
-                  className="grid grid-cols-[2.5rem_1fr_1fr] gap-2 items-center"
+                  className="space-y-1"
                 >
-                  {/* Set number */}
-                  <div className="flex h-10 items-center justify-center rounded-lg bg-muted/60 text-sm font-bold tabular-nums text-muted-foreground">
-                    {setIndex + 1}
+                  {/* Planned values row */}
+                  <div className="grid grid-cols-[2.5rem_1fr_1fr_1fr] gap-2 items-center">
+                    <div />
+                    <span
+                      data-testid={`planned-weight-${slotIndex}-${setIndex}`}
+                      className="text-[10px] text-muted-foreground text-center tabular-nums"
+                    >
+                      {slot.weight !== null ? slot.weight : '\u2014'}
+                    </span>
+                    <span
+                      data-testid={`planned-reps-${slotIndex}-${setIndex}`}
+                      className="text-[10px] text-muted-foreground text-center tabular-nums"
+                    >
+                      {slot.reps}
+                    </span>
+                    <span
+                      data-testid={`planned-rpe-${slotIndex}-${setIndex}`}
+                      className="text-[10px] text-muted-foreground text-center tabular-nums"
+                    >
+                      {slot.rpe !== null ? slot.rpe : '\u2014'}
+                    </span>
                   </div>
 
-                  {/* Weight input */}
-                  <input
-                    data-testid={`weight-input-${slotIndex}-${setIndex}`}
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="—"
-                    value={setData.weight}
-                    onChange={(e) =>
-                      updateSet(slotIndex, setIndex, 'weight', e.target.value)
-                    }
-                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  />
+                  {/* Actual inputs row */}
+                  <div className="grid grid-cols-[2.5rem_1fr_1fr_1fr] gap-2 items-center">
+                    {/* Set number */}
+                    <div className="flex h-10 items-center justify-center rounded-lg bg-muted/60 text-sm font-bold tabular-nums text-muted-foreground">
+                      {setIndex + 1}
+                    </div>
 
-                  {/* Reps input */}
-                  <input
-                    data-testid={`reps-input-${slotIndex}-${setIndex}`}
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="—"
-                    value={setData.reps}
-                    onChange={(e) =>
-                      updateSet(slotIndex, setIndex, 'reps', e.target.value)
-                    }
-                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  />
+                    {/* Weight input */}
+                    <input
+                      data-testid={`weight-input-${slotIndex}-${setIndex}`}
+                      aria-label={`Actual weight for set ${setIndex + 1}`}
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="—"
+                      value={setData.weight}
+                      onChange={(e) =>
+                        updateSet(slotIndex, setIndex, 'weight', e.target.value)
+                      }
+                      className="h-10 w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+
+                    {/* Reps input */}
+                    <input
+                      data-testid={`reps-input-${slotIndex}-${setIndex}`}
+                      aria-label={`Actual reps for set ${setIndex + 1}`}
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="—"
+                      value={setData.reps}
+                      onChange={(e) =>
+                        updateSet(slotIndex, setIndex, 'reps', e.target.value)
+                      }
+                      className="h-10 w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+
+                    {/* RPE input */}
+                    <input
+                      data-testid={`rpe-input-${slotIndex}-${setIndex}`}
+                      aria-label={`Actual RPE for set ${setIndex + 1}`}
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="—"
+                      value={setData.rpe}
+                      onChange={(e) =>
+                        updateSet(slotIndex, setIndex, 'rpe', e.target.value)
+                      }
+                      className="h-10 w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+                  </div>
                 </div>
               ))}
             </div>

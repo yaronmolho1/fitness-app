@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { render, screen, within, cleanup } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, it, expect, afterEach } from 'vitest'
 import { WorkoutLoggingForm } from './workout-logging-form'
 import type { WorkoutData } from './workout-logging-form'
@@ -277,6 +278,148 @@ describe('WorkoutLoggingForm', () => {
       })
       render(<WorkoutLoggingForm data={data} />)
       expect(screen.getByText('Hypertrophy Block')).toBeInTheDocument()
+    })
+  })
+
+  // T049 — Actual set input fields
+  describe('actual RPE input', () => {
+    it('renders an RPE input for each set row', () => {
+      const data = makeWorkoutData({
+        slots: [makeSlot({ sets: 3 })],
+      })
+      render(<WorkoutLoggingForm data={data} />)
+
+      for (let i = 0; i < 3; i++) {
+        expect(screen.getByTestId(`rpe-input-0-${i}`)).toBeInTheDocument()
+      }
+    })
+
+    it('RPE input starts empty (not pre-filled)', () => {
+      const data = makeWorkoutData({
+        slots: [makeSlot({ sets: 1, rpe: 8 })],
+      })
+      render(<WorkoutLoggingForm data={data} />)
+
+      const rpeInput = screen.getByTestId('rpe-input-0-0') as HTMLInputElement
+      expect(rpeInput.value).toBe('')
+    })
+
+    it('RPE input uses numeric inputMode', () => {
+      const data = makeWorkoutData({
+        slots: [makeSlot({ sets: 1 })],
+      })
+      render(<WorkoutLoggingForm data={data} />)
+
+      const rpeInput = screen.getByTestId('rpe-input-0-0') as HTMLInputElement
+      expect(rpeInput.inputMode).toBe('numeric')
+    })
+
+    it('RPE input is editable', async () => {
+      const user = userEvent.setup()
+      const data = makeWorkoutData({
+        slots: [makeSlot({ sets: 1 })],
+      })
+      render(<WorkoutLoggingForm data={data} />)
+
+      const rpeInput = screen.getByTestId('rpe-input-0-0') as HTMLInputElement
+      await user.type(rpeInput, '7')
+      expect(rpeInput.value).toBe('7')
+    })
+
+    it('RPE column header is shown', () => {
+      const data = makeWorkoutData({
+        slots: [makeSlot({ sets: 1 })],
+      })
+      render(<WorkoutLoggingForm data={data} />)
+
+      expect(screen.getByText('RPE')).toBeInTheDocument()
+    })
+  })
+
+  describe('planned values display', () => {
+    it('shows planned weight as read-only reference', () => {
+      const data = makeWorkoutData({
+        slots: [makeSlot({ sets: 1, weight: 80 })],
+      })
+      render(<WorkoutLoggingForm data={data} />)
+
+      const section = screen.getByTestId('exercise-section')
+      const row = within(section).getByTestId('set-row')
+      const planned = within(row).getByTestId('planned-weight-0-0')
+      expect(planned).toHaveTextContent('80')
+    })
+
+    it('shows planned reps as read-only reference', () => {
+      const data = makeWorkoutData({
+        slots: [makeSlot({ sets: 1, reps: '10' })],
+      })
+      render(<WorkoutLoggingForm data={data} />)
+
+      const planned = screen.getByTestId('planned-reps-0-0')
+      expect(planned).toHaveTextContent('10')
+    })
+
+    it('shows planned RPE as read-only reference when present', () => {
+      const data = makeWorkoutData({
+        slots: [makeSlot({ sets: 1, rpe: 8 })],
+      })
+      render(<WorkoutLoggingForm data={data} />)
+
+      const planned = screen.getByTestId('planned-rpe-0-0')
+      expect(planned).toHaveTextContent('8')
+    })
+
+    it('shows dash for planned weight when null', () => {
+      const data = makeWorkoutData({
+        slots: [makeSlot({ sets: 1, weight: null })],
+      })
+      render(<WorkoutLoggingForm data={data} />)
+
+      const planned = screen.getByTestId('planned-weight-0-0')
+      expect(planned).toHaveTextContent('—')
+    })
+
+    it('shows dash for planned RPE when null', () => {
+      const data = makeWorkoutData({
+        slots: [makeSlot({ sets: 1, rpe: null })],
+      })
+      render(<WorkoutLoggingForm data={data} />)
+
+      const planned = screen.getByTestId('planned-rpe-0-0')
+      expect(planned).toHaveTextContent('—')
+    })
+
+    it('planned values are not editable inputs', () => {
+      const data = makeWorkoutData({
+        slots: [makeSlot({ sets: 1, weight: 80, reps: '8', rpe: 8 })],
+      })
+      render(<WorkoutLoggingForm data={data} />)
+
+      const plannedWeight = screen.getByTestId('planned-weight-0-0')
+      const plannedReps = screen.getByTestId('planned-reps-0-0')
+      const plannedRpe = screen.getByTestId('planned-rpe-0-0')
+
+      // Should not be input elements
+      expect(plannedWeight.tagName).not.toBe('INPUT')
+      expect(plannedReps.tagName).not.toBe('INPUT')
+      expect(plannedRpe.tagName).not.toBe('INPUT')
+    })
+  })
+
+  describe('set independence with RPE', () => {
+    it('editing RPE on one set does not affect another', async () => {
+      const user = userEvent.setup()
+      const data = makeWorkoutData({
+        slots: [makeSlot({ sets: 2 })],
+      })
+      render(<WorkoutLoggingForm data={data} />)
+
+      const rpe0 = screen.getByTestId('rpe-input-0-0') as HTMLInputElement
+      const rpe1 = screen.getByTestId('rpe-input-0-1') as HTMLInputElement
+
+      await user.type(rpe0, '9')
+      expect(rpe0.value).toBe('9')
+      expect(rpe1.value).toBe('')
     })
   })
 })

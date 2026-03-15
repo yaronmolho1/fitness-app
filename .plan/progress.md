@@ -56,7 +56,7 @@
 | T046 | Today's resistance workout display | 9 | [x] | feat/task-046-todays-resistance-display | 2026-03-15T10:00 | 2026-03-15 | merged via PR #119 |
 | T047 | Today's running + MMA/BJJ display | 9 | [x] | feat/task-047-running-mma-display | 2026-03-15 | 2026-03-15 | merged via PR #133 |
 | T048 | Logging form + pre-fill from template | 10 | [x] | feat/task-048-logging-form | 2026-03-15T13:00 | 2026-03-15 | merged via PR #132 |
-| T049 | Actual reps/weight/RPE inputs | 10 | [ ] | | | | |
+| T049 | Actual reps/weight/RPE inputs | 10 | [~] | feat/task-049-actual-set-input | 2026-03-15T16:00 | | |
 | T050 | Add/remove set rows | 10 | [ ] | | | | |
 | T051 | Rating + notes fields | 10 | [ ] | | | | |
 | T052 | Save workout SA (atomic + snapshot) | 10 | [ ] | | | | |
@@ -89,4 +89,4 @@
 | T079 | Mesocycle form Checkbox + date refactor | UI-2 | [x] | feat/task-079-meso-form-refactor | 2026-03-15T20:00 | 2026-03-15 | merged via PR #140 |
 | T080 | Schedule Tabs component refactor | UI-2 | [x] | feat/task-080-schedule-tabs | 2026-03-15T20:00 | 2026-03-15 | merged via PR #141 |
 | T081 | Status Badge + Skeleton refactor | UI-2 | [x] | feat/task-081-badge-skeleton | 2026-03-15T20:00 | 2026-03-15 | merged via PR #142 |
-| T082 | Visual consistency pass | UI-3 | [~] | feat/task-082-visual-polish | 2026-03-15T21:00 | | |
+| T082 | Visual consistency pass | UI-3 | [x] | feat/task-082-visual-polish | 2026-03-15T21:00 | 2026-03-15 | merged via PR #143 |
