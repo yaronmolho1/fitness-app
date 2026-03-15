@@ -7,7 +7,10 @@ import {
   exercise_slots,
   exercises,
   logged_workouts,
+  routine_items,
+  routine_logs,
 } from '@/lib/db/schema'
+import { filterActiveRoutineItems } from '@/lib/routines/scope-filter'
 
 // Response types
 
@@ -57,10 +60,39 @@ type WorkoutResult = {
   slots: SlotData[]
 }
 
+export type RoutineItemInfo = {
+  id: number
+  name: string
+  category: string | null
+  has_weight: boolean
+  has_length: boolean
+  has_duration: boolean
+  has_sets: boolean
+  has_reps: boolean
+}
+
+export type RoutineLogInfo = {
+  id: number
+  routine_item_id: number
+  log_date: string
+  status: 'done' | 'skipped'
+  value_weight: number | null
+  value_length: number | null
+  value_duration: number | null
+  value_sets: number | null
+  value_reps: number | null
+}
+
+export type RestDayRoutines = {
+  items: RoutineItemInfo[]
+  logs: RoutineLogInfo[]
+}
+
 type RestDayResult = {
   type: 'rest_day'
   date: string
   mesocycle: MesocycleInfo
+  routines: RestDayRoutines
 }
 
 type NoActiveMesoResult = {
@@ -109,6 +141,41 @@ export function isDeloadWeek(
 // Get day_of_week (0=Sunday, 6=Saturday) from a YYYY-MM-DD string
 function getDayOfWeek(dateStr: string): number {
   return new Date(dateStr + 'T00:00:00Z').getUTCDay()
+}
+
+// Fetch active routines + logs for a given date
+async function getRestDayRoutines(today: string): Promise<RestDayRoutines> {
+  const [allItems, allMesos, logs] = await Promise.all([
+    db.select().from(routine_items).all(),
+    db.select().from(mesocycles).all(),
+    db.select().from(routine_logs).where(eq(routine_logs.log_date, today)).all(),
+  ])
+
+  const activeItems = filterActiveRoutineItems(allItems, allMesos, today)
+
+  return {
+    items: activeItems.map((item) => ({
+      id: item.id,
+      name: item.name,
+      category: item.category,
+      has_weight: item.has_weight,
+      has_length: item.has_length,
+      has_duration: item.has_duration,
+      has_sets: item.has_sets,
+      has_reps: item.has_reps,
+    })),
+    logs: logs.map((log) => ({
+      id: log.id,
+      routine_item_id: log.routine_item_id,
+      log_date: log.log_date,
+      status: log.status as 'done' | 'skipped',
+      value_weight: log.value_weight,
+      value_length: log.value_length,
+      value_duration: log.value_duration,
+      value_sets: log.value_sets,
+      value_reps: log.value_reps,
+    })),
+  }
 }
 
 // Main lookup chain
@@ -161,7 +228,8 @@ export async function getTodayWorkout(today: string): Promise<TodayResult> {
 
   // Step 5: no schedule = rest day
   if (!scheduleRow || !scheduleRow.template_id) {
-    return { type: 'rest_day', date: today, mesocycle: mesoInfo }
+    const routines = await getRestDayRoutines(today)
+    return { type: 'rest_day', date: today, mesocycle: mesoInfo, routines }
   }
 
   // Step 6: load template
@@ -172,7 +240,8 @@ export async function getTodayWorkout(today: string): Promise<TodayResult> {
     .get()
 
   if (!template) {
-    return { type: 'rest_day', date: today, mesocycle: mesoInfo }
+    const routines = await getRestDayRoutines(today)
+    return { type: 'rest_day', date: today, mesocycle: mesoInfo, routines }
   }
 
   // Step 7: check if already logged for today + active mesocycle

@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { WorkoutLoggingForm } from '@/components/workout-logging-form'
 import { RunningLoggingForm } from '@/components/running-logging-form'
 import { MmaLoggingForm } from '@/components/mma-logging-form'
+import { RoutineCheckOff } from '@/components/routine-check-off'
 import { cn } from '@/lib/utils'
-import type { SlotData, MesocycleInfo, TemplateInfo } from '@/lib/today/queries'
+import type { SlotData, MesocycleInfo, TemplateInfo, RoutineItemInfo, RoutineLogInfo } from '@/lib/today/queries'
 
 type WorkoutResponse = {
   type: 'workout'
@@ -20,6 +21,10 @@ type RestDayResponse = {
   type: 'rest_day'
   date: string
   mesocycle: MesocycleInfo
+  routines: {
+    items: RoutineItemInfo[]
+    logs: RoutineLogInfo[]
+  }
 }
 
 type NoMesoResponse = {
@@ -384,17 +389,29 @@ export function TodayWorkout() {
   // Rest day
   if (data?.type === 'rest_day') {
     return (
-      <Card data-testid="rest-day">
-        <CardContent className="py-12 text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-            <span className="text-xl">&#x1f4a4;</span>
-          </div>
-          <p className="text-base font-semibold">Rest Day</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Recovery is part of the plan. See you tomorrow.
-          </p>
-        </CardContent>
-      </Card>
+      <div data-testid="rest-day" className="space-y-6">
+        <Card>
+          <CardContent className="py-12 text-center">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+              <span className="text-xl">&#x1f4a4;</span>
+            </div>
+            <p className="text-base font-semibold">Rest Day</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Recovery is part of the plan. See you tomorrow.
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Daily routines */}
+        <div>
+          <h2 className="mb-3 text-lg font-semibold">Daily Routines</h2>
+          <RoutineCheckOff
+            items={data.routines.items}
+            logs={data.routines.logs}
+            logDate={data.date}
+          />
+        </div>
+      </div>
     )
   }
 
