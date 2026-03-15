@@ -16,7 +16,8 @@ vi.mock('@/lib/db', () => ({
   sqlite: {},
 }))
 
-import { getRoutineItems, formatInputFields, formatScopeSummary } from './queries'
+import { getRoutineItems } from './queries'
+import { formatInputFields, formatScopeSummary } from './format'
 
 describe('getRoutineItems', () => {
   beforeEach(() => {

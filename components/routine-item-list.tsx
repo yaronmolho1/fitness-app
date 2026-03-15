@@ -4,11 +4,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  formatInputFields,
-  formatScopeSummary,
-  type RoutineItemWithMesocycle,
-} from '@/lib/routines/queries'
+import { formatInputFields, formatScopeSummary } from '@/lib/routines/format'
+import type { RoutineItemWithMesocycle } from '@/lib/routines/queries'
 import { deleteRoutineItem } from '@/lib/routines/actions'
 import { EditRoutineItemForm } from '@/components/edit-routine-item-form'
 
