@@ -53,6 +53,7 @@ export async function cascadeUpdateTemplates(
   }
 
   const targets = targetsResult.data
+  const { skippedCompleted } = targetsResult
 
   // Build set of fields to update
   const setFields: Record<string, unknown> = {}
@@ -90,7 +91,7 @@ export async function cascadeUpdateTemplates(
       updated++
     }
 
-    return { updated, skipped }
+    return { updated, skipped, skippedCompleted }
   })
 
   revalidatePath('/mesocycles')

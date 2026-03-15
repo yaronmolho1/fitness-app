@@ -145,6 +145,7 @@ describe('getCascadeTargets', () => {
       if (result.success) {
         expect(result.data).toHaveLength(1)
         expect(result.data[0].id).toBe(t1.id)
+        expect(result.skippedCompleted).toBe(0)
       }
     })
   })
@@ -200,6 +201,24 @@ describe('getCascadeTargets', () => {
         expect(result.data[0].id).toBe(t1.id)
       }
     })
+
+    it('reports skippedCompleted count for excluded completed mesocycles', async () => {
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'completed', created_at: new Date(2000) })
+      const meso3 = seedMesocycle({ name: 'Phase 3', status: 'completed', created_at: new Date(3000) })
+
+      const t1 = seedTemplate(meso1.id)
+      seedTemplate(meso2.id)
+      seedTemplate(meso3.id)
+
+      const result = await getCascadeTargets(t1.id, 'this-and-future')
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data).toHaveLength(1)
+        expect(result.skippedCompleted).toBe(2)
+      }
+    })
   })
 
   describe('all-phases scope', () => {
@@ -235,6 +254,39 @@ describe('getCascadeTargets', () => {
       if (result.success) {
         expect(result.data).toHaveLength(1)
         expect(result.data[0].id).toBe(t2.id)
+      }
+    })
+
+    it('reports skippedCompleted count for excluded completed mesocycles', async () => {
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'completed', created_at: new Date(1000) })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'active', created_at: new Date(2000) })
+      const meso3 = seedMesocycle({ name: 'Phase 3', status: 'planned', created_at: new Date(3000) })
+
+      seedTemplate(meso1.id)
+      const t2 = seedTemplate(meso2.id)
+      seedTemplate(meso3.id)
+
+      const result = await getCascadeTargets(t2.id, 'all-phases')
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data).toHaveLength(2)
+        expect(result.skippedCompleted).toBe(1)
+      }
+    })
+
+    it('reports skippedCompleted=0 when no completed mesocycles exist', async () => {
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
+
+      const t1 = seedTemplate(meso1.id)
+      seedTemplate(meso2.id)
+
+      const result = await getCascadeTargets(t1.id, 'all-phases')
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.skippedCompleted).toBe(0)
       }
     })
   })
@@ -347,6 +399,25 @@ describe('getCascadeTargets', () => {
       if (result.success) {
         expect(result.data).toHaveLength(1)
         expect(result.data[0].id).toBe(t1.id)
+      }
+    })
+
+    it('all siblings completed — returns only source, skippedCompleted = sibling count', async () => {
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'completed', created_at: new Date(2000) })
+      const meso3 = seedMesocycle({ name: 'Phase 3', status: 'completed', created_at: new Date(3000) })
+
+      const t1 = seedTemplate(meso1.id)
+      seedTemplate(meso2.id)
+      seedTemplate(meso3.id)
+
+      const result = await getCascadeTargets(t1.id, 'all-phases')
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data).toHaveLength(1)
+        expect(result.data[0].id).toBe(t1.id)
+        expect(result.skippedCompleted).toBe(2)
       }
     })
 

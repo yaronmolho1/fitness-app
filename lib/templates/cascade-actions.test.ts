@@ -341,6 +341,104 @@ describe('cascadeUpdateTemplates', () => {
     })
   })
 
+  describe('skipping completed mesocycles', () => {
+    it('reports skippedCompleted count in summary for all-phases', async () => {
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'completed', created_at: new Date(2000) })
+      const meso3 = seedMesocycle({ name: 'Phase 3', status: 'planned', created_at: new Date(3000) })
+
+      const t1 = seedTemplate(meso1.id)
+      const tCompleted = seedTemplate(meso2.id)
+      const t3 = seedTemplate(meso3.id)
+
+      const result = await cascadeUpdateTemplates({
+        templateId: t1.id,
+        scope: 'all-phases',
+        updates: { name: 'Push Cascaded' },
+      })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.updated).toBe(2) // t1 + t3
+        expect(result.data.skipped).toBe(0)
+        expect(result.data.skippedCompleted).toBe(1)
+      }
+
+      // Completed mesocycle template unchanged
+      expect(getTemplate(tCompleted.id)?.name).toBe('Push A')
+      expect(getTemplate(t1.id)?.name).toBe('Push Cascaded')
+      expect(getTemplate(t3.id)?.name).toBe('Push Cascaded')
+    })
+
+    it('reports skippedCompleted count in summary for this-and-future', async () => {
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'completed', created_at: new Date(2000) })
+      const meso3 = seedMesocycle({ name: 'Phase 3', status: 'completed', created_at: new Date(3000) })
+
+      const t1 = seedTemplate(meso1.id)
+      seedTemplate(meso2.id)
+      seedTemplate(meso3.id)
+
+      const result = await cascadeUpdateTemplates({
+        templateId: t1.id,
+        scope: 'this-and-future',
+        updates: { name: 'Push Updated' },
+      })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.updated).toBe(1)
+        expect(result.data.skippedCompleted).toBe(2)
+      }
+    })
+
+    it('reports skippedCompleted=0 when no completed mesocycles in scope', async () => {
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
+
+      const t1 = seedTemplate(meso1.id)
+      seedTemplate(meso2.id)
+
+      const result = await cascadeUpdateTemplates({
+        templateId: t1.id,
+        scope: 'all-phases',
+        updates: { name: 'Push New' },
+      })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.skippedCompleted).toBe(0)
+      }
+    })
+
+    it('reports both skipped (logged) and skippedCompleted in mixed scenario', async () => {
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'completed', created_at: new Date(2000) })
+      const meso3 = seedMesocycle({ name: 'Phase 3', status: 'planned', created_at: new Date(3000) })
+      const meso4 = seedMesocycle({ name: 'Phase 4', status: 'planned', created_at: new Date(4000) })
+
+      const t1 = seedTemplate(meso1.id)
+      seedTemplate(meso2.id) // completed — skippedCompleted
+      const t3 = seedTemplate(meso3.id)
+      seedTemplate(meso4.id)
+
+      seedLoggedWorkout(t3.id) // logged — skipped
+
+      const result = await cascadeUpdateTemplates({
+        templateId: t1.id,
+        scope: 'all-phases',
+        updates: { name: 'Push Mixed' },
+      })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.updated).toBe(2) // t1 + t4
+        expect(result.data.skipped).toBe(1) // t3 (logged)
+        expect(result.data.skippedCompleted).toBe(1) // meso2
+      }
+    })
+  })
+
   describe('no siblings edge case', () => {
     it('updates only current template when no siblings exist', async () => {
       const meso = seedMesocycle({ status: 'active' })
