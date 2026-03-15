@@ -78,6 +78,28 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
     })
   }
 
+  function addSet(slotIndex: number) {
+    setSets((prev) => {
+      const next = prev.map((s) => s.map((r) => ({ ...r })))
+      const slotSets = next[slotIndex]
+      const last = slotSets[slotSets.length - 1]
+      const newSet: SetFormData = last
+        ? { weight: last.weight, reps: last.reps, rpe: '' }
+        : { weight: '', reps: '', rpe: '' }
+      next[slotIndex] = [...slotSets, newSet]
+      return next
+    })
+  }
+
+  function removeSet(slotIndex: number, setIndex: number) {
+    setSets((prev) => {
+      const next = prev.map((s) => s.map((r) => ({ ...r })))
+      if (next[slotIndex].length <= 1) return prev
+      next[slotIndex] = next[slotIndex].filter((_, i) => i !== setIndex)
+      return next
+    })
+  }
+
   return (
     <div className="space-y-4 pb-24">
       {/* Header */}
@@ -126,7 +148,7 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
             </div>
 
             {/* Column headers */}
-            <div className="grid grid-cols-[2.5rem_1fr_1fr_1fr] gap-2 px-4 pb-1">
+            <div className="grid grid-cols-[2.5rem_1fr_1fr_1fr_2rem] gap-2 px-4 pb-1">
               <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider text-center">
                 Set
               </div>
@@ -139,10 +161,11 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
               <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider text-center">
                 RPE
               </div>
+              <div />
             </div>
 
             {/* Set rows */}
-            <div className="space-y-1.5 px-4 pb-4">
+            <div className="space-y-1.5 px-4 pb-2">
               {sets[slotIndex]?.map((setData, setIndex) => (
                 <div
                   key={setIndex}
@@ -150,7 +173,7 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
                   className="space-y-1"
                 >
                   {/* Planned values row */}
-                  <div className="grid grid-cols-[2.5rem_1fr_1fr_1fr] gap-2 items-center">
+                  <div className="grid grid-cols-[2.5rem_1fr_1fr_1fr_2rem] gap-2 items-center">
                     <div />
                     <span
                       data-testid={`planned-weight-${slotIndex}-${setIndex}`}
@@ -170,10 +193,11 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
                     >
                       {slot.rpe !== null ? slot.rpe : '\u2014'}
                     </span>
+                    <div />
                   </div>
 
                   {/* Actual inputs row */}
-                  <div className="grid grid-cols-[2.5rem_1fr_1fr_1fr] gap-2 items-center">
+                  <div className="grid grid-cols-[2.5rem_1fr_1fr_1fr_2rem] gap-2 items-center">
                     {/* Set number */}
                     <div className="flex h-10 items-center justify-center rounded-lg bg-muted/60 text-sm font-bold tabular-nums text-muted-foreground">
                       {setIndex + 1}
@@ -220,9 +244,31 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
                       }
                       className="h-10 w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     />
+
+                    {/* Remove set */}
+                    <button
+                      type="button"
+                      aria-label={`Remove set ${setIndex + 1}`}
+                      disabled={sets[slotIndex].length <= 1}
+                      onClick={() => removeSet(slotIndex, setIndex)}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* Add set */}
+            <div className="px-4 pb-4">
+              <button
+                type="button"
+                onClick={() => addSet(slotIndex)}
+                className="w-full rounded-lg border border-dashed border-muted-foreground/30 py-2 text-sm font-medium text-muted-foreground hover:border-primary hover:text-primary transition-colors active:scale-[0.98]"
+              >
+                + Add Set
+              </button>
             </div>
           </div>
         ))
