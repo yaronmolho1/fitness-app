@@ -88,7 +88,7 @@ export function SlotList({ slots, templateId, exercises, isCompleted }: SlotList
     touchHoldTimer.current = setTimeout(() => {
       touchDragIndex.current = index
       setDragIndex(index)
-    }, 200)
+    }, 300)
   }
 
   function handleTouchMove(e: React.TouchEvent) {

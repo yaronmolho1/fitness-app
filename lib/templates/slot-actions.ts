@@ -278,13 +278,15 @@ export async function reorderExerciseSlots(
     return { success: true, noop: true }
   }
 
-  // Update order values
-  for (let i = 0; i < slot_ids.length; i++) {
-    db.update(exercise_slots)
-      .set({ order: i + 1 })
-      .where(eq(exercise_slots.id, slot_ids[i]))
-      .run()
-  }
+  // Update order values atomically
+  db.transaction((tx) => {
+    for (let i = 0; i < slot_ids.length; i++) {
+      tx.update(exercise_slots)
+        .set({ order: i + 1 })
+        .where(eq(exercise_slots.id, slot_ids[i]))
+        .run()
+    }
+  })
 
   revalidatePath('/mesocycles')
   return { success: true }
