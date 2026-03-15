@@ -20,7 +20,8 @@ Shared React components — app-level UI and navigation.
 - `running-template-form.tsx` — `RunningTemplateForm` create form for running templates with run type, pace, HR zone, interval fields
 - `mma-bjj-template-form.tsx` — `MmaBjjTemplateForm` create form for MMA/BJJ templates with planned duration
 - `schedule-tabs.tsx` — `ScheduleTabs` normal/deload tab switcher, renders `ScheduleGrid` per week type
-- `today-workout.tsx` — `TodayWorkout` fetches and displays today's resistance workout: mesocycle context, template name, exercise slots with sets/reps/weight/RPE/rest
+- `today-workout.tsx` — `TodayWorkout` fetches and displays today's resistance workout: mesocycle context, template name, exercise slots with sets/reps/weight/RPE/rest; "Log Workout" button transitions to logging form
+- `workout-logging-form.tsx` — `WorkoutLoggingForm` client component: pre-filled resistance logging form with per-set weight/reps/RPE inputs, add/remove sets, notes per exercise, submit via server action
 
 ## Subdirectories
 - `ui/` — shadcn/ui primitives (Button, Card, Input, Label)
