@@ -44,7 +44,7 @@
 | T034 | Rest day display in grid | 7 | [x] | feat/task-034-rest-day-display | 2026-03-15T00:30 | 2026-03-15 | merged via PR #111 |
 | T035 | Cascade sibling query (3 scopes) | 8 | [x] | feat/task-035-cascade-sibling-query | 2026-03-15T12:00 | 2026-03-15 | merged via PR #115 |
 | T036 | Cascade atomic execution SA | 8 | [x] | feat/task-036-cascade-atomic-execution | 2026-03-15T11:00 | 2026-03-15 | merged via PR #126 |
-| T037 | Cascade scope selection UI | 8 | [ ] | | | | |
+| T037 | Cascade scope selection UI | 8 | [x] | feat/task-037-cascade-scope-ui | 2026-03-15T12:00 | 2026-03-15 | merged via PR #128 |
 | T038 | Block edits on completed mesocycle | 8 | [x] | feat/task-038-completed-meso-protection | 2026-03-15T14:00 | 2026-03-15 | merged via PR #129 |
 | T039 | Cascade skips completed + summary | 8 | [~] | feat/task-039-cascade-skips-completed | 2026-03-15T15:00 | | |
 | T040 | Clone mesocycle SA (atomic) | 8 | [x] | feat/task-040-clone-mesocycle | 2026-03-15T13:00 | 2026-03-15 | merged via PR #127 |
