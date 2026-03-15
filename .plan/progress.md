@@ -56,7 +56,7 @@
 | T046 | Today's resistance workout display | 9 | [x] | feat/task-046-todays-resistance-display | 2026-03-15T10:00 | 2026-03-15 | merged via PR #119 |
 | T047 | Today's running + MMA/BJJ display | 9 | [x] | feat/task-047-running-mma-display | 2026-03-15 | 2026-03-15 | merged via PR #133 |
 | T048 | Logging form + pre-fill from template | 10 | [x] | feat/task-048-logging-form | 2026-03-15T13:00 | 2026-03-15 | merged via PR #132 |
-| T049 | Actual reps/weight/RPE inputs | 10 | [~] | feat/task-049-actual-set-input | 2026-03-15T16:00 | | |
+| T049 | Actual reps/weight/RPE inputs | 10 | [~] | feat/task-049-actual-set-input | 2026-03-15T16:00 | | PR #144 |
 | T050 | Add/remove set rows | 10 | [ ] | | | | |
 | T051 | Rating + notes fields | 10 | [ ] | | | | |
 | T052 | Save workout SA (atomic + snapshot) | 10 | [ ] | | | | |
