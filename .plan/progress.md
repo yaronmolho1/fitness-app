@@ -59,7 +59,7 @@
 | T049 | Actual reps/weight/RPE inputs | 10 | [x] | feat/task-049-actual-set-input | 2026-03-15T16:00 | 2026-03-15 | merged via PR #144 |
 | T050 | Add/remove set rows | 10 | [x] | feat/task-050-add-remove-sets | 2026-03-15T17:00 | 2026-03-15 | merged via PR #145 |
 | T051 | Rating + notes fields | 10 | [x] | feat/task-051-rating-notes | 2026-03-15T18:00 | 2026-03-15 | merged via PR #146 |
-| T052 | Save workout SA (atomic + snapshot) | 10 | [ ] | | | | |
+| T052 | Save workout SA (atomic + snapshot) | 10 | [~] | feat/task-052-save-workout | 2026-03-15T19:00 | | |
 | T053 | Immutability enforcement | 10 | [ ] | | | | |
 | T054 | Running logging form + save SA | 11 | [ ] | | | | |
 | T055 | Running rating & notes | 11 | [ ] | | | | |
