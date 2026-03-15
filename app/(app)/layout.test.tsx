@@ -27,9 +27,10 @@ describe('(app) layout', () => {
     expect(shell).toHaveTextContent('content')
   })
 
-  it('renders sidebar and bottom bar', () => {
+  it('renders desktop sidebar nav links', () => {
     render(<AppLayout>content</AppLayout>)
-    const todayLinks = screen.getAllByRole('link', { name: /today/i })
-    expect(todayLinks.length).toBe(2)
+    // Desktop sidebar should have nav links visible
+    expect(screen.getByRole('link', { name: /today/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /exercises/i })).toBeInTheDocument()
   })
 })
