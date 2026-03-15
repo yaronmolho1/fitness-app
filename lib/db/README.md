@@ -3,7 +3,7 @@
 SQLite database via Drizzle ORM. WAL mode, foreign keys enforced.
 
 ## Files
-- `index.ts` — DB connection with PRAGMAs (WAL, busy_timeout, foreign_keys), exports `db` and `sqlite`
+- `index.ts` — DB connection with PRAGMAs (WAL, busy_timeout, foreign_keys), exports `db`, `AppDb` type, and `sqlite`
 - `schema.ts` — 10 tables: 6 planning (mutable) + 4 logging (immutable). Uses `defineRelations`-era column types
 - `relations.ts` — Drizzle `relations()` definitions for all table relationships
 
