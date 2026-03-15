@@ -55,7 +55,7 @@
 | T045 | GET /api/today (lookup chain + deload) | 9 | [x] | feat/task-045-api-today | 2026-03-14T22:00 | 2026-03-14 | merged via PR #104 |
 | T046 | Today's resistance workout display | 9 | [x] | feat/task-046-todays-resistance-display | 2026-03-15T10:00 | 2026-03-15 | merged via PR #119 |
 | T047 | Today's running + MMA/BJJ display | 9 | [ ] | | | | |
-| T048 | Logging form + pre-fill from template | 10 | [ ] | | | | |
+| T048 | Logging form + pre-fill from template | 10 | [~] | feat/task-048-logging-form | 2026-03-15T13:00 | | |
 | T049 | Actual reps/weight/RPE inputs | 10 | [ ] | | | | |
 | T050 | Add/remove set rows | 10 | [ ] | | | | |
 | T051 | Rating + notes fields | 10 | [ ] | | | | |
