@@ -4,29 +4,11 @@ import { useState, useTransition } from 'react'
 import { cn } from '@/lib/utils'
 import { saveRunningWorkout } from '@/lib/workouts/actions'
 import type { SaveRunningWorkoutInput } from '@/lib/workouts/actions'
-
-type TemplateInfo = {
-  id: number
-  name: string
-  modality: string
-  notes: string | null
-  run_type: string | null
-  target_pace: string | null
-  hr_zone: number | null
-  interval_count: number | null
-  interval_rest: number | null
-  coaching_cues: string | null
-}
+import type { MesocycleInfo, TemplateInfo } from '@/lib/today/queries'
 
 export type RunningWorkoutData = {
   date: string
-  mesocycle: {
-    id: number
-    name: string
-    start_date: string
-    end_date: string
-    week_type: 'normal' | 'deload'
-  }
+  mesocycle: MesocycleInfo
   template: TemplateInfo
 }
 

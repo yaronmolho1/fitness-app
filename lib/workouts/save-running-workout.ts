@@ -23,8 +23,10 @@ function validateInput(input: SaveRunningWorkoutInput): string | null {
     return 'Invalid date format (expected YYYY-MM-DD)'
   }
 
-  if (input.rating !== null && (input.rating < 1 || input.rating > 5)) {
-    return 'Rating must be between 1 and 5'
+  if (input.rating !== null) {
+    if (!Number.isInteger(input.rating) || input.rating < 1 || input.rating > 5) {
+      return 'Rating must be an integer between 1 and 5'
+    }
   }
 
   if (input.actualDistance !== null && input.actualDistance < 0) {

@@ -364,6 +364,15 @@ describe('saveRunningWorkoutCore', () => {
     expect(result0.success).toBe(false)
   })
 
+  it('rejects non-integer rating', async () => {
+    const result = await saveRunningWorkoutCore(
+      db,
+      buildValidInput({ rating: 3.5 })
+    )
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toMatch(/integer/i)
+  })
+
   // --- Atomicity ---
 
   it('is atomic — uses transaction', async () => {

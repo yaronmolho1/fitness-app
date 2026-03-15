@@ -5,45 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { WorkoutLoggingForm } from '@/components/workout-logging-form'
 import { RunningLoggingForm } from '@/components/running-logging-form'
 import { cn } from '@/lib/utils'
-
-// API response types matching lib/today/queries.ts
-type SlotData = {
-  id: number
-  exercise_id: number
-  exercise_name: string
-  sets: number
-  reps: string
-  weight: number | null
-  rpe: number | null
-  rest_seconds: number | null
-  guidelines: string | null
-  order: number
-  is_main: boolean
-}
-
-type MesocycleInfo = {
-  id: number
-  name: string
-  start_date: string
-  end_date: string
-  week_type: 'normal' | 'deload'
-}
-
-type TemplateInfo = {
-  id: number
-  name: string
-  modality: string
-  notes: string | null
-  // Running-specific
-  run_type: string | null
-  target_pace: string | null
-  hr_zone: number | null
-  interval_count: number | null
-  interval_rest: number | null
-  coaching_cues: string | null
-  // MMA-specific
-  planned_duration: number | null
-}
+import type { SlotData, MesocycleInfo, TemplateInfo } from '@/lib/today/queries'
 
 type WorkoutResponse = {
   type: 'workout'
