@@ -145,6 +145,7 @@ export function EditRoutineItemForm({
           id={`edit-name-${item.id}`}
           value={name}
           onChange={(e) => setName(e.target.value)}
+          maxLength={255}
         />
       </div>
 

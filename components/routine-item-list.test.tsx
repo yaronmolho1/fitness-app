@@ -110,6 +110,47 @@ describe('RoutineItemList', () => {
     expect(deleteRoutineItem).toHaveBeenCalledWith(1)
   })
 
+  it('calls updateRoutineItem on edit form submit', async () => {
+    const user = userEvent.setup()
+    const { updateRoutineItem } = await import('@/lib/routines/actions')
+    vi.mocked(updateRoutineItem).mockResolvedValue({
+      success: true,
+      data: {
+        id: 1, name: 'Morning Stretch', category: 'mobility',
+        has_weight: false, has_length: false, has_duration: true,
+        has_sets: true, has_reps: false,
+        frequency_target: 3, scope: 'global',
+        mesocycle_id: null, start_date: null, end_date: null,
+        skip_on_deload: false, created_at: new Date(),
+      },
+    })
+
+    render(<RoutineItemList items={[makeItem()]} mesocycles={[]} />)
+
+    await user.click(screen.getByRole('button', { name: /edit/i }))
+    await user.click(screen.getByRole('button', { name: /save/i }))
+
+    expect(updateRoutineItem).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 1, name: 'Morning Stretch' })
+    )
+  })
+
+  it('shows error when edit form submit fails', async () => {
+    const user = userEvent.setup()
+    const { updateRoutineItem } = await import('@/lib/routines/actions')
+    vi.mocked(updateRoutineItem).mockResolvedValue({
+      success: false,
+      error: 'Name is required',
+    })
+
+    render(<RoutineItemList items={[makeItem()]} mesocycles={[]} />)
+
+    await user.click(screen.getByRole('button', { name: /edit/i }))
+    await user.click(screen.getByRole('button', { name: /save/i }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Name is required')
+  })
+
   it('does not call deleteRoutineItem when Delete is cancelled', async () => {
     const user = userEvent.setup()
     const { deleteRoutineItem } = await import('@/lib/routines/actions')

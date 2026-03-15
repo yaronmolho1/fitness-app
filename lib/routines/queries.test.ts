@@ -36,6 +36,31 @@ describe('getRoutineItems', () => {
     await getRoutineItems()
     expect(mockSelect).toHaveBeenCalled()
   })
+
+  it('chains leftJoin and orderBy in correct sequence', async () => {
+    await getRoutineItems()
+    expect(mockFrom).toHaveBeenCalled()
+    expect(mockLeftJoin).toHaveBeenCalled()
+    expect(mockOrderBy).toHaveBeenCalled()
+  })
+
+  it('returns rows from the joined query', async () => {
+    const fakeRows = [
+      {
+        routine_item: { id: 1, name: 'Stretch', scope: 'mesocycle', mesocycle_id: 1 },
+        mesocycle_name: 'Block 1',
+      },
+      {
+        routine_item: { id: 2, name: 'Foam Roll', scope: 'global', mesocycle_id: null },
+        mesocycle_name: null,
+      },
+    ]
+    mockOrderBy.mockResolvedValueOnce(fakeRows)
+    const result = await getRoutineItems()
+    expect(result).toHaveLength(2)
+    expect(result[0].mesocycle_name).toBe('Block 1')
+    expect(result[1].mesocycle_name).toBeNull()
+  })
 })
 
 describe('formatInputFields', () => {
