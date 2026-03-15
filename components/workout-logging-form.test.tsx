@@ -29,6 +29,7 @@ function makeWorkoutData(overrides: Partial<WorkoutData> = {}): WorkoutData {
 function makeSlot(overrides: Record<string, unknown> = {}) {
   return {
     id: 1,
+    exercise_id: 10,
     exercise_name: 'Bench Press',
     sets: 4,
     reps: '8',

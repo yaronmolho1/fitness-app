@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 // API response types matching lib/today/queries.ts
 type SlotData = {
   id: number
+  exercise_id: number
   exercise_name: string
   sets: number
   reps: string
