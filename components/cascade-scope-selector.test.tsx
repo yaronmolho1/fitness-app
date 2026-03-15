@@ -3,16 +3,12 @@ import { render, screen, cleanup, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-vi.mock('@/lib/templates/cascade-queries', () => ({
-  getCascadePreview: vi.fn(),
-}))
-
 vi.mock('@/lib/templates/cascade-actions', () => ({
+  getCascadePreview: vi.fn(),
   cascadeUpdateTemplates: vi.fn(),
 }))
 
-import { getCascadePreview } from '@/lib/templates/cascade-queries'
-import { cascadeUpdateTemplates } from '@/lib/templates/cascade-actions'
+import { getCascadePreview, cascadeUpdateTemplates } from '@/lib/templates/cascade-actions'
 import { CascadeScopeSelector } from './cascade-scope-selector'
 
 const defaultProps = {

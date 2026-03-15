@@ -1,8 +1,9 @@
 import { eq, and, ne, gte, inArray } from 'drizzle-orm'
 import { db } from '@/lib/db/index'
 import { workout_templates, mesocycles, logged_workouts } from '@/lib/db/schema'
+import type { CascadeScope, CascadePreviewResult, CascadePreviewTarget } from './cascade-types'
 
-export type CascadeScope = 'this-only' | 'this-and-future' | 'all-phases'
+export type { CascadeScope, CascadePreviewData, CascadePreviewResult, CascadePreviewTarget } from './cascade-types'
 
 type TemplateTarget = {
   id: number
@@ -124,23 +125,6 @@ export async function getCascadeTargets(
   return { success: true, data: filtered }
 }
 
-// Preview target for the cascade scope selection UI
-export type CascadePreviewTarget = {
-  id: number
-  mesocycleId: number
-  mesocycleName: string
-  hasLoggedWorkouts: boolean
-}
-
-export type CascadePreviewData = {
-  totalTargets: number
-  skippedCount: number
-  targets: CascadePreviewTarget[]
-}
-
-type CascadePreviewResult =
-  | { success: true; data: CascadePreviewData }
-  | { success: false; error: string }
 
 /**
  * Fetch a preview of cascade targets with mesocycle names and logged-workout flags.

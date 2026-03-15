@@ -3,8 +3,8 @@
 import { useState, useEffect, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { getCascadePreview, type CascadePreviewData, type CascadeScope } from '@/lib/templates/cascade-queries'
-import { cascadeUpdateTemplates, type CascadeUpdates, type CascadeSummary } from '@/lib/templates/cascade-actions'
+import { getCascadePreview, cascadeUpdateTemplates } from '@/lib/templates/cascade-actions'
+import type { CascadeScope, CascadePreviewData, CascadeUpdates, CascadeSummary } from '@/lib/templates/cascade-types'
 
 type Props = {
   templateId: number
