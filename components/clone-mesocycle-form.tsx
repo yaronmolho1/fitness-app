@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { cloneMesocycle } from '@/lib/mesocycles/clone-actions'
 import { calculateEndDate } from '@/lib/mesocycles/utils'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
@@ -133,16 +134,14 @@ export function CloneMesocycleForm({ source }: { source: CloneSource }) {
         </div>
 
         <div className="flex items-end pb-2">
-          <label className="flex cursor-pointer items-center gap-2">
-            <input
+          <div className="flex cursor-pointer items-center gap-2">
+            <Checkbox
               id="clone-has-deload"
-              type="checkbox"
               checked={hasDeload}
-              onChange={(e) => setHasDeload(e.target.checked)}
-              className="h-4 w-4 rounded border-input accent-primary"
+              onCheckedChange={(checked) => setHasDeload(checked === true)}
             />
-            <span className="text-sm font-medium">Deload Week</span>
-          </label>
+            <Label htmlFor="clone-has-deload" className="cursor-pointer">Deload Week</Label>
+          </div>
         </div>
       </div>
 
