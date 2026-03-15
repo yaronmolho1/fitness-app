@@ -3,6 +3,12 @@ import { jwtVerify } from 'jose'
 
 const publicPaths = ['/login', '/api/auth', '/api/health', '/api/test']
 
+const jwtSecret = process.env.JWT_SECRET
+if (!jwtSecret) {
+  throw new Error('JWT_SECRET environment variable is required')
+}
+const encodedSecret = new TextEncoder().encode(jwtSecret)
+
 function isPublicPath(pathname: string): boolean {
   return publicPaths.some(p => pathname === p || pathname.startsWith(p + '/'))
 }
@@ -15,8 +21,7 @@ export async function middleware(request: NextRequest) {
     // Redirect authenticated users away from login page
     if (pathname === '/login' && token) {
       try {
-        const secret = new TextEncoder().encode(process.env.JWT_SECRET)
-        await jwtVerify(token, secret, { algorithms: ['HS256'] })
+        await jwtVerify(token, encodedSecret, { algorithms: ['HS256'] })
         return NextResponse.redirect(new URL('/', request.url))
       } catch {
         return NextResponse.next()
@@ -31,8 +36,7 @@ export async function middleware(request: NextRequest) {
   }
 
   try {
-    const secret = new TextEncoder().encode(process.env.JWT_SECRET)
-    await jwtVerify(token, secret, { algorithms: ['HS256'] })
+    await jwtVerify(token, encodedSecret, { algorithms: ['HS256'] })
     return NextResponse.next()
   } catch {
     return NextResponse.redirect(new URL('/login', request.url))
