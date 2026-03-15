@@ -182,6 +182,7 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
                     {/* Weight input */}
                     <input
                       data-testid={`weight-input-${slotIndex}-${setIndex}`}
+                      aria-label={`Actual weight for set ${setIndex + 1}`}
                       type="text"
                       inputMode="decimal"
                       placeholder="—"
@@ -195,6 +196,7 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
                     {/* Reps input */}
                     <input
                       data-testid={`reps-input-${slotIndex}-${setIndex}`}
+                      aria-label={`Actual reps for set ${setIndex + 1}`}
                       type="text"
                       inputMode="numeric"
                       placeholder="—"
@@ -208,8 +210,9 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
                     {/* RPE input */}
                     <input
                       data-testid={`rpe-input-${slotIndex}-${setIndex}`}
+                      aria-label={`Actual RPE for set ${setIndex + 1}`}
                       type="text"
-                      inputMode="decimal"
+                      inputMode="numeric"
                       placeholder="—"
                       value={setData.rpe}
                       onChange={(e) =>

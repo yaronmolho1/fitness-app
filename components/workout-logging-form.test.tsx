@@ -311,7 +311,7 @@ describe('WorkoutLoggingForm', () => {
       render(<WorkoutLoggingForm data={data} />)
 
       const rpeInput = screen.getByTestId('rpe-input-0-0') as HTMLInputElement
-      expect(rpeInput.inputMode).toBe('decimal')
+      expect(rpeInput.inputMode).toBe('numeric')
     })
 
     it('RPE input is editable', async () => {
