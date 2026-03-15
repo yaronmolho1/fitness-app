@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useCallback, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { PanelLeftClose, PanelLeftOpen, LogOut } from 'lucide-react'
@@ -10,21 +10,26 @@ import { navItems } from './nav-items'
 
 const STORAGE_KEY = 'sidebar-collapsed'
 
+function useLocalStorageFlag(key: string) {
+  const subscribe = useCallback((callback: () => void) => {
+    window.addEventListener('storage', callback)
+    return () => window.removeEventListener('storage', callback)
+  }, [])
+  const getSnapshot = useCallback(() => localStorage.getItem(key) === 'true', [key])
+  const getServerSnapshot = useCallback(() => false, [])
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
+}
+
 export function MainNav() {
   const pathname = usePathname()
   const router = useRouter()
-  const [collapsed, setCollapsed] = useState(false)
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored === 'true') setCollapsed(true)
-    setMounted(true)
-  }, [])
+  const storedCollapsed = useLocalStorageFlag(STORAGE_KEY)
+  const [localCollapsed, setLocalCollapsed] = useState<boolean | null>(null)
+  const collapsed = localCollapsed ?? storedCollapsed
 
   function toggleCollapsed() {
     const next = !collapsed
-    setCollapsed(next)
+    setLocalCollapsed(next)
     localStorage.setItem(STORAGE_KEY, String(next))
   }
 
@@ -36,8 +41,7 @@ export function MainNav() {
     router.push('/login')
   }
 
-  // Avoid hydration mismatch — render expanded by default on server
-  const isCollapsed = mounted ? collapsed : false
+  const isCollapsed = collapsed
 
   return (
     <aside
