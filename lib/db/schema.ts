@@ -190,7 +190,7 @@ export const routine_logs = sqliteTable(
     id: integer('id').primaryKey({ autoIncrement: true }),
     routine_item_id: integer('routine_item_id')
       .notNull()
-      .references(() => routine_items.id, { onDelete: 'cascade' }),
+      .references(() => routine_items.id, { onDelete: 'restrict' }),
     log_date: text('log_date').notNull(), // YYYY-MM-DD
     status: text('status', { enum: ['done', 'skipped'] }).notNull(),
     value_weight: real('value_weight'),
