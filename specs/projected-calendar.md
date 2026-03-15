@@ -1,5 +1,5 @@
 # Projected Calendar
-**Status:** ready
+**Status:** in-progress
 **Epic:** Calendar & Progression
 **Depends:** specs/7-day-assignment-grid.md
 

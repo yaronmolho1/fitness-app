@@ -1,0 +1,182 @@
+import { and, gte, lte, eq, inArray } from 'drizzle-orm'
+import type { AppDb } from '@/lib/db'
+import {
+  mesocycles,
+  weekly_schedule,
+  workout_templates,
+  logged_workouts,
+} from '@/lib/db/schema'
+
+export type CalendarDay = {
+  date: string
+  template_name: string | null
+  modality: 'resistance' | 'running' | 'mma' | null
+  mesocycle_id: number | null
+  is_deload: boolean
+  status: 'completed' | 'projected' | 'rest'
+}
+
+export type CalendarProjection = {
+  days: CalendarDay[]
+}
+
+// Returns 0=Monday..6=Sunday from a YYYY-MM-DD string
+function isoDayOfWeek(dateStr: string): number {
+  const d = new Date(dateStr + 'T00:00:00')
+  // JS getDay: 0=Sun..6=Sat -> convert to 0=Mon..6=Sun
+  return (d.getDay() + 6) % 7
+}
+
+// Number of days between two YYYY-MM-DD dates
+function daysBetween(startDate: string, date: string): number {
+  const start = new Date(startDate + 'T00:00:00')
+  const end = new Date(date + 'T00:00:00')
+  return Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+}
+
+// Generate all YYYY-MM-DD strings for a given YYYY-MM month
+function daysInMonth(month: string): string[] {
+  const [year, mon] = month.split('-').map(Number)
+  const days: string[] = []
+  // Last day: day 0 of next month
+  const lastDay = new Date(year, mon, 0).getDate()
+  for (let d = 1; d <= lastDay; d++) {
+    days.push(`${year}-${String(mon).padStart(2, '0')}-${String(d).padStart(2, '0')}`)
+  }
+  return days
+}
+
+type MesocycleRow = {
+  id: number
+  start_date: string
+  end_date: string
+  work_weeks: number
+  has_deload: boolean | number
+}
+
+type ScheduleRow = {
+  mesocycle_id: number
+  day_of_week: number
+  template_id: number | null
+  week_type: string
+  template_name: string | null
+  modality: string | null
+}
+
+export async function getCalendarProjection(
+  database: AppDb,
+  month: string
+): Promise<CalendarProjection> {
+  const dates = daysInMonth(month)
+  const firstDate = dates[0]
+  const lastDate = dates[dates.length - 1]
+
+  // Fetch mesocycles overlapping this month
+  const mesoRows = database
+    .select({
+      id: mesocycles.id,
+      start_date: mesocycles.start_date,
+      end_date: mesocycles.end_date,
+      work_weeks: mesocycles.work_weeks,
+      has_deload: mesocycles.has_deload,
+    })
+    .from(mesocycles)
+    .where(and(lte(mesocycles.start_date, lastDate), gte(mesocycles.end_date, firstDate)))
+    .all() as MesocycleRow[]
+
+  // Build schedule lookup: mesocycle_id -> Map<`${day_of_week}-${week_type}`, ScheduleRow>
+  const scheduleLookup = new Map<number, Map<string, ScheduleRow>>()
+
+  if (mesoRows.length > 0) {
+    const mesoIds = mesoRows.map((m) => m.id)
+
+    const scheduleRows = database
+      .select({
+        mesocycle_id: weekly_schedule.mesocycle_id,
+        day_of_week: weekly_schedule.day_of_week,
+        template_id: weekly_schedule.template_id,
+        week_type: weekly_schedule.week_type,
+        template_name: workout_templates.name,
+        modality: workout_templates.modality,
+      })
+      .from(weekly_schedule)
+      .leftJoin(workout_templates, eq(weekly_schedule.template_id, workout_templates.id))
+      .where(inArray(weekly_schedule.mesocycle_id, mesoIds))
+      .all() as ScheduleRow[]
+
+    for (const row of scheduleRows) {
+      if (!scheduleLookup.has(row.mesocycle_id)) {
+        scheduleLookup.set(row.mesocycle_id, new Map())
+      }
+      scheduleLookup
+        .get(row.mesocycle_id)!
+        .set(`${row.day_of_week}-${row.week_type}`, row)
+    }
+  }
+
+  // Fetch logged workout dates in this month
+  const loggedRows = database
+    .select({ log_date: logged_workouts.log_date })
+    .from(logged_workouts)
+    .where(
+      and(gte(logged_workouts.log_date, firstDate), lte(logged_workouts.log_date, lastDate))
+    )
+    .all()
+
+  const loggedDates = new Set(loggedRows.map((r) => r.log_date))
+
+  // Build projection
+  const days: CalendarDay[] = dates.map((date) => {
+    // Find which mesocycle contains this date
+    const meso = mesoRows.find((m) => date >= m.start_date && date <= m.end_date)
+
+    if (!meso) {
+      return {
+        date,
+        template_name: null,
+        modality: null,
+        mesocycle_id: null,
+        is_deload: false,
+        status: 'rest' as const,
+      }
+    }
+
+    // Compute week number (1-based) from mesocycle start
+    const daysFromStart = daysBetween(meso.start_date, date)
+    const weekNumber = Math.floor(daysFromStart / 7) + 1
+
+    // Determine if this is a deload week
+    const hasDeload = meso.has_deload === true || meso.has_deload === 1
+    const isDeload = hasDeload && weekNumber > meso.work_weeks
+    const weekType = isDeload ? 'deload' : 'normal'
+
+    // Look up schedule for this day
+    const dow = isoDayOfWeek(date)
+    const schedMap = scheduleLookup.get(meso.id)
+    const schedEntry = schedMap?.get(`${dow}-${weekType}`)
+
+    const templateName = schedEntry?.template_name ?? null
+    const modality = (schedEntry?.modality as CalendarDay['modality']) ?? null
+
+    // Determine status
+    let status: CalendarDay['status']
+    if (templateName === null) {
+      status = 'rest'
+    } else if (loggedDates.has(date)) {
+      status = 'completed'
+    } else {
+      status = 'projected'
+    }
+
+    return {
+      date,
+      template_name: templateName,
+      modality,
+      mesocycle_id: meso.id,
+      is_deload: isDeload,
+      status,
+    }
+  })
+
+  return { days }
+}
