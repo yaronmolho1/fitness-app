@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createMesocycle } from '@/lib/mesocycles/actions'
 import { calculateEndDate } from '@/lib/mesocycles/utils'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
@@ -124,16 +125,16 @@ export function MesocycleForm() {
         </div>
 
         <div className="flex items-end pb-2">
-          <label className="flex cursor-pointer items-center gap-2">
-            <input
+          <div className="flex cursor-pointer items-center gap-2">
+            <Checkbox
               id="meso-has-deload"
-              type="checkbox"
               checked={hasDeload}
-              onChange={(e) => setHasDeload(e.target.checked)}
-              className="h-4 w-4 rounded border-input accent-primary"
+              onCheckedChange={(checked) => setHasDeload(checked === true)}
             />
-            <span className="text-sm font-medium">Deload Week</span>
-          </label>
+            <Label htmlFor="meso-has-deload" className="cursor-pointer font-medium">
+              Deload Week
+            </Label>
+          </div>
         </div>
       </div>
 
