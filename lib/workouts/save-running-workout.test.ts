@@ -373,6 +373,43 @@ describe('saveRunningWorkoutCore', () => {
     if (!result.success) expect(result.error).toMatch(/integer/i)
   })
 
+  // --- Duplicate prevention ---
+
+  it('rejects duplicate log for same date + mesocycle', async () => {
+    const first = await saveRunningWorkoutCore(db, buildValidInput())
+    expect(first.success).toBe(true)
+
+    const second = await saveRunningWorkoutCore(db, buildValidInput())
+    expect(second.success).toBe(false)
+    if (!second.success) expect(second.error).toMatch(/already logged/i)
+  })
+
+  it('allows logging on different date for same mesocycle', async () => {
+    await saveRunningWorkoutCore(db, buildValidInput())
+    const result = await saveRunningWorkoutCore(
+      db,
+      buildValidInput({ logDate: '2026-03-16' })
+    )
+    expect(result.success).toBe(true)
+  })
+
+  it('allows logging on same date for different mesocycle', async () => {
+    await saveRunningWorkoutCore(db, buildValidInput())
+
+    sqlite.exec(`
+      INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, status)
+      VALUES (2, 'Block B', '2026-04-01', '2026-05-01', 4, 'active');
+      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality, run_type)
+      VALUES (50, 2, 'Easy Run B', 'easy-run-b', 'running', 'easy');
+    `)
+
+    const result = await saveRunningWorkoutCore(
+      db,
+      buildValidInput({ templateId: 50 })
+    )
+    expect(result.success).toBe(true)
+  })
+
   // --- Atomicity ---
 
   it('is atomic — uses transaction', async () => {

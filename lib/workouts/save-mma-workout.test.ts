@@ -333,6 +333,43 @@ describe('saveMmaWorkoutCore', () => {
     expect(result.success).toBe(true)
   })
 
+  // --- Duplicate prevention ---
+
+  it('rejects duplicate log for same date + mesocycle', async () => {
+    const first = await saveMmaWorkoutCore(db, buildValidInput())
+    expect(first.success).toBe(true)
+
+    const second = await saveMmaWorkoutCore(db, buildValidInput())
+    expect(second.success).toBe(false)
+    if (!second.success) expect(second.error).toMatch(/already logged/i)
+  })
+
+  it('allows logging on different date for same mesocycle', async () => {
+    await saveMmaWorkoutCore(db, buildValidInput())
+    const result = await saveMmaWorkoutCore(
+      db,
+      buildValidInput({ logDate: '2026-03-16' })
+    )
+    expect(result.success).toBe(true)
+  })
+
+  it('allows logging on same date for different mesocycle', async () => {
+    await saveMmaWorkoutCore(db, buildValidInput())
+
+    sqlite.exec(`
+      INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, status)
+      VALUES (2, 'Block B', '2026-04-01', '2026-05-01', 4, 'active');
+      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality, planned_duration)
+      VALUES (50, 2, 'BJJ B', 'bjj-b', 'mma', 60);
+    `)
+
+    const result = await saveMmaWorkoutCore(
+      db,
+      buildValidInput({ templateId: 50 })
+    )
+    expect(result.success).toBe(true)
+  })
+
   // --- Atomicity ---
 
   it('is atomic — uses transaction', async () => {

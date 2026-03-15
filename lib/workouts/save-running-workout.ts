@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm'
 import type { AppDb } from '@/lib/db'
 import { logged_workouts, workout_templates } from '@/lib/db/schema'
+import { hasExistingLog } from './duplicate-check'
 
 export type IntervalRepData = {
   rep_number: number
@@ -86,6 +87,11 @@ export async function saveRunningWorkoutCore(
 
   if (template.modality !== 'running') {
     return { success: false, error: 'Template is not a running workout' }
+  }
+
+  const duplicate = await hasExistingLog(database, input.logDate, template.mesocycle_id)
+  if (duplicate) {
+    return { success: false, error: 'Workout already logged for this date and mesocycle' }
   }
 
   // Only store interval data for interval run types

@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm'
 import type { AppDb } from '@/lib/db'
 import { logged_workouts, workout_templates } from '@/lib/db/schema'
+import { hasExistingLog } from './duplicate-check'
 
 export type SaveMmaWorkoutInput = {
   templateId: number
@@ -66,6 +67,11 @@ export async function saveMmaWorkoutCore(
 
   if (template.modality !== 'mma') {
     return { success: false, error: 'Template is not an MMA workout' }
+  }
+
+  const duplicate = await hasExistingLog(database, input.logDate, template.mesocycle_id)
+  if (duplicate) {
+    return { success: false, error: 'Workout already logged for this date and mesocycle' }
   }
 
   const templateSnapshot = {
