@@ -274,6 +274,25 @@ describe('getCascadeTargets', () => {
       }
     })
 
+    it('keeps source in all-phases even when source has logged workouts', async () => {
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
+
+      const t1 = seedTemplate(meso1.id)
+      const t2 = seedTemplate(meso2.id)
+
+      // Source has logged workouts — should still be included
+      seedLoggedWorkout(t1.id)
+
+      const result = await getCascadeTargets(t1.id, 'all-phases')
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        const ids = result.data.map((t) => t.id).sort()
+        expect(ids).toEqual([t1.id, t2.id].sort())
+      }
+    })
+
     it('excludes logged siblings but keeps source in cascade scopes', async () => {
       const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
       const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })

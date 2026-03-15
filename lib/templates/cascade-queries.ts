@@ -107,6 +107,8 @@ export async function getCascadeTargets(
 
   const loggedSet = new Set(loggedTemplateIds)
 
+  // Source is always kept even if it has logged workouts —
+  // the execution layer (T036 SA) decides how to handle it.
   const filtered = siblings.filter(
     (t) => t.id === source.id || !loggedSet.has(t.id)
   )
