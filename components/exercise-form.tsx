@@ -5,6 +5,13 @@ import { createExercise } from '@/lib/exercises/actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 export function ExerciseForm() {
   const [name, setName] = useState('')
@@ -68,18 +75,17 @@ export function ExerciseForm() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="exercise-modality">Modality</Label>
-        <select
-          id="exercise-modality"
-          value={modality}
-          onChange={(e) => setModality(e.target.value)}
-          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:text-sm"
-        >
-          <option value="">Select modality</option>
-          <option value="resistance">Resistance</option>
-          <option value="running">Running</option>
-          <option value="mma">MMA</option>
-        </select>
+        <Label>Modality</Label>
+        <Select value={modality} onValueChange={setModality}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select modality" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="resistance">Resistance</SelectItem>
+            <SelectItem value="running">Running</SelectItem>
+            <SelectItem value="mma">MMA</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-2">
