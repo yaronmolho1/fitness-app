@@ -6,7 +6,7 @@ Personal fitness planning + logging app. Desktop for coaching/planning, mobile f
 
 - **Framework**: Next.js 16 App Router
 - **Database**: SQLite (WAL mode) via Drizzle ORM v2
-- **UI**: shadcn/ui + Tailwind v4
+- **UI**: shadcn/ui + Tailwind v4 + Recharts
 - **Auth**: JWT via `jose` (Edge-compatible), single-user, env-based credentials
 - **Runtime**: Node 20, pnpm, Docker (node:20-alpine)
 - **Deploy**: Hostinger VPS, nginx reverse proxy (docker-app-stack)
@@ -27,7 +27,7 @@ specs/                 # 43 feature specs (status/epic/depends/AC/tests)
   fitness-app.md       # Detailed execution plan (Prometheus format)
 app/                   # Next.js App Router routes (README.md)
 lib/                   # Server-side logic — auth, db, exercises, mesocycles, calendar, progression, routines, templates (README.md → submodule READMEs)
-components/            # Shared React components — nav, forms (README.md)
+components/            # Shared React components — nav, forms, charts (README.md)
 ```
 
 ## Commands
