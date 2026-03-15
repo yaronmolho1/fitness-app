@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '@/lib/db'
-import { routine_items, mesocycles } from '@/lib/db/schema'
+import { routine_items, routine_logs, mesocycles } from '@/lib/db/schema'
 
 const INPUT_FIELDS = ['weight', 'length', 'duration', 'sets', 'reps'] as const
 type InputField = (typeof INPUT_FIELDS)[number]
@@ -217,6 +217,16 @@ export async function deleteRoutineItem(id: number): Promise<DeleteResult> {
 
     if (existing.length === 0) {
       return { success: false, error: 'Routine item not found' }
+    }
+
+    // Check for existing logs — routine_logs are immutable
+    const logs = await db
+      .select()
+      .from(routine_logs)
+      .where(eq(routine_logs.routine_item_id, id))
+
+    if (logs.length > 0) {
+      return { success: false, error: 'Cannot delete routine item with existing logs' }
     }
 
     await db.delete(routine_items).where(eq(routine_items.id, id))

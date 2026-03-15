@@ -399,8 +399,21 @@ describe('deleteRoutineItem', () => {
   })
 
   it('deletes existing item successfully', async () => {
-    mockWhere.mockResolvedValueOnce([{ id: 1 }])
+    mockWhere
+      .mockResolvedValueOnce([{ id: 1 }]) // item exists
+      .mockResolvedValueOnce([]) // no logs
     const result = await deleteRoutineItem(1)
     expect(result.success).toBe(true)
+  })
+
+  it('returns error when routine item has existing logs', async () => {
+    mockWhere
+      .mockResolvedValueOnce([{ id: 1 }]) // item exists
+      .mockResolvedValueOnce([{ id: 10, routine_item_id: 1 }]) // has logs
+    const result = await deleteRoutineItem(1)
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error).toMatch(/existing logs/i)
+    }
   })
 })

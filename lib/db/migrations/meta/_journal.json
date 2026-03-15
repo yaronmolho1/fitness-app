@@ -29,6 +29,13 @@
       "when": 1773519790640,
       "tag": "0003_chunky_spectrum",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1773560183025,
+      "tag": "0004_optimal_junta",
+      "breakpoints": true
     }
   ]
 }
