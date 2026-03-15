@@ -422,4 +422,212 @@ describe('WorkoutLoggingForm', () => {
       expect(rpe1.value).toBe('')
     })
   })
+
+  // T050 — Add/remove set rows
+  describe('add set', () => {
+    it('renders an "Add Set" button per exercise section', () => {
+      const data = makeWorkoutData({
+        slots: [
+          makeSlot({ id: 1, exercise_name: 'Bench Press', sets: 2, order: 1 }),
+          makeSlot({ id: 2, exercise_name: 'OHP', sets: 3, order: 2 }),
+        ],
+      })
+      render(<WorkoutLoggingForm data={data} />)
+
+      const sections = screen.getAllByTestId('exercise-section')
+      expect(within(sections[0]).getByRole('button', { name: /add set/i })).toBeInTheDocument()
+      expect(within(sections[1]).getByRole('button', { name: /add set/i })).toBeInTheDocument()
+    })
+
+    it('appends a new set row when clicked', async () => {
+      const user = userEvent.setup()
+      const data = makeWorkoutData({
+        slots: [makeSlot({ sets: 2 })],
+      })
+      render(<WorkoutLoggingForm data={data} />)
+
+      const section = screen.getByTestId('exercise-section')
+      expect(within(section).getAllByTestId('set-row')).toHaveLength(2)
+
+      await user.click(within(section).getByRole('button', { name: /add set/i }))
+      expect(within(section).getAllByTestId('set-row')).toHaveLength(3)
+    })
+
+    it('copies weight and reps from last row but not RPE', async () => {
+      const user = userEvent.setup()
+      const data = makeWorkoutData({
+        slots: [makeSlot({ sets: 1, weight: 100, reps: '8' })],
+      })
+      render(<WorkoutLoggingForm data={data} />)
+
+      // Edit the existing row's RPE
+      const rpe0 = screen.getByTestId('rpe-input-0-0') as HTMLInputElement
+      await user.type(rpe0, '9')
+
+      // Edit weight to something different from planned
+      const weight0 = screen.getByTestId('weight-input-0-0') as HTMLInputElement
+      await user.clear(weight0)
+      await user.type(weight0, '105')
+
+      await user.click(screen.getByRole('button', { name: /add set/i }))
+
+      const newWeight = screen.getByTestId('weight-input-0-1') as HTMLInputElement
+      const newReps = screen.getByTestId('reps-input-0-1') as HTMLInputElement
+      const newRpe = screen.getByTestId('rpe-input-0-1') as HTMLInputElement
+
+      expect(newWeight.value).toBe('105')
+      expect(newReps.value).toBe('8')
+      expect(newRpe.value).toBe('')
+    })
+
+    it('adds empty row when no rows exist (edge case guard)', async () => {
+      // This tests the code path where somehow all sets were removed
+      // and we add one back. Since minimum is 1, this tests the
+      // add-from-last-row logic when last row has empty values.
+      const user = userEvent.setup()
+      const data = makeWorkoutData({
+        slots: [makeSlot({ sets: 1, weight: null })],
+      })
+      render(<WorkoutLoggingForm data={data} />)
+
+      // Clear the pre-filled reps
+      const reps0 = screen.getByTestId('reps-input-0-0') as HTMLInputElement
+      await user.clear(reps0)
+
+      await user.click(screen.getByRole('button', { name: /add set/i }))
+
+      const newWeight = screen.getByTestId('weight-input-0-1') as HTMLInputElement
+      const newReps = screen.getByTestId('reps-input-0-1') as HTMLInputElement
+      const newRpe = screen.getByTestId('rpe-input-0-1') as HTMLInputElement
+
+      expect(newWeight.value).toBe('')
+      expect(newReps.value).toBe('')
+      expect(newRpe.value).toBe('')
+    })
+
+    it('updates set numbering after add', async () => {
+      const user = userEvent.setup()
+      const data = makeWorkoutData({
+        slots: [makeSlot({ sets: 2 })],
+      })
+      render(<WorkoutLoggingForm data={data} />)
+
+      await user.click(screen.getByRole('button', { name: /add set/i }))
+
+      const section = screen.getByTestId('exercise-section')
+      const rows = within(section).getAllByTestId('set-row')
+      expect(rows).toHaveLength(3)
+      // Set numbers should be 1, 2, 3
+      expect(rows[2]).toHaveTextContent('3')
+    })
+  })
+
+  describe('remove set', () => {
+    it('renders a remove button per set row', () => {
+      const data = makeWorkoutData({
+        slots: [makeSlot({ sets: 3 })],
+      })
+      render(<WorkoutLoggingForm data={data} />)
+
+      const section = screen.getByTestId('exercise-section')
+      const removeButtons = within(section).getAllByRole('button', { name: /remove/i })
+      expect(removeButtons).toHaveLength(3)
+    })
+
+    it('removes the set row when clicked', async () => {
+      const user = userEvent.setup()
+      const data = makeWorkoutData({
+        slots: [makeSlot({ sets: 3 })],
+      })
+      render(<WorkoutLoggingForm data={data} />)
+
+      const section = screen.getByTestId('exercise-section')
+      const removeButtons = within(section).getAllByRole('button', { name: /remove/i })
+
+      await user.click(removeButtons[1]) // Remove the second set
+      expect(within(section).getAllByTestId('set-row')).toHaveLength(2)
+    })
+
+    it('blocks removing the last remaining set', () => {
+      const data = makeWorkoutData({
+        slots: [makeSlot({ sets: 1 })],
+      })
+      render(<WorkoutLoggingForm data={data} />)
+
+      const section = screen.getByTestId('exercise-section')
+      const removeButton = within(section).getByRole('button', { name: /remove/i })
+      expect(removeButton).toBeDisabled()
+    })
+
+    it('disables remove from start when target_sets=1', () => {
+      const data = makeWorkoutData({
+        slots: [makeSlot({ sets: 1 })],
+      })
+      render(<WorkoutLoggingForm data={data} />)
+
+      const section = screen.getByTestId('exercise-section')
+      const removeButton = within(section).getByRole('button', { name: /remove/i })
+      expect(removeButton).toBeDisabled()
+    })
+
+    it('updates set numbering after remove', async () => {
+      const user = userEvent.setup()
+      const data = makeWorkoutData({
+        slots: [makeSlot({ sets: 3 })],
+      })
+      render(<WorkoutLoggingForm data={data} />)
+
+      const section = screen.getByTestId('exercise-section')
+      const removeButtons = within(section).getAllByRole('button', { name: /remove/i })
+
+      await user.click(removeButtons[0]) // Remove first set
+      const rows = within(section).getAllByTestId('set-row')
+      expect(rows).toHaveLength(2)
+      // Renumbered to 1, 2
+      expect(rows[0]).toHaveTextContent('1')
+      expect(rows[1]).toHaveTextContent('2')
+    })
+
+    it('re-enables remove button after adding back from 1 set', async () => {
+      const user = userEvent.setup()
+      const data = makeWorkoutData({
+        slots: [makeSlot({ sets: 1 })],
+      })
+      render(<WorkoutLoggingForm data={data} />)
+
+      const section = screen.getByTestId('exercise-section')
+      // Initially disabled
+      expect(within(section).getByRole('button', { name: /remove/i })).toBeDisabled()
+
+      await user.click(within(section).getByRole('button', { name: /add set/i }))
+
+      // Now 2 rows, remove buttons should be enabled
+      const removeButtons = within(section).getAllByRole('button', { name: /remove/i })
+      expect(removeButtons).toHaveLength(2)
+      expect(removeButtons[0]).not.toBeDisabled()
+      expect(removeButtons[1]).not.toBeDisabled()
+    })
+  })
+
+  describe('add then remove (round-trip)', () => {
+    it('adding then removing returns to original state', async () => {
+      const user = userEvent.setup()
+      const data = makeWorkoutData({
+        slots: [makeSlot({ sets: 2 })],
+      })
+      render(<WorkoutLoggingForm data={data} />)
+
+      const section = screen.getByTestId('exercise-section')
+      expect(within(section).getAllByTestId('set-row')).toHaveLength(2)
+
+      // Add a set
+      await user.click(within(section).getByRole('button', { name: /add set/i }))
+      expect(within(section).getAllByTestId('set-row')).toHaveLength(3)
+
+      // Remove the added set (last one)
+      const removeButtons = within(section).getAllByRole('button', { name: /remove/i })
+      await user.click(removeButtons[2])
+      expect(within(section).getAllByTestId('set-row')).toHaveLength(2)
+    })
+  })
 })
