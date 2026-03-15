@@ -5,6 +5,13 @@ import { editExercise } from '@/lib/exercises/actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import type { Exercise } from '@/lib/exercises/filters'
 
 type EditExerciseFormProps = {
@@ -73,17 +80,17 @@ export function EditExerciseForm({ exercise, onCancel, onSaved }: EditExerciseFo
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor={`edit-modality-${exercise.id}`}>Modality</Label>
-        <select
-          id={`edit-modality-${exercise.id}`}
-          value={modality}
-          onChange={(e) => setModality(e.target.value as 'resistance' | 'running' | 'mma')}
-          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:text-sm"
-        >
-          <option value="resistance">Resistance</option>
-          <option value="running">Running</option>
-          <option value="mma">MMA</option>
-        </select>
+        <Label>Modality</Label>
+        <Select value={modality} onValueChange={(v) => setModality(v as typeof modality)}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select modality" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="resistance">Resistance</SelectItem>
+            <SelectItem value="running">Running</SelectItem>
+            <SelectItem value="mma">MMA</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-2">

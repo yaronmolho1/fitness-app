@@ -1,7 +1,15 @@
 // @vitest-environment jsdom
 import { render, screen, cleanup, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeAll } from 'vitest'
+
+// Radix primitives use pointer capture APIs missing from jsdom
+beforeAll(() => {
+  Element.prototype.hasPointerCapture = () => false
+  Element.prototype.setPointerCapture = () => {}
+  Element.prototype.releasePointerCapture = () => {}
+  Element.prototype.scrollIntoView = () => {}
+})
 
 vi.mock('@/lib/exercises/actions', () => ({
   createExercise: vi.fn(),
@@ -9,6 +17,13 @@ vi.mock('@/lib/exercises/actions', () => ({
 
 import { ExerciseForm } from './exercise-form'
 import { createExercise } from '@/lib/exercises/actions'
+
+// Radix Select uses pointer events; userEvent must have them enabled
+async function selectOption(user: ReturnType<typeof userEvent.setup>, trigger: HTMLElement, label: string) {
+  await user.click(trigger)
+  const option = await screen.findByRole('option', { name: label })
+  await user.click(option)
+}
 
 describe('ExerciseForm', () => {
   afterEach(() => {
@@ -20,17 +35,19 @@ describe('ExerciseForm', () => {
     render(<ExerciseForm />)
 
     expect(screen.getByLabelText(/name/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/modality/i)).toBeInTheDocument()
+    expect(screen.getByRole('combobox')).toBeInTheDocument()
     expect(screen.getByLabelText(/muscle group/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/equipment/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /create/i })).toBeInTheDocument()
   })
 
-  it('modality select has three options', () => {
+  it('modality select has three options', async () => {
+    const user = userEvent.setup()
     render(<ExerciseForm />)
 
-    const select = screen.getByLabelText(/modality/i)
-    const options = select.querySelectorAll('option:not([value=""])')
+    // Open the select to reveal options
+    await user.click(screen.getByRole('combobox'))
+    const options = await screen.findAllByRole('option')
     expect(options).toHaveLength(3)
   })
 
@@ -38,8 +55,7 @@ describe('ExerciseForm', () => {
     const user = userEvent.setup()
     render(<ExerciseForm />)
 
-    const select = screen.getByLabelText(/modality/i)
-    await user.selectOptions(select, 'resistance')
+    await selectOption(user, screen.getByRole('combobox'), 'Resistance')
     await user.click(screen.getByRole('button', { name: /create/i }))
 
     expect(await screen.findByText(/name is required/i)).toBeInTheDocument()
@@ -67,7 +83,7 @@ describe('ExerciseForm', () => {
     render(<ExerciseForm />)
 
     await user.type(screen.getByLabelText(/name/i), 'Bench Press')
-    await user.selectOptions(screen.getByLabelText(/modality/i), 'resistance')
+    await selectOption(user, screen.getByRole('combobox'), 'Resistance')
     await user.type(screen.getByLabelText(/muscle group/i), 'Chest')
     await user.type(screen.getByLabelText(/equipment/i), 'Barbell')
     await user.click(screen.getByRole('button', { name: /create/i }))
@@ -97,7 +113,7 @@ describe('ExerciseForm', () => {
     render(<ExerciseForm />)
 
     await user.type(screen.getByLabelText(/name/i), 'Bench Press')
-    await user.selectOptions(screen.getByLabelText(/modality/i), 'resistance')
+    await selectOption(user, screen.getByRole('combobox'), 'Resistance')
     await user.click(screen.getByRole('button', { name: /create/i }))
 
     expect(await screen.findByText(/already exists/i)).toBeInTheDocument()
@@ -113,7 +129,7 @@ describe('ExerciseForm', () => {
     render(<ExerciseForm />)
 
     await user.type(screen.getByLabelText(/name/i), 'Jab Cross')
-    await user.selectOptions(screen.getByLabelText(/modality/i), 'mma')
+    await selectOption(user, screen.getByRole('combobox'), 'MMA')
     await user.click(screen.getByRole('button', { name: /create/i }))
 
     await waitFor(() => {
