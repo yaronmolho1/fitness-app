@@ -6,6 +6,7 @@ import {
   workout_templates,
   exercise_slots,
   exercises,
+  logged_workouts,
 } from '@/lib/db/schema'
 
 // Response types
@@ -67,7 +68,24 @@ type NoActiveMesoResult = {
   date: string
 }
 
-export type TodayResult = WorkoutResult | RestDayResult | NoActiveMesoResult
+export type LoggedWorkoutSummary = {
+  id: number
+  log_date: string
+  logged_at: Date
+  canonical_name: string | null
+  rating: number | null
+  notes: string | null
+  template_snapshot: { version: number; [key: string]: unknown }
+}
+
+type AlreadyLoggedResult = {
+  type: 'already_logged'
+  date: string
+  mesocycle: MesocycleInfo
+  loggedWorkout: LoggedWorkoutSummary
+}
+
+export type TodayResult = WorkoutResult | RestDayResult | NoActiveMesoResult | AlreadyLoggedResult
 
 // Determine if the given date falls in the deload week of a mesocycle
 export function isDeloadWeek(
@@ -146,7 +164,7 @@ export async function getTodayWorkout(today: string): Promise<TodayResult> {
     return { type: 'rest_day', date: today, mesocycle: mesoInfo }
   }
 
-  // Step 6: load template + exercise slots
+  // Step 6: load template
   const template = await db
     .select()
     .from(workout_templates)
@@ -157,6 +175,40 @@ export async function getTodayWorkout(today: string): Promise<TodayResult> {
     return { type: 'rest_day', date: today, mesocycle: mesoInfo }
   }
 
+  // Step 7: check if already logged for today + active mesocycle
+  const existingLog = await db
+    .select({
+      id: logged_workouts.id,
+      log_date: logged_workouts.log_date,
+      logged_at: logged_workouts.logged_at,
+      canonical_name: logged_workouts.canonical_name,
+      rating: logged_workouts.rating,
+      notes: logged_workouts.notes,
+      template_snapshot: logged_workouts.template_snapshot,
+    })
+    .from(logged_workouts)
+    .innerJoin(
+      workout_templates,
+      eq(logged_workouts.template_id, workout_templates.id)
+    )
+    .where(
+      and(
+        eq(logged_workouts.log_date, today),
+        eq(workout_templates.mesocycle_id, activeMeso.id)
+      )
+    )
+    .get()
+
+  if (existingLog) {
+    return {
+      type: 'already_logged',
+      date: today,
+      mesocycle: mesoInfo,
+      loggedWorkout: existingLog,
+    }
+  }
+
+  // Step 8: load exercise slots
   const slots = await db
     .select({
       id: exercise_slots.id,
