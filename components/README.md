@@ -13,7 +13,8 @@ Shared React components — app-level UI and navigation.
 - `status-badge.tsx` — `StatusBadge` colored pill for mesocycle status (planned/active/completed)
 - `slot-list.tsx` — `SlotList` renders exercise slots for a template with drag-reorder (desktop drag-and-drop + mobile long-press), inline edit (sets/reps/weight/RPE/rest/guidelines), remove confirmation, and add-exercise picker; `SlotRow` internal component
 - `status-transition-button.tsx` — `StatusTransitionButton` activates or completes a mesocycle via server actions, with confirmation dialog on complete
-- `template-section.tsx` — `TemplateSection` manages templates for a mesocycle: create (resistance/running/MMA-BJJ), edit name, delete, and renders `SlotList` per template
+- `cascade-scope-selector.tsx` — `CascadeScopeSelector` 3-step cascade flow (scope select, confirm with preview, summary) for applying template changes across mesocycles; scope options: this-only, this+future, all-phases; skips templates with logged workouts
+- `template-section.tsx` — `TemplateSection` manages templates for a mesocycle: create (resistance/running/MMA-BJJ), edit name, delete, renders `SlotList` per template, and integrates `CascadeScopeSelector` for cascade edits
 - `edit-exercise-form.tsx` — `EditExerciseForm` inline edit form for exercises with name, modality, muscle group, equipment fields
 - `exercise-list-with-filters.tsx` — `ExerciseListWithFilters` searchable exercise list with modality filter, inline edit/delete via `EditExerciseForm`
 - `running-template-form.tsx` — `RunningTemplateForm` create form for running templates with run type, pace, HR zone, interval fields
