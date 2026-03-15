@@ -58,7 +58,7 @@
 | T048 | Logging form + pre-fill from template | 10 | [x] | feat/task-048-logging-form | 2026-03-15T13:00 | 2026-03-15 | merged via PR #132 |
 | T049 | Actual reps/weight/RPE inputs | 10 | [x] | feat/task-049-actual-set-input | 2026-03-15T16:00 | 2026-03-15 | merged via PR #144 |
 | T050 | Add/remove set rows | 10 | [x] | feat/task-050-add-remove-sets | 2026-03-15T17:00 | 2026-03-15 | merged via PR #145 |
-| T051 | Rating + notes fields | 10 | [ ] | | | | |
+| T051 | Rating + notes fields | 10 | [~] | feat/task-051-rating-notes | 2026-03-15T18:00 | | |
 | T052 | Save workout SA (atomic + snapshot) | 10 | [ ] | | | | |
 | T053 | Immutability enforcement | 10 | [ ] | | | | |
 | T054 | Running logging form + save SA | 11 | [ ] | | | | |
