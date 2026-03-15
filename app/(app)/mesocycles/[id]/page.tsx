@@ -8,6 +8,7 @@ import { ScheduleTabs } from '@/components/schedule-tabs'
 import { StatusBadge } from '@/components/status-badge'
 import { StatusTransitionButton } from '@/components/status-transition-button'
 import { TemplateSection } from '@/components/template-section'
+import { Button } from '@/components/ui/button'
 
 export const dynamic = 'force-dynamic'
 
@@ -58,7 +59,12 @@ export default async function MesocycleDetailPage({
             {meso.has_deload && <span>+ deload</span>}
           </div>
         </div>
-        <StatusTransitionButton mesocycleId={meso.id} status={meso.status} />
+        <div className="flex items-center gap-2">
+          <Button variant="outline" asChild>
+            <Link href={`/mesocycles/${meso.id}/clone`}>Clone</Link>
+          </Button>
+          <StatusTransitionButton mesocycleId={meso.id} status={meso.status} />
+        </div>
       </div>
 
       <TemplateSection
