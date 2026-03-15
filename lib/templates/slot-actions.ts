@@ -96,6 +96,7 @@ export async function addExerciseSlot(
       rpe: rpe ?? null,
       rest_seconds: rest_seconds ?? null,
       guidelines: guidelines ?? null,
+      is_main: false,
       order: nextOrder,
       created_at: new Date(),
     })
@@ -165,6 +166,32 @@ export async function updateExerciseSlot(
     .update(exercise_slots)
     .set(updates)
     .where(eq(exercise_slots.id, id))
+    .returning()
+    .get()
+
+  revalidatePath('/mesocycles')
+  return { success: true, data: updated }
+}
+
+export async function toggleSlotRole(slotId: number): Promise<SlotResult> {
+  if (!Number.isInteger(slotId) || slotId < 1) {
+    return { success: false, error: 'Invalid slot ID' }
+  }
+
+  const existing = db
+    .select()
+    .from(exercise_slots)
+    .where(eq(exercise_slots.id, slotId))
+    .get()
+
+  if (!existing) {
+    return { success: false, error: 'Slot not found' }
+  }
+
+  const updated = db
+    .update(exercise_slots)
+    .set({ is_main: !existing.is_main })
+    .where(eq(exercise_slots.id, slotId))
     .returning()
     .get()
 
