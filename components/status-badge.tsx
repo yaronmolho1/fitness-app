@@ -1,17 +1,13 @@
 import { cn } from '@/lib/utils'
+import { Badge } from '@/components/ui/badge'
+import type { BadgeProps } from '@/components/ui/badge'
 
 type MesocycleStatus = 'planned' | 'active' | 'completed'
 
-const statusStyles: Record<MesocycleStatus, string> = {
-  planned: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-  active: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-  completed: 'bg-gray-100 text-gray-600 dark:bg-gray-800/50 dark:text-gray-400',
-}
-
-const statusLabels: Record<MesocycleStatus, string> = {
-  planned: 'Planned',
-  active: 'Active',
-  completed: 'Completed',
+const statusConfig: Record<MesocycleStatus, { label: string; variant: BadgeProps['variant']; className?: string }> = {
+  planned: { label: 'Planned', variant: 'outline' },
+  active: { label: 'Active', variant: 'default' },
+  completed: { label: 'Completed', variant: 'secondary', className: 'opacity-70' },
 }
 
 export function StatusBadge({
@@ -21,15 +17,10 @@ export function StatusBadge({
   status: MesocycleStatus
   className?: string
 }) {
+  const config = statusConfig[status]
   return (
-    <span
-      className={cn(
-        'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-        statusStyles[status],
-        className
-      )}
-    >
-      {statusLabels[status]}
-    </span>
+    <Badge variant={config.variant} className={cn(config.className, className)}>
+      {config.label}
+    </Badge>
   )
 }
