@@ -11,3 +11,4 @@ Authenticated route group. All routes require JWT auth via middleware.
 - `mesocycles/` — mesocycle management, templates, schedules
 - `progression/` — exercise progression charts (planned vs actual)
 - `routines/` — routine management and items
+- `calendar/` — projected month calendar grid, color-coded by workout modality
