@@ -23,6 +23,7 @@ export type {
 } from './save-workout'
 
 export type {
+  IntervalRepData,
   SaveRunningWorkoutInput,
   SaveRunningWorkoutResult,
 } from './save-running-workout'
