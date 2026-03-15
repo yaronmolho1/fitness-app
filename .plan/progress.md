@@ -82,8 +82,8 @@
 | T072 | Weekly completion count | 14 | [ ] | | | | |
 | T073 | Streak calculation + display | 14 | [ ] | | | | |
 | T074 | OKLCH theme + dark mode setup | UI-1 | [x] | feat/task-074-oklch-theme | 2026-03-15T18:00 | 2026-03-15 | merged via PR #135 |
-| T075 | Geist fonts + Providers + Toaster | UI-1 | [~] | feat/task-075-geist-providers | 2026-03-15T19:00 | | |
-| T076 | Install shadcn components (11) | UI-1 | [~] | feat/task-076-shadcn-components | 2026-03-15T19:00 | | |
+| T075 | Geist fonts + Providers + Toaster | UI-1 | [x] | feat/task-075-geist-providers | 2026-03-15T19:00 | 2026-03-15 | merged via PR #136 |
+| T076 | Install shadcn components (11) | UI-1 | [x] | feat/task-076-shadcn-components | 2026-03-15T19:00 | 2026-03-15 | merged via PR #137 |
 | T077 | Navigation overhaul (collapsible + Sheet) | UI-2 | [ ] | | | | |
 | T078 | Exercise form Select refactor | UI-2 | [ ] | | | | |
 | T079 | Mesocycle form Checkbox + date refactor | UI-2 | [ ] | | | | |
