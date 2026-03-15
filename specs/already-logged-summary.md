@@ -1,5 +1,5 @@
 # Already-Logged Summary
-**Status:** ready
+**Status:** done
 **Epic:** Today's Workout
 **Depends:** specs/view-todays-planned-workout.md, specs/pre-filled-resistance-logging.md
 

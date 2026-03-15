@@ -9,6 +9,8 @@ import {
   logged_workouts,
   routine_items,
   routine_logs,
+  logged_exercises,
+  logged_sets,
 } from '@/lib/db/schema'
 import { filterActiveRoutineItems } from '@/lib/routines/scope-filter'
 
@@ -100,6 +102,20 @@ type NoActiveMesoResult = {
   date: string
 }
 
+export type LoggedSetData = {
+  set_number: number
+  actual_reps: number | null
+  actual_weight: number | null
+  actual_rpe: number | null
+}
+
+export type LoggedExerciseData = {
+  id: number
+  exercise_name: string
+  order: number
+  sets: LoggedSetData[]
+}
+
 export type LoggedWorkoutSummary = {
   id: number
   log_date: string
@@ -108,6 +124,7 @@ export type LoggedWorkoutSummary = {
   rating: number | null
   notes: string | null
   template_snapshot: { version: number; [key: string]: unknown }
+  exercises: LoggedExerciseData[]
 }
 
 type AlreadyLoggedResult = {
@@ -269,11 +286,43 @@ export async function getTodayWorkout(today: string): Promise<TodayResult> {
     .get()
 
   if (existingLog) {
+    // Fetch logged exercises + sets for resistance summary
+    const loggedExerciseRows = await db
+      .select({
+        id: logged_exercises.id,
+        exercise_name: logged_exercises.exercise_name,
+        order: logged_exercises.order,
+      })
+      .from(logged_exercises)
+      .where(eq(logged_exercises.logged_workout_id, existingLog.id))
+      .orderBy(asc(logged_exercises.order))
+      .all()
+
+    const exercisesWithSets: LoggedExerciseData[] = []
+    for (const ex of loggedExerciseRows) {
+      const sets = await db
+        .select({
+          set_number: logged_sets.set_number,
+          actual_reps: logged_sets.actual_reps,
+          actual_weight: logged_sets.actual_weight,
+          actual_rpe: logged_sets.actual_rpe,
+        })
+        .from(logged_sets)
+        .where(eq(logged_sets.logged_exercise_id, ex.id))
+        .orderBy(asc(logged_sets.set_number))
+        .all()
+
+      exercisesWithSets.push({ ...ex, sets })
+    }
+
     return {
       type: 'already_logged',
       date: today,
       mesocycle: mesoInfo,
-      loggedWorkout: existingLog,
+      loggedWorkout: {
+        ...existingLog,
+        exercises: exercisesWithSets,
+      },
     }
   }
 

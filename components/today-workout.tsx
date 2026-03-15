@@ -7,7 +7,8 @@ import { RunningLoggingForm } from '@/components/running-logging-form'
 import { MmaLoggingForm } from '@/components/mma-logging-form'
 import { RoutineCheckOff } from '@/components/routine-check-off'
 import { cn } from '@/lib/utils'
-import type { SlotData, MesocycleInfo, TemplateInfo, RoutineItemInfo, RoutineLogInfo } from '@/lib/today/queries'
+import type { SlotData, MesocycleInfo, TemplateInfo, RoutineItemInfo, RoutineLogInfo, LoggedExerciseData } from '@/lib/today/queries'
+import { Badge } from '@/components/ui/badge'
 
 type WorkoutResponse = {
   type: 'workout'
@@ -32,21 +33,20 @@ type NoMesoResponse = {
   date: string
 }
 
-type LoggedWorkoutSummary = {
-  id: number
-  log_date: string
-  logged_at: string
-  canonical_name: string | null
-  rating: number | null
-  notes: string | null
-  template_snapshot: { version: number; name?: string; [key: string]: unknown }
-}
-
 type AlreadyLoggedResponse = {
   type: 'already_logged'
   date: string
   mesocycle: MesocycleInfo
-  loggedWorkout: LoggedWorkoutSummary
+  loggedWorkout: {
+    id: number
+    log_date: string
+    logged_at: string
+    canonical_name: string | null
+    rating: number | null
+    notes: string | null
+    template_snapshot: { version: number; name?: string; modality?: string; [key: string]: unknown }
+    exercises: LoggedExerciseData[]
+  }
 }
 
 type TodayResponse = WorkoutResponse | RestDayResponse | NoMesoResponse | AlreadyLoggedResponse
@@ -325,6 +325,137 @@ function MmaDisplay({
   )
 }
 
+function formatLoggedAt(isoStr: string): string {
+  const d = new Date(isoStr)
+  return d.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  })
+}
+
+function ResistanceSummary({ exercises }: { exercises: LoggedExerciseData[] }) {
+  if (exercises.length === 0) return null
+  return (
+    <div className="space-y-3">
+      {exercises.map((ex) => (
+        <div
+          key={ex.id}
+          data-testid="logged-exercise"
+          className="rounded-lg border bg-card p-4"
+        >
+          <h4 className="text-sm font-semibold">{ex.exercise_name}</h4>
+          <div className="mt-2 space-y-1">
+            {ex.sets.map((set) => (
+              <div
+                key={set.set_number}
+                className="flex items-center gap-3 text-sm text-muted-foreground"
+              >
+                <span className="w-8 text-xs font-medium">#{set.set_number}</span>
+                {set.actual_reps !== null && (
+                  <span>{set.actual_reps} reps</span>
+                )}
+                {set.actual_weight !== null && (
+                  <span>{set.actual_weight}kg</span>
+                )}
+                {set.actual_rpe !== null && (
+                  <span className="text-xs">RPE {set.actual_rpe}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function RunningSummary({ snapshot }: { snapshot: Record<string, unknown> }) {
+  const distance = snapshot.actual_distance as number | null | undefined
+  const pace = snapshot.actual_avg_pace as string | null | undefined
+  const hr = snapshot.actual_avg_hr as number | null | undefined
+
+  return (
+    <div className="grid grid-cols-3 gap-3">
+      {distance != null && <TargetCell label="Distance" value={String(distance)} />}
+      {pace != null && <TargetCell label="Avg Pace" value={pace} />}
+      {hr != null && <TargetCell label="Avg HR" value={String(hr)} />}
+    </div>
+  )
+}
+
+function MmaSummary({ snapshot }: { snapshot: Record<string, unknown> }) {
+  const duration = snapshot.actual_duration_minutes as number | null | undefined
+
+  return (
+    <div>
+      {duration != null && <TargetCell label="Duration" value={`${duration} min`} />}
+    </div>
+  )
+}
+
+function AlreadyLoggedSummary({ data }: { data: AlreadyLoggedResponse }) {
+  const { loggedWorkout, mesocycle } = data
+  const snapshot = loggedWorkout.template_snapshot
+  const modality = (snapshot.modality as string) || 'resistance'
+  const workoutName = (snapshot.name as string) || 'Workout'
+
+  return (
+    <div data-testid="already-logged-summary" className="space-y-4">
+      {/* Header with completion badge */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">
+              {mesocycle.name}
+            </span>
+            <Badge variant="secondary" className="bg-green-500/15 text-green-700 dark:text-green-400">
+              Workout Logged
+            </Badge>
+          </div>
+          <CardTitle className="text-2xl font-bold tracking-tight">
+            {workoutName}
+          </CardTitle>
+          <p data-testid="logged-at-time" className="text-sm text-muted-foreground">
+            Logged at {formatLoggedAt(loggedWorkout.logged_at)}
+          </p>
+        </CardHeader>
+      </Card>
+
+      {/* Modality-specific actuals */}
+      {modality === 'resistance' && (
+        <ResistanceSummary exercises={loggedWorkout.exercises} />
+      )}
+      {modality === 'running' && (
+        <RunningSummary snapshot={snapshot} />
+      )}
+      {modality === 'mma' && (
+        <MmaSummary snapshot={snapshot} />
+      )}
+
+      {/* Rating */}
+      {loggedWorkout.rating !== null && (
+        <div data-testid="workout-rating" className="flex items-center gap-2">
+          <span className="text-sm font-medium text-muted-foreground">Rating:</span>
+          <span className="text-lg font-bold">{loggedWorkout.rating}/5</span>
+        </div>
+      )}
+
+      {/* Notes */}
+      {loggedWorkout.notes && (
+        <Card>
+          <CardContent className="pt-4">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-1">
+              Notes
+            </p>
+            <p className="text-sm">{loggedWorkout.notes}</p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  )
+}
+
 export function TodayWorkout() {
   const [data, setData] = useState<TodayResponse | null>(null)
   const [error, setError] = useState(false)
@@ -415,43 +546,9 @@ export function TodayWorkout() {
     )
   }
 
-  // Already logged
+  // Already logged — read-only summary
   if (data?.type === 'already_logged') {
-    const { loggedWorkout, mesocycle } = data
-    const workoutName = loggedWorkout.template_snapshot?.name ?? loggedWorkout.canonical_name ?? 'Workout'
-
-    return (
-      <Card data-testid="already-logged">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">
-              {mesocycle.name}
-            </span>
-          </div>
-          <CardTitle className="text-2xl font-bold tracking-tight">
-            {workoutName}
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">{formatDate(data.date)}</p>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-lg bg-green-500/10 p-4 text-center">
-            <p className="text-base font-semibold text-green-700 dark:text-green-400">
-              Workout Logged
-            </p>
-            {loggedWorkout.rating !== null && (
-              <p className="mt-1 text-sm text-muted-foreground">
-                Rating: {loggedWorkout.rating}/5
-              </p>
-            )}
-            {loggedWorkout.notes && (
-              <p className="mt-1 text-sm text-muted-foreground">
-                {loggedWorkout.notes}
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    )
+    return <AlreadyLoggedSummary data={data} />
   }
 
   // Workout — route by modality
