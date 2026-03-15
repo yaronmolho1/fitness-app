@@ -32,6 +32,15 @@ type TemplateInfo = {
   name: string
   modality: string
   notes: string | null
+  // Running-specific
+  run_type: string | null
+  target_pace: string | null
+  hr_zone: number | null
+  interval_count: number | null
+  interval_rest: number | null
+  coaching_cues: string | null
+  // MMA-specific
+  planned_duration: number | null
 }
 
 type WorkoutResponse = {
@@ -146,37 +155,7 @@ function ResistanceDisplay({
 }) {
   return (
     <div data-testid="workout-display" className="space-y-4">
-      {/* Header */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">
-              {data.mesocycle.name}
-            </span>
-            <span
-              className={cn(
-                'rounded-full px-2.5 py-0.5 text-xs font-medium',
-                data.mesocycle.week_type === 'deload'
-                  ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
-                  : 'bg-muted text-muted-foreground'
-              )}
-            >
-              {data.mesocycle.week_type === 'deload' ? 'Deload' : 'Normal'}
-            </span>
-          </div>
-          <CardTitle className="text-2xl font-bold tracking-tight">
-            {data.template.name}
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">{formatDate(data.date)}</p>
-        </CardHeader>
-        {data.template.notes && (
-          <CardContent className="pt-0">
-            <p className="text-sm text-muted-foreground">
-              {data.template.notes}
-            </p>
-          </CardContent>
-        )}
-      </Card>
+      <WorkoutHeader data={data} />
 
       {/* Exercise slots */}
       {data.slots.length > 0 ? (
@@ -206,6 +185,125 @@ function ResistanceDisplay({
           Log Workout
         </button>
       )}
+    </div>
+  )
+}
+
+const runTypeConfig: Record<string, { label: string; color: string }> = {
+  easy: { label: 'Easy', color: 'bg-green-500/15 text-green-700 dark:text-green-400' },
+  tempo: { label: 'Tempo', color: 'bg-orange-500/15 text-orange-700 dark:text-orange-400' },
+  interval: { label: 'Interval', color: 'bg-red-500/15 text-red-700 dark:text-red-400' },
+  long: { label: 'Long', color: 'bg-blue-500/15 text-blue-700 dark:text-blue-400' },
+  race: { label: 'Race', color: 'bg-purple-500/15 text-purple-700 dark:text-purple-400' },
+}
+
+function WorkoutHeader({ data }: { data: WorkoutResponse }) {
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-medium text-muted-foreground">
+            {data.mesocycle.name}
+          </span>
+          <span
+            className={cn(
+              'rounded-full px-2.5 py-0.5 text-xs font-medium',
+              data.mesocycle.week_type === 'deload'
+                ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                : 'bg-muted text-muted-foreground'
+            )}
+          >
+            {data.mesocycle.week_type === 'deload' ? 'Deload' : 'Normal'}
+          </span>
+        </div>
+        <CardTitle className="text-2xl font-bold tracking-tight">
+          {data.template.name}
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">{formatDate(data.date)}</p>
+      </CardHeader>
+      {data.template.notes && (
+        <CardContent className="pt-0">
+          <p className="text-sm text-muted-foreground">
+            {data.template.notes}
+          </p>
+        </CardContent>
+      )}
+    </Card>
+  )
+}
+
+function RunningDisplay({ data }: { data: WorkoutResponse }) {
+  const { template } = data
+  const config = template.run_type ? runTypeConfig[template.run_type] : null
+  const isInterval = template.run_type === 'interval'
+
+  return (
+    <div data-testid="running-display" className="space-y-4">
+      <WorkoutHeader data={data} />
+
+      {/* Run details card */}
+      <Card className="border-l-4 border-l-green-500">
+        <CardContent className="pt-6">
+          {/* Run type badge */}
+          {config && (
+            <div className="mb-4">
+              <span
+                data-testid="run-type-badge"
+                className={cn('rounded-full px-3 py-1 text-sm font-semibold', config.color)}
+              >
+                {config.label}
+              </span>
+            </div>
+          )}
+
+          {/* Targets grid */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {template.target_pace && (
+              <TargetCell label="Pace" value={template.target_pace} />
+            )}
+            {template.hr_zone !== null && (
+              <TargetCell label="HR Zone" value={`Zone ${template.hr_zone}`} />
+            )}
+            {isInterval && template.interval_count !== null && (
+              <TargetCell label="Intervals" value={String(template.interval_count)} />
+            )}
+            {isInterval && template.interval_rest !== null && (
+              <TargetCell label="Rest" value={formatRest(template.interval_rest)} />
+            )}
+          </div>
+
+          {/* Coaching cues */}
+          {template.coaching_cues && (
+            <div className="mt-4 rounded-md bg-green-500/5 p-3">
+              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Coaching Cues
+              </p>
+              <p className="mt-1 text-sm">{template.coaching_cues}</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+function MmaDisplay({ data }: { data: WorkoutResponse }) {
+  const { template } = data
+
+  return (
+    <div data-testid="mma-display" className="space-y-4">
+      <WorkoutHeader data={data} />
+
+      {/* Session details card */}
+      <Card className="border-l-4 border-l-rose-500">
+        <CardContent className="pt-6">
+          {template.planned_duration !== null && (
+            <div className="mb-4">
+              <TargetCell label="Duration" value={`${template.planned_duration} min`} />
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
@@ -286,8 +384,14 @@ export function TodayWorkout() {
     )
   }
 
-  // Workout display or logging form
+  // Workout — route by modality
   if (data?.type === 'workout') {
+    if (data.template.modality === 'running') {
+      return <RunningDisplay data={data} />
+    }
+    if (data.template.modality === 'mma') {
+      return <MmaDisplay data={data} />
+    }
     if (isLogging && data.template.modality === 'resistance') {
       return <WorkoutLoggingForm data={data} />
     }
