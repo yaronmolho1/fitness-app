@@ -15,3 +15,4 @@ Server-side business logic, database, and auth.
 - `routines/` — Routine item CRUD actions (create/update/delete with auto-ordering) ([README](./routines/README.md))
 - `today/` — Today workout lookup query (active meso → schedule → template + slots) ([README](./today/README.md))
 - `workouts/` — Workout logging: save workout Server Action with validation, template snapshot, and atomic inserts ([README](./workouts/README.md))
+- `progression/` — Exercise progression data queries (planned vs actual weight/volume over time) ([README](./progression/README.md))
