@@ -12,9 +12,10 @@ type Props = {
   templates: TemplateOption[]
   schedule: ScheduleEntry[]
   isCompleted: boolean
+  variant: 'normal' | 'deload'
 }
 
-export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule, isCompleted }: Props) {
+export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule, isCompleted, variant }: Props) {
   const [schedule, setSchedule] = useState(initialSchedule)
   const [pickerDay, setPickerDay] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -39,7 +40,7 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
         mesocycle_id: mesocycleId,
         day_of_week: day,
         template_id: templateId,
-        week_type: 'normal',
+        week_type: variant,
       })
 
       if (result.success) {
@@ -68,7 +69,7 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
       const result = await removeAssignment({
         mesocycle_id: mesocycleId,
         day_of_week: day,
-        week_type: 'normal',
+        week_type: variant,
       })
 
       if (result.success) {
@@ -81,8 +82,6 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold tracking-tight">Weekly Schedule</h2>
-
       {error && (
         <p className="text-sm text-destructive">{error}</p>
       )}
@@ -99,7 +98,7 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
               className={`rounded-lg border p-3 transition-colors ${
                 assignment
                   ? 'border-primary/30 bg-primary/5'
-                  : 'border-border bg-muted/30'
+                  : 'border-dashed border-muted-foreground/30 bg-muted/20'
               }`}
             >
               <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -136,7 +135,7 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">Rest</p>
+                  <p className="text-sm italic text-muted-foreground" data-testid="rest-label">Rest</p>
                   {!isCompleted && (
                     <Button
                       variant="outline"
