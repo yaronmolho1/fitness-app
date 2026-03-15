@@ -106,7 +106,7 @@ export function TemplateSection({ mesocycleId, templates, exercises, slotsByTemp
       )}
 
       {formType === 'resistance' && (
-        <div className="rounded-lg border p-4">
+        <div className="rounded-xl border p-4">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-semibold">New Resistance Template</h3>
             <Button
@@ -139,7 +139,7 @@ export function TemplateSection({ mesocycleId, templates, exercises, slotsByTemp
       )}
 
       {formType === 'running' && (
-        <div className="rounded-lg border p-4">
+        <div className="rounded-xl border p-4">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-semibold">New Running Template</h3>
             <Button
@@ -156,7 +156,7 @@ export function TemplateSection({ mesocycleId, templates, exercises, slotsByTemp
       )}
 
       {formType === 'mma' && (
-        <div className="rounded-lg border p-4">
+        <div className="rounded-xl border p-4">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-semibold">New MMA/BJJ Template</h3>
             <Button
@@ -264,7 +264,7 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated }: Tem
   // Edit mode
   if (editing) {
     return (
-      <div className="space-y-3 rounded-lg border p-4">
+      <div className="space-y-3 rounded-xl border p-4">
         {error && (
           <p className="text-sm text-destructive" role="alert">{error}</p>
         )}
@@ -284,7 +284,7 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated }: Tem
             onChange={(e) => setCanonicalName(e.target.value)}
           />
           {canonicalChanged && (
-            <p className="text-xs text-amber-600">
+            <p className="text-xs text-amber-600 dark:text-amber-400">
               Changing canonical_name will break cross-phase linking for this template.
             </p>
           )}
@@ -304,7 +304,7 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated }: Tem
   // Delete confirmation
   if (confirming) {
     return (
-      <div className="space-y-3 rounded-lg border border-destructive/50 p-4">
+      <div className="space-y-3 rounded-xl border border-destructive/50 p-4">
         {error && (
           <p className="text-sm text-destructive" role="alert">{error}</p>
         )}
@@ -327,9 +327,9 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated }: Tem
   const isResistance = template.modality === 'resistance'
 
   return (
-    <div className="rounded-lg border">
+    <div className="rounded-xl border">
       <div
-        className="flex cursor-pointer items-center justify-between px-4 py-3"
+        className="flex cursor-pointer items-center justify-between px-4 py-3 transition-colors hover:bg-muted/50"
         onClick={() => isResistance && setExpanded(!expanded)}
       >
         <div className="min-w-0 flex-1">

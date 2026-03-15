@@ -51,8 +51,8 @@ describe('CloneMesocycleForm', () => {
     const workWeeksInput = screen.getByLabelText(/work weeks/i) as HTMLInputElement
     expect(workWeeksInput.value).toBe('4')
 
-    const deloadCheckbox = screen.getByLabelText(/deload/i) as HTMLInputElement
-    expect(deloadCheckbox.checked).toBe(true)
+    const deloadCheckbox = screen.getByRole('checkbox', { name: /deload/i })
+    expect(deloadCheckbox).toBeChecked()
   })
 
   it('name field starts empty (not copied from source)', () => {
@@ -206,8 +206,8 @@ describe('CloneMesocycleForm', () => {
   it('pre-fills has_deload=false from source', () => {
     render(<CloneMesocycleForm source={{ ...defaultSource, has_deload: false }} />)
 
-    const deloadCheckbox = screen.getByLabelText(/deload/i) as HTMLInputElement
-    expect(deloadCheckbox.checked).toBe(false)
+    const deloadCheckbox = screen.getByRole('checkbox', { name: /deload/i })
+    expect(deloadCheckbox).not.toBeChecked()
   })
 
   it('shows validation error for invalid work_weeks', async () => {

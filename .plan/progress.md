@@ -84,9 +84,9 @@
 | T074 | OKLCH theme + dark mode setup | UI-1 | [x] | feat/task-074-oklch-theme | 2026-03-15T18:00 | 2026-03-15 | merged via PR #135 |
 | T075 | Geist fonts + Providers + Toaster | UI-1 | [x] | feat/task-075-geist-providers | 2026-03-15T19:00 | 2026-03-15 | merged via PR #136 |
 | T076 | Install shadcn components (11) | UI-1 | [x] | feat/task-076-shadcn-components | 2026-03-15T19:00 | 2026-03-15 | merged via PR #137 |
-| T077 | Navigation overhaul (collapsible + Sheet) | UI-2 | [~] | feat/task-077-nav-overhaul | 2026-03-15T20:00 | | |
-| T078 | Exercise form Select refactor | UI-2 | [~] | feat/task-078-exercise-select | 2026-03-15T20:00 | | |
-| T079 | Mesocycle form Checkbox + date refactor | UI-2 | [~] | feat/task-079-meso-form-refactor | 2026-03-15T20:00 | | |
-| T080 | Schedule Tabs component refactor | UI-2 | [~] | feat/task-080-schedule-tabs | 2026-03-15T20:00 | | |
-| T081 | Status Badge + Skeleton refactor | UI-2 | [~] | feat/task-081-badge-skeleton | 2026-03-15T20:00 | | |
-| T082 | Visual consistency pass | UI-3 | [ ] | | | | |
+| T077 | Navigation overhaul (collapsible + Sheet) | UI-2 | [x] | feat/task-077-nav-overhaul | 2026-03-15T20:00 | 2026-03-15 | merged via PR #138 |
+| T078 | Exercise form Select refactor | UI-2 | [x] | feat/task-078-exercise-select | 2026-03-15T20:00 | 2026-03-15 | merged via PR #139 |
+| T079 | Mesocycle form Checkbox + date refactor | UI-2 | [x] | feat/task-079-meso-form-refactor | 2026-03-15T20:00 | 2026-03-15 | merged via PR #140 |
+| T080 | Schedule Tabs component refactor | UI-2 | [x] | feat/task-080-schedule-tabs | 2026-03-15T20:00 | 2026-03-15 | merged via PR #141 |
+| T081 | Status Badge + Skeleton refactor | UI-2 | [x] | feat/task-081-badge-skeleton | 2026-03-15T20:00 | 2026-03-15 | merged via PR #142 |
+| T082 | Visual consistency pass | UI-3 | [~] | feat/task-082-visual-polish | 2026-03-15T21:00 | | |

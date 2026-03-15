@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { cn } from '@/lib/utils'
 import { ExercisePicker } from '@/components/exercise-picker'
 import { updateExerciseSlot, removeExerciseSlot, addExerciseSlot, reorderExerciseSlots } from '@/lib/templates/slot-actions'
 import type { SlotWithExercise } from '@/lib/templates/slot-queries'
@@ -152,7 +153,7 @@ export function SlotList({ slots, templateId, exercises, isCompleted }: SlotList
   // Empty state
   if (orderedSlots.length === 0 && !showPicker) {
     return (
-      <div className="rounded-lg border border-dashed p-6 text-center">
+      <div className="rounded-xl border border-dashed p-6 text-center">
         <p className="text-sm font-medium text-muted-foreground">No exercises added</p>
         <p className="mt-1 text-xs text-muted-foreground">
           Add your first exercise to define the workout structure.
@@ -203,7 +204,7 @@ export function SlotList({ slots, templateId, exercises, isCompleted }: SlotList
       )}
 
       {showPicker && (
-        <div className="rounded-lg border p-4 space-y-3">
+        <div className="rounded-xl border p-4 space-y-3">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-semibold">Select Exercise</h4>
             <Button
@@ -328,7 +329,7 @@ function SlotRow({
   // Edit mode
   if (mode === 'edit') {
     return (
-      <div data-testid="slot-row" className="rounded-lg border p-4 space-y-3">
+      <div data-testid="slot-row" className="rounded-xl border p-4 space-y-3">
         <div className="flex items-center justify-between">
           <span className="text-sm font-semibold">{slot.exercise_name}</span>
         </div>
@@ -418,7 +419,7 @@ function SlotRow({
   // Remove confirmation
   if (mode === 'confirm-remove') {
     return (
-      <div data-testid="slot-row" className="rounded-lg border border-destructive/50 p-4 space-y-3">
+      <div data-testid="slot-row" className="rounded-xl border border-destructive/50 p-4 space-y-3">
         {error && (
           <p className="text-sm text-destructive" role="alert">{error}</p>
         )}
@@ -438,15 +439,14 @@ function SlotRow({
   }
 
   // Display mode
-  const dragClasses = [
-    isDragging && 'opacity-50',
-    isDropTarget && 'ring-2 ring-primary',
-  ].filter(Boolean).join(' ')
-
   return (
     <div
       data-testid="slot-row"
-      className={`flex items-center justify-between rounded-lg border px-4 py-3 ${dragClasses}`}
+      className={cn(
+        'flex items-center justify-between rounded-xl border px-4 py-3 transition-colors',
+        isDragging && 'opacity-50',
+        isDropTarget && 'ring-2 ring-primary'
+      )}
       draggable={showDragHandle}
       onDragStart={onDragStart}
       onDragOver={onDragOver}
