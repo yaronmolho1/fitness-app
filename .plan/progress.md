@@ -42,7 +42,7 @@
 | T032 | 7-day schedule grid UI | 7 | [x] | feat/task-032-schedule-grid-ui | 2026-03-14 | 2026-03-14 | merged via PR #100 |
 | T033 | Normal/deload tabs | 7 | [x] | feat/task-033-normal-deload-tabs | 2026-03-15T00:15 | 2026-03-15 | merged via PR #109 |
 | T034 | Rest day display in grid | 7 | [x] | feat/task-034-rest-day-display | 2026-03-15T00:30 | 2026-03-15 | merged via PR #111 |
-| T035 | Cascade sibling query (3 scopes) | 8 | [ ] | | | | |
+| T035 | Cascade sibling query (3 scopes) | 8 | [~] | feat/task-035-cascade-sibling-query | 2026-03-15T12:00 | | |
 | T036 | Cascade atomic execution SA | 8 | [ ] | | | | |
 | T037 | Cascade scope selection UI | 8 | [ ] | | | | |
 | T038 | Block edits on completed mesocycle | 8 | [ ] | | | | |
