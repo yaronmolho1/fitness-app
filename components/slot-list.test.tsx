@@ -7,6 +7,7 @@ vi.mock('@/lib/templates/slot-actions', () => ({
   updateExerciseSlot: vi.fn(),
   removeExerciseSlot: vi.fn(),
   addExerciseSlot: vi.fn(),
+  reorderExerciseSlots: vi.fn(),
 }))
 
 vi.mock('next/navigation', () => ({

@@ -20,7 +20,8 @@ type CascadeResult =
  */
 export async function getCascadeTargets(
   templateId: number,
-  scope: CascadeScope
+  scope: CascadeScope,
+  options?: { includeLogged?: boolean }
 ): Promise<CascadeResult> {
   // Look up the source template
   const source = db
@@ -89,6 +90,13 @@ export async function getCascadeTargets(
         )
       )
       .all()
+  }
+
+  // When includeLogged is true, return all targets without filtering.
+  // The execution layer (T036 SA) handles logged-workout skipping
+  // inside its transaction for atomicity.
+  if (options?.includeLogged) {
+    return { success: true, data: siblings.length > 0 ? siblings : [source] }
   }
 
   // Exclude templates that have logged workouts (but always keep source)
