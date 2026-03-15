@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { cn } from '@/lib/utils'
 import { saveRunningWorkout } from '@/lib/workouts/actions'
-import type { SaveRunningWorkoutInput } from '@/lib/workouts/actions'
+import type { SaveRunningWorkoutInput, IntervalRepData } from '@/lib/workouts/actions'
 import type { MesocycleInfo, TemplateInfo } from '@/lib/today/queries'
 
 export type RunningWorkoutData = {
@@ -43,6 +43,8 @@ export function RunningLoggingForm({ data }: { data: RunningWorkoutData }) {
   const config = template.run_type ? runTypeConfig[template.run_type] : null
   const isInterval = template.run_type === 'interval'
 
+  const intervalCount = isInterval && template.interval_count ? template.interval_count : 0
+
   const [distance, setDistance] = useState('')
   const [pace, setPace] = useState('')
   const [hr, setHr] = useState('')
@@ -52,8 +54,53 @@ export function RunningLoggingForm({ data }: { data: RunningWorkoutData }) {
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
 
+  // Interval rep state — one entry per interval_count
+  const [intervalReps, setIntervalReps] = useState<
+    Array<{ pace: string; hr: string; notes: string }>
+  >(() =>
+    Array.from({ length: intervalCount }, () => ({
+      pace: '',
+      hr: '',
+      notes: '',
+    }))
+  )
+  const [expandedNotes, setExpandedNotes] = useState<Set<number>>(new Set())
+
+  function updateIntervalRep(
+    index: number,
+    field: 'pace' | 'hr' | 'notes',
+    value: string
+  ) {
+    setIntervalReps((prev) =>
+      prev.map((rep, i) => (i === index ? { ...rep, [field]: value } : rep))
+    )
+  }
+
+  function toggleNotes(index: number) {
+    setExpandedNotes((prev) => {
+      const next = new Set(prev)
+      if (next.has(index)) {
+        next.delete(index)
+      } else {
+        next.add(index)
+      }
+      return next
+    })
+  }
+
   async function handleSave() {
     setError(null)
+
+    // Build interval data if applicable
+    let intervalData: IntervalRepData[] | null = null
+    if (isInterval && intervalCount > 0) {
+      intervalData = intervalReps.map((rep, i) => ({
+        rep_number: i + 1,
+        interval_pace: rep.pace === '' ? null : rep.pace,
+        interval_avg_hr: rep.hr === '' ? null : parseInt(rep.hr, 10),
+        interval_notes: rep.notes === '' ? null : rep.notes,
+      }))
+    }
 
     const input: SaveRunningWorkoutInput = {
       templateId: template.id,
@@ -63,6 +110,7 @@ export function RunningLoggingForm({ data }: { data: RunningWorkoutData }) {
       actualAvgHr: hr === '' ? null : parseInt(hr, 10),
       rating,
       notes: notes || null,
+      intervalData,
     }
 
     // Client-side validation for immediate feedback
@@ -73,6 +121,14 @@ export function RunningLoggingForm({ data }: { data: RunningWorkoutData }) {
     if (input.actualAvgHr !== null && (isNaN(input.actualAvgHr) || input.actualAvgHr <= 0)) {
       setError('Average HR must be a positive integer')
       return
+    }
+    if (intervalData) {
+      for (const rep of intervalData) {
+        if (rep.interval_avg_hr !== null && (isNaN(rep.interval_avg_hr) || rep.interval_avg_hr <= 0)) {
+          setError(`Interval rep ${rep.rep_number}: HR must be a positive integer`)
+          return
+        }
+      }
     }
 
     startTransition(async () => {
@@ -233,6 +289,98 @@ export function RunningLoggingForm({ data }: { data: RunningWorkoutData }) {
           </div>
         </div>
       </div>
+
+      {/* Interval reps — only for interval runs */}
+      {isInterval && intervalCount > 0 && (
+        <div data-testid="interval-section" className="rounded-xl border bg-card p-4 space-y-3">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            Intervals ({intervalCount})
+          </h2>
+
+          <div className="space-y-3">
+            {intervalReps.map((rep, index) => (
+              <div
+                key={index}
+                data-testid={`interval-rep-${index + 1}`}
+                className="rounded-lg border bg-muted/30 p-3 space-y-2"
+              >
+                <div className="text-xs font-semibold text-muted-foreground">
+                  Rep {index + 1}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label
+                      htmlFor={`interval-pace-${index + 1}`}
+                      className="text-xs font-medium text-muted-foreground"
+                    >
+                      Pace
+                    </label>
+                    <input
+                      id={`interval-pace-${index + 1}`}
+                      data-testid={`interval-pace-${index + 1}`}
+                      type="text"
+                      placeholder="e.g. 4:55/km"
+                      value={rep.pace}
+                      onChange={(e) => updateIntervalRep(index, 'pace', e.target.value)}
+                      className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm font-medium placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label
+                      htmlFor={`interval-hr-${index + 1}`}
+                      className="text-xs font-medium text-muted-foreground"
+                    >
+                      Avg HR
+                    </label>
+                    <input
+                      id={`interval-hr-${index + 1}`}
+                      data-testid={`interval-hr-${index + 1}`}
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="bpm"
+                      value={rep.hr}
+                      onChange={(e) => updateIntervalRep(index, 'hr', e.target.value)}
+                      className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+                  </div>
+                </div>
+
+                {/* Notes — collapsed by default */}
+                {expandedNotes.has(index) ? (
+                  <div className="space-y-1">
+                    <label
+                      htmlFor={`interval-notes-${index + 1}`}
+                      className="text-xs font-medium text-muted-foreground"
+                    >
+                      Notes
+                    </label>
+                    <input
+                      id={`interval-notes-${index + 1}`}
+                      data-testid={`interval-notes-${index + 1}`}
+                      type="text"
+                      placeholder="How did this rep feel?"
+                      value={rep.notes}
+                      onChange={(e) => updateIntervalRep(index, 'notes', e.target.value)}
+                      className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    data-testid={`interval-notes-toggle-${index + 1}`}
+                    onClick={() => toggleNotes(index)}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    + Add notes
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Rating + notes */}
       <div data-testid="rating-notes-section" className="rounded-xl border bg-card p-4 space-y-4">

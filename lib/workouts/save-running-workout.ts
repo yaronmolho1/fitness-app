@@ -2,6 +2,13 @@ import { eq } from 'drizzle-orm'
 import type { AppDb } from '@/lib/db'
 import { logged_workouts, workout_templates } from '@/lib/db/schema'
 
+export type IntervalRepData = {
+  rep_number: number
+  interval_pace: string | null
+  interval_avg_hr: number | null
+  interval_notes: string | null
+}
+
 export type SaveRunningWorkoutInput = {
   templateId: number
   logDate: string
@@ -10,6 +17,7 @@ export type SaveRunningWorkoutInput = {
   actualAvgHr: number | null
   rating: number | null
   notes: string | null
+  intervalData?: IntervalRepData[] | null
 }
 
 export type SaveRunningWorkoutResult =
@@ -42,6 +50,16 @@ function validateInput(input: SaveRunningWorkoutInput): string | null {
     }
   }
 
+  if (input.intervalData) {
+    for (const rep of input.intervalData) {
+      if (rep.interval_avg_hr !== null && rep.interval_avg_hr !== undefined) {
+        if (!Number.isInteger(rep.interval_avg_hr) || rep.interval_avg_hr <= 0) {
+          return `Interval rep ${rep.rep_number}: HR must be a positive integer`
+        }
+      }
+    }
+  }
+
   return null
 }
 
@@ -70,6 +88,10 @@ export async function saveRunningWorkoutCore(
     return { success: false, error: 'Template is not a running workout' }
   }
 
+  // Only store interval data for interval run types
+  const isInterval = template.run_type === 'interval'
+  const intervalData = isInterval && input.intervalData ? input.intervalData : null
+
   const templateSnapshot = {
     version: 1 as const,
     name: template.name,
@@ -84,6 +106,7 @@ export async function saveRunningWorkoutCore(
     actual_distance: input.actualDistance,
     actual_avg_pace: input.actualAvgPace,
     actual_avg_hr: input.actualAvgHr,
+    interval_data: intervalData,
   }
 
   try {

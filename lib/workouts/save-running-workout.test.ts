@@ -401,4 +401,141 @@ describe('saveRunningWorkoutCore', () => {
     expect(snapshot.hr_zone).toBeNull()
     expect(snapshot.coaching_cues).toBeNull()
   })
+
+  // --- Interval data ---
+
+  it('stores interval_data as JSON array in template_snapshot for interval run', async () => {
+    const intervalData = [
+      { rep_number: 1, interval_pace: '4:55/km', interval_avg_hr: 170, interval_notes: null },
+      { rep_number: 2, interval_pace: '4:50/km', interval_avg_hr: 175, interval_notes: 'legs heavy' },
+      { rep_number: 3, interval_pace: null, interval_avg_hr: null, interval_notes: null },
+    ]
+    const result = await saveRunningWorkoutCore(
+      db,
+      buildValidInput({ templateId: 11, intervalData })
+    )
+    expect(result.success).toBe(true)
+
+    const [workout] = db.select().from(schema.logged_workouts).all()
+    const snapshot = workout.template_snapshot as Record<string, unknown>
+    expect(snapshot.interval_data).toEqual(intervalData)
+  })
+
+  it('stores interval_data as null when not provided for interval run', async () => {
+    const result = await saveRunningWorkoutCore(
+      db,
+      buildValidInput({ templateId: 11 })
+    )
+    expect(result.success).toBe(true)
+
+    const [workout] = db.select().from(schema.logged_workouts).all()
+    const snapshot = workout.template_snapshot as Record<string, unknown>
+    expect(snapshot.interval_data).toBeNull()
+  })
+
+  it('stores interval_data as null for non-interval run types', async () => {
+    const result = await saveRunningWorkoutCore(
+      db,
+      buildValidInput({ templateId: 10 })
+    )
+    expect(result.success).toBe(true)
+
+    const [workout] = db.select().from(schema.logged_workouts).all()
+    const snapshot = workout.template_snapshot as Record<string, unknown>
+    expect(snapshot.interval_data).toBeNull()
+  })
+
+  it('ignores intervalData input for non-interval run types', async () => {
+    const intervalData = [
+      { rep_number: 1, interval_pace: '5:00/km', interval_avg_hr: 150, interval_notes: null },
+    ]
+    const result = await saveRunningWorkoutCore(
+      db,
+      buildValidInput({ templateId: 10, intervalData })
+    )
+    expect(result.success).toBe(true)
+
+    const [workout] = db.select().from(schema.logged_workouts).all()
+    const snapshot = workout.template_snapshot as Record<string, unknown>
+    expect(snapshot.interval_data).toBeNull()
+  })
+
+  it('validates interval_avg_hr must be positive integer when provided', async () => {
+    const intervalData = [
+      { rep_number: 1, interval_pace: null, interval_avg_hr: 0, interval_notes: null },
+    ]
+    const result = await saveRunningWorkoutCore(
+      db,
+      buildValidInput({ templateId: 11, intervalData })
+    )
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toMatch(/hr/i)
+  })
+
+  it('validates interval_avg_hr rejects negative values', async () => {
+    const intervalData = [
+      { rep_number: 1, interval_pace: null, interval_avg_hr: -5, interval_notes: null },
+    ]
+    const result = await saveRunningWorkoutCore(
+      db,
+      buildValidInput({ templateId: 11, intervalData })
+    )
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toMatch(/hr/i)
+  })
+
+  it('validates interval_avg_hr rejects non-integer values', async () => {
+    const intervalData = [
+      { rep_number: 1, interval_pace: null, interval_avg_hr: 170.5, interval_notes: null },
+    ]
+    const result = await saveRunningWorkoutCore(
+      db,
+      buildValidInput({ templateId: 11, intervalData })
+    )
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toMatch(/hr/i)
+  })
+
+  it('allows null interval_avg_hr in interval data', async () => {
+    const intervalData = [
+      { rep_number: 1, interval_pace: '4:55/km', interval_avg_hr: null, interval_notes: null },
+    ]
+    const result = await saveRunningWorkoutCore(
+      db,
+      buildValidInput({ templateId: 11, intervalData })
+    )
+    expect(result.success).toBe(true)
+  })
+
+  it('saves successfully with all interval fields blank', async () => {
+    const intervalData = [
+      { rep_number: 1, interval_pace: null, interval_avg_hr: null, interval_notes: null },
+      { rep_number: 2, interval_pace: null, interval_avg_hr: null, interval_notes: null },
+    ]
+    const result = await saveRunningWorkoutCore(
+      db,
+      buildValidInput({ templateId: 11, intervalData })
+    )
+    expect(result.success).toBe(true)
+
+    const [workout] = db.select().from(schema.logged_workouts).all()
+    const snapshot = workout.template_snapshot as Record<string, unknown>
+    expect(snapshot.interval_data).toEqual(intervalData)
+  })
+
+  it('stores interval_pace as-is (free text)', async () => {
+    const intervalData = [
+      { rep_number: 1, interval_pace: 'about 5 min flat', interval_avg_hr: null, interval_notes: null },
+    ]
+    const result = await saveRunningWorkoutCore(
+      db,
+      buildValidInput({ templateId: 11, intervalData })
+    )
+    expect(result.success).toBe(true)
+
+    const [workout] = db.select().from(schema.logged_workouts).all()
+    const snapshot = workout.template_snapshot as Record<string, unknown>
+    const data = snapshot.interval_data as Array<Record<string, unknown>>
+    expect(data[0].interval_pace).toBe('about 5 min flat')
+  })
 })
