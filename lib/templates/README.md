@@ -7,3 +7,4 @@ Workout template server actions for all modalities (resistance, running, MMA/BJJ
 - `utils.ts` — `generateCanonicalName()` slugifies template name for cross-mesocycle identity tracking
 - `slot-actions.ts` — `addExerciseSlot()`, `updateExerciseSlot()`, `removeExerciseSlot()`, `toggleSlotRole()` Server Actions with Zod validation
 - `slot-queries.ts` — `getSlotsByTemplate()` query with exercise join, returns `SlotWithExercise[]`
+- `cascade-queries.ts` — `getSiblingTemplates()` finds same-canonical-name templates across mesocycles for cascade operations
