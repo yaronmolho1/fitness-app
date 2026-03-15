@@ -26,7 +26,7 @@ specs/                 # 43 feature specs (status/epic/depends/AC/tests)
 .sisyphus/plans/
   fitness-app.md       # Detailed execution plan (Prometheus format)
 app/                   # Next.js App Router routes (README.md)
-lib/                   # Server-side logic — auth, db, exercises, mesocycles, templates (README.md → submodule READMEs)
+lib/                   # Server-side logic — auth, db, exercises, mesocycles, routines, templates (README.md → submodule READMEs)
 components/            # Shared React components — nav, forms (README.md)
 ```
 
@@ -82,5 +82,4 @@ docker compose up -d   # containerized run
 
 ## Current Status
 
-Waves 0–9 complete + wave 8 started (36/77 tasks done). Foundation, auth, exercise library, mesocycle lifecycle, resistance/running/MMA templates, exercise slots, slot editing + role toggle + drag-reorder, template assignment, mesocycle form, schedule grid UI, normal/deload tabs, rest day display, status transitions, today's workout API + resistance display, and cascade sibling query implemented. Next up: T036–T044 (wave 8: cascade execution, clone, routines), T047 (today's running/MMA display).
-See `.plan/progress.md` for task-level status (77 tasks: 4 infra + 73 feature, 15 waves).
+See `.plan/progress.md` for task-level status.
