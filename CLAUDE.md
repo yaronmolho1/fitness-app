@@ -83,4 +83,5 @@ docker compose up -d   # containerized run
 ## Current Status
 
 Waves 0–9 complete + T046 done (35/77 tasks). Foundation, auth, exercise library, mesocycle lifecycle, resistance/running/MMA templates, exercise slots, slot editing + role toggle, template assignment, mesocycle form, schedule grid UI, normal/deload tabs, rest day display, status transitions, today's workout API, and today's resistance workout display implemented. Next up: T029 (drag-reorder slots), T035–T044 (wave 8: cascades, clone, routines), T047 (today's running/MMA display).
+Waves 0–9 complete + wave 8 started (35/77 tasks done). Foundation, auth, exercise library, mesocycle lifecycle, resistance/running/MMA templates, exercise slots, slot editing + role toggle, template assignment, mesocycle form, schedule grid UI, normal/deload tabs, rest day display, status transitions, today's workout API, and cascade sibling query implemented. Next up: T029 (drag-reorder slots), T036–T044 (wave 8: cascade execution, clone, routines), T046–T047 (today's workout display).
 See `.plan/progress.md` for task-level status (77 tasks: 4 infra + 73 feature, 15 waves).
