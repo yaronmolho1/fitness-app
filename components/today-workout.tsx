@@ -27,7 +27,24 @@ type NoMesoResponse = {
   date: string
 }
 
-type TodayResponse = WorkoutResponse | RestDayResponse | NoMesoResponse
+type LoggedWorkoutSummary = {
+  id: number
+  log_date: string
+  logged_at: string
+  canonical_name: string | null
+  rating: number | null
+  notes: string | null
+  template_snapshot: { version: number; name?: string; [key: string]: unknown }
+}
+
+type AlreadyLoggedResponse = {
+  type: 'already_logged'
+  date: string
+  mesocycle: MesocycleInfo
+  loggedWorkout: LoggedWorkoutSummary
+}
+
+type TodayResponse = WorkoutResponse | RestDayResponse | NoMesoResponse | AlreadyLoggedResponse
 
 function formatRest(seconds: number): string {
   if (seconds >= 60) {
@@ -376,6 +393,45 @@ export function TodayWorkout() {
           <p className="mt-1 text-sm text-muted-foreground">
             Recovery is part of the plan. See you tomorrow.
           </p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Already logged
+  if (data?.type === 'already_logged') {
+    const { loggedWorkout, mesocycle } = data
+    const workoutName = loggedWorkout.template_snapshot?.name ?? loggedWorkout.canonical_name ?? 'Workout'
+
+    return (
+      <Card data-testid="already-logged">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">
+              {mesocycle.name}
+            </span>
+          </div>
+          <CardTitle className="text-2xl font-bold tracking-tight">
+            {workoutName}
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">{formatDate(data.date)}</p>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-lg bg-green-500/10 p-4 text-center">
+            <p className="text-base font-semibold text-green-700 dark:text-green-400">
+              Workout Logged
+            </p>
+            {loggedWorkout.rating !== null && (
+              <p className="mt-1 text-sm text-muted-foreground">
+                Rating: {loggedWorkout.rating}/5
+              </p>
+            )}
+            {loggedWorkout.notes && (
+              <p className="mt-1 text-sm text-muted-foreground">
+                {loggedWorkout.notes}
+              </p>
+            )}
+          </div>
         </CardContent>
       </Card>
     )

@@ -6,6 +6,7 @@ import {
   logged_sets,
   workout_templates,
 } from '@/lib/db/schema'
+import { hasExistingLog } from './duplicate-check'
 
 export type SaveWorkoutSetInput = {
   reps: number
@@ -89,6 +90,11 @@ export async function saveWorkoutCore(
 
   if (!template) {
     return { success: false, error: 'Template not found' }
+  }
+
+  const duplicate = await hasExistingLog(database, input.logDate, template.mesocycle_id)
+  if (duplicate) {
+    return { success: false, error: 'Workout already logged for this date and mesocycle' }
   }
 
   const sortedSlots = [...template.exercise_slots].sort((a, b) => a.order - b.order)

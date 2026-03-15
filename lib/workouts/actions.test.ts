@@ -456,6 +456,45 @@ describe('saveWorkoutCore', () => {
     expect((await saveWorkoutCore(db, input0)).success).toBe(false)
   })
 
+  // --- Duplicate prevention ---
+
+  it('rejects duplicate log for same date + mesocycle', async () => {
+    const input = buildValidInput()
+    const first = await saveWorkoutCore(db, input)
+    expect(first.success).toBe(true)
+
+    const second = await saveWorkoutCore(db, input)
+    expect(second.success).toBe(false)
+    if (!second.success) expect(second.error).toMatch(/already logged/i)
+  })
+
+  it('allows logging on different date for same mesocycle', async () => {
+    await saveWorkoutCore(db, buildValidInput())
+    const input2 = buildValidInput()
+    input2.logDate = '2026-03-16'
+    const result = await saveWorkoutCore(db, input2)
+    expect(result.success).toBe(true)
+  })
+
+  it('allows logging on same date for different mesocycle', async () => {
+    await saveWorkoutCore(db, buildValidInput())
+
+    // Create second mesocycle + template
+    sqlite.exec(`
+      INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, status)
+      VALUES (2, 'Block B', '2026-04-01', '2026-05-01', 4, 'active');
+      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+      VALUES (2, 2, 'Pull Day', 'pull-day', 'resistance');
+      INSERT INTO exercise_slots (id, template_id, exercise_id, sets, reps, "order", is_main)
+      VALUES (200, 2, 10, 3, '8', 1, 1);
+    `)
+
+    const input2 = buildValidInput()
+    input2.templateId = 2
+    const result = await saveWorkoutCore(db, input2)
+    expect(result.success).toBe(true)
+  })
+
   // --- Transaction rollback ---
 
   it('rolls back on DB error — no partial rows', async () => {

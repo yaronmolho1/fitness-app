@@ -233,6 +233,60 @@ describe('TodayWorkout', () => {
     })
   })
 
+  // --- Already logged (T060) ---
+
+  describe('Already logged state', () => {
+    const baseMeso = { id: 1, name: 'Block A', start_date: '2026-03-01', end_date: '2026-04-01', week_type: 'normal' as const }
+
+    it('renders already-logged summary with no log buttons', async () => {
+      mockApiResponse({
+        type: 'already_logged',
+        date: '2026-03-15',
+        mesocycle: baseMeso,
+        loggedWorkout: {
+          id: 1,
+          log_date: '2026-03-15',
+          logged_at: '2026-03-15T14:30:00Z',
+          canonical_name: 'push-day',
+          rating: 4,
+          notes: 'Good session',
+          template_snapshot: { version: 1, name: 'Push Day', modality: 'resistance' },
+        },
+      })
+      render(<TodayWorkout />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('already-logged')).toBeInTheDocument()
+      })
+      expect(screen.getByText(/already completed|workout logged/i)).toBeInTheDocument()
+      expect(screen.queryByTestId('start-logging-btn')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('start-running-logging-btn')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('start-mma-logging-btn')).not.toBeInTheDocument()
+    })
+
+    it('displays workout name from snapshot', async () => {
+      mockApiResponse({
+        type: 'already_logged',
+        date: '2026-03-15',
+        mesocycle: baseMeso,
+        loggedWorkout: {
+          id: 1,
+          log_date: '2026-03-15',
+          logged_at: '2026-03-15T14:30:00Z',
+          canonical_name: 'push-day',
+          rating: null,
+          notes: null,
+          template_snapshot: { version: 1, name: 'Push Day', modality: 'resistance' },
+        },
+      })
+      render(<TodayWorkout />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Push Day')).toBeInTheDocument()
+      })
+    })
+  })
+
   // --- Running workout display (T047) ---
 
   describe('Running workout display', () => {
