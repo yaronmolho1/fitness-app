@@ -337,12 +337,13 @@ describe('TodayWorkout', () => {
           rating: 4,
           notes: 'Good session',
           template_snapshot: { version: 1, name: 'Push Day', modality: 'resistance' },
+          exercises: [],
         },
       })
       render(<TodayWorkout />)
 
       await waitFor(() => {
-        expect(screen.getByTestId('already-logged')).toBeInTheDocument()
+        expect(screen.getByTestId('already-logged-summary')).toBeInTheDocument()
       })
       expect(screen.getByText(/already completed|workout logged/i)).toBeInTheDocument()
       expect(screen.queryByTestId('start-logging-btn')).not.toBeInTheDocument()
@@ -363,6 +364,7 @@ describe('TodayWorkout', () => {
           rating: null,
           notes: null,
           template_snapshot: { version: 1, name: 'Push Day', modality: 'resistance' },
+          exercises: [],
         },
       })
       render(<TodayWorkout />)
