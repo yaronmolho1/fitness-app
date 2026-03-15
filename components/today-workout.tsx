@@ -3,46 +3,9 @@
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { WorkoutLoggingForm } from '@/components/workout-logging-form'
+import { RunningLoggingForm } from '@/components/running-logging-form'
 import { cn } from '@/lib/utils'
-
-// API response types matching lib/today/queries.ts
-type SlotData = {
-  id: number
-  exercise_id: number
-  exercise_name: string
-  sets: number
-  reps: string
-  weight: number | null
-  rpe: number | null
-  rest_seconds: number | null
-  guidelines: string | null
-  order: number
-  is_main: boolean
-}
-
-type MesocycleInfo = {
-  id: number
-  name: string
-  start_date: string
-  end_date: string
-  week_type: 'normal' | 'deload'
-}
-
-type TemplateInfo = {
-  id: number
-  name: string
-  modality: string
-  notes: string | null
-  // Running-specific
-  run_type: string | null
-  target_pace: string | null
-  hr_zone: number | null
-  interval_count: number | null
-  interval_rest: number | null
-  coaching_cues: string | null
-  // MMA-specific
-  planned_duration: number | null
-}
+import type { SlotData, MesocycleInfo, TemplateInfo } from '@/lib/today/queries'
 
 type WorkoutResponse = {
   type: 'workout'
@@ -233,7 +196,13 @@ function WorkoutHeader({ data }: { data: WorkoutResponse }) {
   )
 }
 
-function RunningDisplay({ data }: { data: WorkoutResponse }) {
+function RunningDisplay({
+  data,
+  onStartLogging,
+}: {
+  data: WorkoutResponse
+  onStartLogging: () => void
+}) {
   const { template } = data
   const config = template.run_type ? runTypeConfig[template.run_type] : null
   const isInterval = template.run_type === 'interval'
@@ -284,6 +253,15 @@ function RunningDisplay({ data }: { data: WorkoutResponse }) {
           )}
         </CardContent>
       </Card>
+
+      <button
+        type="button"
+        data-testid="start-running-logging-btn"
+        onClick={onStartLogging}
+        className="w-full rounded-xl bg-primary py-3.5 text-base font-semibold text-primary-foreground shadow-lg active:scale-[0.98] transition-transform"
+      >
+        Log Run
+      </button>
     </div>
   )
 }
@@ -313,6 +291,7 @@ export function TodayWorkout() {
   const [data, setData] = useState<TodayResponse | null>(null)
   const [error, setError] = useState(false)
   const [isLogging, setIsLogging] = useState(false)
+  const [isLoggingRun, setIsLoggingRun] = useState(false)
 
   useEffect(() => {
     fetch('/api/today')
@@ -388,7 +367,15 @@ export function TodayWorkout() {
   // Workout — route by modality
   if (data?.type === 'workout') {
     if (data.template.modality === 'running') {
-      return <RunningDisplay data={data} />
+      if (isLoggingRun) {
+        return <RunningLoggingForm data={data} />
+      }
+      return (
+        <RunningDisplay
+          data={data}
+          onStartLogging={() => setIsLoggingRun(true)}
+        />
+      )
     }
     if (data.template.modality === 'mma') {
       return <MmaDisplay data={data} />

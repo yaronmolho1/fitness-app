@@ -4,6 +4,11 @@ import { revalidatePath } from 'next/cache'
 import { db } from '@/lib/db'
 import { saveWorkoutCore } from './save-workout'
 import type { SaveWorkoutInput, SaveWorkoutResult } from './save-workout'
+import { saveRunningWorkoutCore } from './save-running-workout'
+import type {
+  SaveRunningWorkoutInput,
+  SaveRunningWorkoutResult,
+} from './save-running-workout'
 
 export type {
   SaveWorkoutInput,
@@ -12,8 +17,23 @@ export type {
   SaveWorkoutResult,
 } from './save-workout'
 
+export type {
+  SaveRunningWorkoutInput,
+  SaveRunningWorkoutResult,
+} from './save-running-workout'
+
 export async function saveWorkout(input: SaveWorkoutInput): Promise<SaveWorkoutResult> {
   const result = await saveWorkoutCore(db, input)
+  if (result.success) {
+    revalidatePath('/')
+  }
+  return result
+}
+
+export async function saveRunningWorkout(
+  input: SaveRunningWorkoutInput
+): Promise<SaveRunningWorkoutResult> {
+  const result = await saveRunningWorkoutCore(db, input)
   if (result.success) {
     revalidatePath('/')
   }

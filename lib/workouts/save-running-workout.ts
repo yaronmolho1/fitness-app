@@ -1,0 +1,115 @@
+import { eq } from 'drizzle-orm'
+import type { AppDb } from '@/lib/db'
+import { logged_workouts, workout_templates } from '@/lib/db/schema'
+
+export type SaveRunningWorkoutInput = {
+  templateId: number
+  logDate: string
+  actualDistance: number | null
+  actualAvgPace: string | null
+  actualAvgHr: number | null
+  rating: number | null
+  notes: string | null
+}
+
+export type SaveRunningWorkoutResult =
+  | { success: true; data: { workoutId: number } }
+  | { success: false; error: string }
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+
+function validateInput(input: SaveRunningWorkoutInput): string | null {
+  if (!DATE_RE.test(input.logDate)) {
+    return 'Invalid date format (expected YYYY-MM-DD)'
+  }
+
+  if (input.rating !== null) {
+    if (!Number.isInteger(input.rating) || input.rating < 1 || input.rating > 5) {
+      return 'Rating must be an integer between 1 and 5'
+    }
+  }
+
+  if (input.actualDistance !== null && input.actualDistance < 0) {
+    return 'Distance must be non-negative'
+  }
+
+  if (input.actualAvgHr !== null) {
+    if (input.actualAvgHr <= 0) {
+      return 'Average HR must be a positive integer'
+    }
+    if (!Number.isInteger(input.actualAvgHr)) {
+      return 'Average HR must be a positive integer'
+    }
+  }
+
+  return null
+}
+
+export async function saveRunningWorkoutCore(
+  database: AppDb,
+  input: SaveRunningWorkoutInput
+): Promise<SaveRunningWorkoutResult> {
+  const validationError = validateInput(input)
+  if (validationError) {
+    return { success: false, error: validationError }
+  }
+
+  const normalizedNotes = input.notes?.trim() || null
+
+  const template = await database
+    .select()
+    .from(workout_templates)
+    .where(eq(workout_templates.id, input.templateId))
+    .get()
+
+  if (!template) {
+    return { success: false, error: 'Template not found' }
+  }
+
+  if (template.modality !== 'running') {
+    return { success: false, error: 'Template is not a running workout' }
+  }
+
+  const templateSnapshot = {
+    version: 1 as const,
+    name: template.name,
+    modality: template.modality,
+    run_type: template.run_type,
+    target_pace: template.target_pace,
+    hr_zone: template.hr_zone,
+    interval_count: template.interval_count,
+    interval_rest: template.interval_rest,
+    coaching_cues: template.coaching_cues,
+    notes: template.notes,
+    actual_distance: input.actualDistance,
+    actual_avg_pace: input.actualAvgPace,
+    actual_avg_hr: input.actualAvgHr,
+  }
+
+  try {
+    const result = database.transaction((tx) => {
+      const workout = tx
+        .insert(logged_workouts)
+        .values({
+          template_id: input.templateId,
+          canonical_name: template.canonical_name,
+          log_date: input.logDate,
+          logged_at: new Date(),
+          rating: input.rating,
+          notes: normalizedNotes,
+          template_snapshot: templateSnapshot,
+          created_at: new Date(),
+        })
+        .returning()
+        .get()
+
+      // Running workouts do NOT create logged_exercises or logged_sets
+      return { workoutId: workout.id }
+    })
+
+    return { success: true, data: result }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return { success: false, error: `Failed to save running workout: ${message}` }
+  }
+}

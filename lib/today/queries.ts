@@ -10,7 +10,7 @@ import {
 
 // Response types
 
-type SlotData = {
+export type SlotData = {
   id: number
   exercise_id: number
   exercise_name: string
@@ -24,7 +24,7 @@ type SlotData = {
   is_main: boolean
 }
 
-type MesocycleInfo = {
+export type MesocycleInfo = {
   id: number
   name: string
   start_date: string
@@ -32,7 +32,7 @@ type MesocycleInfo = {
   week_type: 'normal' | 'deload'
 }
 
-type TemplateInfo = {
+export type TemplateInfo = {
   id: number
   name: string
   modality: string
