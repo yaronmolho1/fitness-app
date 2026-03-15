@@ -232,4 +232,213 @@ describe('TodayWorkout', () => {
       expect(screen.getByText('1m30s')).toBeInTheDocument()
     })
   })
+
+  // --- Running workout display (T047) ---
+
+  describe('Running workout display', () => {
+    const baseMeso = { id: 1, name: 'Block A', start_date: '2026-03-01', end_date: '2026-04-01', week_type: 'normal' as const }
+
+    it('renders running workout with run type badge', async () => {
+      mockApiResponse({
+        type: 'workout',
+        date: '2026-03-15',
+        mesocycle: baseMeso,
+        template: {
+          id: 1, name: 'Easy Run', modality: 'running', notes: null,
+          run_type: 'easy', target_pace: '5:30/km', hr_zone: 2,
+          interval_count: null, interval_rest: null, coaching_cues: 'Keep it conversational',
+          planned_duration: null,
+        },
+        slots: [],
+      })
+      render(<TodayWorkout />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('running-display')).toBeInTheDocument()
+      })
+      expect(screen.getByText('Easy Run')).toBeInTheDocument()
+      expect(screen.getByTestId('run-type-badge')).toHaveTextContent('Easy')
+    })
+
+    it('displays target pace and HR zone', async () => {
+      mockApiResponse({
+        type: 'workout',
+        date: '2026-03-15',
+        mesocycle: baseMeso,
+        template: {
+          id: 1, name: 'Tempo Run', modality: 'running', notes: null,
+          run_type: 'tempo', target_pace: '4:45/km', hr_zone: 4,
+          interval_count: null, interval_rest: null, coaching_cues: null,
+          planned_duration: null,
+        },
+        slots: [],
+      })
+      render(<TodayWorkout />)
+
+      await waitFor(() => {
+        expect(screen.getByText('4:45/km')).toBeInTheDocument()
+      })
+      expect(screen.getByText('Zone 4')).toBeInTheDocument()
+    })
+
+    it('displays interval details for interval run type', async () => {
+      mockApiResponse({
+        type: 'workout',
+        date: '2026-03-15',
+        mesocycle: baseMeso,
+        template: {
+          id: 1, name: 'Track Intervals', modality: 'running', notes: null,
+          run_type: 'interval', target_pace: '3:50/km', hr_zone: 5,
+          interval_count: 6, interval_rest: 90, coaching_cues: 'Fast turnover',
+          planned_duration: null,
+        },
+        slots: [],
+      })
+      render(<TodayWorkout />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('running-display')).toBeInTheDocument()
+      })
+      // Interval-specific details
+      expect(screen.getByText('6')).toBeInTheDocument() // interval count
+      expect(screen.getByText('1m30s')).toBeInTheDocument() // interval rest (90s)
+    })
+
+    it('does not show interval details for non-interval run types', async () => {
+      mockApiResponse({
+        type: 'workout',
+        date: '2026-03-15',
+        mesocycle: baseMeso,
+        template: {
+          id: 1, name: 'Long Run', modality: 'running', notes: null,
+          run_type: 'long', target_pace: '5:45/km', hr_zone: 2,
+          interval_count: null, interval_rest: null, coaching_cues: null,
+          planned_duration: null,
+        },
+        slots: [],
+      })
+      render(<TodayWorkout />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('running-display')).toBeInTheDocument()
+      })
+      expect(screen.queryByText('Intervals')).not.toBeInTheDocument()
+    })
+
+    it('displays coaching cues when present', async () => {
+      mockApiResponse({
+        type: 'workout',
+        date: '2026-03-15',
+        mesocycle: baseMeso,
+        template: {
+          id: 1, name: 'Easy Run', modality: 'running', notes: null,
+          run_type: 'easy', target_pace: '5:30/km', hr_zone: 2,
+          interval_count: null, interval_rest: null, coaching_cues: 'Nose breathing, relaxed shoulders',
+          planned_duration: null,
+        },
+        slots: [],
+      })
+      render(<TodayWorkout />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Nose breathing, relaxed shoulders')).toBeInTheDocument()
+      })
+    })
+
+    it('renders all run type variants with distinct badges', async () => {
+      for (const runType of ['easy', 'tempo', 'interval', 'long', 'race'] as const) {
+        cleanup()
+        vi.clearAllMocks()
+        mockApiResponse({
+          type: 'workout',
+          date: '2026-03-15',
+          mesocycle: baseMeso,
+          template: {
+            id: 1, name: `${runType} session`, modality: 'running', notes: null,
+            run_type: runType, target_pace: '5:00/km', hr_zone: 3,
+            interval_count: runType === 'interval' ? 4 : null,
+            interval_rest: runType === 'interval' ? 60 : null,
+            coaching_cues: null,
+            planned_duration: null,
+          },
+          slots: [],
+        })
+        render(<TodayWorkout />)
+
+        await waitFor(() => {
+          expect(screen.getByTestId('run-type-badge')).toBeInTheDocument()
+        })
+      }
+    })
+  })
+
+  // --- MMA/BJJ workout display (T047) ---
+
+  describe('MMA/BJJ workout display', () => {
+    const baseMeso = { id: 1, name: 'Block A', start_date: '2026-03-01', end_date: '2026-04-01', week_type: 'normal' as const }
+
+    it('renders MMA workout with planned duration', async () => {
+      mockApiResponse({
+        type: 'workout',
+        date: '2026-03-15',
+        mesocycle: baseMeso,
+        template: {
+          id: 1, name: 'BJJ Fundamentals', modality: 'mma', notes: null,
+          run_type: null, target_pace: null, hr_zone: null,
+          interval_count: null, interval_rest: null, coaching_cues: null,
+          planned_duration: 60,
+        },
+        slots: [],
+      })
+      render(<TodayWorkout />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('mma-display')).toBeInTheDocument()
+      })
+      expect(screen.getByText('BJJ Fundamentals')).toBeInTheDocument()
+      expect(screen.getByText('60 min')).toBeInTheDocument()
+    })
+
+    it('displays coaching notes when present', async () => {
+      mockApiResponse({
+        type: 'workout',
+        date: '2026-03-15',
+        mesocycle: baseMeso,
+        template: {
+          id: 1, name: 'Muay Thai Sparring', modality: 'mma', notes: 'Light sparring, focus on footwork and jab combinations',
+          run_type: null, target_pace: null, hr_zone: null,
+          interval_count: null, interval_rest: null, coaching_cues: null,
+          planned_duration: 90,
+        },
+        slots: [],
+      })
+      render(<TodayWorkout />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Light sparring, focus on footwork and jab combinations')).toBeInTheDocument()
+      })
+    })
+
+    it('renders without duration when not set', async () => {
+      mockApiResponse({
+        type: 'workout',
+        date: '2026-03-15',
+        mesocycle: baseMeso,
+        template: {
+          id: 1, name: 'Open Mat', modality: 'mma', notes: 'Free rolling',
+          run_type: null, target_pace: null, hr_zone: null,
+          interval_count: null, interval_rest: null, coaching_cues: null,
+          planned_duration: null,
+        },
+        slots: [],
+      })
+      render(<TodayWorkout />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('mma-display')).toBeInTheDocument()
+      })
+      expect(screen.getByText('Open Mat')).toBeInTheDocument()
+      expect(screen.queryByText(/min/)).not.toBeInTheDocument()
+    })
+  })
 })
