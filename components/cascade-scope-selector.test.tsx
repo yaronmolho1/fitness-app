@@ -82,7 +82,7 @@ describe('CascadeScopeSelector', () => {
     })
     vi.mocked(cascadeUpdateTemplates).mockResolvedValue({
       success: true,
-      data: { updated: 1, skipped: 0 },
+      data: { updated: 1, skipped: 0, skippedCompleted: 0 },
     })
 
     const user = userEvent.setup()
@@ -121,7 +121,7 @@ describe('CascadeScopeSelector', () => {
     })
     vi.mocked(cascadeUpdateTemplates).mockResolvedValue({
       success: true,
-      data: { updated: 3, skipped: 0 },
+      data: { updated: 3, skipped: 0, skippedCompleted: 0 },
     })
 
     const user = userEvent.setup()
@@ -157,7 +157,7 @@ describe('CascadeScopeSelector', () => {
     })
     vi.mocked(cascadeUpdateTemplates).mockResolvedValue({
       success: true,
-      data: { updated: 2, skipped: 1 },
+      data: { updated: 2, skipped: 1, skippedCompleted: 0 },
     })
 
     const user = userEvent.setup()
@@ -216,7 +216,7 @@ describe('CascadeScopeSelector', () => {
     })
     vi.mocked(cascadeUpdateTemplates).mockResolvedValue({
       success: true,
-      data: { updated: 1, skipped: 0 },
+      data: { updated: 1, skipped: 0, skippedCompleted: 0 },
     })
 
     const user = userEvent.setup()
