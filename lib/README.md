@@ -14,3 +14,4 @@ Server-side business logic, database, and auth.
 - `schedule/` — Weekly schedule assignment actions (assign/remove template per day slot) ([README](./schedule/README.md))
 - `routines/` — Routine item CRUD actions (create/update/delete with auto-ordering) ([README](./routines/README.md))
 - `today/` — Today workout lookup query (active meso → schedule → template + slots) ([README](./today/README.md))
+- `workouts/` — Workout logging: save workout Server Action with validation, template snapshot, and atomic inserts ([README](./workouts/README.md))
