@@ -31,17 +31,17 @@
 | T021 | Status transitions + one-active constraint | 5 | [x] | feat/task-021-mesocycle-status | 2026-03-13T13:00 | 2026-03-13T14:30 | PR #8 |
 | T022 | Status transition UI | 5 | [x] | feat/task-022-status-transition-ui | 2026-03-14T22:30 | 2026-03-14 | merged via PR #105 |
 | T023 | Create resistance template SA + canonical slug | 6 | [x] | feat/task-023-resistance-templates | 2026-03-13T14:00 | 2026-03-13T14:45 | PR #9 |
-| T024 | Template list + edit + delete | 6 | [~] | feat/task-024-template-list-edit-delete | 2026-03-15T00:00 | | |
+| T024 | Template list + edit + delete | 6 | [x] | feat/task-024-template-list-edit-delete | 2026-03-15T00:00 | 2026-03-15 | merged via PR #108 |
 | T025 | Running template SA + form | 6 | [x] | feat/task-025-running-templates | 2026-03-14T23:00 | 2026-03-14 | merged via PR #106 |
 | T026 | MMA/BJJ template SA + form | 6 | [x] | feat/task-026-mma-bjj-templates | 2026-03-14T23:30 | 2026-03-14 | merged via PR #107 |
 | T027 | Add exercise slot SA + picker | 7 | [x] | feat/task-027-exercise-slot-sa | 2026-03-13T21:00 | 2026-03-14 | merged via PR #14 |
-| T028 | Slot editing + remove | 7 | [~] | feat/task-028-slot-editing-remove | 2026-03-14T20:30 | | |
+| T028 | Slot editing + remove | 7 | [x] | feat/task-028-slot-editing-remove | 2026-03-14T20:30 | 2026-03-15 | merged via PR #112 |
 | T029 | Drag-reorder slots (SA + UI) | 7 | [ ] | | | | |
-| T030 | Main/complementary role toggle | 7 | [~] | feat/task-030-role-toggle | 2026-03-15T00:30 | | |
+| T030 | Main/complementary role toggle | 7 | [x] | feat/task-030-role-toggle | 2026-03-15T00:30 | 2026-03-15 | merged via PR #110 |
 | T031 | Assign/remove/replace template SA | 7 | [x] | feat/task-031-assign-template-sa | 2026-03-14T17:00 | 2026-03-14 | merged via PR #98 |
 | T032 | 7-day schedule grid UI | 7 | [x] | feat/task-032-schedule-grid-ui | 2026-03-14 | 2026-03-14 | merged via PR #100 |
 | T033 | Normal/deload tabs | 7 | [x] | feat/task-033-normal-deload-tabs | 2026-03-15T00:15 | 2026-03-15 | merged via PR #109 |
-| T034 | Rest day display in grid | 7 | [~] | feat/task-034-rest-day-display | 2026-03-15T00:30 | | |
+| T034 | Rest day display in grid | 7 | [x] | feat/task-034-rest-day-display | 2026-03-15T00:30 | 2026-03-15 | merged via PR #111 |
 | T035 | Cascade sibling query (3 scopes) | 8 | [ ] | | | | |
 | T036 | Cascade atomic execution SA | 8 | [ ] | | | | |
 | T037 | Cascade scope selection UI | 8 | [ ] | | | | |

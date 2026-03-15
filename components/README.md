@@ -14,6 +14,11 @@ Shared React components — app-level UI and navigation.
 - `slot-list.tsx` — `SlotList` renders exercise slots for a template with inline edit (sets/reps/weight/RPE/rest/guidelines), remove confirmation, and add-exercise picker; `SlotRow` internal component
 - `status-transition-button.tsx` — `StatusTransitionButton` activates or completes a mesocycle via server actions, with confirmation dialog on complete
 - `template-section.tsx` — `TemplateSection` manages templates for a mesocycle: create (resistance/running/MMA-BJJ), edit name, delete, and renders `SlotList` per template
+- `edit-exercise-form.tsx` — `EditExerciseForm` inline edit form for exercises with name, modality, muscle group, equipment fields
+- `exercise-list-with-filters.tsx` — `ExerciseListWithFilters` searchable exercise list with modality filter, inline edit/delete via `EditExerciseForm`
+- `running-template-form.tsx` — `RunningTemplateForm` create form for running templates with run type, pace, HR zone, interval fields
+- `mma-bjj-template-form.tsx` — `MmaBjjTemplateForm` create form for MMA/BJJ templates with planned duration
+- `schedule-tabs.tsx` — `ScheduleTabs` normal/deload tab switcher, renders `ScheduleGrid` per week type
 
 ## Subdirectories
 - `ui/` — shadcn/ui primitives (Button, Card, Input, Label)
