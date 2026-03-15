@@ -1,0 +1,275 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
+
+// API response types matching lib/today/queries.ts
+type SlotData = {
+  id: number
+  exercise_name: string
+  sets: number
+  reps: string
+  weight: number | null
+  rpe: number | null
+  rest_seconds: number | null
+  guidelines: string | null
+  order: number
+  is_main: boolean
+}
+
+type MesocycleInfo = {
+  id: number
+  name: string
+  start_date: string
+  end_date: string
+  week_type: 'normal' | 'deload'
+}
+
+type TemplateInfo = {
+  id: number
+  name: string
+  modality: string
+  notes: string | null
+}
+
+type WorkoutResponse = {
+  type: 'workout'
+  date: string
+  mesocycle: MesocycleInfo
+  template: TemplateInfo
+  slots: SlotData[]
+}
+
+type RestDayResponse = {
+  type: 'rest_day'
+  date: string
+  mesocycle: MesocycleInfo
+}
+
+type NoMesoResponse = {
+  type: 'no_active_mesocycle'
+  date: string
+}
+
+type TodayResponse = WorkoutResponse | RestDayResponse | NoMesoResponse
+
+function formatRest(seconds: number): string {
+  if (seconds >= 60) {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return secs > 0 ? `${mins}m${secs}s` : `${mins}m`
+  }
+  return `${seconds}s`
+}
+
+function formatDate(dateStr: string): string {
+  const date = new Date(dateStr + 'T00:00:00')
+  return date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
+function ExerciseSlot({ slot }: { slot: SlotData }) {
+  return (
+    <div
+      data-testid="exercise-slot"
+      className={cn(
+        'rounded-lg border p-4 transition-colors',
+        slot.is_main
+          ? 'border-l-4 border-l-primary bg-card'
+          : 'border-l-4 border-l-muted bg-card'
+      )}
+    >
+      {/* Exercise header */}
+      <div className="flex items-start justify-between gap-3">
+        <h3 className="text-base font-semibold leading-tight">
+          {slot.exercise_name}
+        </h3>
+        <span
+          className={cn(
+            'shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium',
+            slot.is_main
+              ? 'bg-primary/15 text-primary'
+              : 'bg-muted text-muted-foreground'
+          )}
+        >
+          {slot.is_main ? 'Main' : 'Complementary'}
+        </span>
+      </div>
+
+      {/* Targets grid — large, scannable numbers */}
+      <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4">
+        <TargetCell label="Sets" value={String(slot.sets)} />
+        <TargetCell label="Reps" value={slot.reps} />
+        {slot.weight !== null && (
+          <TargetCell label="Weight" value={`${slot.weight}kg`} />
+        )}
+        {slot.rpe !== null && (
+          <TargetCell label="RPE" value={String(slot.rpe)} />
+        )}
+        {slot.rest_seconds !== null && (
+          <TargetCell label="Rest" value={formatRest(slot.rest_seconds)} />
+        )}
+      </div>
+
+      {/* Guidelines */}
+      {slot.guidelines && (
+        <p className="mt-3 text-sm italic text-muted-foreground">
+          {slot.guidelines}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function TargetCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md bg-muted/50 px-3 py-2 text-center">
+      <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+        {label}
+      </div>
+      <div className="mt-0.5 text-lg font-bold tabular-nums">{value}</div>
+    </div>
+  )
+}
+
+function ResistanceDisplay({ data }: { data: WorkoutResponse }) {
+  return (
+    <div data-testid="workout-display" className="space-y-4">
+      {/* Header */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">
+              {data.mesocycle.name}
+            </span>
+            <span
+              className={cn(
+                'rounded-full px-2.5 py-0.5 text-xs font-medium',
+                data.mesocycle.week_type === 'deload'
+                  ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                  : 'bg-muted text-muted-foreground'
+              )}
+            >
+              {data.mesocycle.week_type === 'deload' ? 'Deload' : 'Normal'}
+            </span>
+          </div>
+          <CardTitle className="text-2xl font-bold tracking-tight">
+            {data.template.name}
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">{formatDate(data.date)}</p>
+        </CardHeader>
+        {data.template.notes && (
+          <CardContent className="pt-0">
+            <p className="text-sm text-muted-foreground">
+              {data.template.notes}
+            </p>
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Exercise slots */}
+      {data.slots.length > 0 ? (
+        <div className="space-y-3">
+          {data.slots.map((slot) => (
+            <ExerciseSlot key={slot.id} slot={slot} />
+          ))}
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="py-8 text-center">
+            <p className="text-sm text-muted-foreground">
+              No exercises configured for this template yet.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  )
+}
+
+export function TodayWorkout() {
+  const [data, setData] = useState<TodayResponse | null>(null)
+  const [error, setError] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/today')
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to fetch')
+        return res.json()
+      })
+      .then((json: TodayResponse) => setData(json))
+      .catch(() => setError(true))
+  }, [])
+
+  // Loading
+  if (!data && !error) {
+    return (
+      <div data-testid="today-loading" className="space-y-4">
+        <div className="h-32 animate-pulse rounded-lg bg-muted" />
+        <div className="h-24 animate-pulse rounded-lg bg-muted" />
+        <div className="h-24 animate-pulse rounded-lg bg-muted" />
+      </div>
+    )
+  }
+
+  // Error
+  if (error) {
+    return (
+      <Card data-testid="today-error">
+        <CardContent className="py-8 text-center">
+          <p className="text-sm font-medium text-destructive">
+            Something went wrong loading your workout.
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Check your connection and try refreshing.
+          </p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // No active mesocycle
+  if (data?.type === 'no_active_mesocycle') {
+    return (
+      <Card data-testid="no-active-mesocycle">
+        <CardContent className="py-12 text-center">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+            <span className="text-xl">&#x1f3cb;&#xfe0f;</span>
+          </div>
+          <p className="text-base font-semibold">No active training phase</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Create and activate a mesocycle to see your daily workout.
+          </p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Rest day
+  if (data?.type === 'rest_day') {
+    return (
+      <Card data-testid="rest-day">
+        <CardContent className="py-12 text-center">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+            <span className="text-xl">&#x1f4a4;</span>
+          </div>
+          <p className="text-base font-semibold">Rest Day</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Recovery is part of the plan. See you tomorrow.
+          </p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Workout — currently only resistance is implemented (T046)
+  if (data?.type === 'workout') {
+    return <ResistanceDisplay data={data} />
+  }
+
+  return null
+}
