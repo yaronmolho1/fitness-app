@@ -159,7 +159,7 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
                     onChange={(e) =>
                       updateSet(slotIndex, setIndex, 'weight', e.target.value)
                     }
-                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   />
 
                   {/* Reps input */}
@@ -172,7 +172,7 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
                     onChange={(e) =>
                       updateSet(slotIndex, setIndex, 'reps', e.target.value)
                     }
-                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   />
                 </div>
               ))}
@@ -191,7 +191,7 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
       <div className="fixed bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur-sm p-4 safe-area-pb">
         <button
           type="button"
-          className="w-full rounded-xl bg-primary py-3.5 text-base font-semibold text-primary-foreground shadow-lg active:scale-[0.98] transition-transform"
+          className="w-full rounded-xl bg-primary py-3.5 text-base font-semibold text-primary-foreground shadow-lg active:scale-[0.98] transition-all hover:bg-primary/90"
         >
           Save Workout
         </button>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { filterExercises, type Exercise } from '@/lib/exercises/filters'
@@ -32,16 +33,16 @@ export function ExercisePicker({ exercises, onSelect }: ExercisePickerProps) {
             <div>
               <p className="font-medium">No resistance exercises</p>
               <p className="mt-1 text-sm">
-                <a href="/exercises" className="text-primary underline">
+                <Link href="/exercises" className="text-primary underline transition-colors hover:text-primary/80">
                   Create exercises
-                </a>{' '}
+                </Link>{' '}
                 to add them to templates.
               </p>
             </div>
           )}
         </div>
       ) : (
-        <div className="max-h-64 divide-y overflow-y-auto rounded-lg border">
+        <div className="max-h-64 divide-y overflow-y-auto rounded-xl border">
           {filtered.map((exercise) => (
             <Button
               key={exercise.id}

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { assignTemplate, removeAssignment } from '@/lib/schedule/actions'
 import type { ScheduleEntry, TemplateOption } from '@/lib/schedule/queries'
 
@@ -95,11 +96,12 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
             <div
               key={dayIndex}
               data-testid={`day-cell-${dayIndex}`}
-              className={`rounded-lg border p-3 transition-colors ${
+              className={cn(
+                'rounded-xl border p-3 transition-colors',
                 assignment
                   ? 'border-primary/30 bg-primary/5'
                   : 'border-dashed border-muted-foreground/30 bg-muted/20'
-              }`}
+              )}
             >
               <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 {dayName}
@@ -156,7 +158,7 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
                   {templates.map((tmpl) => (
                     <div
                       key={tmpl.id}
-                      className="cursor-pointer rounded px-2 py-1.5 text-sm hover:bg-accent"
+                      className="cursor-pointer rounded px-2 py-1.5 text-sm transition-colors hover:bg-accent"
                       onClick={() => handleTemplatePick(tmpl.id)}
                     >
                       {tmpl.name}
