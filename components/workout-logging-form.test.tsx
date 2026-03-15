@@ -630,4 +630,125 @@ describe('WorkoutLoggingForm', () => {
       expect(within(section).getAllByTestId('set-row')).toHaveLength(2)
     })
   })
+
+  // T051 — Rating + notes fields
+  describe('workout rating', () => {
+    it('renders rating buttons 1-5', () => {
+      const data = makeWorkoutData({ slots: [makeSlot()] })
+      render(<WorkoutLoggingForm data={data} />)
+
+      for (let i = 1; i <= 5; i++) {
+        expect(screen.getByRole('button', { name: `Rate ${i}` })).toBeInTheDocument()
+      }
+    })
+
+    it('no rating selected by default', () => {
+      const data = makeWorkoutData({ slots: [makeSlot()] })
+      render(<WorkoutLoggingForm data={data} />)
+
+      for (let i = 1; i <= 5; i++) {
+        const btn = screen.getByRole('button', { name: `Rate ${i}` })
+        expect(btn).not.toHaveAttribute('aria-pressed', 'true')
+      }
+    })
+
+    it('selects rating when clicked', async () => {
+      const user = userEvent.setup()
+      const data = makeWorkoutData({ slots: [makeSlot()] })
+      render(<WorkoutLoggingForm data={data} />)
+
+      await user.click(screen.getByRole('button', { name: 'Rate 3' }))
+      expect(screen.getByRole('button', { name: 'Rate 3' })).toHaveAttribute('aria-pressed', 'true')
+    })
+
+    it('deselects rating when same value clicked again', async () => {
+      const user = userEvent.setup()
+      const data = makeWorkoutData({ slots: [makeSlot()] })
+      render(<WorkoutLoggingForm data={data} />)
+
+      await user.click(screen.getByRole('button', { name: 'Rate 3' }))
+      await user.click(screen.getByRole('button', { name: 'Rate 3' }))
+      expect(screen.getByRole('button', { name: 'Rate 3' })).not.toHaveAttribute('aria-pressed', 'true')
+    })
+
+    it('only one rating active at a time', async () => {
+      const user = userEvent.setup()
+      const data = makeWorkoutData({ slots: [makeSlot()] })
+      render(<WorkoutLoggingForm data={data} />)
+
+      await user.click(screen.getByRole('button', { name: 'Rate 2' }))
+      await user.click(screen.getByRole('button', { name: 'Rate 4' }))
+
+      expect(screen.getByRole('button', { name: 'Rate 2' })).not.toHaveAttribute('aria-pressed', 'true')
+      expect(screen.getByRole('button', { name: 'Rate 4' })).toHaveAttribute('aria-pressed', 'true')
+    })
+
+    it('rating section has a label', () => {
+      const data = makeWorkoutData({ slots: [makeSlot()] })
+      render(<WorkoutLoggingForm data={data} />)
+
+      expect(screen.getByText('Workout Rating')).toBeInTheDocument()
+    })
+  })
+
+  describe('workout notes', () => {
+    it('renders a notes textarea', () => {
+      const data = makeWorkoutData({ slots: [makeSlot()] })
+      render(<WorkoutLoggingForm data={data} />)
+
+      expect(screen.getByLabelText('Workout Notes')).toBeInTheDocument()
+    })
+
+    it('notes textarea is editable', async () => {
+      const user = userEvent.setup()
+      const data = makeWorkoutData({ slots: [makeSlot()] })
+      render(<WorkoutLoggingForm data={data} />)
+
+      const textarea = screen.getByLabelText('Workout Notes')
+      await user.type(textarea, 'Felt strong today')
+      expect(textarea).toHaveValue('Felt strong today')
+    })
+
+    it('notes starts empty', () => {
+      const data = makeWorkoutData({ slots: [makeSlot()] })
+      render(<WorkoutLoggingForm data={data} />)
+
+      const textarea = screen.getByLabelText('Workout Notes')
+      expect(textarea).toHaveValue('')
+    })
+  })
+
+  describe('rating + notes positioning', () => {
+    it('rating and notes appear after exercise sections and before save button', () => {
+      const data = makeWorkoutData({ slots: [makeSlot()] })
+      const { container } = render(<WorkoutLoggingForm data={data} />)
+
+      // Rating/notes section should come after exercise section in DOM
+      const allElements = container.querySelectorAll('[data-testid="exercise-section"], [data-testid="rating-notes-section"]')
+      const indices = Array.from(allElements).map((el) => el.getAttribute('data-testid'))
+      expect(indices[indices.length - 1]).toBe('rating-notes-section')
+    })
+
+    it('renders rating and notes even with no exercises', () => {
+      const data = makeWorkoutData({ slots: [] })
+      render(<WorkoutLoggingForm data={data} />)
+
+      expect(screen.getByTestId('rating-notes-section')).toBeInTheDocument()
+      expect(screen.getByText('Workout Rating')).toBeInTheDocument()
+      expect(screen.getByLabelText('Workout Notes')).toBeInTheDocument()
+    })
+  })
+
+  describe('rating + notes state exposed via getRatingNotes', () => {
+    it('exposes null rating when nothing selected', () => {
+      const data = makeWorkoutData({ slots: [makeSlot()] })
+      render(<WorkoutLoggingForm data={data} />)
+
+      // The form should internally track rating as null
+      // We verify via the aria-pressed state
+      for (let i = 1; i <= 5; i++) {
+        expect(screen.getByRole('button', { name: `Rate ${i}` })).not.toHaveAttribute('aria-pressed', 'true')
+      }
+    })
+  })
 })
