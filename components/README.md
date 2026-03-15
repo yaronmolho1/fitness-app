@@ -22,6 +22,7 @@ Shared React components — app-level UI and navigation.
 - `schedule-tabs.tsx` — `ScheduleTabs` normal/deload tab switcher, renders `ScheduleGrid` per week type
 - `today-workout.tsx` — `TodayWorkout` fetches and displays today's resistance workout: mesocycle context, template name, exercise slots with sets/reps/weight/RPE/rest; "Log Workout" button transitions to logging form
 - `workout-logging-form.tsx` — `WorkoutLoggingForm` client component: pre-filled resistance logging form with per-set actual weight/reps/RPE inputs alongside read-only planned values, numeric mobile keyboards, submit via server action
+- `progression-chart.tsx` — `ProgressionChart` client component: exercise selector + weight/volume toggle, fetches progression data from API, renders planned vs actual line chart with phase-colored dots via Recharts
 
 ## Subdirectories
 - `ui/` — shadcn/ui primitives (Button, Card, Input, Label)
