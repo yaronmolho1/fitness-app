@@ -318,11 +318,9 @@ describe('order field behavior across operations — characterize', () => {
     if (r2.success) expect(r2.data.order).toBe(1)
   })
 
-  it('no reorderSlots function is exported from slot-actions', async () => {
+  it('reorderExerciseSlots is exported from slot-actions (added in T029)', async () => {
     const slotActions = await import('./slot-actions')
-    expect('reorderSlots' in slotActions).toBe(false)
-    expect('reorderExerciseSlots' in slotActions).toBe(false)
-    expect('moveSlot' in slotActions).toBe(false)
+    expect('reorderExerciseSlots' in slotActions).toBe(true)
   })
 })
 

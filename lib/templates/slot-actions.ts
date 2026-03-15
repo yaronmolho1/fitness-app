@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { eq, sql } from 'drizzle-orm'
+import { eq, sql, asc } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '@/lib/db/index'
 import { exercise_slots, workout_templates, exercises } from '@/lib/db/schema'
@@ -14,6 +14,10 @@ type SlotResult =
 
 type RemoveResult =
   | { success: true }
+  | { success: false; error: string }
+
+type ReorderResult =
+  | { success: true; noop?: boolean }
   | { success: false; error: string }
 
 // Shared field validators
@@ -215,6 +219,72 @@ export async function removeExerciseSlot(slotId: number): Promise<RemoveResult> 
   }
 
   db.delete(exercise_slots).where(eq(exercise_slots.id, slotId)).run()
+
+  revalidatePath('/mesocycles')
+  return { success: true }
+}
+
+const reorderSchema = z.object({
+  template_id: positiveInt,
+  slot_ids: z.array(positiveInt).min(1),
+})
+
+type ReorderExerciseSlotsInput = {
+  template_id: number
+  slot_ids: number[]
+}
+
+export async function reorderExerciseSlots(
+  input: ReorderExerciseSlotsInput
+): Promise<ReorderResult> {
+  const parsed = reorderSchema.safeParse(input)
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message }
+  }
+
+  const { template_id, slot_ids } = parsed.data
+
+  // Verify template exists
+  const template = db
+    .select()
+    .from(workout_templates)
+    .where(eq(workout_templates.id, template_id))
+    .get()
+
+  if (!template) {
+    return { success: false, error: 'Template not found' }
+  }
+
+  // Get current slots for this template
+  const currentSlots = db
+    .select({ id: exercise_slots.id, order: exercise_slots.order })
+    .from(exercise_slots)
+    .where(eq(exercise_slots.template_id, template_id))
+    .orderBy(asc(exercise_slots.order))
+    .all()
+
+  // Verify slot_ids match exactly
+  const currentIds = new Set(currentSlots.map(s => s.id))
+  const inputIds = new Set(slot_ids)
+
+  if (currentIds.size !== inputIds.size || ![...currentIds].every(id => inputIds.has(id))) {
+    return { success: false, error: 'Slot IDs mismatch: must include all template slots' }
+  }
+
+  // Check if order is actually changing
+  const currentOrder = currentSlots.map(s => s.id)
+  const isUnchanged = slot_ids.every((id, i) => id === currentOrder[i])
+  if (isUnchanged) {
+    return { success: true, noop: true }
+  }
+
+  // Update order values
+  for (let i = 0; i < slot_ids.length; i++) {
+    db.update(exercise_slots)
+      .set({ order: i + 1 })
+      .where(eq(exercise_slots.id, slot_ids[i]))
+      .run()
+  }
 
   revalidatePath('/mesocycles')
   return { success: true }

@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useRef, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ExercisePicker } from '@/components/exercise-picker'
-import { updateExerciseSlot, removeExerciseSlot, addExerciseSlot } from '@/lib/templates/slot-actions'
+import { updateExerciseSlot, removeExerciseSlot, addExerciseSlot, reorderExerciseSlots } from '@/lib/templates/slot-actions'
 import type { SlotWithExercise } from '@/lib/templates/slot-queries'
 import type { Exercise } from '@/lib/exercises/filters'
 
@@ -21,6 +21,118 @@ export function SlotList({ slots, templateId, exercises, isCompleted }: SlotList
   const router = useRouter()
   const [showPicker, setShowPicker] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const [orderedSlots, setOrderedSlots] = useState(slots)
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
+  const [dropIndex, setDropIndex] = useState<number | null>(null)
+  const [isReordering, setIsReordering] = useState(false)
+
+  // Touch drag state
+  const touchDragIndex = useRef<number | null>(null)
+  const touchHoldTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const listRef = useRef<HTMLDivElement>(null)
+
+  // Sync props to local state when slots change from server
+  useEffect(() => {
+    setOrderedSlots(slots)
+  }, [slots])
+
+  const canDrag = !isCompleted && orderedSlots.length > 1 && !isReordering
+
+  const persistReorder = useCallback((newSlots: SlotWithExercise[]) => {
+    const newIds = newSlots.map(s => s.id)
+    const oldIds = slots.map(s => s.id)
+    const unchanged = newIds.every((id, i) => id === oldIds[i])
+    if (unchanged) return
+
+    setIsReordering(true)
+    startTransition(async () => {
+      const result = await reorderExerciseSlots({
+        template_id: templateId,
+        slot_ids: newIds,
+      })
+      setIsReordering(false)
+      if (result.success) {
+        router.refresh()
+      }
+    })
+  }, [slots, templateId, router, startTransition])
+
+  // Desktop drag handlers
+  function handleDragStart(index: number) {
+    if (!canDrag) return
+    setDragIndex(index)
+  }
+
+  function handleDragOver(e: React.DragEvent, index: number) {
+    e.preventDefault()
+    if (dragIndex === null || dragIndex === index) return
+    setDropIndex(index)
+  }
+
+  function handleDragEnd() {
+    if (dragIndex !== null && dropIndex !== null && dragIndex !== dropIndex) {
+      const newSlots = [...orderedSlots]
+      const [moved] = newSlots.splice(dragIndex, 1)
+      newSlots.splice(dropIndex, 0, moved)
+      setOrderedSlots(newSlots)
+      persistReorder(newSlots)
+    }
+    setDragIndex(null)
+    setDropIndex(null)
+  }
+
+  // Touch drag handlers
+  function handleTouchStart(e: React.TouchEvent, index: number) {
+    if (!canDrag) return
+    // Deliberate hold before initiating drag
+    touchHoldTimer.current = setTimeout(() => {
+      touchDragIndex.current = index
+      setDragIndex(index)
+    }, 200)
+  }
+
+  function handleTouchMove(e: React.TouchEvent) {
+    if (touchDragIndex.current === null) {
+      // Cancel hold if moved before timer
+      if (touchHoldTimer.current) {
+        clearTimeout(touchHoldTimer.current)
+        touchHoldTimer.current = null
+      }
+      return
+    }
+
+    e.preventDefault()
+    const touch = e.touches[0]
+    if (!listRef.current) return
+
+    const rows = listRef.current.querySelectorAll('[data-testid="slot-row"]')
+    for (let i = 0; i < rows.length; i++) {
+      const rect = rows[i].getBoundingClientRect()
+      if (touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+        setDropIndex(i)
+        break
+      }
+    }
+  }
+
+  function handleTouchEnd() {
+    if (touchHoldTimer.current) {
+      clearTimeout(touchHoldTimer.current)
+      touchHoldTimer.current = null
+    }
+
+    if (touchDragIndex.current !== null && dropIndex !== null && touchDragIndex.current !== dropIndex) {
+      const newSlots = [...orderedSlots]
+      const [moved] = newSlots.splice(touchDragIndex.current, 1)
+      newSlots.splice(dropIndex, 0, moved)
+      setOrderedSlots(newSlots)
+      persistReorder(newSlots)
+    }
+
+    touchDragIndex.current = null
+    setDragIndex(null)
+    setDropIndex(null)
+  }
 
   function handleExerciseSelected(exercise: Exercise) {
     startTransition(async () => {
@@ -38,7 +150,7 @@ export function SlotList({ slots, templateId, exercises, isCompleted }: SlotList
   }
 
   // Empty state
-  if (slots.length === 0 && !showPicker) {
+  if (orderedSlots.length === 0 && !showPicker) {
     return (
       <div className="rounded-lg border border-dashed p-6 text-center">
         <p className="text-sm font-medium text-muted-foreground">No exercises added</p>
@@ -60,13 +172,22 @@ export function SlotList({ slots, templateId, exercises, isCompleted }: SlotList
   }
 
   return (
-    <div className="space-y-2">
-      {slots.map((slot) => (
+    <div className="space-y-2" ref={listRef}>
+      {orderedSlots.map((slot, index) => (
         <SlotRow
           key={slot.id}
           slot={slot}
           isCompleted={isCompleted}
           onUpdated={() => router.refresh()}
+          showDragHandle={canDrag}
+          isDragging={dragIndex === index}
+          isDropTarget={dropIndex === index}
+          onDragStart={() => handleDragStart(index)}
+          onDragOver={(e: React.DragEvent) => handleDragOver(e, index)}
+          onDragEnd={handleDragEnd}
+          onTouchStart={(e: React.TouchEvent) => handleTouchStart(e, index)}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
         />
       ))}
 
@@ -113,9 +234,23 @@ type SlotRowProps = {
   slot: SlotWithExercise
   isCompleted: boolean
   onUpdated: () => void
+  showDragHandle?: boolean
+  isDragging?: boolean
+  isDropTarget?: boolean
+  onDragStart?: () => void
+  onDragOver?: (e: React.DragEvent) => void
+  onDragEnd?: () => void
+  onTouchStart?: (e: React.TouchEvent) => void
+  onTouchMove?: (e: React.TouchEvent) => void
+  onTouchEnd?: () => void
 }
 
-function SlotRow({ slot, isCompleted, onUpdated }: SlotRowProps) {
+function SlotRow({
+  slot, isCompleted, onUpdated,
+  showDragHandle, isDragging, isDropTarget,
+  onDragStart, onDragOver, onDragEnd,
+  onTouchStart, onTouchMove, onTouchEnd,
+}: SlotRowProps) {
   const [mode, setMode] = useState<'display' | 'edit' | 'confirm-remove'>('display')
   const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
@@ -181,7 +316,6 @@ function SlotRow({ slot, isCompleted, onUpdated }: SlotRowProps) {
     })
   }
 
-  // Format rest seconds for display
   function formatRest(seconds: number): string {
     if (seconds >= 60) {
       const mins = Math.floor(seconds / 60)
@@ -304,8 +438,39 @@ function SlotRow({ slot, isCompleted, onUpdated }: SlotRowProps) {
   }
 
   // Display mode
+  const dragClasses = [
+    isDragging && 'opacity-50',
+    isDropTarget && 'ring-2 ring-primary',
+  ].filter(Boolean).join(' ')
+
   return (
-    <div data-testid="slot-row" className="flex items-center justify-between rounded-lg border px-4 py-3">
+    <div
+      data-testid="slot-row"
+      className={`flex items-center justify-between rounded-lg border px-4 py-3 ${dragClasses}`}
+      draggable={showDragHandle}
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDragEnd={onDragEnd}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
+      {showDragHandle && (
+        <div
+          data-testid="drag-handle"
+          className="mr-3 flex cursor-grab touch-none select-none items-center text-muted-foreground"
+          aria-label="Drag to reorder"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <circle cx="5" cy="3" r="1.5" />
+            <circle cx="11" cy="3" r="1.5" />
+            <circle cx="5" cy="8" r="1.5" />
+            <circle cx="11" cy="8" r="1.5" />
+            <circle cx="5" cy="13" r="1.5" />
+            <circle cx="11" cy="13" r="1.5" />
+          </svg>
+        </div>
+      )}
       <div className="min-w-0 flex-1">
         <span className="text-sm font-medium">{slot.exercise_name}</span>
         <div className="mt-0.5 flex flex-wrap gap-2 text-xs text-muted-foreground">
