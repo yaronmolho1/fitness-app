@@ -581,4 +581,308 @@ describe('TodayWorkout', () => {
       expect(screen.queryByText(/min/)).not.toBeInTheDocument()
     })
   })
+
+  // --- Already-logged summary display (T059) ---
+
+  describe('Already-logged summary', () => {
+    const baseMeso = { id: 1, name: 'Block A', start_date: '2026-03-01', end_date: '2026-04-01', week_type: 'normal' as const }
+
+    it('renders completion banner with "Workout Logged" label', async () => {
+      mockApiResponse({
+        type: 'already_logged',
+        date: '2026-03-15',
+        mesocycle: baseMeso,
+        loggedWorkout: {
+          id: 1,
+          log_date: '2026-03-15',
+          logged_at: '2026-03-15T14:30:00.000Z',
+          canonical_name: 'push-a',
+          rating: 4,
+          notes: 'Felt strong',
+          template_snapshot: {
+            version: 1,
+            name: 'Push Day A',
+            modality: 'resistance',
+          },
+          exercises: [
+            {
+              id: 1,
+              exercise_name: 'Bench Press',
+              order: 1,
+              sets: [
+                { set_number: 1, actual_reps: 8, actual_weight: 80, actual_rpe: 7 },
+                { set_number: 2, actual_reps: 8, actual_weight: 80, actual_rpe: 8 },
+              ],
+            },
+          ],
+        },
+      })
+      render(<TodayWorkout />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('already-logged-summary')).toBeInTheDocument()
+      })
+      expect(screen.getByText(/workout logged/i)).toBeInTheDocument()
+    })
+
+    it('displays workout name from template_snapshot', async () => {
+      mockApiResponse({
+        type: 'already_logged',
+        date: '2026-03-15',
+        mesocycle: baseMeso,
+        loggedWorkout: {
+          id: 1,
+          log_date: '2026-03-15',
+          logged_at: '2026-03-15T10:00:00.000Z',
+          canonical_name: 'push-a',
+          rating: null,
+          notes: null,
+          template_snapshot: { version: 1, name: 'Push Day A', modality: 'resistance' },
+          exercises: [],
+        },
+      })
+      render(<TodayWorkout />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Push Day A')).toBeInTheDocument()
+      })
+    })
+
+    it('displays logged_at timestamp', async () => {
+      mockApiResponse({
+        type: 'already_logged',
+        date: '2026-03-15',
+        mesocycle: baseMeso,
+        loggedWorkout: {
+          id: 1,
+          log_date: '2026-03-15',
+          logged_at: '2026-03-15T14:30:00.000Z',
+          canonical_name: null,
+          rating: null,
+          notes: null,
+          template_snapshot: { version: 1, name: 'Push Day A', modality: 'resistance' },
+          exercises: [],
+        },
+      })
+      render(<TodayWorkout />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('already-logged-summary')).toBeInTheDocument()
+      })
+      // Should show logged time
+      expect(screen.getByTestId('logged-at-time')).toBeInTheDocument()
+    })
+
+    it('displays rating when present', async () => {
+      mockApiResponse({
+        type: 'already_logged',
+        date: '2026-03-15',
+        mesocycle: baseMeso,
+        loggedWorkout: {
+          id: 1,
+          log_date: '2026-03-15',
+          logged_at: '2026-03-15T14:30:00.000Z',
+          canonical_name: null,
+          rating: 4,
+          notes: null,
+          template_snapshot: { version: 1, name: 'Push Day A', modality: 'resistance' },
+          exercises: [],
+        },
+      })
+      render(<TodayWorkout />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('workout-rating')).toBeInTheDocument()
+      })
+      expect(screen.getByTestId('workout-rating')).toHaveTextContent('4')
+    })
+
+    it('displays notes when present', async () => {
+      mockApiResponse({
+        type: 'already_logged',
+        date: '2026-03-15',
+        mesocycle: baseMeso,
+        loggedWorkout: {
+          id: 1,
+          log_date: '2026-03-15',
+          logged_at: '2026-03-15T14:30:00.000Z',
+          canonical_name: null,
+          rating: null,
+          notes: 'Great session overall',
+          template_snapshot: { version: 1, name: 'Push Day A', modality: 'resistance' },
+          exercises: [],
+        },
+      })
+      render(<TodayWorkout />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Great session overall')).toBeInTheDocument()
+      })
+    })
+
+    it('does not render any log buttons or edit controls', async () => {
+      mockApiResponse({
+        type: 'already_logged',
+        date: '2026-03-15',
+        mesocycle: baseMeso,
+        loggedWorkout: {
+          id: 1,
+          log_date: '2026-03-15',
+          logged_at: '2026-03-15T14:30:00.000Z',
+          canonical_name: null,
+          rating: 3,
+          notes: null,
+          template_snapshot: { version: 1, name: 'Push Day A', modality: 'resistance' },
+          exercises: [],
+        },
+      })
+      render(<TodayWorkout />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('already-logged-summary')).toBeInTheDocument()
+      })
+      expect(screen.queryByTestId('start-logging-btn')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('start-running-logging-btn')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('start-mma-logging-btn')).not.toBeInTheDocument()
+      expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    })
+
+    // Resistance modality: exercises + sets
+    it('renders resistance actuals: exercises with sets, reps, weight', async () => {
+      mockApiResponse({
+        type: 'already_logged',
+        date: '2026-03-15',
+        mesocycle: baseMeso,
+        loggedWorkout: {
+          id: 1,
+          log_date: '2026-03-15',
+          logged_at: '2026-03-15T14:30:00.000Z',
+          canonical_name: 'push-a',
+          rating: 4,
+          notes: null,
+          template_snapshot: { version: 1, name: 'Push Day A', modality: 'resistance' },
+          exercises: [
+            {
+              id: 1,
+              exercise_name: 'Bench Press',
+              order: 1,
+              sets: [
+                { set_number: 1, actual_reps: 8, actual_weight: 80, actual_rpe: 7 },
+                { set_number: 2, actual_reps: 7, actual_weight: 80, actual_rpe: 8.5 },
+              ],
+            },
+            {
+              id: 2,
+              exercise_name: 'Lateral Raise',
+              order: 2,
+              sets: [
+                { set_number: 1, actual_reps: 15, actual_weight: 10, actual_rpe: null },
+              ],
+            },
+          ],
+        },
+      })
+      render(<TodayWorkout />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Bench Press')).toBeInTheDocument()
+      })
+      expect(screen.getByText('Lateral Raise')).toBeInTheDocument()
+
+      // Should show logged exercise entries
+      const exerciseEntries = screen.getAllByTestId('logged-exercise')
+      expect(exerciseEntries).toHaveLength(2)
+    })
+
+    // Running modality: distance/pace/HR from snapshot
+    it('renders running actuals: distance, pace, HR', async () => {
+      mockApiResponse({
+        type: 'already_logged',
+        date: '2026-03-15',
+        mesocycle: baseMeso,
+        loggedWorkout: {
+          id: 1,
+          log_date: '2026-03-15',
+          logged_at: '2026-03-15T07:00:00.000Z',
+          canonical_name: 'easy-run',
+          rating: 3,
+          notes: null,
+          template_snapshot: {
+            version: 1,
+            name: 'Easy Run',
+            modality: 'running',
+            run_type: 'easy',
+            actual_distance: 8.5,
+            actual_avg_pace: '5:20/km',
+            actual_avg_hr: 145,
+          },
+          exercises: [],
+        },
+      })
+      render(<TodayWorkout />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('already-logged-summary')).toBeInTheDocument()
+      })
+      expect(screen.getByText('8.5')).toBeInTheDocument()
+      expect(screen.getByText('5:20/km')).toBeInTheDocument()
+      expect(screen.getByText('145')).toBeInTheDocument()
+    })
+
+    // MMA modality: duration + notes from snapshot
+    it('renders MMA actuals: duration and notes', async () => {
+      mockApiResponse({
+        type: 'already_logged',
+        date: '2026-03-15',
+        mesocycle: baseMeso,
+        loggedWorkout: {
+          id: 1,
+          log_date: '2026-03-15',
+          logged_at: '2026-03-15T18:00:00.000Z',
+          canonical_name: 'bjj-fundamentals',
+          rating: 5,
+          notes: 'Worked on guard passing',
+          template_snapshot: {
+            version: 1,
+            name: 'BJJ Fundamentals',
+            modality: 'mma',
+            actual_duration_minutes: 75,
+          },
+          exercises: [],
+        },
+      })
+      render(<TodayWorkout />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('already-logged-summary')).toBeInTheDocument()
+      })
+      expect(screen.getByText('BJJ Fundamentals')).toBeInTheDocument()
+      expect(screen.getByText('75 min')).toBeInTheDocument()
+      expect(screen.getByText('Worked on guard passing')).toBeInTheDocument()
+    })
+
+    it('hides rating section when not present', async () => {
+      mockApiResponse({
+        type: 'already_logged',
+        date: '2026-03-15',
+        mesocycle: baseMeso,
+        loggedWorkout: {
+          id: 1,
+          log_date: '2026-03-15',
+          logged_at: '2026-03-15T14:30:00.000Z',
+          canonical_name: null,
+          rating: null,
+          notes: null,
+          template_snapshot: { version: 1, name: 'Push Day A', modality: 'resistance' },
+          exercises: [],
+        },
+      })
+      render(<TodayWorkout />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('already-logged-summary')).toBeInTheDocument()
+      })
+      expect(screen.queryByTestId('workout-rating')).not.toBeInTheDocument()
+    })
+  })
 })
