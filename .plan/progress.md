@@ -81,7 +81,7 @@
 | T071 | Phase boundary markers | 13 | [ ] | | | | |
 | T072 | Weekly completion count | 14 | [ ] | | | | |
 | T073 | Streak calculation + display | 14 | [ ] | | | | |
-| T074 | OKLCH theme + dark mode setup | UI-1 | [~] | feat/task-074-oklch-theme | 2026-03-15T18:00 | | |
+| T074 | OKLCH theme + dark mode setup | UI-1 | [x] | feat/task-074-oklch-theme | 2026-03-15T18:00 | 2026-03-15 | merged via PR #135 |
 | T075 | Geist fonts + Providers + Toaster | UI-1 | [ ] | | | | |
 | T076 | Install shadcn components (11) | UI-1 | [ ] | | | | |
 | T077 | Navigation overhaul (collapsible + Sheet) | UI-2 | [ ] | | | | |
