@@ -4,9 +4,32 @@ import { revalidatePath } from 'next/cache'
 import { eq, sql, asc } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '@/lib/db/index'
-import { exercise_slots, workout_templates, exercises } from '@/lib/db/schema'
+import { exercise_slots, workout_templates, exercises, mesocycles } from '@/lib/db/schema'
 
 type SlotRow = typeof exercise_slots.$inferSelect
+
+// Checks if the template's mesocycle is completed. Returns error string or null.
+function checkCompletedMesocycle(templateId: number): string | null {
+  const template = db
+    .select({ mesocycle_id: workout_templates.mesocycle_id })
+    .from(workout_templates)
+    .where(eq(workout_templates.id, templateId))
+    .get()
+
+  if (!template) return null // let caller handle not-found
+
+  const meso = db
+    .select({ status: mesocycles.status })
+    .from(mesocycles)
+    .where(eq(mesocycles.id, template.mesocycle_id))
+    .get()
+
+  if (meso?.status === 'completed') {
+    return 'Cannot modify template on a completed mesocycle'
+  }
+
+  return null
+}
 
 type SlotResult =
   | { success: true; data: SlotRow }
@@ -67,6 +90,11 @@ export async function addExerciseSlot(
 
   if (!template) {
     return { success: false, error: 'Template not found' }
+  }
+
+  const completedError = checkCompletedMesocycle(template_id)
+  if (completedError) {
+    return { success: false, error: completedError }
   }
 
   // Verify exercise exists
@@ -153,6 +181,11 @@ export async function updateExerciseSlot(
     return { success: false, error: 'Slot not found' }
   }
 
+  const completedError = checkCompletedMesocycle(existing.template_id)
+  if (completedError) {
+    return { success: false, error: completedError }
+  }
+
   // Build update object with only provided fields
   const updates: Record<string, unknown> = {}
   if (sets !== undefined) updates.sets = sets
@@ -192,6 +225,11 @@ export async function toggleSlotRole(slotId: number): Promise<SlotResult> {
     return { success: false, error: 'Slot not found' }
   }
 
+  const completedError = checkCompletedMesocycle(existing.template_id)
+  if (completedError) {
+    return { success: false, error: completedError }
+  }
+
   const updated = db
     .update(exercise_slots)
     .set({ is_main: !existing.is_main })
@@ -216,6 +254,11 @@ export async function removeExerciseSlot(slotId: number): Promise<RemoveResult> 
 
   if (!existing) {
     return { success: false, error: 'Slot not found' }
+  }
+
+  const completedError = checkCompletedMesocycle(existing.template_id)
+  if (completedError) {
+    return { success: false, error: completedError }
   }
 
   db.delete(exercise_slots).where(eq(exercise_slots.id, slotId)).run()
@@ -253,6 +296,11 @@ export async function reorderExerciseSlots(
 
   if (!template) {
     return { success: false, error: 'Template not found' }
+  }
+
+  const completedError = checkCompletedMesocycle(template_id)
+  if (completedError) {
+    return { success: false, error: completedError }
   }
 
   // Get current slots for this template

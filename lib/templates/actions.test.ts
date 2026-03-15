@@ -26,6 +26,8 @@ import {
   createResistanceTemplate,
   createRunningTemplate,
   createMmaBjjTemplate,
+  updateTemplate,
+  deleteTemplate,
 } from './actions'
 
 function seedMesocycle(
@@ -706,6 +708,194 @@ describe('createMmaBjjTemplate', () => {
       expect(rows).toHaveLength(1)
       expect(rows[0].modality).toBe('mma')
       expect(rows[0].run_type).toBeNull()
+    })
+  })
+})
+
+// ============================================================================
+// updateTemplate — completed mesocycle protection (T038)
+// ============================================================================
+
+describe('updateTemplate', () => {
+  beforeEach(() => {
+    testDb.run(sql`DROP TABLE IF EXISTS exercise_slots`)
+    testDb.run(sql`DROP TABLE IF EXISTS weekly_schedule`)
+    testDb.run(sql`DROP TABLE IF EXISTS workout_templates`)
+    testDb.run(sql`DROP TABLE IF EXISTS mesocycles`)
+    testDb.run(sql`
+      CREATE TABLE mesocycles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        start_date TEXT NOT NULL,
+        end_date TEXT NOT NULL,
+        work_weeks INTEGER NOT NULL,
+        has_deload INTEGER NOT NULL DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'planned',
+        created_at INTEGER
+      )
+    `)
+    testDb.run(sql`
+      CREATE TABLE workout_templates (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        mesocycle_id INTEGER NOT NULL REFERENCES mesocycles(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        canonical_name TEXT NOT NULL,
+        modality TEXT NOT NULL,
+        notes TEXT,
+        run_type TEXT,
+        target_pace TEXT,
+        hr_zone INTEGER,
+        interval_count INTEGER,
+        interval_rest INTEGER,
+        coaching_cues TEXT,
+        planned_duration INTEGER,
+        created_at INTEGER
+      )
+    `)
+  })
+
+  function seedTemplateForMeso(mesoId: number) {
+    return testDb
+      .insert(schema.workout_templates)
+      .values({
+        mesocycle_id: mesoId,
+        name: 'Push A',
+        canonical_name: 'push-a',
+        modality: 'resistance',
+        created_at: new Date(),
+      })
+      .returning()
+      .get()
+  }
+
+  describe('completed mesocycle', () => {
+    it('blocks edit on completed mesocycle', async () => {
+      const meso = seedMesocycle({ status: 'completed' })
+      const tmpl = seedTemplateForMeso(meso.id)
+      const result = await updateTemplate({ id: tmpl.id, name: 'Updated' })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toMatch(/completed/i)
+    })
+
+    it('allows edit on planned mesocycle', async () => {
+      const meso = seedMesocycle({ status: 'planned' })
+      const tmpl = seedTemplateForMeso(meso.id)
+      const result = await updateTemplate({ id: tmpl.id, name: 'Updated' })
+      expect(result.success).toBe(true)
+    })
+
+    it('allows edit on active mesocycle', async () => {
+      const meso = seedMesocycle({ status: 'active' })
+      const tmpl = seedTemplateForMeso(meso.id)
+      const result = await updateTemplate({ id: tmpl.id, name: 'Updated' })
+      expect(result.success).toBe(true)
+    })
+  })
+})
+
+// ============================================================================
+// deleteTemplate — completed mesocycle protection (T038)
+// ============================================================================
+
+describe('deleteTemplate', () => {
+  beforeEach(() => {
+    testDb.run(sql`DROP TABLE IF EXISTS exercise_slots`)
+    testDb.run(sql`DROP TABLE IF EXISTS weekly_schedule`)
+    testDb.run(sql`DROP TABLE IF EXISTS workout_templates`)
+    testDb.run(sql`DROP TABLE IF EXISTS mesocycles`)
+    testDb.run(sql`
+      CREATE TABLE mesocycles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        start_date TEXT NOT NULL,
+        end_date TEXT NOT NULL,
+        work_weeks INTEGER NOT NULL,
+        has_deload INTEGER NOT NULL DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'planned',
+        created_at INTEGER
+      )
+    `)
+    testDb.run(sql`
+      CREATE TABLE workout_templates (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        mesocycle_id INTEGER NOT NULL REFERENCES mesocycles(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        canonical_name TEXT NOT NULL,
+        modality TEXT NOT NULL,
+        notes TEXT,
+        run_type TEXT,
+        target_pace TEXT,
+        hr_zone INTEGER,
+        interval_count INTEGER,
+        interval_rest INTEGER,
+        coaching_cues TEXT,
+        planned_duration INTEGER,
+        created_at INTEGER
+      )
+    `)
+    testDb.run(sql`
+      CREATE TABLE exercise_slots (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        template_id INTEGER NOT NULL REFERENCES workout_templates(id) ON DELETE CASCADE,
+        exercise_id INTEGER NOT NULL,
+        sets INTEGER,
+        reps TEXT,
+        weight REAL,
+        rpe REAL,
+        rest_seconds INTEGER,
+        guidelines TEXT,
+        "order" INTEGER NOT NULL,
+        is_main INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER
+      )
+    `)
+    testDb.run(sql`
+      CREATE TABLE weekly_schedule (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        mesocycle_id INTEGER NOT NULL REFERENCES mesocycles(id) ON DELETE CASCADE,
+        template_id INTEGER NOT NULL REFERENCES workout_templates(id),
+        day_of_week INTEGER NOT NULL,
+        week_type TEXT NOT NULL DEFAULT 'normal',
+        created_at INTEGER
+      )
+    `)
+  })
+
+  function seedTemplateForMeso(mesoId: number) {
+    return testDb
+      .insert(schema.workout_templates)
+      .values({
+        mesocycle_id: mesoId,
+        name: 'Push A',
+        canonical_name: 'push-a',
+        modality: 'resistance',
+        created_at: new Date(),
+      })
+      .returning()
+      .get()
+  }
+
+  describe('completed mesocycle', () => {
+    it('blocks delete on completed mesocycle', async () => {
+      const meso = seedMesocycle({ status: 'completed' })
+      const tmpl = seedTemplateForMeso(meso.id)
+      const result = await deleteTemplate(tmpl.id)
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toMatch(/completed/i)
+    })
+
+    it('allows delete on planned mesocycle', async () => {
+      const meso = seedMesocycle({ status: 'planned' })
+      const tmpl = seedTemplateForMeso(meso.id)
+      const result = await deleteTemplate(tmpl.id)
+      expect(result.success).toBe(true)
+    })
+
+    it('allows delete on active mesocycle', async () => {
+      const meso = seedMesocycle({ status: 'active' })
+      const tmpl = seedTemplateForMeso(meso.id)
+      const result = await deleteTemplate(tmpl.id)
+      expect(result.success).toBe(true)
     })
   })
 })

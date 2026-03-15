@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { sql } from 'drizzle-orm'
+import { sql, eq } from 'drizzle-orm'
 import * as schema from '@/lib/db/schema'
 
 const { testDb } = vi.hoisted(() => {
@@ -21,19 +21,23 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
-import { addExerciseSlot, updateExerciseSlot, removeExerciseSlot, toggleSlotRole } from './slot-actions'
+import { addExerciseSlot, updateExerciseSlot, removeExerciseSlot, toggleSlotRole, reorderExerciseSlots } from './slot-actions'
 
-function seedMesocycle() {
+function seedMesocycle(
+  overrides: Partial<{ id: number; name: string; status: string }> = {}
+) {
+  const defaults = {
+    name: 'Test Meso',
+    start_date: '2026-03-01',
+    end_date: '2026-03-28',
+    work_weeks: 4,
+    has_deload: false,
+    status: 'planned',
+  }
+  const row = { ...defaults, ...overrides }
   return testDb
     .insert(schema.mesocycles)
-    .values({
-      name: 'Test Meso',
-      start_date: '2026-03-01',
-      end_date: '2026-03-28',
-      work_weeks: 4,
-      has_deload: false,
-      status: 'planned',
-    })
+    .values(row)
     .returning({ id: schema.mesocycles.id })
     .get()
 }
@@ -701,5 +705,152 @@ describe('removeExerciseSlot', () => {
     // Template still exists
     const templates = testDb.select().from(schema.workout_templates).all()
     expect(templates).toHaveLength(1)
+  })
+})
+
+// ============================================================================
+// Completed mesocycle protection — T038
+// ============================================================================
+
+describe('completed mesocycle protection', () => {
+  // Helper: seed a completed mesocycle with a template and slot already in place
+  function seedCompletedMesoWithSlot() {
+    // Create as planned first so we can add data
+    const meso = seedMesocycle({ status: 'planned' })
+    const tmpl = seedTemplate(meso.id)
+    const ex = seedExercise()
+
+    // Insert slot directly to avoid going through the SA
+    const slot = testDb
+      .insert(schema.exercise_slots)
+      .values({
+        template_id: tmpl.id,
+        exercise_id: ex.id,
+        sets: 3,
+        reps: '10',
+        order: 1,
+        is_main: false,
+        created_at: new Date(),
+      })
+      .returning()
+      .get()
+
+    // Now flip to completed
+    testDb
+      .update(schema.mesocycles)
+      .set({ status: 'completed' })
+      .where(eq(schema.mesocycles.id, meso.id))
+      .run()
+
+    return { meso, tmpl, ex, slot }
+  }
+
+  describe('addExerciseSlot', () => {
+    it('blocks adding slot on completed mesocycle', async () => {
+      const { tmpl } = seedCompletedMesoWithSlot()
+      const ex2 = seedExercise('Squat')
+      const result = await addExerciseSlot({
+        template_id: tmpl.id,
+        exercise_id: ex2.id,
+        sets: 3,
+        reps: 10,
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toMatch(/completed/i)
+    })
+
+    it('allows adding slot on planned mesocycle', async () => {
+      const meso = seedMesocycle({ status: 'planned' })
+      const tmpl = seedTemplate(meso.id)
+      const ex = seedExercise()
+      const result = await addExerciseSlot({
+        template_id: tmpl.id,
+        exercise_id: ex.id,
+        sets: 3,
+        reps: 10,
+      })
+      expect(result.success).toBe(true)
+    })
+
+    it('allows adding slot on active mesocycle', async () => {
+      const meso = seedMesocycle({ status: 'active' })
+      const tmpl = seedTemplate(meso.id)
+      const ex = seedExercise()
+      const result = await addExerciseSlot({
+        template_id: tmpl.id,
+        exercise_id: ex.id,
+        sets: 3,
+        reps: 10,
+      })
+      expect(result.success).toBe(true)
+    })
+  })
+
+  describe('updateExerciseSlot', () => {
+    it('blocks updating slot on completed mesocycle', async () => {
+      const { slot } = seedCompletedMesoWithSlot()
+      const result = await updateExerciseSlot({ id: slot.id, sets: 5 })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toMatch(/completed/i)
+    })
+  })
+
+  describe('toggleSlotRole', () => {
+    it('blocks toggling role on completed mesocycle', async () => {
+      const { slot } = seedCompletedMesoWithSlot()
+      const result = await toggleSlotRole(slot.id)
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toMatch(/completed/i)
+    })
+  })
+
+  describe('removeExerciseSlot', () => {
+    it('blocks removing slot on completed mesocycle', async () => {
+      const { slot } = seedCompletedMesoWithSlot()
+      const result = await removeExerciseSlot(slot.id)
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toMatch(/completed/i)
+    })
+  })
+
+  describe('reorderExerciseSlots', () => {
+    it('blocks reordering slots on completed mesocycle', async () => {
+      // Need 2 slots to reorder
+      const meso = seedMesocycle({ status: 'planned' })
+      const tmpl = seedTemplate(meso.id)
+      const ex1 = seedExercise('Bench Press')
+      const ex2 = seedExercise('Squat')
+
+      const s1 = testDb
+        .insert(schema.exercise_slots)
+        .values({
+          template_id: tmpl.id, exercise_id: ex1.id, sets: 3, reps: '10',
+          order: 1, is_main: false, created_at: new Date(),
+        })
+        .returning()
+        .get()
+      const s2 = testDb
+        .insert(schema.exercise_slots)
+        .values({
+          template_id: tmpl.id, exercise_id: ex2.id, sets: 3, reps: '10',
+          order: 2, is_main: false, created_at: new Date(),
+        })
+        .returning()
+        .get()
+
+      // Flip to completed
+      testDb
+        .update(schema.mesocycles)
+        .set({ status: 'completed' })
+        .where(eq(schema.mesocycles.id, meso.id))
+        .run()
+
+      const result = await reorderExerciseSlots({
+        template_id: tmpl.id,
+        slot_ids: [s2.id, s1.id],
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toMatch(/completed/i)
+    })
   })
 })
