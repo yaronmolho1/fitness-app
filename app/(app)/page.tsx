@@ -1,7 +1,9 @@
-export default function Home() {
+import { TodayWorkout } from '@/components/today-workout'
+
+export default function TodayPage() {
   return (
-    <main>
-      <h1>Fitness App</h1>
-    </main>
+    <div className="mx-auto max-w-lg px-4 py-6">
+      <TodayWorkout />
+    </div>
   )
 }
