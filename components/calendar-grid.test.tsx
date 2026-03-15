@@ -228,3 +228,134 @@ describe('CalendarGrid', () => {
     expect(running).not.toBe(mma)
   })
 })
+
+// T067: completed day markers
+describe('CalendarGrid – status markers', () => {
+  // Mix of completed, projected, and rest days
+  const DAYS_WITH_STATUS: CalendarDay[] = Array.from({ length: 31 }, (_, i) => {
+    const day = i + 1
+    const date = `2026-03-${String(day).padStart(2, '0')}`
+    // day 2: completed resistance workout
+    if (day === 2) return { date, template_name: 'Push A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'completed' }
+    // day 4: projected running (not yet logged)
+    if (day === 4) return { date, template_name: '5K Tempo', modality: 'running', mesocycle_id: 1, is_deload: false, status: 'projected' }
+    // day 6: completed mma workout
+    if (day === 6) return { date, template_name: 'BJJ Sparring', modality: 'mma', mesocycle_id: 1, is_deload: false, status: 'completed' }
+    // day 9: projected resistance (past, missed workout)
+    if (day === 9) return { date, template_name: 'Pull A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'projected' }
+    return { date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest' }
+  })
+
+  afterEach(() => {
+    cleanup()
+    vi.restoreAllMocks()
+  })
+
+  beforeEach(() => {
+    mockFetch({ '2026-03': DAYS_WITH_STATUS })
+  })
+
+  it('completed day shows a completed marker', async () => {
+    render(<CalendarGrid initialMonth="2026-03" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('calendar-day-2026-03-02')).toBeInTheDocument()
+    })
+
+    const day2 = screen.getByTestId('calendar-day-2026-03-02')
+    expect(day2.querySelector('[data-testid="completed-marker"]')).toBeInTheDocument()
+  })
+
+  it('projected day does not show a completed marker', async () => {
+    render(<CalendarGrid initialMonth="2026-03" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('calendar-day-2026-03-04')).toBeInTheDocument()
+    })
+
+    const day4 = screen.getByTestId('calendar-day-2026-03-04')
+    expect(day4.querySelector('[data-testid="completed-marker"]')).toBeNull()
+  })
+
+  it('rest day does not show a completed marker', async () => {
+    render(<CalendarGrid initialMonth="2026-03" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('calendar-day-2026-03-01')).toBeInTheDocument()
+    })
+
+    const day1 = screen.getByTestId('calendar-day-2026-03-01')
+    expect(day1.querySelector('[data-testid="completed-marker"]')).toBeNull()
+  })
+
+  it('completed day retains modality color alongside marker', async () => {
+    render(<CalendarGrid initialMonth="2026-03" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('calendar-day-2026-03-02')).toBeInTheDocument()
+    })
+
+    const day2 = screen.getByTestId('calendar-day-2026-03-02')
+    // Has modality color
+    expect(day2.className).toMatch(/resistance/)
+    // Has completed marker
+    expect(day2.querySelector('[data-testid="completed-marker"]')).toBeInTheDocument()
+  })
+
+  it('completed day has status-completed data attribute', async () => {
+    render(<CalendarGrid initialMonth="2026-03" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('calendar-day-2026-03-02')).toBeInTheDocument()
+    })
+
+    expect(screen.getByTestId('calendar-day-2026-03-02').dataset.status).toBe('completed')
+  })
+
+  it('projected day has status-projected data attribute', async () => {
+    render(<CalendarGrid initialMonth="2026-03" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('calendar-day-2026-03-04')).toBeInTheDocument()
+    })
+
+    expect(screen.getByTestId('calendar-day-2026-03-04').dataset.status).toBe('projected')
+  })
+
+  it('rest day has status-rest data attribute', async () => {
+    render(<CalendarGrid initialMonth="2026-03" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('calendar-day-2026-03-01')).toBeInTheDocument()
+    })
+
+    expect(screen.getByTestId('calendar-day-2026-03-01').dataset.status).toBe('rest')
+  })
+
+  it('past unlogged day with template shows as projected (missed workout)', async () => {
+    render(<CalendarGrid initialMonth="2026-03" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('calendar-day-2026-03-09')).toBeInTheDocument()
+    })
+
+    const day9 = screen.getByTestId('calendar-day-2026-03-09')
+    // Projected, not completed — missed workout
+    expect(day9.dataset.status).toBe('projected')
+    expect(day9.querySelector('[data-testid="completed-marker"]')).toBeNull()
+    // Still shows the template name
+    expect(day9).toHaveTextContent('Pull A')
+  })
+
+  it('multiple completed days each show their own marker', async () => {
+    render(<CalendarGrid initialMonth="2026-03" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('calendar-day-2026-03-02')).toBeInTheDocument()
+    })
+
+    // day 2 and day 6 are both completed
+    expect(screen.getByTestId('calendar-day-2026-03-02').querySelector('[data-testid="completed-marker"]')).toBeInTheDocument()
+    expect(screen.getByTestId('calendar-day-2026-03-06').querySelector('[data-testid="completed-marker"]')).toBeInTheDocument()
+  })
+})

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { CalendarDay } from '@/lib/calendar/queries'
 
 const DAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -131,9 +131,20 @@ export function CalendarGrid({ initialMonth }: CalendarGridProps = {}) {
             <div
               key={cell.date}
               data-testid={`calendar-day-${cell.date}`}
+              data-status={cell.status}
               className={`bg-card min-h-[4.5rem] p-1.5 border ${isRest ? 'border-transparent' : modalityClass}`}
             >
-              <span className="text-xs font-medium">{dayNum}</span>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium">{dayNum}</span>
+                {cell.status === 'completed' && (
+                  <span
+                    data-testid="completed-marker"
+                    className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-green-500 dark:bg-green-600"
+                  >
+                    <Check className="h-3 w-3 text-white" />
+                  </span>
+                )}
+              </div>
               {cell.template_name && (
                 <p className="mt-0.5 text-[0.65rem] leading-tight truncate">
                   {cell.template_name}
