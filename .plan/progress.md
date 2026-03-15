@@ -42,8 +42,8 @@
 | T032 | 7-day schedule grid UI | 7 | [x] | feat/task-032-schedule-grid-ui | 2026-03-14 | 2026-03-14 | merged via PR #100 |
 | T033 | Normal/deload tabs | 7 | [x] | feat/task-033-normal-deload-tabs | 2026-03-15T00:15 | 2026-03-15 | merged via PR #109 |
 | T034 | Rest day display in grid | 7 | [x] | feat/task-034-rest-day-display | 2026-03-15T00:30 | 2026-03-15 | merged via PR #111 |
-| T035 | Cascade sibling query (3 scopes) | 8 | [~] | feat/task-035-cascade-sibling-query | 2026-03-15T12:00 | | |
-| T036 | Cascade atomic execution SA | 8 | [ ] | | | | |
+| T035 | Cascade sibling query (3 scopes) | 8 | [x] | feat/task-035-cascade-sibling-query | 2026-03-15T12:00 | 2026-03-15 | merged via PR #115 |
+| T036 | Cascade atomic execution SA | 8 | [~] | feat/task-036-cascade-atomic-execution | 2026-03-15T11:00 | | |
 | T037 | Cascade scope selection UI | 8 | [ ] | | | | |
 | T038 | Block edits on completed mesocycle | 8 | [ ] | | | | |
 | T039 | Cascade skips completed + summary | 8 | [ ] | | | | |
@@ -53,7 +53,7 @@
 | T043 | Routine item CRUD SA + scope validation | 8 | [ ] | | | | |
 | T044 | Routine item list + edit + delete | 8 | [ ] | | | | |
 | T045 | GET /api/today (lookup chain + deload) | 9 | [x] | feat/task-045-api-today | 2026-03-14T22:00 | 2026-03-14 | merged via PR #104 |
-| T046 | Today's resistance workout display | 9 | [ ] | | | | |
+| T046 | Today's resistance workout display | 9 | [~] | feat/task-046-todays-resistance-display | 2026-03-15T10:00 | | PR #119, awaiting review |
 | T047 | Today's running + MMA/BJJ display | 9 | [ ] | | | | |
 | T048 | Logging form + pre-fill from template | 10 | [ ] | | | | |
 | T049 | Actual reps/weight/RPE inputs | 10 | [ ] | | | | |
