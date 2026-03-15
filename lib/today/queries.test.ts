@@ -22,6 +22,9 @@ import { getTodayWorkout, isDeloadWeek } from './queries'
 // Helpers
 
 function createTables() {
+  testDb.run(sql`DROP TABLE IF EXISTS logged_sets`)
+  testDb.run(sql`DROP TABLE IF EXISTS logged_exercises`)
+  testDb.run(sql`DROP TABLE IF EXISTS logged_workouts`)
   testDb.run(sql`DROP TABLE IF EXISTS exercise_slots`)
   testDb.run(sql`DROP TABLE IF EXISTS weekly_schedule`)
   testDb.run(sql`DROP TABLE IF EXISTS workout_templates`)
@@ -97,6 +100,40 @@ function createTables() {
   testDb.run(
     sql`CREATE UNIQUE INDEX weekly_schedule_meso_day_type_idx ON weekly_schedule(mesocycle_id, day_of_week, week_type)`
   )
+  testDb.run(sql`
+    CREATE TABLE logged_workouts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      template_id INTEGER,
+      canonical_name TEXT,
+      log_date TEXT NOT NULL,
+      logged_at INTEGER NOT NULL,
+      rating INTEGER,
+      notes TEXT,
+      template_snapshot TEXT NOT NULL,
+      created_at INTEGER
+    )
+  `)
+  testDb.run(sql`
+    CREATE TABLE logged_exercises (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      logged_workout_id INTEGER NOT NULL REFERENCES logged_workouts(id) ON DELETE CASCADE,
+      exercise_id INTEGER,
+      exercise_name TEXT NOT NULL,
+      "order" INTEGER NOT NULL,
+      created_at INTEGER
+    )
+  `)
+  testDb.run(sql`
+    CREATE TABLE logged_sets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      logged_exercise_id INTEGER NOT NULL REFERENCES logged_exercises(id) ON DELETE CASCADE,
+      set_number INTEGER NOT NULL,
+      actual_reps INTEGER,
+      actual_weight REAL,
+      actual_rpe REAL,
+      created_at INTEGER
+    )
+  `)
 }
 
 function seedMesocycle(overrides: Partial<{
@@ -168,6 +205,28 @@ function seedSlot(templateId: number, exerciseId: number, order: number, overrid
       created_at: new Date(),
     })
     .returning({ id: schema.exercise_slots.id })
+    .get()
+}
+
+function seedLoggedWorkout(
+  templateId: number,
+  logDate: string,
+  canonicalName: string,
+  overrides: Partial<{ rating: number; notes: string }> = {}
+) {
+  return testDb
+    .insert(schema.logged_workouts)
+    .values({
+      template_id: templateId,
+      canonical_name: canonicalName,
+      log_date: logDate,
+      logged_at: new Date(),
+      rating: overrides.rating ?? null,
+      notes: overrides.notes ?? null,
+      template_snapshot: { version: 1, name: canonicalName, modality: 'resistance' },
+      created_at: new Date(),
+    })
+    .returning({ id: schema.logged_workouts.id })
     .get()
 }
 
@@ -386,5 +445,116 @@ describe('getTodayWorkout', () => {
       expect(result.mesocycle.name).toBe('Hypertrophy Block')
       expect(result.mesocycle.id).toBe(meso.id)
     }
+  })
+
+  // ==========================================================================
+  // T058: Already-logged detection
+  // ==========================================================================
+
+  it('returns already_logged when workout logged for today + active mesocycle', async () => {
+    const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
+    const tmpl = seedTemplate(meso.id, 'Push A')
+    seedSchedule(meso.id, 2, tmpl.id) // Tuesday
+
+    // Log a workout for this template on 2026-03-10 (Tuesday)
+    seedLoggedWorkout(tmpl.id, '2026-03-10', 'push-a')
+
+    const result = await getTodayWorkout('2026-03-10')
+    expect(result.type).toBe('already_logged')
+  })
+
+  it('returns workout when no log exists for today', async () => {
+    const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
+    const tmpl = seedTemplate(meso.id, 'Push A')
+    seedSchedule(meso.id, 2, tmpl.id)
+
+    const result = await getTodayWorkout('2026-03-10')
+    expect(result.type).toBe('workout')
+  })
+
+  it('detection uses calendar date not timestamp (midnight boundary)', async () => {
+    const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
+    const tmpl = seedTemplate(meso.id, 'Push A')
+    seedSchedule(meso.id, 2, tmpl.id) // Tuesday
+
+    // Logged yesterday (2026-03-09) at 23:59 — should NOT match today (2026-03-10)
+    seedLoggedWorkout(tmpl.id, '2026-03-09', 'push-a')
+
+    const result = await getTodayWorkout('2026-03-10')
+    expect(result.type).toBe('workout')
+  })
+
+  it('log for different mesocycle does not trigger already_logged', async () => {
+    const oldMeso = seedMesocycle({ status: 'completed', start_date: '2026-02-01', name: 'Old Block' })
+    const oldTmpl = seedTemplate(oldMeso.id, 'Old Push')
+
+    const activeMeso = seedMesocycle({ status: 'active', start_date: '2026-03-01', name: 'New Block' })
+    const activeTmpl = seedTemplate(activeMeso.id, 'Push A')
+    seedSchedule(activeMeso.id, 2, activeTmpl.id)
+
+    // Logged workout for the OLD mesocycle's template on today's date
+    seedLoggedWorkout(oldTmpl.id, '2026-03-10', 'old-push')
+
+    const result = await getTodayWorkout('2026-03-10')
+    expect(result.type).toBe('workout')
+  })
+
+  it('already_logged response includes logged workout id and date', async () => {
+    const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
+    const tmpl = seedTemplate(meso.id, 'Push A')
+    seedSchedule(meso.id, 2, tmpl.id)
+
+    seedLoggedWorkout(tmpl.id, '2026-03-10', 'push-a')
+
+    const result = await getTodayWorkout('2026-03-10')
+    expect(result.type).toBe('already_logged')
+    if (result.type === 'already_logged') {
+      expect(result.date).toBe('2026-03-10')
+      expect(result.mesocycle.id).toBe(meso.id)
+      expect(result.loggedWorkout.id).toBeGreaterThan(0)
+      expect(result.loggedWorkout.log_date).toBe('2026-03-10')
+      expect(result.loggedWorkout.canonical_name).toBe('push-a')
+    }
+  })
+
+  it('already_logged includes rating and notes when present', async () => {
+    const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
+    const tmpl = seedTemplate(meso.id, 'Push A')
+    seedSchedule(meso.id, 2, tmpl.id)
+
+    seedLoggedWorkout(tmpl.id, '2026-03-10', 'push-a', { rating: 4, notes: 'Great session' })
+
+    const result = await getTodayWorkout('2026-03-10')
+    if (result.type === 'already_logged') {
+      expect(result.loggedWorkout.rating).toBe(4)
+      expect(result.loggedWorkout.notes).toBe('Great session')
+    }
+  })
+
+  it('already_logged includes template_snapshot', async () => {
+    const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
+    const tmpl = seedTemplate(meso.id, 'Push A')
+    seedSchedule(meso.id, 2, tmpl.id)
+
+    seedLoggedWorkout(tmpl.id, '2026-03-10', 'push-a')
+
+    const result = await getTodayWorkout('2026-03-10')
+    if (result.type === 'already_logged') {
+      expect(result.loggedWorkout.template_snapshot).toBeDefined()
+      expect(result.loggedWorkout.template_snapshot.version).toBe(1)
+    }
+  })
+
+  it('rest day not affected by already_logged check', async () => {
+    const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
+    const tmpl = seedTemplate(meso.id, 'Push A')
+    seedSchedule(meso.id, 1, tmpl.id) // Monday only
+
+    // Even if a log exists for a template on this date, rest day is rest day
+    seedLoggedWorkout(tmpl.id, '2026-03-10', 'push-a')
+
+    // 2026-03-10 is Tuesday — no schedule = rest day
+    const result = await getTodayWorkout('2026-03-10')
+    expect(result.type).toBe('rest_day')
   })
 })
