@@ -361,6 +361,97 @@ describe('updateRoutineItem', () => {
       scope_type: 'global',
     })
     expect(result.success).toBe(true)
+    // Verify .set() was called with mesocycle_id: null
+    const setArg = mockUpdateSet.mock.calls[0][0]
+    expect(setArg.mesocycle_id).toBeNull()
+    expect(setArg.start_date).toBeNull()
+    expect(setArg.end_date).toBeNull()
+  })
+
+  it('clears start_date and end_date when scope changes from date_range to global', async () => {
+    const result = await updateRoutineItem({
+      id: 1,
+      ...validGlobal,
+      scope_type: 'global',
+      // These should be ignored and cleared
+      start_date: '2026-03-01',
+      end_date: '2026-04-30',
+    })
+    expect(result.success).toBe(true)
+    const setArg = mockUpdateSet.mock.calls[0][0]
+    expect(setArg.start_date).toBeNull()
+    expect(setArg.end_date).toBeNull()
+    expect(setArg.mesocycle_id).toBeNull()
+  })
+
+  it('clears mesocycle_id when scope changes to date_range', async () => {
+    mockUpdateReturning.mockResolvedValueOnce([{
+      id: 1, name: 'Updated Item', category: null,
+      has_weight: false, has_length: false, has_duration: true,
+      has_sets: false, has_reps: false,
+      frequency_target: 3, scope: 'date_range',
+      mesocycle_id: null, start_date: '2026-03-01', end_date: '2026-04-30',
+      skip_on_deload: false, created_at: new Date(),
+    }])
+    const result = await updateRoutineItem({
+      id: 1,
+      ...validGlobal,
+      scope_type: 'date_range',
+      start_date: '2026-03-01',
+      end_date: '2026-04-30',
+    })
+    expect(result.success).toBe(true)
+    const setArg = mockUpdateSet.mock.calls[0][0]
+    expect(setArg.mesocycle_id).toBeNull()
+    expect(setArg.start_date).toBe('2026-03-01')
+    expect(setArg.end_date).toBe('2026-04-30')
+  })
+
+  it('clears date fields when scope changes to per_mesocycle', async () => {
+    // Mock mesocycle exists
+    mockWhere.mockResolvedValueOnce([{ id: 1, name: 'Block 1' }])
+    mockUpdateReturning.mockResolvedValueOnce([{
+      id: 1, name: 'Updated Item', category: null,
+      has_weight: false, has_length: false, has_duration: true,
+      has_sets: false, has_reps: false,
+      frequency_target: 3, scope: 'mesocycle',
+      mesocycle_id: 1, start_date: null, end_date: null,
+      skip_on_deload: false, created_at: new Date(),
+    }])
+    const result = await updateRoutineItem({
+      id: 1,
+      ...validGlobal,
+      scope_type: 'per_mesocycle',
+      mesocycle_id: 1,
+    })
+    expect(result.success).toBe(true)
+    const setArg = mockUpdateSet.mock.calls[0][0]
+    expect(setArg.mesocycle_id).toBe(1)
+    expect(setArg.start_date).toBeNull()
+    expect(setArg.end_date).toBeNull()
+  })
+
+  it('updates input field columns when adding/removing fields', async () => {
+    mockUpdateReturning.mockResolvedValueOnce([{
+      id: 1, name: 'Updated Item', category: null,
+      has_weight: true, has_length: false, has_duration: false,
+      has_sets: true, has_reps: false,
+      frequency_target: 3, scope: 'global',
+      mesocycle_id: null, start_date: null, end_date: null,
+      skip_on_deload: false, created_at: new Date(),
+    }])
+    const result = await updateRoutineItem({
+      id: 1,
+      ...validGlobal,
+      input_fields: ['weight', 'sets'],
+    })
+    expect(result.success).toBe(true)
+    const setArg = mockUpdateSet.mock.calls[0][0]
+    expect(setArg.has_weight).toBe(true)
+    expect(setArg.has_length).toBe(false)
+    expect(setArg.has_duration).toBe(false)
+    expect(setArg.has_sets).toBe(true)
+    expect(setArg.has_reps).toBe(false)
   })
 
   it('validates scope fields same as create', async () => {
@@ -398,15 +489,16 @@ describe('deleteRoutineItem', () => {
     if (!result.success) expect(result.error).toMatch(/not found/i)
   })
 
-  it('deletes existing item successfully', async () => {
+  it('deletes existing item successfully and calls db.delete', async () => {
     mockWhere
       .mockResolvedValueOnce([{ id: 1 }]) // item exists
       .mockResolvedValueOnce([]) // no logs
     const result = await deleteRoutineItem(1)
     expect(result.success).toBe(true)
+    expect(mockDelete).toHaveBeenCalled()
   })
 
-  it('returns error when routine item has existing logs', async () => {
+  it('preserves routine_logs by refusing to delete when logs exist', async () => {
     mockWhere
       .mockResolvedValueOnce([{ id: 1 }]) // item exists
       .mockResolvedValueOnce([{ id: 10, routine_item_id: 1 }]) // has logs
@@ -415,5 +507,7 @@ describe('deleteRoutineItem', () => {
     if (!result.success) {
       expect(result.error).toMatch(/existing logs/i)
     }
+    // Verify db.delete was NOT called — logs are preserved
+    expect(mockDelete).not.toHaveBeenCalled()
   })
 })
