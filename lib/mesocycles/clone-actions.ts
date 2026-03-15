@@ -72,6 +72,7 @@ export async function cloneMesocycle(input: CloneInput): Promise<CloneResult> {
         work_weeks: workWeeks,
         has_deload: hasDeload,
         status: 'planned',
+        created_at: new Date(),
       })
       .returning({ id: mesocycles.id })
       .get()
