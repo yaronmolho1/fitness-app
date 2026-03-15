@@ -9,6 +9,11 @@ import type {
   SaveRunningWorkoutInput,
   SaveRunningWorkoutResult,
 } from './save-running-workout'
+import { saveMmaWorkoutCore } from './save-mma-workout'
+import type {
+  SaveMmaWorkoutInput,
+  SaveMmaWorkoutResult,
+} from './save-mma-workout'
 
 export type {
   SaveWorkoutInput,
@@ -22,6 +27,11 @@ export type {
   SaveRunningWorkoutResult,
 } from './save-running-workout'
 
+export type {
+  SaveMmaWorkoutInput,
+  SaveMmaWorkoutResult,
+} from './save-mma-workout'
+
 export async function saveWorkout(input: SaveWorkoutInput): Promise<SaveWorkoutResult> {
   const result = await saveWorkoutCore(db, input)
   if (result.success) {
@@ -34,6 +44,16 @@ export async function saveRunningWorkout(
   input: SaveRunningWorkoutInput
 ): Promise<SaveRunningWorkoutResult> {
   const result = await saveRunningWorkoutCore(db, input)
+  if (result.success) {
+    revalidatePath('/')
+  }
+  return result
+}
+
+export async function saveMmaWorkout(
+  input: SaveMmaWorkoutInput
+): Promise<SaveMmaWorkoutResult> {
+  const result = await saveMmaWorkoutCore(db, input)
   if (result.success) {
     revalidatePath('/')
   }

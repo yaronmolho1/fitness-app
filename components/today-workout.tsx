@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { WorkoutLoggingForm } from '@/components/workout-logging-form'
 import { RunningLoggingForm } from '@/components/running-logging-form'
+import { MmaLoggingForm } from '@/components/mma-logging-form'
 import { cn } from '@/lib/utils'
 import type { SlotData, MesocycleInfo, TemplateInfo } from '@/lib/today/queries'
 
@@ -266,7 +267,13 @@ function RunningDisplay({
   )
 }
 
-function MmaDisplay({ data }: { data: WorkoutResponse }) {
+function MmaDisplay({
+  data,
+  onStartLogging,
+}: {
+  data: WorkoutResponse
+  onStartLogging: () => void
+}) {
   const { template } = data
 
   return (
@@ -283,6 +290,15 @@ function MmaDisplay({ data }: { data: WorkoutResponse }) {
           )}
         </CardContent>
       </Card>
+
+      <button
+        type="button"
+        data-testid="start-mma-logging-btn"
+        onClick={onStartLogging}
+        className="w-full rounded-xl bg-primary py-3.5 text-base font-semibold text-primary-foreground shadow-lg active:scale-[0.98] transition-transform"
+      >
+        Log Session
+      </button>
     </div>
   )
 }
@@ -292,6 +308,7 @@ export function TodayWorkout() {
   const [error, setError] = useState(false)
   const [isLogging, setIsLogging] = useState(false)
   const [isLoggingRun, setIsLoggingRun] = useState(false)
+  const [isLoggingMma, setIsLoggingMma] = useState(false)
 
   useEffect(() => {
     fetch('/api/today')
@@ -378,7 +395,15 @@ export function TodayWorkout() {
       )
     }
     if (data.template.modality === 'mma') {
-      return <MmaDisplay data={data} />
+      if (isLoggingMma) {
+        return <MmaLoggingForm data={data} />
+      }
+      return (
+        <MmaDisplay
+          data={data}
+          onStartLogging={() => setIsLoggingMma(true)}
+        />
+      )
     }
     if (isLogging && data.template.modality === 'resistance') {
       return <WorkoutLoggingForm data={data} />
