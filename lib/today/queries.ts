@@ -36,6 +36,15 @@ type TemplateInfo = {
   name: string
   modality: string
   notes: string | null
+  // Running-specific
+  run_type: string | null
+  target_pace: string | null
+  hr_zone: number | null
+  interval_count: number | null
+  interval_rest: number | null
+  coaching_cues: string | null
+  // MMA-specific
+  planned_duration: number | null
 }
 
 type WorkoutResult = {
@@ -175,6 +184,13 @@ export async function getTodayWorkout(today: string): Promise<TodayResult> {
       name: template.name,
       modality: template.modality,
       notes: template.notes,
+      run_type: template.run_type,
+      target_pace: template.target_pace,
+      hr_zone: template.hr_zone,
+      interval_count: template.interval_count,
+      interval_rest: template.interval_rest,
+      coaching_cues: template.coaching_cues,
+      planned_duration: template.planned_duration,
     },
     slots: slots as SlotData[],
   }
