@@ -613,6 +613,59 @@ describe('cloneMesocycle', () => {
     })
   })
 
+  describe('transaction atomicity', () => {
+    it('rolls back all rows on mid-transaction failure', async () => {
+      const { mesoId } = seedSource()
+
+      // Count rows before clone attempt
+      const mesosBefore = testDb.select().from(schema.mesocycles).all().length
+      const templatesBefore = testDb.select().from(schema.workout_templates).all().length
+      const slotsBefore = testDb.select().from(schema.exercise_slots).all().length
+      const scheduleBefore = testDb.select().from(schema.weekly_schedule).all().length
+
+      // Wrap db.transaction to inject a throw after template inserts but before slots
+      const originalTransaction = testDb.transaction.bind(testDb)
+      vi.spyOn(testDb, 'transaction').mockImplementationOnce((...args: unknown[]) => {
+        const callback = args[0] as (tx: typeof testDb) => unknown
+        return originalTransaction((tx: typeof testDb) => {
+          // Wrap tx.insert to throw on exercise_slots
+          const originalTxInsert = tx.insert.bind(tx)
+          const txInsertSpy = vi.spyOn(tx, 'insert').mockImplementation((...insertArgs: unknown[]) => {
+            const table = insertArgs[0] as Parameters<typeof tx.insert>[0]
+            if (table === schema.exercise_slots) {
+              txInsertSpy.mockRestore()
+              throw new Error('Simulated mid-transaction failure')
+            }
+            return originalTxInsert(table)
+          })
+          return callback(tx)
+        })
+      })
+
+      const result = await cloneMesocycle({
+        source_id: mesoId,
+        name: 'Should Not Exist',
+        start_date: '2026-03-01',
+      })
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toBeDefined()
+      }
+
+      // Verify no partial rows were created
+      const mesosAfter = testDb.select().from(schema.mesocycles).all().length
+      const templatesAfter = testDb.select().from(schema.workout_templates).all().length
+      const slotsAfter = testDb.select().from(schema.exercise_slots).all().length
+      const scheduleAfter = testDb.select().from(schema.weekly_schedule).all().length
+
+      expect(mesosAfter).toBe(mesosBefore)
+      expect(templatesAfter).toBe(templatesBefore)
+      expect(slotsAfter).toBe(slotsBefore)
+      expect(scheduleAfter).toBe(scheduleBefore)
+    })
+  })
+
   describe('edge cases', () => {
     it('clones source with templates but no slots', async () => {
       const { mesoId } = seedSource({ noSlots: true })

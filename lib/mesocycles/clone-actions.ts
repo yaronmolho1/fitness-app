@@ -59,7 +59,9 @@ export async function cloneMesocycle(input: CloneInput): Promise<CloneResult> {
   const hasDeload = input.has_deload ?? source.has_deload
   const endDate = calculateEndDate(input.start_date, workWeeks, hasDeload)
 
-  return db.transaction((tx) => {
+  let result: { success: true; id: number }
+  try {
+    result = db.transaction((tx) => {
     // Create new mesocycle
     const newMeso = tx
       .insert(mesocycles)
@@ -149,7 +151,12 @@ export async function cloneMesocycle(input: CloneInput): Promise<CloneResult> {
         .run()
     }
 
-    revalidatePath('/mesocycles')
     return { success: true as const, id: newMeso.id }
-  })
+    })
+  } catch {
+    return { success: false, error: 'Failed to clone mesocycle' }
+  }
+
+  revalidatePath('/mesocycles')
+  return result
 }
