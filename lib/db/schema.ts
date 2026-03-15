@@ -151,6 +151,7 @@ export const logged_workouts = sqliteTable('logged_workouts', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   template_id: integer('template_id'), // soft reference, NO FK constraint
   canonical_name: text('canonical_name'),
+  log_date: text('log_date').notNull(), // YYYY-MM-DD
   logged_at: integer('logged_at', { mode: 'timestamp' }).notNull(),
   rating: integer('rating'),
   notes: text('notes'),

@@ -1,0 +1,1 @@
+ALTER TABLE `logged_workouts` ADD `log_date` text NOT NULL;

@@ -30,4 +30,5 @@ export const db = drizzle(sqlite, {
     ...relationsModule,
   },
 })
+export type AppDb = typeof db
 export { sqlite }
