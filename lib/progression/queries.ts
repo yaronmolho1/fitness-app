@@ -86,7 +86,7 @@ export async function getProgressionData(
         return sum + s.actual_reps * s.actual_weight
       }
       return sum
-    }, 0) || null
+    }, 0) ?? null
 
     // Extract planned data from template_snapshot
     const snapshot = workout.template_snapshot as TemplateSnapshot
@@ -114,7 +114,7 @@ export async function getProgressionData(
             return sum + s.target_sets * reps * s.target_weight
           }
           return sum
-        }, 0) || null
+        }, 0) ?? null
       }
     }
 
