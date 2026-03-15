@@ -96,7 +96,7 @@ function ExerciseSlot({ slot }: { slot: SlotData }) {
               : 'bg-muted text-muted-foreground'
           )}
         >
-          {slot.is_main ? 'Main' : 'Accessory'}
+          {slot.is_main ? 'Main' : 'Complementary'}
         </span>
       </div>
 

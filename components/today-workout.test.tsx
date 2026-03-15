@@ -170,7 +170,7 @@ describe('TodayWorkout', () => {
     // Main badge present for main exercises
     expect(screen.getByText('Main')).toBeInTheDocument()
     // Complementary badge for non-main
-    expect(screen.getByText('Accessory')).toBeInTheDocument()
+    expect(screen.getByText('Complementary')).toBeInTheDocument()
   })
 
   it('shows week type badge (normal/deload)', async () => {
