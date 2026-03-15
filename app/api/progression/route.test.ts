@@ -70,6 +70,27 @@ describe('GET /api/progression', () => {
     expect(data.data).toEqual([])
   })
 
+  it('returns 400 when exercise_id is non-numeric', async () => {
+    const res = await GET(makeRequest({ canonical_name: 'push-a', exercise_id: 'abc' }))
+    expect(res.status).toBe(400)
+    const data = await res.json()
+    expect(data.error).toMatch(/exercise_id/)
+  })
+
+  it('returns 400 when exercise_id is zero', async () => {
+    const res = await GET(makeRequest({ canonical_name: 'push-a', exercise_id: '0' }))
+    expect(res.status).toBe(400)
+    const data = await res.json()
+    expect(data.error).toMatch(/exercise_id/)
+  })
+
+  it('returns 400 when exercise_id is negative', async () => {
+    const res = await GET(makeRequest({ canonical_name: 'push-a', exercise_id: '-5' }))
+    expect(res.status).toBe(400)
+    const data = await res.json()
+    expect(data.error).toMatch(/exercise_id/)
+  })
+
   it('returns 500 on internal error', async () => {
     mockGetProgressionData.mockRejectedValue(new Error('DB failure'))
 
