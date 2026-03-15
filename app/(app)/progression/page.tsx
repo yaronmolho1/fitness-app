@@ -1,6 +1,8 @@
 import { getExercises } from '@/lib/exercises/queries'
 import { ProgressionChart } from '@/components/progression-chart'
 
+export const dynamic = 'force-dynamic'
+
 export default async function ProgressionPage() {
   const exercises = await getExercises()
 
