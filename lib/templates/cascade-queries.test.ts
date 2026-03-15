@@ -73,6 +73,7 @@ function seedLoggedWorkout(templateId: number) {
     .values({
       template_id: templateId,
       canonical_name: 'push-a',
+      log_date: '2026-03-15',
       logged_at: new Date(),
       template_snapshot: { version: 1 },
     })
@@ -119,6 +120,7 @@ function resetTables() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       template_id INTEGER,
       canonical_name TEXT,
+      log_date TEXT NOT NULL,
       logged_at INTEGER NOT NULL,
       rating INTEGER,
       notes TEXT,

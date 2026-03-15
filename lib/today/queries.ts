@@ -12,6 +12,7 @@ import {
 
 type SlotData = {
   id: number
+  exercise_id: number
   exercise_name: string
   sets: number
   reps: string
@@ -159,6 +160,7 @@ export async function getTodayWorkout(today: string): Promise<TodayResult> {
   const slots = await db
     .select({
       id: exercise_slots.id,
+      exercise_id: exercise_slots.exercise_id,
       exercise_name: exercises.name,
       sets: exercise_slots.sets,
       reps: exercise_slots.reps,

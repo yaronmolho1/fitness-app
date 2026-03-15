@@ -30,6 +30,7 @@ function makeWorkoutData(overrides: Partial<WorkoutData> = {}): WorkoutData {
 function makeSlot(overrides: Partial<SlotData> = {}): SlotData {
   return {
     id: 1,
+    exercise_id: 10,
     exercise_name: 'Bench Press',
     sets: 4,
     reps: '8',

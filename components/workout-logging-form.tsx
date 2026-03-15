@@ -1,10 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { cn } from '@/lib/utils'
+import { saveWorkout } from '@/lib/workouts/actions'
+import type { SaveWorkoutInput } from '@/lib/workouts/actions'
 
 export type SlotData = {
   id: number
+  exercise_id: number
   exercise_name: string
   sets: number
   reps: string
@@ -66,6 +69,39 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
   )
   const [rating, setRating] = useState<number | null>(null)
   const [notes, setNotes] = useState('')
+  const [isPending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
+
+  async function handleSave() {
+    setError(null)
+    const input: SaveWorkoutInput = {
+      templateId: data.template.id,
+      logDate: data.date,
+      exercises: sortedSlots.map((slot, slotIndex) => ({
+        slotId: slot.id,
+        exerciseId: slot.exercise_id,
+        exerciseName: slot.exercise_name,
+        order: slot.order,
+        sets: (sets[slotIndex] ?? []).map((s) => ({
+          reps: parseInt(s.reps, 10) || 0,
+          weight: s.weight === '' ? null : parseFloat(s.weight),
+          rpe: s.rpe === '' ? null : parseFloat(s.rpe),
+        })),
+      })),
+      rating,
+      notes: notes || null,
+    }
+
+    startTransition(async () => {
+      const result = await saveWorkout(input)
+      if (result.success) {
+        setSaved(true)
+      } else {
+        setError(result.error)
+      }
+    })
+  }
 
   function updateSet(
     slotIndex: number,
@@ -320,13 +356,29 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
         </div>
       </div>
 
+      {/* Error message */}
+      {error && (
+        <div className="rounded-xl border border-destructive bg-destructive/10 p-4">
+          <p className="text-sm text-destructive">{error}</p>
+        </div>
+      )}
+
+      {/* Saved confirmation */}
+      {saved && (
+        <div className="rounded-xl border border-primary bg-primary/10 p-4">
+          <p className="text-sm font-medium text-primary">Workout saved!</p>
+        </div>
+      )}
+
       {/* Sticky save button */}
       <div className="fixed bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur-sm p-4 safe-area-pb">
         <button
           type="button"
-          className="w-full rounded-xl bg-primary py-3.5 text-base font-semibold text-primary-foreground shadow-lg active:scale-[0.98] transition-all hover:bg-primary/90"
+          disabled={isPending || saved}
+          onClick={handleSave}
+          className="w-full rounded-xl bg-primary py-3.5 text-base font-semibold text-primary-foreground shadow-lg active:scale-[0.98] transition-all hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none"
         >
-          Save Workout
+          {isPending ? 'Saving...' : saved ? 'Saved' : 'Save Workout'}
         </button>
       </div>
     </div>
