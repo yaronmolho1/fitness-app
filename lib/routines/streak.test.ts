@@ -205,6 +205,34 @@ describe('getStreak', () => {
     expect(streak2).toBe(3)
   })
 
+  it('counts partial-fill log as done when status is done', async () => {
+    const item = seedItem()
+    // Insert log with status='done' but only weight filled (no reps)
+    testDb
+      .insert(schema.routine_logs)
+      .values({
+        routine_item_id: item.id,
+        log_date: '2026-03-15',
+        status: 'done',
+        value_weight: 72.5,
+        value_reps: null,
+      })
+      .run()
+    testDb
+      .insert(schema.routine_logs)
+      .values({
+        routine_item_id: item.id,
+        log_date: '2026-03-16',
+        status: 'done',
+        value_weight: null,
+        value_reps: null,
+      })
+      .run()
+
+    const streak = await getStreak(item.id, '2026-03-16')
+    expect(streak).toBe(2)
+  })
+
   // Integration: done 3 days in a row
   it('integration: 3 consecutive done days = streak 3', async () => {
     const item = seedItem()

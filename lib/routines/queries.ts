@@ -86,7 +86,11 @@ export async function getStreak(
   routineItemId: number,
   today: string
 ): Promise<number> {
-  // Fetch all done/skipped logs for this item, ordered by date desc
+  // Cap lookback to 90 days to bound memory usage
+  const floor = new Date(today + 'T00:00:00Z')
+  floor.setUTCDate(floor.getUTCDate() - 90)
+  const floorDate = formatDate(floor)
+
   const logs = await db
     .select({
       log_date: routine_logs.log_date,
@@ -96,7 +100,8 @@ export async function getStreak(
     .where(
       and(
         eq(routine_logs.routine_item_id, routineItemId),
-        lte(routine_logs.log_date, today)
+        lte(routine_logs.log_date, today),
+        gte(routine_logs.log_date, floorDate)
       )
     )
     .orderBy(desc(routine_logs.log_date))
