@@ -1,5 +1,5 @@
 # Day Detail Drill-in
-**Status:** ready
+**Status:** done
 **Epic:** Calendar & Progression
 **Depends:** specs/projected-calendar.md
 

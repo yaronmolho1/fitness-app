@@ -27,7 +27,7 @@ graph TD
             SC["Server Components\n(data fetching, auth checks)"]
             CC["Client Components\n(forms, interactivity)"]
             SA["Server Actions\n(all CRUD mutations)"]
-            RH["Route Handlers\n(/api/calendar, /api/progression,\n/api/today, /api/health)"]
+            RH["Route Handlers\n(/api/calendar, /api/calendar/day,\n/api/progression, /api/today, /api/health)"]
         end
 
         subgraph DataLayer["Data Layer"]
@@ -104,7 +104,7 @@ Hybrid pattern: Server Actions for all mutations, Route Handlers for computed re
 | Pattern | Used For | Examples |
 |---------|----------|---------|
 | **Server Actions** | All form mutations (create, update, delete, log) | Create exercise, update template, log workout, clone mesocycle, cascade edit, mark routine done |
-| **Route Handlers** | Computed reads, health check, future API consumers | `GET /api/calendar`, `GET /api/progression`, `GET /api/today`, `GET /api/health` |
+| **Route Handlers** | Computed reads, health check, future API consumers | `GET /api/calendar`, `GET /api/calendar/day`, `GET /api/progression`, `GET /api/today`, `GET /api/health` |
 
 Route Handlers are intentionally kept for reads that may serve V2 consumers (LLM coach, Garmin integration, ecosystem aggregator). Server Actions save boilerplate on 15+ mutation operations with automatic cache revalidation and end-to-end type safety.
 
