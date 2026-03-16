@@ -13,7 +13,9 @@ const MODALITY_CLASSES: Record<string, string> = {
   mma: 'bg-amber-100 border-amber-300 text-amber-900 dark:bg-amber-900/30 dark:border-amber-700 dark:text-amber-200 modality-mma',
 }
 
-const DELOAD_CLASS = 'deload ring-2 ring-inset ring-purple-400 dark:ring-purple-500 bg-purple-50 dark:bg-purple-900/20'
+// Ring-only treatment avoids bg-* conflicts with modality colors and bg-card
+const DELOAD_RING = 'ring-2 ring-inset ring-purple-400 dark:ring-purple-500'
+const DELOAD_CLASS = `deload ${DELOAD_RING}`
 
 function formatMonth(year: number, month: number): string {
   return `${year}-${String(month).padStart(2, '0')}`
@@ -164,7 +166,7 @@ export function CalendarGrid({ initialMonth }: CalendarGridProps = {}) {
       {/* Legend */}
       {hasDeloadDays && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="inline-block h-3 w-3 rounded ring-2 ring-inset ring-purple-400 bg-purple-50 dark:ring-purple-500 dark:bg-purple-900/20" />
+          <span className={`inline-block h-3 w-3 rounded ${DELOAD_RING}`} />
           <span>Deload week</span>
         </div>
       )}
