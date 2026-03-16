@@ -28,6 +28,7 @@ const makeItem = (overrides = {}) => ({
   has_reps: false,
   frequency_target: 5,
   weeklyCount: 0,
+  streak: 0,
   ...overrides,
 })
 
@@ -42,6 +43,7 @@ const makeMultiFieldItem = (overrides = {}) => ({
   has_reps: true,
   frequency_target: 5,
   weeklyCount: 0,
+  streak: 0,
   ...overrides,
 })
 
@@ -291,5 +293,50 @@ describe('RoutineCheckOff', () => {
       />
     )
     expect(screen.getByText('7 / 7 this week')).toBeInTheDocument()
+  })
+
+  // T073: Streak display
+  it('displays streak when streak > 0 on pending item', () => {
+    render(
+      <RoutineCheckOff
+        items={[makeItem({ streak: 5 })]}
+        logs={[]}
+        logDate="2026-03-15"
+      />
+    )
+    expect(screen.getByTestId('streak-1')).toHaveTextContent('5-day streak')
+  })
+
+  it('does not display streak when streak = 0', () => {
+    render(
+      <RoutineCheckOff
+        items={[makeItem({ streak: 0 })]}
+        logs={[]}
+        logDate="2026-03-15"
+      />
+    )
+    expect(screen.queryByTestId('streak-1')).not.toBeInTheDocument()
+  })
+
+  it('displays streak on logged (done) item', () => {
+    render(
+      <RoutineCheckOff
+        items={[makeItem({ streak: 3 })]}
+        logs={[makeLog()]}
+        logDate="2026-03-15"
+      />
+    )
+    expect(screen.getByTestId('streak-1')).toHaveTextContent('3-day streak')
+  })
+
+  it('displays streak = 1 correctly', () => {
+    render(
+      <RoutineCheckOff
+        items={[makeItem({ streak: 1 })]}
+        logs={[makeLog()]}
+        logDate="2026-03-15"
+      />
+    )
+    expect(screen.getByTestId('streak-1')).toHaveTextContent('1-day streak')
   })
 })
