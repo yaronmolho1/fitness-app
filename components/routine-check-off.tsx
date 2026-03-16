@@ -28,6 +28,8 @@ type RoutineItemRow = {
   has_duration: boolean
   has_sets: boolean
   has_reps: boolean
+  frequency_target: number
+  weeklyCount: number
 }
 
 type FieldConfig = {
@@ -167,6 +169,9 @@ function RoutineCheckOffCard({
             <div className="mt-1 text-sm text-muted-foreground">
               {isDone ? formatLoggedValues(log, item) || 'Completed' : 'Skipped'}
             </div>
+            <div className="mt-1 text-xs text-muted-foreground">
+              {item.weeklyCount} / {item.frequency_target} this week
+            </div>
           </div>
           <Badge variant={isDone ? 'default' : 'outline'}>
             {isDone ? 'Done' : 'Skipped'}
@@ -189,6 +194,9 @@ function RoutineCheckOffCard({
             {item.category}
           </Badge>
         )}
+      </div>
+      <div className="mt-1 text-xs text-muted-foreground">
+        {item.weeklyCount} / {item.frequency_target} this week
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">
