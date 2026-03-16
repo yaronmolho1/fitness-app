@@ -13,6 +13,8 @@ const MODALITY_CLASSES: Record<string, string> = {
   mma: 'bg-amber-100 border-amber-300 text-amber-900 dark:bg-amber-900/30 dark:border-amber-700 dark:text-amber-200 modality-mma',
 }
 
+const DELOAD_CLASS = 'deload ring-2 ring-inset ring-purple-400 dark:ring-purple-500 bg-purple-50 dark:bg-purple-900/20'
+
 function formatMonth(year: number, month: number): string {
   return `${year}-${String(month).padStart(2, '0')}`
 }
@@ -77,6 +79,8 @@ export function CalendarGrid({ initialMonth }: CalendarGridProps = {}) {
     }
   }
 
+  const hasDeloadDays = days.some((d) => d.is_deload)
+
   // Build grid: pad leading empty cells for days before first of month
   const firstDow = isoDow(year, month, 1)
   const gridCells: (CalendarDay | null)[] = []
@@ -126,13 +130,15 @@ export function CalendarGrid({ initialMonth }: CalendarGridProps = {}) {
           const dayNum = parseInt(cell.date.split('-')[2], 10)
           const modalityClass = cell.modality ? MODALITY_CLASSES[cell.modality] ?? '' : ''
           const isRest = !cell.modality
+          const deloadClass = cell.is_deload ? DELOAD_CLASS : ''
 
           return (
             <div
               key={cell.date}
               data-testid={`calendar-day-${cell.date}`}
               data-status={cell.status}
-              className={`bg-card min-h-[4.5rem] p-1.5 border ${isRest ? 'border-transparent' : modalityClass}`}
+              data-deload={String(cell.is_deload)}
+              className={`bg-card min-h-[4.5rem] p-1.5 border ${isRest ? 'border-transparent' : modalityClass} ${deloadClass}`.trim()}
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium">{dayNum}</span>
@@ -154,6 +160,14 @@ export function CalendarGrid({ initialMonth }: CalendarGridProps = {}) {
           )
         })}
       </div>
+
+      {/* Legend */}
+      {hasDeloadDays && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="inline-block h-3 w-3 rounded ring-2 ring-inset ring-purple-400 bg-purple-50 dark:ring-purple-500 dark:bg-purple-900/20" />
+          <span>Deload week</span>
+        </div>
+      )}
     </div>
   )
 }
