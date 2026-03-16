@@ -26,6 +26,8 @@ const makeItem = (overrides = {}) => ({
   has_duration: false,
   has_sets: false,
   has_reps: false,
+  frequency_target: 5,
+  weeklyCount: 0,
   ...overrides,
 })
 
@@ -38,6 +40,8 @@ const makeMultiFieldItem = (overrides = {}) => ({
   has_duration: true,
   has_sets: true,
   has_reps: true,
+  frequency_target: 5,
+  weeklyCount: 0,
   ...overrides,
 })
 
@@ -231,5 +235,61 @@ describe('RoutineCheckOff', () => {
       />
     )
     expect(screen.getByText('tracking')).toBeInTheDocument()
+  })
+
+  // T072: Weekly completion count display
+  it('displays weekly count alongside frequency target for pending item', () => {
+    render(
+      <RoutineCheckOff
+        items={[makeItem({ weeklyCount: 3, frequency_target: 5 })]}
+        logs={[]}
+        logDate="2026-03-15"
+      />
+    )
+    expect(screen.getByText('3 / 5 this week')).toBeInTheDocument()
+  })
+
+  it('displays 0 weekly count when no logs this week', () => {
+    render(
+      <RoutineCheckOff
+        items={[makeItem({ weeklyCount: 0, frequency_target: 5 })]}
+        logs={[]}
+        logDate="2026-03-15"
+      />
+    )
+    expect(screen.getByText('0 / 5 this week')).toBeInTheDocument()
+  })
+
+  it('displays weekly count on logged (done) items', () => {
+    render(
+      <RoutineCheckOff
+        items={[makeItem({ weeklyCount: 4, frequency_target: 7 })]}
+        logs={[makeLog()]}
+        logDate="2026-03-15"
+      />
+    )
+    expect(screen.getByText('4 / 7 this week')).toBeInTheDocument()
+  })
+
+  it('displays weekly count on skipped items', () => {
+    render(
+      <RoutineCheckOff
+        items={[makeItem({ weeklyCount: 2, frequency_target: 5 })]}
+        logs={[makeLog({ status: 'skipped', value_weight: null })]}
+        logDate="2026-03-15"
+      />
+    )
+    expect(screen.getByText('2 / 5 this week')).toBeInTheDocument()
+  })
+
+  it('displays full completion count (7/7)', () => {
+    render(
+      <RoutineCheckOff
+        items={[makeItem({ weeklyCount: 7, frequency_target: 7 })]}
+        logs={[makeLog()]}
+        logDate="2026-03-15"
+      />
+    )
+    expect(screen.getByText('7 / 7 this week')).toBeInTheDocument()
   })
 })

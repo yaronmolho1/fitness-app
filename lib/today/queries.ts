@@ -13,6 +13,7 @@ import {
   logged_sets,
 } from '@/lib/db/schema'
 import { filterActiveRoutineItems } from '@/lib/routines/scope-filter'
+import { getWeeklyCompletionCounts } from '@/lib/routines/queries'
 
 // Response types
 
@@ -71,6 +72,8 @@ export type RoutineItemInfo = {
   has_duration: boolean
   has_sets: boolean
   has_reps: boolean
+  frequency_target: number
+  weeklyCount: number
 }
 
 export type RoutineLogInfo = {
@@ -170,6 +173,12 @@ async function getRestDayRoutines(today: string): Promise<RestDayRoutines> {
 
   const activeItems = filterActiveRoutineItems(allItems, allMesos, today)
 
+  // Fetch weekly completion counts for all active items
+  const weeklyCountMap = await getWeeklyCompletionCounts(
+    activeItems.map((item) => item.id),
+    today
+  )
+
   return {
     items: activeItems.map((item) => ({
       id: item.id,
@@ -180,6 +189,8 @@ async function getRestDayRoutines(today: string): Promise<RestDayRoutines> {
       has_duration: item.has_duration,
       has_sets: item.has_sets,
       has_reps: item.has_reps,
+      frequency_target: item.frequency_target,
+      weeklyCount: weeklyCountMap.get(item.id) ?? 0,
     })),
     logs: logs.map((log) => ({
       id: log.id,
