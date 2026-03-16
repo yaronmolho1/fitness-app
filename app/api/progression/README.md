@@ -4,3 +4,4 @@ GET route handler for exercise progression data. Returns planned vs actual weigh
 
 ## Files
 - `route.ts` — `GET /api/progression?canonical_name=...&exercise_id=...`: validates params, delegates to `getProgressionData()`, returns JSON
+- `route.test.ts` — integration tests for progression endpoint param validation and response shape

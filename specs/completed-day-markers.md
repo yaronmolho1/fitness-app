@@ -1,5 +1,5 @@
 # Completed Day Markers
-**Status:** in-progress
+**Status:** done
 **Epic:** Calendar & Progression
 **Depends:** specs/projected-calendar.md, specs/log-immutability.md
 

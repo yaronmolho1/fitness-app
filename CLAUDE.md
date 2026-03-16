@@ -26,7 +26,7 @@ specs/                 # 43 feature specs (status/epic/depends/AC/tests)
 .sisyphus/plans/
   fitness-app.md       # Detailed execution plan (Prometheus format)
 app/                   # Next.js App Router routes (README.md)
-lib/                   # Server-side logic — auth, db, exercises, mesocycles, calendar, progression, routines, templates (README.md → submodule READMEs)
+lib/                   # Server-side logic — auth, calendar, db, exercises, mesocycles, progression, routines, schedule, templates, today, workouts (README.md → submodule READMEs)
 components/            # Shared React components — nav, forms, charts (README.md)
 ```
 
