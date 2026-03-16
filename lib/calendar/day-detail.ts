@@ -202,10 +202,21 @@ export async function getDayDetail(
       })
     }
 
+    const snapshot = loggedWorkout.template_snapshot as unknown
+    if (
+      typeof snapshot !== 'object' ||
+      snapshot === null ||
+      !('version' in snapshot) ||
+      typeof (snapshot as Record<string, unknown>).version !== 'number'
+    ) {
+      // Corrupted or missing snapshot — treat as rest
+      return { type: 'rest', date }
+    }
+
     return {
       type: 'completed',
       date,
-      snapshot: loggedWorkout.template_snapshot as unknown as TemplateSnapshot,
+      snapshot: snapshot as TemplateSnapshot,
       exercises: exercisesWithSets,
       rating: loggedWorkout.rating,
       notes: loggedWorkout.notes,
@@ -253,7 +264,8 @@ export async function getDayDetail(
     .innerJoin(exercises, eq(exercise_slots.exercise_id, exercises.id))
     .where(eq(exercise_slots.template_id, template.id))
     .orderBy(asc(exercise_slots.order))
-    .all() as SlotDetail[]
+    .all()
+    .map((row) => ({ ...row, is_main: Boolean(row.is_main) })) as SlotDetail[]
 
   return {
     type: 'projected',
