@@ -24,7 +24,8 @@ Shared React components — app-level UI and navigation.
 - `workout-logging-form.tsx` — `WorkoutLoggingForm` client component: pre-filled resistance logging form with per-set actual weight/reps/RPE inputs alongside read-only planned values, numeric mobile keyboards, submit via server action
 - `progression-chart.tsx` — `ProgressionChart` client component: exercise selector + weight/volume toggle, fetches progression data from API, renders planned vs actual line chart with phase-colored dots via Recharts
 - `routine-check-off.tsx` — `RoutineCheckOff` daily routine check-off list: per-item value inputs (weight/length/duration/sets/reps based on config), Done/Skip buttons, logged items shown with recorded values; `RoutineCheckOffCard` internal component
-- `calendar-grid.tsx` — `CalendarGrid` client component: month grid with Mon–Sun columns, fetches projected calendar data from `/api/calendar`, color-coded day cells by modality (resistance/running/MMA), prev/next month navigation
+- `calendar-grid.tsx` — `CalendarGrid` client component: month grid with Mon–Sun columns, fetches projected calendar data from `/api/calendar`, color-coded day cells by modality (resistance/running/MMA), prev/next month navigation; click any day to open `DayDetailPanel`
+- `day-detail-panel.tsx` — `DayDetailPanel` slide-over sheet: fetches `/api/calendar/day` for selected date, displays rest message, projected workout (slots/running/MMA detail), or completed workout (planned vs actual sets, rating, notes)
 
 ## Subdirectories
 - `ui/` — shadcn/ui primitives (Button, Card, Input, Label)

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { CalendarDay } from '@/lib/calendar/queries'
+import { DayDetailPanel } from '@/components/day-detail-panel'
 
 const DAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -45,6 +46,7 @@ export function CalendarGrid({ initialMonth }: CalendarGridProps = {}) {
   const [month, setMonth] = useState(initMonth)
   const [days, setDays] = useState<CalendarDay[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
 
   const fetchMonth = useCallback(async (y: number, m: number) => {
     setLoading(true)
@@ -140,7 +142,11 @@ export function CalendarGrid({ initialMonth }: CalendarGridProps = {}) {
               data-testid={`calendar-day-${cell.date}`}
               data-status={cell.status}
               data-deload={String(cell.is_deload)}
-              className={`bg-card min-h-[4.5rem] p-1.5 border ${isRest ? 'border-transparent' : modalityClass} ${deloadClass}`.trim()}
+              role="button"
+              tabIndex={0}
+              onClick={() => setSelectedDate(cell.date)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSelectedDate(cell.date) }}
+              className={`bg-card min-h-[4.5rem] p-1.5 border cursor-pointer hover:bg-accent/50 transition-colors ${isRest ? 'border-transparent' : modalityClass} ${deloadClass}`.trim()}
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium">{dayNum}</span>
@@ -170,6 +176,9 @@ export function CalendarGrid({ initialMonth }: CalendarGridProps = {}) {
           <span>Deload week</span>
         </div>
       )}
+
+      {/* Day detail panel */}
+      <DayDetailPanel date={selectedDate} onClose={() => setSelectedDate(null)} />
     </div>
   )
 }
