@@ -26,6 +26,12 @@ Shared React components — app-level UI and navigation.
 - `routine-check-off.tsx` — `RoutineCheckOff` daily routine check-off list: per-item value inputs (weight/length/duration/sets/reps based on config), Done/Skip buttons, logged items shown with recorded values; `RoutineCheckOffCard` internal component
 - `calendar-grid.tsx` — `CalendarGrid` client component: month grid with Mon–Sun columns, fetches projected calendar data from `/api/calendar`, color-coded day cells by modality (resistance/running/MMA), prev/next month navigation; click any day to open `DayDetailPanel`
 - `day-detail-panel.tsx` — `DayDetailPanel` slide-over sheet: fetches `/api/calendar/day` for selected date, displays rest message, projected workout (slots/running/MMA detail), or completed workout (planned vs actual sets, rating, notes)
+- `clone-mesocycle-form.tsx` — `CloneMesocycleForm` clones a mesocycle via `cloneMesocycle` server action
+- `edit-routine-item-form.tsx` — `EditRoutineItemForm` inline edit form for routine items (name, scope, frequency, value config)
+- `routine-item-list.tsx` — `RoutineItemList` displays routine items with badges, inline edit/delete via `EditRoutineItemForm`
+- `running-logging-form.tsx` — `RunningLoggingForm` post-workout logging form for running templates (pace, HR, intervals)
+- `mma-logging-form.tsx` — `MmaLoggingForm` post-workout logging form for MMA/BJJ templates (duration, feeling, notes)
 
 ## Subdirectories
-- `ui/` — shadcn/ui primitives (Button, Card, Input, Label)
+- `layout/` — app shell navigation: desktop sidebar, mobile header + drawer ([README](./layout/README.md))
+- `ui/` — shadcn/ui primitives ([README](./ui/README.md))

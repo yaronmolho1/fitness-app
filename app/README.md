@@ -7,5 +7,5 @@ Next.js App Router entry point. Route groups separate authenticated and public p
 
 ## Subdirectories
 - `(app)/` — authenticated routes: dashboard, exercises, mesocycles, future calendar/routines
-- `(auth)/` — public routes: login page
-- `api/` — route handlers: auth (login/logout), health check, today workout, progression, calendar projection
+- `(auth)/` — public routes: login page ([README](./(auth)/README.md))
+- `api/` — route handlers: auth, health, today, progression, calendar ([README](./api/README.md))
