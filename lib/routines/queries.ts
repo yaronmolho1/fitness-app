@@ -68,6 +68,79 @@ export async function getWeeklyCompletionCount(
   return result?.count ?? 0
 }
 
+// Helper: format YYYY-MM-DD from a UTC Date
+function formatDate(d: Date): string {
+  return d.toISOString().slice(0, 10)
+}
+
+// Get previous day as YYYY-MM-DD
+function prevDay(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00Z')
+  d.setUTCDate(d.getUTCDate() - 1)
+  return formatDate(d)
+}
+
+// Streak = consecutive calendar days with status='done' ending on today (or yesterday if today has no log).
+// Skipped or missing day breaks streak.
+export async function getStreak(
+  routineItemId: number,
+  today: string
+): Promise<number> {
+  // Fetch all done/skipped logs for this item, ordered by date desc
+  const logs = await db
+    .select({
+      log_date: routine_logs.log_date,
+      status: routine_logs.status,
+    })
+    .from(routine_logs)
+    .where(
+      and(
+        eq(routine_logs.routine_item_id, routineItemId),
+        lte(routine_logs.log_date, today)
+      )
+    )
+    .orderBy(desc(routine_logs.log_date))
+    .all()
+
+  const logMap = new Map(logs.map((l) => [l.log_date, l.status]))
+
+  // Determine anchor: today if logged as done, else yesterday
+  let anchor = today
+  if (logMap.get(today) === 'done') {
+    anchor = today
+  } else if (logMap.get(today) === 'skipped') {
+    return 0
+  } else {
+    // No log today — anchor to yesterday
+    anchor = prevDay(today)
+  }
+
+  // Walk backwards from anchor counting consecutive 'done' days
+  let streak = 0
+  let current = anchor
+  while (logMap.get(current) === 'done') {
+    streak++
+    current = prevDay(current)
+  }
+
+  return streak
+}
+
+// Batch fetch streaks for multiple routine items
+export async function getStreaks(
+  routineItemIds: number[],
+  today: string
+): Promise<Map<number, number>> {
+  if (routineItemIds.length === 0) return new Map()
+
+  const map = new Map<number, number>()
+  // For now, fetch individually. Can optimize with a single query later if needed.
+  for (const id of routineItemIds) {
+    map.set(id, await getStreak(id, today))
+  }
+  return map
+}
+
 // Batch fetch weekly counts for multiple routine items
 export async function getWeeklyCompletionCounts(
   routineItemIds: number[],
