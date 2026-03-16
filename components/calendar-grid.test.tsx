@@ -359,3 +359,134 @@ describe('CalendarGrid – status markers', () => {
     expect(screen.getByTestId('calendar-day-2026-03-06').querySelector('[data-testid="completed-marker"]')).toBeInTheDocument()
   })
 })
+
+// T068: deload week distinction
+describe('CalendarGrid – deload week distinction', () => {
+  // Mesocycle with 2 work weeks + deload starting Mar 2 (Mon)
+  // W1=Mar2-8, W2=Mar9-15, Deload=Mar16-22
+  const DAYS_WITH_DELOAD: CalendarDay[] = Array.from({ length: 31 }, (_, i) => {
+    const day = i + 1
+    const date = `2026-03-${String(day).padStart(2, '0')}`
+    // Days 2, 9: normal work week workout days
+    if (day === 2) return { date, template_name: 'Push A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'projected' }
+    if (day === 9) return { date, template_name: 'Push A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'projected' }
+    // Days 3-8, 10-15: rest within normal weeks
+    if (day >= 3 && day <= 8) return { date, template_name: null, modality: null, mesocycle_id: 1, is_deload: false, status: 'rest' }
+    if (day >= 10 && day <= 15) return { date, template_name: null, modality: null, mesocycle_id: 1, is_deload: false, status: 'rest' }
+    // Day 16: deload workout day
+    if (day === 16) return { date, template_name: 'Push Deload', modality: 'resistance', mesocycle_id: 1, is_deload: true, status: 'projected' }
+    // Days 17-22: deload rest days
+    if (day >= 17 && day <= 22) return { date, template_name: null, modality: null, mesocycle_id: 1, is_deload: true, status: 'rest' }
+    // Outside mesocycle
+    return { date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest' }
+  })
+
+  afterEach(() => {
+    cleanup()
+    vi.restoreAllMocks()
+  })
+
+  beforeEach(() => {
+    mockFetch({ '2026-03': DAYS_WITH_DELOAD })
+  })
+
+  it('deload day has data-deload="true" attribute', async () => {
+    render(<CalendarGrid initialMonth="2026-03" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('calendar-day-2026-03-16')).toBeInTheDocument()
+    })
+
+    expect(screen.getByTestId('calendar-day-2026-03-16').dataset.deload).toBe('true')
+  })
+
+  it('normal day has data-deload="false" attribute', async () => {
+    render(<CalendarGrid initialMonth="2026-03" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('calendar-day-2026-03-02')).toBeInTheDocument()
+    })
+
+    expect(screen.getByTestId('calendar-day-2026-03-02').dataset.deload).toBe('false')
+  })
+
+  it('deload day has distinct visual class', async () => {
+    render(<CalendarGrid initialMonth="2026-03" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('calendar-day-2026-03-16')).toBeInTheDocument()
+    })
+
+    expect(screen.getByTestId('calendar-day-2026-03-16').className).toMatch(/deload/)
+  })
+
+  it('deload rest day (no workout) also has deload visual treatment', async () => {
+    render(<CalendarGrid initialMonth="2026-03" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('calendar-day-2026-03-17')).toBeInTheDocument()
+    })
+
+    expect(screen.getByTestId('calendar-day-2026-03-17').dataset.deload).toBe('true')
+    expect(screen.getByTestId('calendar-day-2026-03-17').className).toMatch(/deload/)
+  })
+
+  it('normal work week day does not have deload class', async () => {
+    render(<CalendarGrid initialMonth="2026-03" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('calendar-day-2026-03-02')).toBeInTheDocument()
+    })
+
+    expect(screen.getByTestId('calendar-day-2026-03-02').className).not.toMatch(/deload/)
+  })
+
+  it('day outside mesocycle does not have deload class', async () => {
+    render(<CalendarGrid initialMonth="2026-03" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('calendar-day-2026-03-01')).toBeInTheDocument()
+    })
+
+    expect(screen.getByTestId('calendar-day-2026-03-01').className).not.toMatch(/deload/)
+  })
+
+  it('deload visual treatment is distinct from modality colors', async () => {
+    render(<CalendarGrid initialMonth="2026-03" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('calendar-day-2026-03-16')).toBeInTheDocument()
+    })
+
+    const deloadDay = screen.getByTestId('calendar-day-2026-03-16')
+    expect(deloadDay.className).toMatch(/deload/)
+    expect(deloadDay.className).toMatch(/resistance/)
+  })
+
+  it('renders a legend identifying deload treatment', async () => {
+    render(<CalendarGrid initialMonth="2026-03" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('calendar-day-2026-03-16')).toBeInTheDocument()
+    })
+
+    expect(screen.getByText('Deload week')).toBeInTheDocument()
+  })
+
+  it('no deload legend when no deload days in month', async () => {
+    const NO_DELOAD_DAYS: CalendarDay[] = Array.from({ length: 31 }, (_, i) => {
+      const day = i + 1
+      const date = `2026-03-${String(day).padStart(2, '0')}`
+      return { date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest' as const }
+    })
+
+    mockFetch({ '2026-03': NO_DELOAD_DAYS })
+    render(<CalendarGrid initialMonth="2026-03" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('calendar-day-2026-03-01')).toBeInTheDocument()
+    })
+
+    expect(screen.queryByText('Deload week')).not.toBeInTheDocument()
+  })
+})
