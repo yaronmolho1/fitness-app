@@ -1,5 +1,5 @@
 # Rest Day Display
-**Status:** ready
+**Status:** done
 **Epic:** Today's Workout
 **Depends:** specs/view-todays-planned-workout.md, specs/daily-routine-check-off.md
 

@@ -1,5 +1,5 @@
 # Routine Streaks & Counts
-**Status:** ready
+**Status:** done
 **Epic:** Daily Routines
 **Depends:** specs/daily-routine-check-off.md
 

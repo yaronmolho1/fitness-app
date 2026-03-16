@@ -1,5 +1,5 @@
 # Daily Routine Check-off
-**Status:** in-progress
+**Status:** done
 **Epic:** Daily Routines
 **Depends:** specs/routine-item-crud.md
 
