@@ -13,7 +13,7 @@ import {
   logged_sets,
 } from '@/lib/db/schema'
 import { filterActiveRoutineItems } from '@/lib/routines/scope-filter'
-import { getWeeklyCompletionCounts } from '@/lib/routines/queries'
+import { getWeeklyCompletionCounts, getStreaks } from '@/lib/routines/queries'
 
 // Response types
 
@@ -74,6 +74,7 @@ export type RoutineItemInfo = {
   has_reps: boolean
   frequency_target: number
   weeklyCount: number
+  streak: number
 }
 
 export type RoutineLogInfo = {
@@ -173,11 +174,13 @@ async function getRestDayRoutines(today: string): Promise<RestDayRoutines> {
 
   const activeItems = filterActiveRoutineItems(allItems, allMesos, today)
 
-  // Fetch weekly completion counts for all active items
-  const weeklyCountMap = await getWeeklyCompletionCounts(
-    activeItems.map((item) => item.id),
-    today
-  )
+  const itemIds = activeItems.map((item) => item.id)
+
+  // Fetch weekly completion counts and streaks for all active items
+  const [weeklyCountMap, streakMap] = await Promise.all([
+    getWeeklyCompletionCounts(itemIds, today),
+    getStreaks(itemIds, today),
+  ])
 
   return {
     items: activeItems.map((item) => ({
@@ -191,6 +194,7 @@ async function getRestDayRoutines(today: string): Promise<RestDayRoutines> {
       has_reps: item.has_reps,
       frequency_target: item.frequency_target,
       weeklyCount: weeklyCountMap.get(item.id) ?? 0,
+      streak: streakMap.get(item.id) ?? 0,
     })),
     logs: logs.map((log) => ({
       id: log.id,

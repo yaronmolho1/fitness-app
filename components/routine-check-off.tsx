@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Flame } from 'lucide-react'
 import { markRoutineDone, markRoutineSkipped } from '@/lib/routines/actions'
 
 type RoutineLogRow = {
@@ -30,6 +31,7 @@ type RoutineItemRow = {
   has_reps: boolean
   frequency_target: number
   weeklyCount: number
+  streak: number
 }
 
 type FieldConfig = {
@@ -169,8 +171,14 @@ function RoutineCheckOffCard({
             <div className="mt-1 text-sm text-muted-foreground">
               {isDone ? formatLoggedValues(log, item) || 'Completed' : 'Skipped'}
             </div>
-            <div className="mt-1 text-xs text-muted-foreground">
-              {item.weeklyCount} / {item.frequency_target} this week
+            <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+              <span>{item.weeklyCount} / {item.frequency_target} this week</span>
+              {item.streak > 0 && (
+                <span className="inline-flex items-center gap-0.5 text-orange-600 dark:text-orange-400" data-testid={`streak-${item.id}`}>
+                  <Flame className="h-3 w-3" />
+                  {item.streak}-day streak
+                </span>
+              )}
             </div>
           </div>
           <Badge variant={isDone ? 'default' : 'outline'}>
@@ -195,8 +203,14 @@ function RoutineCheckOffCard({
           </Badge>
         )}
       </div>
-      <div className="mt-1 text-xs text-muted-foreground">
-        {item.weeklyCount} / {item.frequency_target} this week
+      <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+        <span>{item.weeklyCount} / {item.frequency_target} this week</span>
+        {item.streak > 0 && (
+          <span className="inline-flex items-center gap-0.5 text-orange-600 dark:text-orange-400" data-testid={`streak-${item.id}`}>
+            <Flame className="h-3 w-3" />
+            {item.streak}-day streak
+          </span>
+        )}
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">
