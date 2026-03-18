@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getMesocycleById } from '@/lib/mesocycles/queries'
+import { PageContainer } from '@/components/layout/page-container'
 import { CloneMesocycleForm } from '@/components/clone-mesocycle-form'
 
 export const dynamic = 'force-dynamic'
@@ -18,22 +19,24 @@ export default async function CloneMesocyclePage({
   if (!meso) notFound()
 
   return (
-    <div className="mx-auto max-w-lg space-y-6 px-4 py-6">
-      <div className="space-y-1">
-        <Link href={`/mesocycles/${meso.id}`} className="text-sm text-muted-foreground transition-colors hover:text-foreground hover:underline">
-          {meso.name}
-        </Link>
-        <h1 className="text-2xl font-bold">Clone Mesocycle</h1>
-      </div>
+    <PageContainer variant="narrow">
+      <div className="space-y-6">
+        <div className="space-y-1">
+          <Link href={`/mesocycles/${meso.id}`} className="text-sm text-muted-foreground transition-colors hover:text-foreground hover:underline">
+            {meso.name}
+          </Link>
+          <h1 className="text-2xl font-bold">Clone Mesocycle</h1>
+        </div>
 
-      <CloneMesocycleForm
-        source={{
-          id: meso.id,
-          name: meso.name,
-          work_weeks: meso.work_weeks,
-          has_deload: meso.has_deload,
-        }}
-      />
-    </div>
+        <CloneMesocycleForm
+          source={{
+            id: meso.id,
+            name: meso.name,
+            work_weeks: meso.work_weeks,
+            has_deload: meso.has_deload,
+          }}
+        />
+      </div>
+    </PageContainer>
   )
 }

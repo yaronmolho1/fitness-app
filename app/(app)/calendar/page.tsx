@@ -1,12 +1,16 @@
+import { PageContainer } from '@/components/layout/page-container'
+import { PageHeader } from '@/components/layout/page-header'
 import { CalendarGrid } from '@/components/calendar-grid'
 
 export const dynamic = 'force-dynamic'
 
 export default function CalendarPage() {
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">Calendar</h1>
-      <CalendarGrid />
-    </div>
+    <PageContainer variant="wide">
+      <div className="space-y-6">
+        <PageHeader title="Calendar" className="mb-0" />
+        <CalendarGrid />
+      </div>
+    </PageContainer>
   )
 }

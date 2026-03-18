@@ -1,9 +1,14 @@
+import { PageContainer } from '@/components/layout/page-container'
+import { PageHeader } from '@/components/layout/page-header'
 import { TodayWorkout } from '@/components/today-workout'
 
 export default function TodayPage() {
   return (
-    <div className="mx-auto max-w-lg space-y-6 px-4 py-6">
-      <TodayWorkout />
-    </div>
+    <PageContainer variant="narrow">
+      <div className="space-y-6">
+        <PageHeader title="Today" className="mb-0" />
+        <TodayWorkout />
+      </div>
+    </PageContainer>
   )
 }
