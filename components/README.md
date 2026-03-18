@@ -31,6 +31,7 @@ Shared React components — app-level UI and navigation.
 - `routine-item-list.tsx` — `RoutineItemList` displays routine items with badges, inline edit/delete via `EditRoutineItemForm`
 - `running-logging-form.tsx` — `RunningLoggingForm` post-workout logging form for running templates (pace, HR, intervals)
 - `mma-logging-form.tsx` — `MmaLoggingForm` post-workout logging form for MMA/BJJ templates (duration, feeling, notes)
+- `empty-state.tsx` — `EmptyState` shared empty state with optional icon, message, description, and action button
 
 ## Subdirectories
 - `layout/` — app shell navigation: desktop sidebar, mobile header + drawer ([README](./layout/README.md))
