@@ -2,8 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { ListChecks } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/empty-state'
 import { formatInputFields, formatScopeSummary } from '@/lib/routines/format'
 import type { RoutineItemWithMesocycle } from '@/lib/routines/queries'
 import { deleteRoutineItem } from '@/lib/routines/actions'
@@ -31,10 +33,11 @@ export function RoutineItemList({
 
   if (items.length === 0) {
     return (
-      <div className="py-12 text-center text-muted-foreground">
-        <p className="text-lg font-medium">No routine items yet</p>
-        <p className="mt-1">Create your first routine item to start tracking.</p>
-      </div>
+      <EmptyState
+        icon={ListChecks}
+        message="No routine items yet"
+        description="Create your first routine item to start tracking."
+      />
     )
   }
 
