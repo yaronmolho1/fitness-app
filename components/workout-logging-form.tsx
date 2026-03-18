@@ -187,7 +187,7 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
             </div>
 
             {/* Column headers */}
-            <div className="grid grid-cols-[2rem_1fr_1fr_2rem] gap-2 px-4 pb-1">
+            <div className="grid grid-cols-[2rem_1fr_1fr_2.75rem] gap-2 px-4 pb-1">
               <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider text-center">
                 Set
               </div>
@@ -206,12 +206,12 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
                 <div
                   key={setIndex}
                   data-testid="set-row"
-                  className="grid grid-cols-[2rem_1fr_1fr_2rem] gap-2 items-center"
+                  className="grid grid-cols-[2rem_1fr_1fr_2.75rem] gap-2 items-center"
                 >
                   {/* Set number label */}
                   <div
                     data-testid="set-number-label"
-                    className="flex h-10 items-center justify-center text-sm font-bold tabular-nums text-muted-foreground"
+                    className="flex min-h-[44px] items-center justify-center text-sm font-bold tabular-nums text-muted-foreground"
                   >
                     {setIndex + 1}
                   </div>
@@ -227,7 +227,7 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
                     onChange={(e) =>
                       updateSet(slotIndex, setIndex, 'weight', e.target.value)
                     }
-                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="min-h-[44px] w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   />
 
                   {/* Reps input */}
@@ -241,7 +241,7 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
                     onChange={(e) =>
                       updateSet(slotIndex, setIndex, 'reps', e.target.value)
                     }
-                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="min-h-[44px] w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   />
 
                   {/* Remove set */}

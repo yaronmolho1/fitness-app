@@ -64,6 +64,23 @@ describe('touch target enforcement', () => {
     })
   })
 
+  // AC12: Weight/reps inputs — 44px touch target
+  describe('weight and reps inputs', () => {
+    it('has min-h of 44px for touch target compliance', () => {
+      const data = makeWorkoutData({
+        slots: [makeSlot({ sets: 2 })],
+      })
+      render(<WorkoutLoggingForm data={data} />)
+
+      const weightInputs = screen.getAllByRole('textbox', { name: /actual weight/i })
+      const repsInputs = screen.getAllByRole('textbox', { name: /actual reps/i })
+
+      for (const input of [...weightInputs, ...repsInputs]) {
+        expect(input.className).toMatch(/min-h-\[44px\]/)
+      }
+    })
+  })
+
   // AC14: Add Set button — min height 44px
   describe('add set button', () => {
     it('has min-h of 44px', () => {
