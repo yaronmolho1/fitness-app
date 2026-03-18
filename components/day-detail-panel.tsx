@@ -105,10 +105,12 @@ function CompletedExerciseRow({ exercise, planned }: {
             <span className="text-muted-foreground w-10">Set {set.set_number}</span>
             <span>{set.actual_reps ?? '-'} reps</span>
             <span>{set.actual_weight != null ? `${set.actual_weight} kg` : '-'}</span>
-            <span>{set.actual_rpe != null ? `RPE ${set.actual_rpe}` : ''}</span>
           </div>
         ))}
       </div>
+      {exercise.actual_rpe != null && (
+        <div className="mt-1 text-xs text-muted-foreground">RPE {exercise.actual_rpe}</div>
+      )}
     </div>
   )
 }

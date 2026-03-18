@@ -282,17 +282,19 @@ describe('WorkoutLoggingForm', () => {
     })
   })
 
-  // T049 — Actual set input fields
+  // T049 — Actual RPE input (per-exercise)
   describe('actual RPE input', () => {
-    it('renders an RPE input for each set row', () => {
+    it('renders one RPE input per exercise', () => {
       const data = makeWorkoutData({
-        slots: [makeSlot({ sets: 3 })],
+        slots: [
+          makeSlot({ id: 1, exercise_name: 'Bench Press', sets: 3, order: 1 }),
+          makeSlot({ id: 2, exercise_name: 'OHP', sets: 2, order: 2 }),
+        ],
       })
       render(<WorkoutLoggingForm data={data} />)
 
-      for (let i = 0; i < 3; i++) {
-        expect(screen.getByTestId(`rpe-input-0-${i}`)).toBeInTheDocument()
-      }
+      expect(screen.getByTestId('rpe-input-0')).toBeInTheDocument()
+      expect(screen.getByTestId('rpe-input-1')).toBeInTheDocument()
     })
 
     it('RPE input starts empty (not pre-filled)', () => {
@@ -301,7 +303,7 @@ describe('WorkoutLoggingForm', () => {
       })
       render(<WorkoutLoggingForm data={data} />)
 
-      const rpeInput = screen.getByTestId('rpe-input-0-0') as HTMLInputElement
+      const rpeInput = screen.getByTestId('rpe-input-0') as HTMLInputElement
       expect(rpeInput.value).toBe('')
     })
 
@@ -311,7 +313,7 @@ describe('WorkoutLoggingForm', () => {
       })
       render(<WorkoutLoggingForm data={data} />)
 
-      const rpeInput = screen.getByTestId('rpe-input-0-0') as HTMLInputElement
+      const rpeInput = screen.getByTestId('rpe-input-0') as HTMLInputElement
       expect(rpeInput.inputMode).toBe('numeric')
     })
 
@@ -322,12 +324,12 @@ describe('WorkoutLoggingForm', () => {
       })
       render(<WorkoutLoggingForm data={data} />)
 
-      const rpeInput = screen.getByTestId('rpe-input-0-0') as HTMLInputElement
+      const rpeInput = screen.getByTestId('rpe-input-0') as HTMLInputElement
       await user.type(rpeInput, '7')
       expect(rpeInput.value).toBe('7')
     })
 
-    it('RPE column header is shown', () => {
+    it('RPE label is shown per exercise', () => {
       const data = makeWorkoutData({
         slots: [makeSlot({ sets: 1 })],
       })
@@ -360,14 +362,13 @@ describe('WorkoutLoggingForm', () => {
       expect(planned).toHaveTextContent('10')
     })
 
-    it('shows planned RPE as read-only reference when present', () => {
+    it('shows planned RPE in exercise RPE section when present', () => {
       const data = makeWorkoutData({
         slots: [makeSlot({ sets: 1, rpe: 8 })],
       })
       render(<WorkoutLoggingForm data={data} />)
 
-      const planned = screen.getByTestId('planned-rpe-0-0')
-      expect(planned).toHaveTextContent('8')
+      expect(screen.getByText(/plan: 8/)).toBeInTheDocument()
     })
 
     it('shows dash for planned weight when null', () => {
@@ -380,14 +381,13 @@ describe('WorkoutLoggingForm', () => {
       expect(planned).toHaveTextContent('—')
     })
 
-    it('shows dash for planned RPE when null', () => {
+    it('does not show planned RPE when null', () => {
       const data = makeWorkoutData({
         slots: [makeSlot({ sets: 1, rpe: null })],
       })
       render(<WorkoutLoggingForm data={data} />)
 
-      const planned = screen.getByTestId('planned-rpe-0-0')
-      expect(planned).toHaveTextContent('—')
+      expect(screen.queryByText(/plan:/)).not.toBeInTheDocument()
     })
 
     it('planned values are not editable inputs', () => {
@@ -398,25 +398,26 @@ describe('WorkoutLoggingForm', () => {
 
       const plannedWeight = screen.getByTestId('planned-weight-0-0')
       const plannedReps = screen.getByTestId('planned-reps-0-0')
-      const plannedRpe = screen.getByTestId('planned-rpe-0-0')
 
       // Should not be input elements
       expect(plannedWeight.tagName).not.toBe('INPUT')
       expect(plannedReps.tagName).not.toBe('INPUT')
-      expect(plannedRpe.tagName).not.toBe('INPUT')
     })
   })
 
-  describe('set independence with RPE', () => {
-    it('editing RPE on one set does not affect another', async () => {
+  describe('exercise RPE independence', () => {
+    it('editing RPE on one exercise does not affect another', async () => {
       const user = userEvent.setup()
       const data = makeWorkoutData({
-        slots: [makeSlot({ sets: 2 })],
+        slots: [
+          makeSlot({ id: 1, exercise_name: 'Bench Press', sets: 2, order: 1 }),
+          makeSlot({ id: 2, exercise_name: 'OHP', sets: 2, order: 2 }),
+        ],
       })
       render(<WorkoutLoggingForm data={data} />)
 
-      const rpe0 = screen.getByTestId('rpe-input-0-0') as HTMLInputElement
-      const rpe1 = screen.getByTestId('rpe-input-0-1') as HTMLInputElement
+      const rpe0 = screen.getByTestId('rpe-input-0') as HTMLInputElement
+      const rpe1 = screen.getByTestId('rpe-input-1') as HTMLInputElement
 
       await user.type(rpe0, '9')
       expect(rpe0.value).toBe('9')
@@ -454,16 +455,12 @@ describe('WorkoutLoggingForm', () => {
       expect(within(section).getAllByTestId('set-row')).toHaveLength(3)
     })
 
-    it('copies weight and reps from last row but not RPE', async () => {
+    it('copies weight and reps from last row', async () => {
       const user = userEvent.setup()
       const data = makeWorkoutData({
         slots: [makeSlot({ sets: 1, weight: 100, reps: '8' })],
       })
       render(<WorkoutLoggingForm data={data} />)
-
-      // Edit the existing row's RPE
-      const rpe0 = screen.getByTestId('rpe-input-0-0') as HTMLInputElement
-      await user.type(rpe0, '9')
 
       // Edit weight to something different from planned
       const weight0 = screen.getByTestId('weight-input-0-0') as HTMLInputElement
@@ -474,11 +471,9 @@ describe('WorkoutLoggingForm', () => {
 
       const newWeight = screen.getByTestId('weight-input-0-1') as HTMLInputElement
       const newReps = screen.getByTestId('reps-input-0-1') as HTMLInputElement
-      const newRpe = screen.getByTestId('rpe-input-0-1') as HTMLInputElement
 
       expect(newWeight.value).toBe('105')
       expect(newReps.value).toBe('8')
-      expect(newRpe.value).toBe('')
     })
 
     it('adds empty row when no rows exist (edge case guard)', async () => {
@@ -499,11 +494,9 @@ describe('WorkoutLoggingForm', () => {
 
       const newWeight = screen.getByTestId('weight-input-0-1') as HTMLInputElement
       const newReps = screen.getByTestId('reps-input-0-1') as HTMLInputElement
-      const newRpe = screen.getByTestId('rpe-input-0-1') as HTMLInputElement
 
       expect(newWeight.value).toBe('')
       expect(newReps.value).toBe('')
-      expect(newRpe.value).toBe('')
     })
 
     it('updates set numbering after add', async () => {

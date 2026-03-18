@@ -50,13 +50,13 @@ const CREATE_SQL = `
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     logged_workout_id INTEGER NOT NULL REFERENCES logged_workouts(id) ON DELETE CASCADE,
     exercise_id INTEGER, exercise_name TEXT NOT NULL,
-    "order" INTEGER NOT NULL, created_at INTEGER
+    "order" INTEGER NOT NULL, actual_rpe REAL, created_at INTEGER
   );
   CREATE TABLE logged_sets (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     logged_exercise_id INTEGER NOT NULL REFERENCES logged_exercises(id) ON DELETE CASCADE,
     set_number INTEGER NOT NULL, actual_reps INTEGER,
-    actual_weight REAL, actual_rpe REAL, created_at INTEGER
+    actual_weight REAL, created_at INTEGER
   );
 `
 

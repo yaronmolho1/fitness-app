@@ -179,9 +179,10 @@ describe('DayDetailPanel', () => {
         {
           exercise_name: 'Bench Press',
           order: 1,
+          actual_rpe: 8.5,
           sets: [
-            { set_number: 1, actual_reps: 10, actual_weight: 82.5, actual_rpe: 8.5 },
-            { set_number: 2, actual_reps: 9, actual_weight: 82.5, actual_rpe: 9 },
+            { set_number: 1, actual_reps: 10, actual_weight: 82.5 },
+            { set_number: 2, actual_reps: 9, actual_weight: 82.5 },
           ],
         },
       ],

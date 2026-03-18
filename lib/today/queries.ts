@@ -110,13 +110,13 @@ export type LoggedSetData = {
   set_number: number
   actual_reps: number | null
   actual_weight: number | null
-  actual_rpe: number | null
 }
 
 export type LoggedExerciseData = {
   id: number
   exercise_name: string
   order: number
+  actual_rpe: number | null
   sets: LoggedSetData[]
 }
 
@@ -307,6 +307,7 @@ export async function getTodayWorkout(today: string): Promise<TodayResult> {
         id: logged_exercises.id,
         exercise_name: logged_exercises.exercise_name,
         order: logged_exercises.order,
+        actual_rpe: logged_exercises.actual_rpe,
       })
       .from(logged_exercises)
       .where(eq(logged_exercises.logged_workout_id, existingLog.id))
@@ -320,7 +321,6 @@ export async function getTodayWorkout(today: string): Promise<TodayResult> {
           set_number: logged_sets.set_number,
           actual_reps: logged_sets.actual_reps,
           actual_weight: logged_sets.actual_weight,
-          actual_rpe: logged_sets.actual_rpe,
         })
         .from(logged_sets)
         .where(eq(logged_sets.logged_exercise_id, ex.id))

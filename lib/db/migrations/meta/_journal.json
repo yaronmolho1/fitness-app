@@ -43,6 +43,13 @@
       "when": 1773577815643,
       "tag": "0005_tough_thena",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1773814002634,
+      "tag": "0006_flowery_venom",
+      "breakpoints": true
     }
   ]
 }

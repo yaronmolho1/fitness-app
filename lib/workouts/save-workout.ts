@@ -11,7 +11,6 @@ import { hasExistingLog } from './duplicate-check'
 export type SaveWorkoutSetInput = {
   reps: number
   weight: number | null
-  rpe: number | null
 }
 
 export type SaveWorkoutExerciseInput = {
@@ -19,6 +18,7 @@ export type SaveWorkoutExerciseInput = {
   exerciseId: number
   exerciseName: string
   order: number
+  rpe: number | null
   sets: SaveWorkoutSetInput[]
 }
 
@@ -50,15 +50,15 @@ function validateInput(input: SaveWorkoutInput): string | null {
   }
 
   for (const ex of input.exercises) {
+    if (ex.rpe !== null && (ex.rpe < 1 || ex.rpe > 10)) {
+      return 'RPE must be between 1 and 10'
+    }
     for (const set of ex.sets) {
       if (!set.reps || set.reps < 1) {
         return 'All sets must have reps > 0'
       }
       if (set.weight !== null && set.weight < 0) {
         return 'Weight must be non-negative'
-      }
-      if (set.rpe !== null && (set.rpe < 1 || set.rpe > 10)) {
-        return 'RPE must be between 1 and 10'
       }
     }
   }
@@ -142,6 +142,7 @@ export async function saveWorkoutCore(
             exercise_id: ex.exerciseId,
             exercise_name: ex.exerciseName,
             order: ex.order,
+            actual_rpe: ex.rpe,
             created_at: new Date(),
           })
           .returning()
@@ -155,7 +156,6 @@ export async function saveWorkoutCore(
               set_number: i + 1,
               actual_reps: set.reps,
               actual_weight: set.weight,
-              actual_rpe: set.rpe,
               created_at: new Date(),
             })
             .run()

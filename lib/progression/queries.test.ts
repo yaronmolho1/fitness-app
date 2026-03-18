@@ -75,6 +75,7 @@ const CREATE_SQL = `
     exercise_id INTEGER,
     exercise_name TEXT NOT NULL,
     "order" INTEGER NOT NULL,
+    actual_rpe REAL,
     created_at INTEGER
   );
   CREATE TABLE logged_sets (
@@ -83,7 +84,6 @@ const CREATE_SQL = `
     set_number INTEGER NOT NULL,
     actual_reps INTEGER,
     actual_weight REAL,
-    actual_rpe REAL,
     created_at INTEGER
   );
 `

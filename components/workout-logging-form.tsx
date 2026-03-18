@@ -40,7 +40,6 @@ export type WorkoutData = {
 type SetFormData = {
   weight: string
   reps: string
-  rpe: string
 }
 
 function buildInitialSets(slots: SlotData[]): SetFormData[][] {
@@ -48,7 +47,6 @@ function buildInitialSets(slots: SlotData[]): SetFormData[][] {
     Array.from({ length: slot.sets }, () => ({
       weight: slot.weight !== null ? String(slot.weight) : '',
       reps: slot.reps,
-      rpe: '',
     }))
   )
 }
@@ -67,6 +65,9 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
   const [sets, setSets] = useState<SetFormData[][]>(() =>
     buildInitialSets(sortedSlots)
   )
+  const [exerciseRpe, setExerciseRpe] = useState<(string)[]>(() =>
+    sortedSlots.map(() => '')
+  )
   const [rating, setRating] = useState<number | null>(null)
   const [notes, setNotes] = useState('')
   const [isPending, startTransition] = useTransition()
@@ -83,10 +84,10 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
         exerciseId: slot.exercise_id,
         exerciseName: slot.exercise_name,
         order: slot.order,
+        rpe: exerciseRpe[slotIndex] === '' ? null : parseFloat(exerciseRpe[slotIndex]),
         sets: (sets[slotIndex] ?? []).map((s) => ({
           reps: parseInt(s.reps, 10) || 0,
           weight: s.weight === '' ? null : parseFloat(s.weight),
-          rpe: s.rpe === '' ? null : parseFloat(s.rpe),
         })),
       })),
       rating,
@@ -122,8 +123,8 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
       const slotSets = next[slotIndex]
       const last = slotSets[slotSets.length - 1]
       const newSet: SetFormData = last
-        ? { weight: last.weight, reps: last.reps, rpe: '' }
-        : { weight: '', reps: '', rpe: '' }
+        ? { weight: last.weight, reps: last.reps }
+        : { weight: '', reps: '' }
       next[slotIndex] = [...slotSets, newSet]
       return next
     })
@@ -186,7 +187,7 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
             </div>
 
             {/* Column headers */}
-            <div className="grid grid-cols-[2.5rem_1fr_1fr_1fr_2rem] gap-2 px-4 pb-1">
+            <div className="grid grid-cols-[2.5rem_1fr_1fr_2rem] gap-2 px-4 pb-1">
               <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider text-center">
                 Set
               </div>
@@ -195,9 +196,6 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
               </div>
               <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider text-center">
                 Reps
-              </div>
-              <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider text-center">
-                RPE
               </div>
               <div />
             </div>
@@ -211,7 +209,7 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
                   className="space-y-1"
                 >
                   {/* Planned values row */}
-                  <div className="grid grid-cols-[2.5rem_1fr_1fr_1fr_2rem] gap-2 items-center">
+                  <div className="grid grid-cols-[2.5rem_1fr_1fr_2rem] gap-2 items-center">
                     <div />
                     <span
                       data-testid={`planned-weight-${slotIndex}-${setIndex}`}
@@ -225,17 +223,11 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
                     >
                       {slot.reps}
                     </span>
-                    <span
-                      data-testid={`planned-rpe-${slotIndex}-${setIndex}`}
-                      className="text-[10px] text-muted-foreground text-center tabular-nums"
-                    >
-                      {slot.rpe !== null ? slot.rpe : '\u2014'}
-                    </span>
                     <div />
                   </div>
 
                   {/* Actual inputs row */}
-                  <div className="grid grid-cols-[2.5rem_1fr_1fr_1fr_2rem] gap-2 items-center">
+                  <div className="grid grid-cols-[2.5rem_1fr_1fr_2rem] gap-2 items-center">
                     {/* Set number */}
                     <div className="flex h-10 items-center justify-center rounded-lg bg-muted/60 text-sm font-bold tabular-nums text-muted-foreground">
                       {setIndex + 1}
@@ -269,20 +261,6 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
                       className="h-10 w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     />
 
-                    {/* RPE input */}
-                    <input
-                      data-testid={`rpe-input-${slotIndex}-${setIndex}`}
-                      aria-label={`Actual RPE for set ${setIndex + 1}`}
-                      type="text"
-                      inputMode="numeric"
-                      placeholder="—"
-                      value={setData.rpe}
-                      onChange={(e) =>
-                        updateSet(slotIndex, setIndex, 'rpe', e.target.value)
-                      }
-                      className="h-10 w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    />
-
                     {/* Remove set */}
                     <button
                       type="button"
@@ -299,7 +277,7 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
             </div>
 
             {/* Add set */}
-            <div className="px-4 pb-4">
+            <div className="px-4 pb-3">
               <button
                 type="button"
                 onClick={() => addSet(slotIndex)}
@@ -307,6 +285,32 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
               >
                 + Add Set
               </button>
+            </div>
+
+            {/* Per-exercise RPE */}
+            <div className="border-t px-4 py-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">
+                  RPE {slot.rpe !== null && <span className="text-[10px]">(plan: {slot.rpe})</span>}
+                </span>
+                <input
+                  data-testid={`rpe-input-${slotIndex}`}
+                  aria-label={`RPE for ${slot.exercise_name}`}
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="—"
+                  value={exerciseRpe[slotIndex]}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    setExerciseRpe((prev) => {
+                      const next = [...prev]
+                      next[slotIndex] = val
+                      return next
+                    })
+                  }}
+                  className="h-9 w-16 rounded-lg border border-input bg-background px-2 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+              </div>
             </div>
           </div>
         ))

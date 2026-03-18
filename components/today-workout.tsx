@@ -345,6 +345,9 @@ function ResistanceSummary({ exercises }: { exercises: LoggedExerciseData[] }) {
           className="rounded-lg border bg-card p-4"
         >
           <h4 className="text-sm font-semibold">{ex.exercise_name}</h4>
+          {ex.actual_rpe !== null && (
+            <span className="text-xs text-muted-foreground">RPE {ex.actual_rpe}</span>
+          )}
           <div className="mt-2 space-y-1">
             {ex.sets.map((set) => (
               <div
@@ -357,9 +360,6 @@ function ResistanceSummary({ exercises }: { exercises: LoggedExerciseData[] }) {
                 )}
                 {set.actual_weight !== null && (
                   <span>{set.actual_weight}kg</span>
-                )}
-                {set.actual_rpe !== null && (
-                  <span className="text-xs">RPE {set.actual_rpe}</span>
                 )}
               </div>
             ))}

@@ -122,6 +122,7 @@ function createTables() {
       exercise_id INTEGER,
       exercise_name TEXT NOT NULL,
       "order" INTEGER NOT NULL,
+      actual_rpe REAL,
       created_at INTEGER
     )
   `)
@@ -132,7 +133,6 @@ function createTables() {
       set_number INTEGER NOT NULL,
       actual_reps INTEGER,
       actual_weight REAL,
-      actual_rpe REAL,
       created_at INTEGER
     )
   `)

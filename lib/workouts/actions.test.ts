@@ -77,6 +77,7 @@ const CREATE_SQL = `
     exercise_id INTEGER,
     exercise_name TEXT NOT NULL,
     "order" INTEGER NOT NULL,
+    actual_rpe REAL,
     created_at INTEGER
   );
   CREATE TABLE logged_sets (
@@ -85,7 +86,6 @@ const CREATE_SQL = `
     set_number INTEGER NOT NULL,
     actual_reps INTEGER,
     actual_weight REAL,
-    actual_rpe REAL,
     created_at INTEGER
   );
 `
@@ -118,10 +118,11 @@ function buildValidInput(): SaveWorkoutInput {
         exerciseId: 10,
         exerciseName: 'Bench Press',
         order: 1,
+        rpe: 8,
         sets: [
-          { reps: 8, weight: 80, rpe: 8 },
-          { reps: 8, weight: 80, rpe: 7.5 },
-          { reps: 7, weight: 80, rpe: 9 },
+          { reps: 8, weight: 80 },
+          { reps: 8, weight: 80 },
+          { reps: 7, weight: 80 },
         ],
       },
       {
@@ -129,10 +130,11 @@ function buildValidInput(): SaveWorkoutInput {
         exerciseId: 20,
         exerciseName: 'Overhead Press',
         order: 2,
+        rpe: null,
         sets: [
-          { reps: 10, weight: 40, rpe: null },
-          { reps: 10, weight: 40, rpe: null },
-          { reps: 9, weight: 40, rpe: null },
+          { reps: 10, weight: 40 },
+          { reps: 10, weight: 40 },
+          { reps: 9, weight: 40 },
         ],
       },
     ],
@@ -306,24 +308,34 @@ describe('saveWorkoutCore', () => {
     expect(exercises[1].order).toBe(2)
   })
 
-  it('stores actual_reps, actual_weight, actual_rpe on logged_sets', async () => {
+  it('stores actual_reps, actual_weight on logged_sets', async () => {
     await saveWorkoutCore(db, buildValidInput())
     const sets = db.select().from(schema.logged_sets).orderBy(schema.logged_sets.id).all()
 
     expect(sets[0].actual_reps).toBe(8)
     expect(sets[0].actual_weight).toBe(80)
-    expect(sets[0].actual_rpe).toBe(8)
     expect(sets[0].set_number).toBe(1)
   })
 
-  it('stores null actual_weight and actual_rpe when not provided', async () => {
+  it('stores actual_rpe on logged_exercises', async () => {
+    await saveWorkoutCore(db, buildValidInput())
+    const exercises = db
+      .select()
+      .from(schema.logged_exercises)
+      .orderBy(schema.logged_exercises.order)
+      .all()
+
+    expect(exercises[0].actual_rpe).toBe(8)
+    expect(exercises[1].actual_rpe).toBeNull()
+  })
+
+  it('stores null actual_weight when not provided', async () => {
     const input = buildValidInput()
-    input.exercises[0].sets[0] = { reps: 8, weight: null, rpe: null }
+    input.exercises[0].sets[0] = { reps: 8, weight: null }
     await saveWorkoutCore(db, input)
     const sets = db.select().from(schema.logged_sets).orderBy(schema.logged_sets.id).all()
 
     expect(sets[0].actual_weight).toBeNull()
-    expect(sets[0].actual_rpe).toBeNull()
   })
 
   it('logged_exercises reference correct logged_workout_id', async () => {
@@ -434,13 +446,13 @@ describe('saveWorkoutCore', () => {
 
   it('fails when actual_rpe is out of 1-10 range', async () => {
     const input = buildValidInput()
-    input.exercises[0].sets[0].rpe = 11
+    input.exercises[0].rpe = 11
     const result = await saveWorkoutCore(db, input)
     expect(result.success).toBe(false)
     if (!result.success) expect(result.error).toMatch(/rpe/i)
 
     const input0 = buildValidInput()
-    input0.exercises[0].sets[0].rpe = 0
+    input0.exercises[0].rpe = 0
     const result0 = await saveWorkoutCore(db, input0)
     expect(result0.success).toBe(false)
     if (!result0.success) expect(result0.error).toMatch(/rpe/i)
@@ -541,7 +553,7 @@ describe('saveWorkoutCore', () => {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         logged_workout_id INTEGER NOT NULL REFERENCES logged_workouts(id),
         exercise_id INTEGER, exercise_name TEXT NOT NULL,
-        "order" INTEGER NOT NULL, created_at INTEGER
+        "order" INTEGER NOT NULL, actual_rpe REAL, created_at INTEGER
       );
     `)
 

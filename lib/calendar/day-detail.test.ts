@@ -86,6 +86,7 @@ function createTestDb() {
       exercise_id INTEGER,
       exercise_name TEXT NOT NULL,
       "order" INTEGER NOT NULL,
+      actual_rpe REAL,
       created_at INTEGER
     );
     CREATE TABLE logged_sets (
@@ -94,7 +95,6 @@ function createTestDb() {
       set_number INTEGER NOT NULL,
       actual_reps INTEGER,
       actual_weight REAL,
-      actual_rpe REAL,
       created_at INTEGER
     );
   `)
@@ -305,14 +305,14 @@ describe('getDayDetail', () => {
       VALUES (1, 0, 1, 'normal');
       INSERT INTO logged_workouts (id, template_id, canonical_name, log_date, logged_at, rating, notes, template_snapshot)
       VALUES (1, 1, 'push-a', '2026-03-02', 1740900000, 5, null, '${snapshot}');
-      INSERT INTO logged_exercises (id, logged_workout_id, exercise_id, exercise_name, "order")
-      VALUES (1, 1, 1, 'Bench Press', 1);
-      INSERT INTO logged_sets (logged_exercise_id, set_number, actual_reps, actual_weight, actual_rpe)
-      VALUES (1, 1, 10, 82.5, 8.5);
-      INSERT INTO logged_sets (logged_exercise_id, set_number, actual_reps, actual_weight, actual_rpe)
-      VALUES (1, 2, 9, 82.5, 9);
-      INSERT INTO logged_sets (logged_exercise_id, set_number, actual_reps, actual_weight, actual_rpe)
-      VALUES (1, 3, 8, 82.5, 9.5);
+      INSERT INTO logged_exercises (id, logged_workout_id, exercise_id, exercise_name, "order", actual_rpe)
+      VALUES (1, 1, 1, 'Bench Press', 1, 8.5);
+      INSERT INTO logged_sets (logged_exercise_id, set_number, actual_reps, actual_weight)
+      VALUES (1, 1, 10, 82.5);
+      INSERT INTO logged_sets (logged_exercise_id, set_number, actual_reps, actual_weight)
+      VALUES (1, 2, 9, 82.5);
+      INSERT INTO logged_sets (logged_exercise_id, set_number, actual_reps, actual_weight)
+      VALUES (1, 3, 8, 82.5);
     `)
 
     const result = await getDayDetail(db, '2026-03-02')
@@ -322,11 +322,11 @@ describe('getDayDetail', () => {
     expect(result.exercises).toHaveLength(1)
     expect(result.exercises[0].exercise_name).toBe('Bench Press')
     expect(result.exercises[0].sets).toHaveLength(3)
+    expect(result.exercises[0].actual_rpe).toBe(8.5)
     expect(result.exercises[0].sets[0]).toEqual({
       set_number: 1,
       actual_reps: 10,
       actual_weight: 82.5,
-      actual_rpe: 8.5,
     })
     expect(result.exercises[0].sets[2].actual_reps).toBe(8)
   })
