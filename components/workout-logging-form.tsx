@@ -45,8 +45,8 @@ type SetFormData = {
 function buildInitialSets(slots: SlotData[]): SetFormData[][] {
   return slots.map((slot) =>
     Array.from({ length: slot.sets }, () => ({
-      weight: slot.weight !== null ? String(slot.weight) : '',
-      reps: slot.reps,
+      weight: '',
+      reps: '',
     }))
   )
 }
@@ -187,7 +187,7 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
             </div>
 
             {/* Column headers */}
-            <div className="grid grid-cols-[2.5rem_1fr_1fr_2rem] gap-2 px-4 pb-1">
+            <div className="grid grid-cols-[2rem_1fr_1fr_2rem] gap-2 px-4 pb-1">
               <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider text-center">
                 Set
               </div>
@@ -206,72 +206,54 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
                 <div
                   key={setIndex}
                   data-testid="set-row"
-                  className="space-y-1"
+                  className="grid grid-cols-[2rem_1fr_1fr_2rem] gap-2 items-center"
                 >
-                  {/* Planned values row */}
-                  <div className="grid grid-cols-[2.5rem_1fr_1fr_2rem] gap-2 items-center">
-                    <div />
-                    <span
-                      data-testid={`planned-weight-${slotIndex}-${setIndex}`}
-                      className="text-[10px] text-muted-foreground text-center tabular-nums"
-                    >
-                      {slot.weight !== null ? slot.weight : '\u2014'}
-                    </span>
-                    <span
-                      data-testid={`planned-reps-${slotIndex}-${setIndex}`}
-                      className="text-[10px] text-muted-foreground text-center tabular-nums"
-                    >
-                      {slot.reps}
-                    </span>
-                    <div />
+                  {/* Set number label */}
+                  <div
+                    data-testid="set-number-label"
+                    className="flex h-10 items-center justify-center text-sm font-bold tabular-nums text-muted-foreground"
+                  >
+                    {setIndex + 1}
                   </div>
 
-                  {/* Actual inputs row */}
-                  <div className="grid grid-cols-[2.5rem_1fr_1fr_2rem] gap-2 items-center">
-                    {/* Set number */}
-                    <div className="flex h-10 items-center justify-center rounded-lg bg-muted/60 text-sm font-bold tabular-nums text-muted-foreground">
-                      {setIndex + 1}
-                    </div>
+                  {/* Weight input */}
+                  <input
+                    data-testid={`weight-input-${slotIndex}-${setIndex}`}
+                    aria-label={`Actual weight for set ${setIndex + 1}`}
+                    type="text"
+                    inputMode="decimal"
+                    placeholder={slot.weight !== null ? String(slot.weight) : '\u2014'}
+                    value={setData.weight}
+                    onChange={(e) =>
+                      updateSet(slotIndex, setIndex, 'weight', e.target.value)
+                    }
+                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  />
 
-                    {/* Weight input */}
-                    <input
-                      data-testid={`weight-input-${slotIndex}-${setIndex}`}
-                      aria-label={`Actual weight for set ${setIndex + 1}`}
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="—"
-                      value={setData.weight}
-                      onChange={(e) =>
-                        updateSet(slotIndex, setIndex, 'weight', e.target.value)
-                      }
-                      className="h-10 w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    />
+                  {/* Reps input */}
+                  <input
+                    data-testid={`reps-input-${slotIndex}-${setIndex}`}
+                    aria-label={`Actual reps for set ${setIndex + 1}`}
+                    type="text"
+                    inputMode="numeric"
+                    placeholder={slot.reps || '\u2014'}
+                    value={setData.reps}
+                    onChange={(e) =>
+                      updateSet(slotIndex, setIndex, 'reps', e.target.value)
+                    }
+                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  />
 
-                    {/* Reps input */}
-                    <input
-                      data-testid={`reps-input-${slotIndex}-${setIndex}`}
-                      aria-label={`Actual reps for set ${setIndex + 1}`}
-                      type="text"
-                      inputMode="numeric"
-                      placeholder="—"
-                      value={setData.reps}
-                      onChange={(e) =>
-                        updateSet(slotIndex, setIndex, 'reps', e.target.value)
-                      }
-                      className="h-10 w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    />
-
-                    {/* Remove set */}
-                    <button
-                      type="button"
-                      aria-label={`Remove set ${setIndex + 1}`}
-                      disabled={sets[slotIndex].length <= 1}
-                      onClick={() => removeSet(slotIndex, setIndex)}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-30 disabled:pointer-events-none"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                    </button>
-                  </div>
+                  {/* Remove set */}
+                  <button
+                    type="button"
+                    aria-label={`Remove set ${setIndex + 1}`}
+                    disabled={sets[slotIndex].length <= 1}
+                    onClick={() => removeSet(slotIndex, setIndex)}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
                 </div>
               ))}
             </div>

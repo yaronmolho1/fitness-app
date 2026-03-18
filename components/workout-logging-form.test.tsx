@@ -113,28 +113,30 @@ describe('WorkoutLoggingForm', () => {
     })
   })
 
-  describe('pre-fill values', () => {
-    it('pre-fills weight from target_weight', () => {
+  describe('planned values as placeholders', () => {
+    it('shows target_weight as placeholder', () => {
       const data = makeWorkoutData({
         slots: [makeSlot({ sets: 1, weight: 100 })],
       })
       render(<WorkoutLoggingForm data={data} />)
 
       const weightInput = screen.getByTestId('weight-input-0-0') as HTMLInputElement
-      expect(weightInput.value).toBe('100')
+      expect(weightInput.placeholder).toBe('100')
+      expect(weightInput.value).toBe('')
     })
 
-    it('pre-fills reps from target_reps', () => {
+    it('shows target_reps as placeholder', () => {
       const data = makeWorkoutData({
         slots: [makeSlot({ sets: 1, reps: '12' })],
       })
       render(<WorkoutLoggingForm data={data} />)
 
       const repsInput = screen.getByTestId('reps-input-0-0') as HTMLInputElement
-      expect(repsInput.value).toBe('12')
+      expect(repsInput.placeholder).toBe('12')
+      expect(repsInput.value).toBe('')
     })
 
-    it('pre-fills all set rows with same target values', () => {
+    it('shows same placeholders on all set rows', () => {
       const data = makeWorkoutData({
         slots: [makeSlot({ sets: 3, weight: 60, reps: '10' })],
       })
@@ -143,14 +145,16 @@ describe('WorkoutLoggingForm', () => {
       for (let i = 0; i < 3; i++) {
         const w = screen.getByTestId(`weight-input-0-${i}`) as HTMLInputElement
         const r = screen.getByTestId(`reps-input-0-${i}`) as HTMLInputElement
-        expect(w.value).toBe('60')
-        expect(r.value).toBe('10')
+        expect(w.placeholder).toBe('60')
+        expect(r.placeholder).toBe('10')
+        expect(w.value).toBe('')
+        expect(r.value).toBe('')
       }
     })
   })
 
   describe('null target_weight handling', () => {
-    it('renders blank weight input when target_weight is null', () => {
+    it('renders empty weight input when target_weight is null', () => {
       const data = makeWorkoutData({
         slots: [makeSlot({ sets: 1, weight: null })],
       })
@@ -158,26 +162,27 @@ describe('WorkoutLoggingForm', () => {
 
       const weightInput = screen.getByTestId('weight-input-0-0') as HTMLInputElement
       expect(weightInput.value).toBe('')
+      expect(weightInput.placeholder).toBe('\u2014')
     })
 
-    it('does not render zero when target_weight is null', () => {
+    it('placeholder shows dash not zero when target_weight is null', () => {
       const data = makeWorkoutData({
         slots: [makeSlot({ sets: 1, weight: null })],
       })
       render(<WorkoutLoggingForm data={data} />)
 
       const weightInput = screen.getByTestId('weight-input-0-0') as HTMLInputElement
-      expect(weightInput.value).not.toBe('0')
+      expect(weightInput.placeholder).not.toBe('0')
     })
 
-    it('pre-fills reps even when weight is null', () => {
+    it('shows reps placeholder even when weight is null', () => {
       const data = makeWorkoutData({
         slots: [makeSlot({ sets: 1, weight: null, reps: '15' })],
       })
       render(<WorkoutLoggingForm data={data} />)
 
       const repsInput = screen.getByTestId('reps-input-0-0') as HTMLInputElement
-      expect(repsInput.value).toBe('15')
+      expect(repsInput.placeholder).toBe('15')
     })
   })
 
@@ -339,27 +344,25 @@ describe('WorkoutLoggingForm', () => {
     })
   })
 
-  describe('planned values display', () => {
-    it('shows planned weight as read-only reference', () => {
+  describe('planned values as input placeholders', () => {
+    it('shows planned weight as placeholder in weight input', () => {
       const data = makeWorkoutData({
         slots: [makeSlot({ sets: 1, weight: 80 })],
       })
       render(<WorkoutLoggingForm data={data} />)
 
-      const section = screen.getByTestId('exercise-section')
-      const row = within(section).getByTestId('set-row')
-      const planned = within(row).getByTestId('planned-weight-0-0')
-      expect(planned).toHaveTextContent('80')
+      const weightInput = screen.getByTestId('weight-input-0-0') as HTMLInputElement
+      expect(weightInput.placeholder).toBe('80')
     })
 
-    it('shows planned reps as read-only reference', () => {
+    it('shows planned reps as placeholder in reps input', () => {
       const data = makeWorkoutData({
         slots: [makeSlot({ sets: 1, reps: '10' })],
       })
       render(<WorkoutLoggingForm data={data} />)
 
-      const planned = screen.getByTestId('planned-reps-0-0')
-      expect(planned).toHaveTextContent('10')
+      const repsInput = screen.getByTestId('reps-input-0-0') as HTMLInputElement
+      expect(repsInput.placeholder).toBe('10')
     })
 
     it('shows planned RPE in exercise RPE section when present', () => {
@@ -371,14 +374,14 @@ describe('WorkoutLoggingForm', () => {
       expect(screen.getByText(/plan: 8/)).toBeInTheDocument()
     })
 
-    it('shows dash for planned weight when null', () => {
+    it('shows dash placeholder for weight when null', () => {
       const data = makeWorkoutData({
         slots: [makeSlot({ sets: 1, weight: null })],
       })
       render(<WorkoutLoggingForm data={data} />)
 
-      const planned = screen.getByTestId('planned-weight-0-0')
-      expect(planned).toHaveTextContent('—')
+      const weightInput = screen.getByTestId('weight-input-0-0') as HTMLInputElement
+      expect(weightInput.placeholder).toBe('\u2014')
     })
 
     it('does not show planned RPE when null', () => {
@@ -390,18 +393,14 @@ describe('WorkoutLoggingForm', () => {
       expect(screen.queryByText(/plan:/)).not.toBeInTheDocument()
     })
 
-    it('planned values are not editable inputs', () => {
+    it('no separate planned values elements exist', () => {
       const data = makeWorkoutData({
         slots: [makeSlot({ sets: 1, weight: 80, reps: '8', rpe: 8 })],
       })
       render(<WorkoutLoggingForm data={data} />)
 
-      const plannedWeight = screen.getByTestId('planned-weight-0-0')
-      const plannedReps = screen.getByTestId('planned-reps-0-0')
-
-      // Should not be input elements
-      expect(plannedWeight.tagName).not.toBe('INPUT')
-      expect(plannedReps.tagName).not.toBe('INPUT')
+      expect(screen.queryByTestId('planned-weight-0-0')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('planned-reps-0-0')).not.toBeInTheDocument()
     })
   })
 
@@ -462,10 +461,11 @@ describe('WorkoutLoggingForm', () => {
       })
       render(<WorkoutLoggingForm data={data} />)
 
-      // Edit weight to something different from planned
+      // Type values into the first row (inputs start empty with placeholders)
       const weight0 = screen.getByTestId('weight-input-0-0') as HTMLInputElement
-      await user.clear(weight0)
+      const reps0 = screen.getByTestId('reps-input-0-0') as HTMLInputElement
       await user.type(weight0, '105')
+      await user.type(reps0, '8')
 
       await user.click(screen.getByRole('button', { name: /add set/i }))
 
