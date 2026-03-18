@@ -1,4 +1,6 @@
 import { getExercises } from '@/lib/exercises/queries'
+import { PageContainer } from '@/components/layout/page-container'
+import { PageHeader } from '@/components/layout/page-header'
 import { ExerciseForm } from '@/components/exercise-form'
 import { ExerciseListWithFilters } from '@/components/exercise-list-with-filters'
 
@@ -8,14 +10,12 @@ export default async function ExercisesPage() {
   const allExercises = await getExercises()
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 px-4 py-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Exercises</h1>
+    <PageContainer variant="wide">
+      <div className="space-y-6">
+        <PageHeader title="Exercises" className="mb-0" />
+        <ExerciseForm />
+        <ExerciseListWithFilters exercises={allExercises} />
       </div>
-
-      <ExerciseForm />
-
-      <ExerciseListWithFilters exercises={allExercises} />
-    </div>
+    </PageContainer>
   )
 }
