@@ -84,13 +84,14 @@ describe('WorkoutLoggingForm — characterization', () => {
   })
 
   describe('buildInitialSets edge cases', () => {
-    it('weight=0 pre-fills as "0" not empty', () => {
+    it('weight=0 shows "0" as placeholder, input starts empty', () => {
       const data = makeWorkoutData({
         slots: [makeSlot({ sets: 1, weight: 0 })],
       })
       render(<WorkoutLoggingForm data={data} />)
       const weightInput = screen.getByTestId('weight-input-0-0') as HTMLInputElement
-      expect(weightInput.value).toBe('0')
+      expect(weightInput.value).toBe('')
+      expect(weightInput.placeholder).toBe('0')
     })
 
     it('single set slot renders exactly one row', () => {
@@ -140,11 +141,10 @@ describe('WorkoutLoggingForm — characterization', () => {
       const weightInput0 = screen.getByTestId('weight-input-0-0') as HTMLInputElement
       const weightInput1 = screen.getByTestId('weight-input-0-1') as HTMLInputElement
 
-      await user.clear(weightInput0)
       await user.type(weightInput0, '100')
 
       expect(weightInput0.value).toBe('100')
-      expect(weightInput1.value).toBe('80')
+      expect(weightInput1.value).toBe('')
     })
 
     it('editing one slot does not affect another slot', async () => {
@@ -160,11 +160,10 @@ describe('WorkoutLoggingForm — characterization', () => {
       const slot0Weight = screen.getByTestId('weight-input-0-0') as HTMLInputElement
       const slot1Weight = screen.getByTestId('weight-input-1-0') as HTMLInputElement
 
-      await user.clear(slot0Weight)
       await user.type(slot0Weight, '90')
 
       expect(slot0Weight.value).toBe('90')
-      expect(slot1Weight.value).toBe('60')
+      expect(slot1Weight.value).toBe('')
     })
   })
 
