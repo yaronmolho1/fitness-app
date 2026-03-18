@@ -187,7 +187,7 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
             </div>
 
             {/* Column headers */}
-            <div className="grid grid-cols-[2.5rem_1fr_1fr_2rem] gap-2 px-4 pb-1">
+            <div className="grid grid-cols-[2rem_1fr_1fr_2rem] gap-2 px-4 pb-1">
               <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider text-center">
                 Set
               </div>
