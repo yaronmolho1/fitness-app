@@ -1,7 +1,9 @@
 import Link from 'next/link'
+import { Layers } from 'lucide-react'
 import { getMesocycles } from '@/lib/mesocycles/queries'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
+import { EmptyState } from '@/components/empty-state'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/status-badge'
 import { StatusTransitionButton } from '@/components/status-transition-button'
@@ -25,7 +27,12 @@ export default async function MesocyclesPage() {
         />
 
         {allMesocycles.length === 0 ? (
-          <p className="text-muted-foreground">No mesocycles yet</p>
+          <EmptyState
+            icon={Layers}
+            message="No mesocycles yet"
+            description="Create your first training block to get started."
+            action={{ label: 'New Mesocycle', href: '/mesocycles/new' }}
+          />
         ) : (
           <ul className="space-y-4">
             {allMesocycles.map((meso) => (

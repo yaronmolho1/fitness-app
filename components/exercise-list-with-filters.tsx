@@ -2,8 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Dumbbell } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/empty-state'
 import { EditExerciseForm } from '@/components/edit-exercise-form'
 import { filterExercises, type Exercise, type Modality } from '@/lib/exercises/filters'
 
@@ -47,19 +49,18 @@ export function ExerciseListWithFilters({ exercises }: { exercises: Exercise[] }
       </div>
 
       {filtered.length === 0 ? (
-        <div className="py-12 text-center text-muted-foreground">
-          {hasFilters ? (
-            <>
-              <p className="text-lg font-medium">No matching exercises</p>
-              <p className="mt-1">Try adjusting your search or filter.</p>
-            </>
-          ) : (
-            <>
-              <p className="text-lg font-medium">No exercises yet</p>
-              <p className="mt-1">Create your first exercise using the form above.</p>
-            </>
-          )}
-        </div>
+        hasFilters ? (
+          <EmptyState
+            message="No matching exercises"
+            description="Try adjusting your search or filter."
+          />
+        ) : (
+          <EmptyState
+            icon={Dumbbell}
+            message="No exercises yet"
+            description="Create your first exercise using the form above."
+          />
+        )
       ) : (
         <div className="divide-y rounded-xl border">
           {filtered.map((exercise) => (
