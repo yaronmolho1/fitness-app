@@ -250,7 +250,7 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
                     aria-label={`Remove set ${setIndex + 1}`}
                     disabled={sets[slotIndex].length <= 1}
                     onClick={() => removeSet(slotIndex, setIndex)}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                    className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-30 disabled:pointer-events-none"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                   </button>
@@ -263,7 +263,7 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
               <button
                 type="button"
                 onClick={() => addSet(slotIndex)}
-                className="w-full rounded-lg border border-dashed border-muted-foreground/30 py-2 text-sm font-medium text-muted-foreground hover:border-primary hover:text-primary transition-colors active:scale-[0.98]"
+                className="w-full min-h-[44px] rounded-lg border border-dashed border-muted-foreground/30 py-2 text-sm font-medium text-muted-foreground hover:border-primary hover:text-primary transition-colors active:scale-[0.98]"
               >
                 + Add Set
               </button>
@@ -331,7 +331,7 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
                 aria-pressed={rating === value}
                 onClick={() => setRating(rating === value ? null : value)}
                 className={cn(
-                  'flex h-10 w-10 items-center justify-center rounded-lg border transition-colors',
+                  'flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border transition-colors',
                   rating !== null && value <= rating
                     ? 'border-primary bg-primary text-primary-foreground'
                     : 'border-input bg-background text-muted-foreground hover:border-primary hover:text-primary'
