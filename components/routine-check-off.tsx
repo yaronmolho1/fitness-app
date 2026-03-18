@@ -155,7 +155,7 @@ function RoutineCheckOffCard({
     const isDone = log.status === 'done'
     return (
       <div
-        className={`rounded-lg border p-4 ${isDone ? 'border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950' : 'border-muted bg-muted/30'}`}
+        className={`rounded-xl border p-4 ${isDone ? 'border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950' : 'border-muted bg-muted/30'}`}
         data-testid={`routine-card-${item.id}`}
       >
         <div className="flex items-center justify-between">
@@ -192,7 +192,7 @@ function RoutineCheckOffCard({
   // Pending — show input form
   return (
     <div
-      className="rounded-lg border p-4"
+      className="rounded-xl border p-4"
       data-testid={`routine-card-${item.id}`}
     >
       <div className="flex items-center gap-2">

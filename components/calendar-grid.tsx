@@ -112,7 +112,7 @@ export function CalendarGrid({ initialMonth }: CalendarGridProps = {}) {
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-7 gap-px bg-border rounded-lg overflow-hidden">
+      <div className="grid grid-cols-7 gap-px bg-border rounded-xl overflow-hidden">
         {/* Day headers */}
         {DAY_HEADERS.map((h) => (
           <div key={h} className="bg-muted px-2 py-1.5 text-center text-xs font-medium text-muted-foreground">

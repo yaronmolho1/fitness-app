@@ -191,7 +191,7 @@ export function ProgressionChart({ exercises }: ProgressionChartProps) {
       </div>
 
       {/* Chart area */}
-      <div className="rounded-lg border bg-card p-4 sm:p-6">
+      <div className="rounded-xl border bg-card p-4 shadow-sm sm:p-6">
         {!selectedExercise && (
           <div className="flex h-64 items-center justify-center text-muted-foreground">
             <p>Select an exercise to view progression data</p>
