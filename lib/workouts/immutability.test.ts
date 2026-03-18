@@ -52,13 +52,13 @@ const CREATE_SQL = `
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     logged_workout_id INTEGER NOT NULL REFERENCES logged_workouts(id) ON DELETE CASCADE,
     exercise_id INTEGER, exercise_name TEXT NOT NULL,
-    "order" INTEGER NOT NULL, created_at INTEGER
+    "order" INTEGER NOT NULL, actual_rpe REAL, created_at INTEGER
   );
   CREATE TABLE logged_sets (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     logged_exercise_id INTEGER NOT NULL REFERENCES logged_exercises(id) ON DELETE CASCADE,
     set_number INTEGER NOT NULL, actual_reps INTEGER,
-    actual_weight REAL, actual_rpe REAL, created_at INTEGER
+    actual_weight REAL, created_at INTEGER
   );
 `
 
@@ -90,10 +90,11 @@ function buildValidInput(): SaveWorkoutInput {
         exerciseId: 10,
         exerciseName: 'Bench Press',
         order: 1,
+        rpe: 8,
         sets: [
-          { reps: 8, weight: 80, rpe: 8 },
-          { reps: 8, weight: 80, rpe: 7.5 },
-          { reps: 7, weight: 80, rpe: 9 },
+          { reps: 8, weight: 80 },
+          { reps: 8, weight: 80 },
+          { reps: 7, weight: 80 },
         ],
       },
       {
@@ -101,10 +102,11 @@ function buildValidInput(): SaveWorkoutInput {
         exerciseId: 20,
         exerciseName: 'Overhead Press',
         order: 2,
+        rpe: null,
         sets: [
-          { reps: 10, weight: 40, rpe: null },
-          { reps: 10, weight: 40, rpe: null },
-          { reps: 9, weight: 40, rpe: null },
+          { reps: 10, weight: 40 },
+          { reps: 10, weight: 40 },
+          { reps: 9, weight: 40 },
         ],
       },
     ],

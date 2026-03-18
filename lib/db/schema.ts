@@ -170,6 +170,7 @@ export const logged_exercises = sqliteTable('logged_exercises', {
   exercise_id: integer('exercise_id'), // soft reference, NO FK constraint
   exercise_name: text('exercise_name').notNull(),
   order: integer('order').notNull(),
+  actual_rpe: real('actual_rpe'),
   created_at: integer('created_at', { mode: 'timestamp' }),
 })
 
@@ -181,7 +182,6 @@ export const logged_sets = sqliteTable('logged_sets', {
   set_number: integer('set_number').notNull(),
   actual_reps: integer('actual_reps'),
   actual_weight: real('actual_weight'),
-  actual_rpe: real('actual_rpe'),
   created_at: integer('created_at', { mode: 'timestamp' }),
 })
 
