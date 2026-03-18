@@ -44,7 +44,7 @@ export function RoutineItemList({
   return (
     <div className="divide-y rounded-xl border">
       {items.map(({ routine_item: item, mesocycle_name }) => (
-        <div key={item.id} className="px-4 py-3">
+        <div key={item.id} className="px-4 py-3 transition-colors duration-150 hover:bg-muted/50">
           {editingId === item.id ? (
             <EditRoutineItemForm
               item={item}

@@ -141,7 +141,7 @@ export function CalendarGrid({ initialMonth }: CalendarGridProps = {}) {
               tabIndex={0}
               onClick={() => setSelectedDate(cell.date)}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSelectedDate(cell.date) }}
-              className={`bg-card min-h-[4.5rem] p-1.5 border cursor-pointer hover:bg-accent/50 transition-colors ${isRest ? 'border-transparent' : modalityClass} ${deloadClass}`.trim()}
+              className={`bg-card min-h-[4.5rem] p-1.5 border cursor-pointer hover:bg-accent/50 transition-colors duration-150 ${isRest ? 'border-transparent' : modalityClass} ${deloadClass}`.trim()}
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium">{dayNum}</span>

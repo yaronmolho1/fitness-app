@@ -64,7 +64,7 @@ export function ExerciseListWithFilters({ exercises }: { exercises: Exercise[] }
       ) : (
         <div className="divide-y rounded-xl border">
           {filtered.map((exercise) => (
-            <div key={exercise.id} className="px-4 py-3">
+            <div key={exercise.id} className="px-4 py-3 transition-colors duration-150 hover:bg-muted/50">
               {editingId === exercise.id ? (
                 <EditExerciseForm
                   exercise={exercise}
