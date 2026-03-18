@@ -86,7 +86,7 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
         order: slot.order,
         rpe: exerciseRpe[slotIndex],
         sets: (sets[slotIndex] ?? []).map((s) => ({
-          reps: parseInt(s.reps, 10) || 0,
+          reps: s.reps === '' ? null : parseInt(s.reps, 10),
           weight: s.weight === '' ? null : parseFloat(s.weight),
         })),
       })),

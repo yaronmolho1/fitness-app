@@ -329,13 +329,15 @@ describe('saveWorkoutCore', () => {
     expect(exercises[1].actual_rpe).toBeNull()
   })
 
-  it('stores null actual_weight when not provided', async () => {
+  it('stores null actual_weight when slot has no planned weight', async () => {
+    // Slot 101 (OHP) has weight=NULL, so null input stays null after fallback
     const input = buildValidInput()
-    input.exercises[0].sets[0] = { reps: 8, weight: null }
+    input.exercises[1].sets[0] = { reps: 10, weight: null }
     await saveWorkoutCore(db, input)
     const sets = db.select().from(schema.logged_sets).orderBy(schema.logged_sets.id).all()
 
-    expect(sets[0].actual_weight).toBeNull()
+    // OHP sets start at index 3
+    expect(sets[3].actual_weight).toBeNull()
   })
 
   it('logged_exercises reference correct logged_workout_id', async () => {
@@ -505,6 +507,95 @@ describe('saveWorkoutCore', () => {
     input2.templateId = 2
     const result = await saveWorkoutCore(db, input2)
     expect(result.success).toBe(true)
+  })
+
+  // --- Empty input fallback ---
+
+  it('set 1 falls back to planned weight/reps when null', async () => {
+    // Slot 100: weight=80, reps='8'
+    const input = buildValidInput()
+    input.exercises[0].sets = [
+      { reps: null, weight: null },
+      { reps: 8, weight: 80 },
+      { reps: 7, weight: 80 },
+    ]
+    const result = await saveWorkoutCore(db, input)
+    expect(result.success).toBe(true)
+
+    const sets = db.select().from(schema.logged_sets).orderBy(schema.logged_sets.id).all()
+    // Set 1 should fall back to planned: weight=80, reps=8
+    expect(sets[0].actual_weight).toBe(80)
+    expect(sets[0].actual_reps).toBe(8)
+  })
+
+  it('set 2+ falls back to previous set values when null', async () => {
+    const input = buildValidInput()
+    input.exercises[0].sets = [
+      { reps: 10, weight: 85 },
+      { reps: null, weight: null },
+      { reps: null, weight: null },
+    ]
+    const result = await saveWorkoutCore(db, input)
+    expect(result.success).toBe(true)
+
+    const sets = db.select().from(schema.logged_sets).orderBy(schema.logged_sets.id).all()
+    // Set 2 and 3 should fall back to set 1: weight=85, reps=10
+    expect(sets[1].actual_weight).toBe(85)
+    expect(sets[1].actual_reps).toBe(10)
+    expect(sets[2].actual_weight).toBe(85)
+    expect(sets[2].actual_reps).toBe(10)
+  })
+
+  it('set 2 falls back to planned when set 1 was also null', async () => {
+    // Both set 1 and 2 null — set 1 falls back to planned, set 2 falls back to resolved set 1
+    const input = buildValidInput()
+    input.exercises[0].sets = [
+      { reps: null, weight: null },
+      { reps: null, weight: null },
+      { reps: 7, weight: 80 },
+    ]
+    const result = await saveWorkoutCore(db, input)
+    expect(result.success).toBe(true)
+
+    const sets = db.select().from(schema.logged_sets).orderBy(schema.logged_sets.id).all()
+    // Set 1 → planned (80, 8). Set 2 → set 1 resolved (80, 8).
+    expect(sets[0].actual_weight).toBe(80)
+    expect(sets[0].actual_reps).toBe(8)
+    expect(sets[1].actual_weight).toBe(80)
+    expect(sets[1].actual_reps).toBe(8)
+  })
+
+  it('partial null: only weight null falls back, reps kept', async () => {
+    const input = buildValidInput()
+    input.exercises[0].sets = [
+      { reps: 6, weight: null },
+      { reps: 8, weight: 80 },
+      { reps: 7, weight: 80 },
+    ]
+    const result = await saveWorkoutCore(db, input)
+    expect(result.success).toBe(true)
+
+    const sets = db.select().from(schema.logged_sets).orderBy(schema.logged_sets.id).all()
+    // Set 1: reps=6 (explicit), weight=80 (planned fallback)
+    expect(sets[0].actual_reps).toBe(6)
+    expect(sets[0].actual_weight).toBe(80)
+  })
+
+  it('slot with no planned weight: null weight stays null on fallback', async () => {
+    // Slot 101 (Overhead Press) has weight=NULL in template
+    const input = buildValidInput()
+    input.exercises[1].sets = [
+      { reps: null, weight: null },
+      { reps: 10, weight: 40 },
+      { reps: 9, weight: 40 },
+    ]
+    const result = await saveWorkoutCore(db, input)
+    expect(result.success).toBe(true)
+
+    const sets = db.select().from(schema.logged_sets).orderBy(schema.logged_sets.id).all()
+    // Exercise 2 sets start at index 3. Set 1 falls back to planned: weight=null, reps=10
+    expect(sets[3].actual_weight).toBeNull()
+    expect(sets[3].actual_reps).toBe(10)
   })
 
   // --- Transaction rollback ---
