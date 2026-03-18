@@ -65,8 +65,8 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
   const [sets, setSets] = useState<SetFormData[][]>(() =>
     buildInitialSets(sortedSlots)
   )
-  const [exerciseRpe, setExerciseRpe] = useState<(string)[]>(() =>
-    sortedSlots.map(() => '')
+  const [exerciseRpe, setExerciseRpe] = useState<(number | null)[]>(() =>
+    sortedSlots.map(() => null)
   )
   const [rating, setRating] = useState<number | null>(null)
   const [notes, setNotes] = useState('')
@@ -84,7 +84,7 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
         exerciseId: slot.exercise_id,
         exerciseName: slot.exercise_name,
         order: slot.order,
-        rpe: exerciseRpe[slotIndex] === '' ? null : parseFloat(exerciseRpe[slotIndex]),
+        rpe: exerciseRpe[slotIndex],
         sets: (sets[slotIndex] ?? []).map((s) => ({
           reps: parseInt(s.reps, 10) || 0,
           weight: s.weight === '' ? null : parseFloat(s.weight),
@@ -269,29 +269,43 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
               </button>
             </div>
 
-            {/* Per-exercise RPE */}
+            {/* Per-exercise RPE selector */}
             <div className="border-t px-4 py-3">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 mb-2">
                 <span className="text-xs font-medium text-muted-foreground">
                   RPE {slot.rpe !== null && <span className="text-[10px]">(plan: {slot.rpe})</span>}
                 </span>
-                <input
-                  data-testid={`rpe-input-${slotIndex}`}
-                  aria-label={`RPE for ${slot.exercise_name}`}
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="—"
-                  value={exerciseRpe[slotIndex]}
-                  onChange={(e) => {
-                    const val = e.target.value
-                    setExerciseRpe((prev) => {
-                      const next = [...prev]
-                      next[slotIndex] = val
-                      return next
-                    })
-                  }}
-                  className="h-9 w-16 rounded-lg border border-input bg-background px-2 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                />
+              </div>
+              <div
+                data-testid={`rpe-selector-${slotIndex}`}
+                className="flex flex-wrap gap-1.5"
+              >
+                {Array.from({ length: 10 }, (_, i) => i + 1).map((value) => {
+                  const isSelected = exerciseRpe[slotIndex] === value
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-label={`RPE ${value}`}
+                      aria-pressed={isSelected}
+                      onClick={() => {
+                        setExerciseRpe((prev) => {
+                          const next = [...prev]
+                          next[slotIndex] = isSelected ? null : value
+                          return next
+                        })
+                      }}
+                      className={cn(
+                        'min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border text-sm font-semibold tabular-nums transition-colors active:scale-95',
+                        isSelected
+                          ? 'border-primary bg-primary text-primary-foreground'
+                          : 'border-input bg-background text-muted-foreground hover:border-primary hover:text-primary'
+                      )}
+                    >
+                      {value}
+                    </button>
+                  )
+                })}
               </div>
             </div>
           </div>

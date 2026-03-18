@@ -107,9 +107,11 @@ describe('WorkoutLoggingForm', () => {
       })
       render(<WorkoutLoggingForm data={data} />)
 
-      expect(screen.getByText('1')).toBeInTheDocument()
-      expect(screen.getByText('2')).toBeInTheDocument()
-      expect(screen.getByText('3')).toBeInTheDocument()
+      const rows = screen.getAllByTestId('set-row')
+      rows.forEach((row, i) => {
+        const label = within(row).getByTestId('set-number-label')
+        expect(label).toHaveTextContent(String(i + 1))
+      })
     })
   })
 
@@ -287,9 +289,9 @@ describe('WorkoutLoggingForm', () => {
     })
   })
 
-  // T049 — Actual RPE input (per-exercise)
-  describe('actual RPE input', () => {
-    it('renders one RPE input per exercise', () => {
+  // T049/T088 — Actual RPE selector (per-exercise, button row)
+  describe('actual RPE selector', () => {
+    it('renders one RPE selector per exercise', () => {
       const data = makeWorkoutData({
         slots: [
           makeSlot({ id: 1, exercise_name: 'Bench Press', sets: 3, order: 1 }),
@@ -298,40 +300,33 @@ describe('WorkoutLoggingForm', () => {
       })
       render(<WorkoutLoggingForm data={data} />)
 
-      expect(screen.getByTestId('rpe-input-0')).toBeInTheDocument()
-      expect(screen.getByTestId('rpe-input-1')).toBeInTheDocument()
+      expect(screen.getByTestId('rpe-selector-0')).toBeInTheDocument()
+      expect(screen.getByTestId('rpe-selector-1')).toBeInTheDocument()
     })
 
-    it('RPE input starts empty (not pre-filled)', () => {
+    it('RPE starts unselected (not pre-filled)', () => {
       const data = makeWorkoutData({
         slots: [makeSlot({ sets: 1, rpe: 8 })],
       })
       render(<WorkoutLoggingForm data={data} />)
 
-      const rpeInput = screen.getByTestId('rpe-input-0') as HTMLInputElement
-      expect(rpeInput.value).toBe('')
+      const selector = screen.getByTestId('rpe-selector-0')
+      const buttons = within(selector).getAllByRole('button')
+      for (const btn of buttons) {
+        expect(btn).toHaveAttribute('aria-pressed', 'false')
+      }
     })
 
-    it('RPE input uses numeric inputMode', () => {
-      const data = makeWorkoutData({
-        slots: [makeSlot({ sets: 1 })],
-      })
-      render(<WorkoutLoggingForm data={data} />)
-
-      const rpeInput = screen.getByTestId('rpe-input-0') as HTMLInputElement
-      expect(rpeInput.inputMode).toBe('numeric')
-    })
-
-    it('RPE input is editable', async () => {
+    it('RPE is selectable via button tap', async () => {
       const user = userEvent.setup()
       const data = makeWorkoutData({
         slots: [makeSlot({ sets: 1 })],
       })
       render(<WorkoutLoggingForm data={data} />)
 
-      const rpeInput = screen.getByTestId('rpe-input-0') as HTMLInputElement
-      await user.type(rpeInput, '7')
-      expect(rpeInput.value).toBe('7')
+      const btn = screen.getByRole('button', { name: 'RPE 7' })
+      await user.click(btn)
+      expect(btn).toHaveAttribute('aria-pressed', 'true')
     })
 
     it('RPE label is shown per exercise', () => {
@@ -405,7 +400,7 @@ describe('WorkoutLoggingForm', () => {
   })
 
   describe('exercise RPE independence', () => {
-    it('editing RPE on one exercise does not affect another', async () => {
+    it('selecting RPE on one exercise does not affect another', async () => {
       const user = userEvent.setup()
       const data = makeWorkoutData({
         slots: [
@@ -415,12 +410,16 @@ describe('WorkoutLoggingForm', () => {
       })
       render(<WorkoutLoggingForm data={data} />)
 
-      const rpe0 = screen.getByTestId('rpe-input-0') as HTMLInputElement
-      const rpe1 = screen.getByTestId('rpe-input-1') as HTMLInputElement
+      const selector0 = screen.getByTestId('rpe-selector-0')
+      const selector1 = screen.getByTestId('rpe-selector-1')
 
-      await user.type(rpe0, '9')
-      expect(rpe0.value).toBe('9')
-      expect(rpe1.value).toBe('')
+      await user.click(within(selector0).getByRole('button', { name: 'RPE 9' }))
+      expect(within(selector0).getByRole('button', { name: 'RPE 9' })).toHaveAttribute('aria-pressed', 'true')
+
+      const buttons1 = within(selector1).getAllByRole('button')
+      for (const btn of buttons1) {
+        expect(btn).toHaveAttribute('aria-pressed', 'false')
+      }
     })
   })
 
