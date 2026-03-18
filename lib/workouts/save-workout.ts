@@ -9,7 +9,7 @@ import {
 import { hasExistingLog } from './duplicate-check'
 
 export type SaveWorkoutSetInput = {
-  reps: number
+  reps: number | null
   weight: number | null
 }
 
@@ -34,35 +34,67 @@ export type SaveWorkoutResult =
   | { success: true; data: { workoutId: number } }
   | { success: false; error: string }
 
+type ResolvedSet = { reps: number; weight: number | null }
+
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
-function validateInput(input: SaveWorkoutInput): string | null {
+function validatePreFallback(input: SaveWorkoutInput): string | null {
   if (!DATE_RE.test(input.logDate)) {
     return 'Invalid date format (expected YYYY-MM-DD)'
   }
-
   if (!input.exercises || input.exercises.length === 0) {
     return 'At least one exercise is required'
   }
-
   if (input.rating !== null && (input.rating < 1 || input.rating > 5)) {
     return 'Rating must be between 1 and 5'
   }
-
   for (const ex of input.exercises) {
     if (ex.rpe !== null && (ex.rpe < 1 || ex.rpe > 10)) {
       return 'RPE must be between 1 and 10'
     }
     for (const set of ex.sets) {
-      if (!set.reps || set.reps < 1) {
-        return 'All sets must have reps > 0'
-      }
       if (set.weight !== null && set.weight < 0) {
         return 'Weight must be non-negative'
       }
     }
   }
+  return null
+}
 
+// Resolve null inputs via cascade: set 1 → planned values, set 2+ → previous set
+function resolveSetFallbacks(
+  sets: SaveWorkoutSetInput[],
+  plannedWeight: number | null,
+  plannedReps: string
+): ResolvedSet[] {
+  const parsedPlannedReps = parseInt(plannedReps, 10) || 1
+  const resolved: ResolvedSet[] = []
+
+  for (let i = 0; i < sets.length; i++) {
+    const raw = sets[i]
+    let reps: number
+    let weight: number | null
+
+    if (i === 0) {
+      reps = raw.reps ?? parsedPlannedReps
+      weight = raw.weight ?? plannedWeight
+    } else {
+      reps = raw.reps ?? resolved[i - 1].reps
+      weight = raw.weight ?? resolved[i - 1].weight
+    }
+
+    resolved.push({ reps, weight })
+  }
+
+  return resolved
+}
+
+function validateResolved(resolved: ResolvedSet[]): string | null {
+  for (const set of resolved) {
+    if (!set.reps || set.reps < 1) {
+      return 'All sets must have reps > 0'
+    }
+  }
   return null
 }
 
@@ -70,9 +102,9 @@ export async function saveWorkoutCore(
   database: AppDb,
   input: SaveWorkoutInput
 ): Promise<SaveWorkoutResult> {
-  const validationError = validateInput(input)
-  if (validationError) {
-    return { success: false, error: validationError }
+  const preError = validatePreFallback(input)
+  if (preError) {
+    return { success: false, error: preError }
   }
 
   const normalizedNotes = input.notes?.trim() || null
@@ -95,6 +127,23 @@ export async function saveWorkoutCore(
   const duplicate = await hasExistingLog(database, input.logDate, template.mesocycle_id)
   if (duplicate) {
     return { success: false, error: 'Workout already logged for this date and mesocycle' }
+  }
+
+  // Build slot lookup for fallback resolution
+  const slotMap = new Map(template.exercise_slots.map((s) => [s.id, s]))
+
+  // Resolve fallbacks and validate resolved sets
+  const resolvedExercises: { ex: SaveWorkoutExerciseInput; sets: ResolvedSet[] }[] = []
+  for (const ex of input.exercises) {
+    const slot = slotMap.get(ex.slotId)
+    const plannedWeight = slot?.weight ?? null
+    const plannedReps = slot?.reps ?? '1'
+    const resolved = resolveSetFallbacks(ex.sets, plannedWeight, plannedReps)
+    const setError = validateResolved(resolved)
+    if (setError) {
+      return { success: false, error: setError }
+    }
+    resolvedExercises.push({ ex, sets: resolved })
   }
 
   const sortedSlots = [...template.exercise_slots].sort((a, b) => a.order - b.order)
@@ -134,7 +183,7 @@ export async function saveWorkoutCore(
         .returning()
         .get()
 
-      for (const ex of input.exercises) {
+      for (const { ex, sets } of resolvedExercises) {
         const loggedEx = tx
           .insert(logged_exercises)
           .values({
@@ -148,8 +197,8 @@ export async function saveWorkoutCore(
           .returning()
           .get()
 
-        for (let i = 0; i < ex.sets.length; i++) {
-          const set = ex.sets[i]
+        for (let i = 0; i < sets.length; i++) {
+          const set = sets[i]
           tx.insert(logged_sets)
             .values({
               logged_exercise_id: loggedEx.id,
