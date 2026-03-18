@@ -1,6 +1,6 @@
 # Implementation Plan
 
-> 77 tasks across 15 waves (Wave 0 infra + 14 feature waves). Each feature task = one TDD cycle.
+> 83 tasks across 18 waves (Wave 0 infra + 14 feature waves + 3 UI overhaul + 3 UI redesign). Each feature task = one TDD cycle.
 > Waves are sequential; tracks within a wave are parallel.
 
 ## Critical Path
@@ -274,10 +274,10 @@ db-schema-migrations
 
 | Scope | Count | Est. Hours Each | Total |
 |-------|-------|-----------------|-------|
-| Small | 42 | 1-2h | ~63h |
-| Medium | 26 | 2-4h | ~78h |
-| Large | 3 | 4-8h | ~18h |
-| **Total** | **73** | | **~159h** |
+| Small | 49 | 1-2h | ~74h |
+| Medium | 30 | 2-4h | ~90h |
+| Large | 4 | 4-8h | ~24h |
+| **Total** | **83** | | **~188h** |
 
 ## Epics
 
@@ -295,6 +295,7 @@ db-schema-migrations
 | Calendar & Progression | 8 | projected-calendar, day-detail-drill-in, completed-day-markers, deload-week-distinction, exercise-progression-chart, phase-boundary-markers |
 | Daily Routines | 5 | routine-item-crud, daily-routine-check-off, routine-streaks-counts |
 | UI Overhaul | 9 | ui-overhaul-shadcn-theme |
+| UI Redesign | 10 | layout-system, mobile-logging-redesign, visual-consistency-pass |
 
 ---
 
@@ -327,3 +328,61 @@ db-schema-migrations
 | ID | Description | Scope | Epic | Deps | Spec |
 |----|-------------|-------|------|------|------|
 | T082 | Visual consistency pass: ensure all cards use `rounded-xl` + `shadow-sm`. Normalize page spacing to `max-w-4xl` containers with `gap-4`/`gap-6`. Add theme-consistent hover/focus transitions to all interactive elements. Verify no raw HTML form elements remain. | medium | UI Overhaul | T077, T078, T079, T080, T081 | ui-overhaul-shadcn-theme |
+
+---
+
+## Wave R1: Layout System
+
+> Depends on UI Overhaul (T082 complete). Foundation for all redesign work.
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T083 | PageContainer component: shared wrapper with adaptive max-width (`max-w-lg` for Today/Routines, `max-w-4xl` for Exercises/Mesocycles/Calendar/Progression). Centered, `px-4 sm:px-6 lg:px-8` progressive padding, `py-6` vertical padding. Accepts `variant` prop (`narrow` \| `wide`). | small | UI Redesign | T082 | layout-system |
+| T084 | PageHeader component: title (required), description (optional, muted text), actions slot (optional). Mobile: actions stack below title. Desktop: actions inline right. Consistent `space-y-1.5` between title and description, `mb-6` bottom margin. | small | UI Redesign | T083 | layout-system |
+| T085 | Adopt PageContainer + PageHeader across all pages: Today, Exercises, Mesocycles (list + detail + new + clone), Calendar, Progression, Routines. Remove per-page ad-hoc container classes. Fix Calendar and Progression pages to use the container system (currently no max-w constraint). | medium | UI Redesign | T083, T084 | layout-system |
+
+## Wave R2: Mobile Logging Redesign
+
+> Depends on layout system (T083). Critical path for mobile UX.
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T086 | RPE schema migration: add `actual_rpe` column (real, nullable) to `logged_exercises` table. Drop `actual_rpe` column from `logged_sets` table. Generate + apply migration via `drizzle-kit generate && drizzle-kit migrate`. Update Drizzle schema + relations. | small | UI Redesign | T083 | mobile-logging-redesign |
+| T087 | 3-column set input grid: refactor resistance logging form from 5-column grid (set#/weight/reps/RPE/delete) to 3-column grid (weight/reps/delete). Set number as non-interactive label left of inputs. Planned values shown as placeholder text in inputs (not separate reference row). Inputs wide enough for 5+ chars (weight) and 3+ chars (reps). | medium | UI Redesign | T086 | mobile-logging-redesign |
+| T088 | Per-exercise RPE selector: row of 10 tappable buttons (1-10) below each exercise's set rows. Tap to select (highlighted), tap again to deselect (null). Stored on `logged_exercises.actual_rpe`. All RPE buttons meet 44px min touch target. Wraps to 2 rows on viewports <340px. | medium | UI Redesign | T087 | mobile-logging-redesign |
+| T089 | Touch target enforcement: increase all interactive elements in logging form to 44px minimum tappable area. Delete button (currently 32px → 44px via padding hit area). Add Set button (currently ~32px → 44px height). Rating stars (currently 40px → 44px). Save button already compliant (56px). | small | UI Redesign | T087 | mobile-logging-redesign |
+| T090 | Update save workout SA: read `actual_rpe` from per-exercise form data (not per-set). Write to `logged_exercises.actual_rpe` instead of `logged_sets.actual_rpe`. Preserve atomic transaction. Update template_snapshot if RPE field references changed. | medium | UI Redesign | T086, T088 | mobile-logging-redesign |
+
+## Wave R3: Visual Consistency
+
+> Depends on layout system (T085). All tasks in this wave are parallel.
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T091 | Modality color utility: extract hardcoded modality colors (blue=resistance, green=running, amber=mma) into a shared `lib/ui/modality-colors.ts` mapping. Provides both light and dark mode class names. Includes fallback for unknown modality (neutral/gray). Refactor calendar-grid, status-badge, template cards, day-detail-panel to use it. | small | UI Redesign | T085 | visual-consistency-pass |
+| T092 | Card normalization: audit all Card usages across pages. Ensure consistent `rounded-xl` + `shadow-sm`. Standardize card header action placement (top-right). Verify theme token usage for background/border/shadow in both light and dark mode. | small | UI Redesign | T085 | visual-consistency-pass |
+| T093 | Empty state component: shared `EmptyState` component (icon, message, action button). Apply to Exercises, Mesocycles, and Routines list pages. Consistent layout and visual treatment across all empty states. | small | UI Redesign | T085 | visual-consistency-pass |
+| T094 | Progressive padding + interactive feedback: update PageContainer to use `px-4 sm:px-6 lg:px-8` (already in T083, verify). Add subtle hover/press transitions to clickable cards and list items (consistent `transition-colors duration-150`). No transitions on disabled elements. | small | UI Redesign | T085 | visual-consistency-pass |
+
+## UI Redesign Dependency Graph
+
+```
+T082 (UI Overhaul complete)
+├── T083 (PageContainer) → T084 (PageHeader) → T085 (Adopt across pages)
+│   ├── T091 (Modality colors)
+│   ├── T092 (Card normalization)
+│   ├── T093 (Empty states)
+│   └── T094 (Progressive padding + feedback)
+└── T086 (RPE migration) → T087 (3-col grid) → T088 (RPE selector) → T090 (Save SA update)
+                                               └── T089 (Touch targets)
+```
+
+## UI Redesign Critical Path
+
+T082 → T083 → T086 → T087 → T088 → T090 (estimated: M + S + S + M + M + M = ~14-20h)
+
+## UI Redesign Risk Areas
+
+- **T086 (RPE migration)**: Schema change moves `actual_rpe` from `logged_sets` to `logged_exercises`. If production data exists in `logged_sets.actual_rpe`, a data migration step is needed. Verify before deploying.
+- **T087 (3-col grid)**: Major UX change to resistance logging. Removing planned values reference row means users lose side-by-side comparison — mitigated by placeholder text showing targets.
+- **T090 (Save SA update)**: Must update all code paths that read/write RPE — server action, form submission, snapshot generation. Risk of partial migration if any path is missed.
