@@ -75,7 +75,7 @@ function ExerciseSlot({ slot }: { slot: SlotData }) {
     <div
       data-testid="exercise-slot"
       className={cn(
-        'rounded-xl border p-4 transition-colors',
+        'rounded-xl border p-4 shadow-sm transition-colors',
         slot.is_main
           ? 'border-l-4 border-l-primary bg-card'
           : 'border-l-4 border-l-muted bg-card'
@@ -343,7 +343,7 @@ function ResistanceSummary({ exercises }: { exercises: LoggedExerciseData[] }) {
         <div
           key={ex.id}
           data-testid="logged-exercise"
-          className="rounded-xl border bg-card p-4"
+          className="rounded-xl border bg-card p-4 shadow-sm"
         >
           <h4 className="text-sm font-semibold">{ex.exercise_name}</h4>
           {ex.actual_rpe !== null && (

@@ -39,7 +39,7 @@ describe('Card normalization (AC4-6)', () => {
     it('today-workout ExerciseSlot uses rounded-xl', () => {
       const src = readSource('components/today-workout.tsx')
       // ExerciseSlot's card div
-      const slotLine = src.split('\n').find(l => l.includes("'rounded-") && l.includes('border p-4 transition-colors'))
+      const slotLine = src.split('\n').find(l => l.includes("'rounded-") && l.includes('border p-4') && l.includes('transition-colors'))
       expect(slotLine).toBeDefined()
       expect(slotLine).toContain('rounded-xl')
     })
