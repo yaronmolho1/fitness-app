@@ -90,3 +90,15 @@
 | T080 | Schedule Tabs component refactor | UI-2 | [x] | feat/task-080-schedule-tabs | 2026-03-15T20:00 | 2026-03-15 | merged via PR #141 |
 | T081 | Status Badge + Skeleton refactor | UI-2 | [x] | feat/task-081-badge-skeleton | 2026-03-15T20:00 | 2026-03-15 | merged via PR #142 |
 | T082 | Visual consistency pass | UI-3 | [x] | feat/task-082-visual-polish | 2026-03-15T21:00 | 2026-03-15 | merged via PR #143 |
+| T083 | PageContainer component | R1 | [ ] | | | | |
+| T084 | PageHeader component | R1 | [ ] | | | | |
+| T085 | Adopt PageContainer + PageHeader across all pages | R1 | [ ] | | | | |
+| T086 | RPE schema migration (logged_sets → logged_exercises) | R2 | [ ] | | | | |
+| T087 | 3-column set input grid | R2 | [ ] | | | | |
+| T088 | Per-exercise RPE selector (1-10 buttons) | R2 | [ ] | | | | |
+| T089 | Touch target enforcement (44px minimum) | R2 | [ ] | | | | |
+| T090 | Update save workout SA for per-exercise RPE | R2 | [ ] | | | | |
+| T091 | Modality color utility extraction | R3 | [ ] | | | | |
+| T092 | Card normalization pass | R3 | [ ] | | | | |
+| T093 | Empty state component | R3 | [ ] | | | | |
+| T094 | Progressive padding + interactive feedback | R3 | [ ] | | | | |
