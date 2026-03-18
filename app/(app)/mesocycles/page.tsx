@@ -36,13 +36,13 @@ export default async function MesocyclesPage() {
         ) : (
           <ul className="space-y-4">
             {allMesocycles.map((meso) => (
-              <li key={meso.id} className="rounded-xl border bg-card p-4 shadow-sm">
+              <li key={meso.id} className="rounded-xl border bg-card p-4 shadow-sm transition-colors duration-150 hover:bg-muted/50">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <Link
                         href={`/mesocycles/${meso.id}`}
-                        className="text-lg font-semibold transition-colors hover:text-primary hover:underline"
+                        className="text-lg font-semibold transition-colors duration-150 hover:text-primary hover:underline"
                       >
                         {meso.name}
                       </Link>

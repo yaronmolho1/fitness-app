@@ -97,7 +97,7 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
               key={dayIndex}
               data-testid={`day-cell-${dayIndex}`}
               className={cn(
-                'rounded-xl border p-3 transition-colors',
+                'rounded-xl border p-3 transition-colors duration-150',
                 assignment
                   ? 'border-primary/30 bg-primary/5'
                   : 'border-dashed border-muted-foreground/30 bg-muted/20'
@@ -158,7 +158,7 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
                   {templates.map((tmpl) => (
                     <div
                       key={tmpl.id}
-                      className="cursor-pointer rounded px-2 py-1.5 text-sm transition-colors hover:bg-accent"
+                      className="cursor-pointer rounded px-2 py-1.5 text-sm transition-colors duration-150 hover:bg-accent"
                       onClick={() => handleTemplatePick(tmpl.id)}
                     >
                       {tmpl.name}

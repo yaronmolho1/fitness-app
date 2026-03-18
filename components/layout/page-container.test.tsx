@@ -25,10 +25,12 @@ describe('PageContainer', () => {
     expect(el.className).toContain('mx-auto')
   })
 
-  it('applies progressive horizontal padding', () => {
+  it('applies progressive horizontal padding at all breakpoints', () => {
     render(<PageContainer>padded content</PageContainer>)
     const el = screen.getByText('padded content')
     expect(el.className).toContain('px-4')
+    expect(el.className).toContain('sm:px-6')
+    expect(el.className).toContain('lg:px-8')
   })
 
   it('applies vertical padding py-6', () => {

@@ -75,7 +75,7 @@ function ExerciseSlot({ slot }: { slot: SlotData }) {
     <div
       data-testid="exercise-slot"
       className={cn(
-        'rounded-xl border p-4 shadow-sm transition-colors',
+        'rounded-xl border p-4 shadow-sm transition-colors duration-150',
         slot.is_main
           ? 'border-l-4 border-l-primary bg-card'
           : 'border-l-4 border-l-muted bg-card'

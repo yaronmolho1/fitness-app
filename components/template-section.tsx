@@ -329,7 +329,7 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated }: Tem
   return (
     <div className="rounded-xl border">
       <div
-        className="flex cursor-pointer items-center justify-between px-4 py-3 transition-colors hover:bg-muted/50"
+        className="flex cursor-pointer items-center justify-between px-4 py-3 transition-colors duration-150 hover:bg-muted/50"
         onClick={() => isResistance && setExpanded(!expanded)}
       >
         <div className="min-w-0 flex-1">

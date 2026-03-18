@@ -443,7 +443,7 @@ function SlotRow({
     <div
       data-testid="slot-row"
       className={cn(
-        'flex items-center justify-between rounded-xl border px-4 py-3 transition-colors',
+        'flex items-center justify-between rounded-xl border px-4 py-3 transition-colors duration-150',
         isDragging && 'opacity-50',
         isDropTarget && 'ring-2 ring-primary'
       )}
