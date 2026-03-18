@@ -39,7 +39,7 @@ export function RoutineItemList({
   }
 
   return (
-    <div className="divide-y rounded-lg border">
+    <div className="divide-y rounded-xl border">
       {items.map(({ routine_item: item, mesocycle_name }) => (
         <div key={item.id} className="px-4 py-3">
           {editingId === item.id ? (
