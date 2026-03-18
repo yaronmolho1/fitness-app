@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { cn } from '@/lib/utils'
+import { getModalityAccentClass } from '@/lib/ui/modality-colors'
 import { saveRunningWorkout } from '@/lib/workouts/actions'
 import type { SaveRunningWorkoutInput, IntervalRepData } from '@/lib/workouts/actions'
 import type { MesocycleInfo, TemplateInfo } from '@/lib/today/queries'
@@ -167,7 +168,7 @@ export function RunningLoggingForm({ data }: { data: RunningWorkoutData }) {
       </div>
 
       {/* Planned reference (read-only) */}
-      <div data-testid="planned-reference" className="rounded-xl border border-l-4 border-l-green-500 bg-card p-4 space-y-3">
+      <div data-testid="planned-reference" className={cn('rounded-xl border border-l-4 bg-card p-4 space-y-3', getModalityAccentClass('running'))}>
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
           Planned
         </h2>

@@ -5,14 +5,9 @@ import { Button } from '@/components/ui/button'
 import { Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { CalendarDay } from '@/lib/calendar/queries'
 import { DayDetailPanel } from '@/components/day-detail-panel'
+import { getModalityClasses } from '@/lib/ui/modality-colors'
 
 const DAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-
-const MODALITY_CLASSES: Record<string, string> = {
-  resistance: 'bg-blue-100 border-blue-300 text-blue-900 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-200 modality-resistance',
-  running: 'bg-emerald-100 border-emerald-300 text-emerald-900 dark:bg-emerald-900/30 dark:border-emerald-700 dark:text-emerald-200 modality-running',
-  mma: 'bg-amber-100 border-amber-300 text-amber-900 dark:bg-amber-900/30 dark:border-amber-700 dark:text-amber-200 modality-mma',
-}
 
 // Ring-only treatment avoids bg-* conflicts with modality colors and bg-card
 const DELOAD_RING = 'ring-2 ring-inset ring-purple-400 dark:ring-purple-500'
@@ -132,7 +127,7 @@ export function CalendarGrid({ initialMonth }: CalendarGridProps = {}) {
           }
 
           const dayNum = parseInt(cell.date.split('-')[2], 10)
-          const modalityClass = cell.modality ? MODALITY_CLASSES[cell.modality] ?? '' : ''
+          const modalityClass = cell.modality ? getModalityClasses(cell.modality) : ''
           const isRest = !cell.modality
           const deloadClass = cell.is_deload ? DELOAD_CLASS : ''
 

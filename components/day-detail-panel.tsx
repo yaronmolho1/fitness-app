@@ -11,6 +11,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Star } from 'lucide-react'
 import type { DayDetailResult, SlotDetail, LoggedExerciseDetail, TemplateSnapshot } from '@/lib/calendar/day-detail'
+import { getModalityBadgeClasses } from '@/lib/ui/modality-colors'
 
 interface DayDetailPanelProps {
   date: string | null
@@ -28,13 +29,8 @@ function formatDate(dateStr: string): string {
 }
 
 function ModalityBadge({ modality }: { modality: string }) {
-  const colors: Record<string, string> = {
-    resistance: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200',
-    running: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200',
-    mma: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200',
-  }
   return (
-    <Badge className={colors[modality] ?? ''} variant="secondary">
+    <Badge className={getModalityBadgeClasses(modality)} variant="secondary">
       {modality}
     </Badge>
   )

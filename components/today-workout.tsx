@@ -7,6 +7,7 @@ import { RunningLoggingForm } from '@/components/running-logging-form'
 import { MmaLoggingForm } from '@/components/mma-logging-form'
 import { RoutineCheckOff } from '@/components/routine-check-off'
 import { cn } from '@/lib/utils'
+import { getModalityAccentClass } from '@/lib/ui/modality-colors'
 import type { SlotData, MesocycleInfo, TemplateInfo, RoutineItemInfo, RoutineLogInfo, LoggedExerciseData } from '@/lib/today/queries'
 import { Badge } from '@/components/ui/badge'
 
@@ -235,7 +236,7 @@ function RunningDisplay({
       <WorkoutHeader data={data} />
 
       {/* Run details card */}
-      <Card className="border-l-4 border-l-green-500">
+      <Card className={cn('border-l-4', getModalityAccentClass('running'))}>
         <CardContent className="pt-6">
           {/* Run type badge */}
           {config && (
@@ -303,7 +304,7 @@ function MmaDisplay({
       <WorkoutHeader data={data} />
 
       {/* Session details card */}
-      <Card className="border-l-4 border-l-rose-500">
+      <Card className={cn('border-l-4', getModalityAccentClass('mma'))}>
         <CardContent className="pt-6">
           {template.planned_duration !== null && (
             <div className="mb-4">
