@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RunningTemplateForm } from '@/components/running-template-form'
 import { MmaBjjTemplateForm } from '@/components/mma-bjj-template-form'
+import { MixedTemplateForm } from '@/components/mixed-template-form'
 import { SlotList } from '@/components/slot-list'
 import { CascadeScopeSelector } from '@/components/cascade-scope-selector'
 import { createResistanceTemplate, deleteTemplate } from '@/lib/templates/actions'
@@ -24,7 +25,7 @@ type Props = {
 
 export function TemplateSection({ mesocycleId, templates, exercises, slotsByTemplate, isCompleted }: Props) {
   const router = useRouter()
-  const [formType, setFormType] = useState<'resistance' | 'running' | 'mma' | null>(null)
+  const [formType, setFormType] = useState<'resistance' | 'running' | 'mma' | 'mixed' | null>(null)
   const [resistanceName, setResistanceName] = useState('')
   const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
@@ -81,6 +82,13 @@ export function TemplateSection({ mesocycleId, templates, exercises, slotsByTemp
               onClick={() => { setFormType('mma'); setError('') }}
             >
               + MMA/BJJ
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setFormType('mixed'); setError('') }}
+            >
+              + Mixed Workout
             </Button>
           </div>
         )}
@@ -169,6 +177,27 @@ export function TemplateSection({ mesocycleId, templates, exercises, slotsByTemp
             </Button>
           </div>
           <MmaBjjTemplateForm mesocycleId={mesocycleId} onSuccess={handleCreated} />
+        </div>
+      )}
+
+      {formType === 'mixed' && (
+        <div className="rounded-xl border p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-sm font-semibold">New Mixed Template</h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => { setFormType(null); setError('') }}
+            >
+              Cancel
+            </Button>
+          </div>
+          <MixedTemplateForm
+            mesocycleId={mesocycleId}
+            onSuccess={handleCreated}
+            onCancel={() => { setFormType(null); setError('') }}
+          />
         </div>
       )}
     </div>
