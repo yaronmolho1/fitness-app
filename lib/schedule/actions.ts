@@ -88,7 +88,7 @@ export async function assignTemplate(input: {
       created_at: new Date(),
     })
     .onConflictDoUpdate({
-      target: [weekly_schedule.mesocycle_id, weekly_schedule.day_of_week, weekly_schedule.week_type],
+      target: [weekly_schedule.mesocycle_id, weekly_schedule.day_of_week, weekly_schedule.week_type, weekly_schedule.period],
       set: { template_id },
     })
     .returning()

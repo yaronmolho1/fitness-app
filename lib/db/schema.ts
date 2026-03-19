@@ -125,13 +125,20 @@ export const weekly_schedule = sqliteTable(
     })
       .notNull()
       .default('normal'),
+    period: text('period', {
+      enum: ['morning', 'afternoon', 'evening'],
+    })
+      .notNull()
+      .default('morning'),
+    time_slot: text('time_slot'), // nullable, "HH:MM" format
     created_at: integer('created_at', { mode: 'timestamp' }),
   },
   (t) => ({
-    uniq: uniqueIndex('weekly_schedule_meso_day_type_idx').on(
+    uniq: uniqueIndex('weekly_schedule_meso_day_type_period_idx').on(
       t.mesocycle_id,
       t.day_of_week,
-      t.week_type
+      t.week_type,
+      t.period
     ),
   })
 )
