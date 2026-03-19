@@ -1,6 +1,6 @@
 # Implementation Plan
 
-> 83 tasks across 18 waves (Wave 0 infra + 14 feature waves + 3 UI overhaul + 3 UI redesign). Each feature task = one TDD cycle.
+> 125 tasks across 22 waves (Wave 0 infra + 14 feature waves + 3 UI overhaul + 3 UI redesign + 4 enhancement waves). Each feature task = one TDD cycle.
 > Waves are sequential; tracks within a wave are parallel.
 
 ## Critical Path
@@ -386,3 +386,190 @@ T082 → T083 → T086 → T087 → T088 → T090 (estimated: M + S + S + M + M 
 - **T086 (RPE migration)**: Schema change moves `actual_rpe` from `logged_sets` to `logged_exercises`. If production data exists in `logged_sets.actual_rpe`, a data migration step is needed. Verify before deploying.
 - **T087 (3-col grid)**: Major UX change to resistance logging. Removing planned values reference row means users lose side-by-side comparison — mitigated by placeholder text showing targets.
 - **T090 (Save SA update)**: Must update all code paths that read/write RPE — server action, form submission, snapshot generation. Risk of partial migration if any path is missed.
+
+---
+
+## Wave F1: Enhancement — Schema + Shared Components
+
+> No dependencies on new work. All depend only on existing completed tasks. All tasks parallel.
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T095 | Schema migration: add `period` (text NOT NULL enum 'morning'\|'afternoon'\|'evening') + `time_slot` (text nullable "HH:MM") to `weekly_schedule`. Replace unique constraint `(mesocycle_id, day_of_week, variant)` with `(mesocycle_id, day_of_week, variant, period)`. Default existing rows to period='morning'. | small | Schedule & Calendar | — | workout-time-slots |
+| T096 | Schema migration: new `template_sections` table (id, template_id FK, modality enum, section_name, order, run_type, target_pace, hr_zone, interval_count, interval_rest, coaching_cues, planned_duration, created_at). Add nullable `section_id` FK on `exercise_slots`. Extend `workout_templates.modality` enum with 'mixed'. | medium | Template System | — | mixed-modality-templates |
+| T097 | Schema migration: add `frequency_mode` (text NOT NULL default 'weekly_target', enum 'daily'\|'specific_days'\|'weekly_target') + `frequency_days` (text nullable, JSON array of day numbers 0-6) to `routine_items`. Existing rows default to 'weekly_target'. | small | Daily Habits | — | routines-ux-improvements |
+| T098 | Shared auto-suggest combobox component: input + dropdown list, populated from prop data, type-to-filter (case-insensitive), select existing or type new value, mobile-friendly. Uses shadcn Popover + Command pattern. | medium | Shared UI | — | exercise-creation-ux |
+| T099 | Server queries: `getDistinctExerciseValues()` returns sorted unique equipment + muscle_group values. `getDistinctRoutineCategories()` returns sorted unique category values. Null/empty excluded. | small | Shared | — | exercise-creation-ux, routines-ux-improvements |
+| T100 | Add Progression nav item: TrendingUp icon, links to `/progression`, positioned after Calendar. Update nav-items.ts + verify in both desktop sidebar and mobile sheet. | small | Navigation | — | navigation-discoverability |
+| T101 | Slot matching utility: given a source template + slot change, find corresponding slots in sibling templates by (exercise_id + order) primary match, fallback to (exercise_id, any position) for single matches, skip if ambiguous. Returns match map with skip reasons. | medium | Template Cascade | T035 | cascade-slot-edits |
+
+## Wave F2: Enhancement — Core Logic
+
+> Depends on Wave F1. Multiple parallel tracks.
+
+### Track A: Time Slots
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T102 | Period pill selector component: 3 toggle pills (Morning/Afternoon/Evening), required selection. Optional time picker (expandable, mobile-friendly scroll/wheel). Auto-derive period from clock time (before 12→morning, 12-16:59→afternoon, 17+→evening). Manual override allowed. | medium | Schedule & Calendar | T095 | workout-time-slots |
+| T103 | Update schedule assignment SA: accept `period` (required) + `time_slot` (optional). Validate no duplicate (day, variant, period). Update remove/replace flows. | small | Schedule & Calendar | T095 | workout-time-slots |
+
+### Track B: Template Cascade Extension
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T104 | Make running template fields (run_type, target_pace, hr_zone, interval_count, interval_rest, coaching_cues) + MMA planned_duration editable post-creation. Edit UI on template row. Cascade scope selector on save. | medium | Template Cascade | T101 | cascade-slot-edits |
+| T105 | Cascade slot parameter changes SA: when editing sets/reps/weight/RPE/rest/guidelines on a slot, apply same 3-scope cascade (this only / this+future / all phases). Use slot matching utility. Skip logged/completed. Return summary counts. | large | Template Cascade | T101 | cascade-slot-edits |
+| T106 | Cascade add/remove exercise slot SA: adding a slot cascades to sibling templates (append if order conflict). Removing cascades with match-by-exercise_id (skip if no match). Re-order remaining after remove. Return summary. | large | Template Cascade | T101 | cascade-slot-edits |
+
+### Track C: Mixed Templates
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T107 | Mixed template creation SA: create workout_template with modality='mixed', then add template_sections. Section management SAs: add section (name, modality, modality-specific fields, order), remove section (validate 2+ remain with different modalities), reorder sections. | medium | Template System | T096 | mixed-modality-templates |
+
+### Track D: Exercise + Routine UX
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T108 | Collapsible exercise creation form: collapsed by default, "+ New Exercise" button expands. Smooth transition. Reset on collapse. Integrate comboboxes for equipment + muscle_group (create form). | medium | Exercise Library | T098, T099 | exercise-creation-ux |
+| T109 | Edit exercise form: replace equipment + muscle_group text inputs with comboboxes. Same data source as create form. | small | Exercise Library | T098, T099 | exercise-creation-ux |
+| T110 | Frequency mode selector component: 3-option toggle (Daily / Specific Days / X per Week). Day picker: 7 circular S-M-T-W-T-F-S pills, multi-select, min 1 required, 40px+ touch target. Number input for weekly target. Mode switch clears previous data. | medium | Daily Habits | T097 | routines-ux-improvements |
+| T111 | Update routine create + edit forms: integrate frequency mode selector + category combobox. Pre-fill on edit. Validate per mode. | medium | Daily Habits | T110, T098, T099 | routines-ux-improvements |
+
+### Track E: Navigation Quick Links
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T112 | Today page quick links: pencil/edit icon on workout → links to /mesocycles/[id] template section. "No active mesocycle" prompt with link. Hide edit for completed mesocycles. | small | Navigation | — | navigation-discoverability |
+
+## Wave F3: Enhancement — UI Integration
+
+> Depends on Wave F2. Multiple parallel tracks.
+
+### Track A: Time Slots UI
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T113 | Schedule grid: render multiple entries per day stacked, ordered by period (morning→afternoon→evening). Period label on each entry. Add button per unused period slot. | medium | Schedule & Calendar | T102, T103 | workout-time-slots |
+| T114 | GET /api/today: return array of workouts when multiple sessions scheduled. Include period + time_slot in response. Today page: render sessions grouped by period with time labels. | medium | Schedule & Calendar | T095, T102 | workout-time-slots |
+| T115 | Calendar month grid: show multiple workouts per day as stacked pills/badges with period labels. Update GET /api/calendar to include period + time_slot. | small | Schedule & Calendar | T095 | workout-time-slots |
+
+### Track B: Cascade UI
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T116 | Cascade scope selector: trigger on slot param edits, slot add/remove, running/MMA field edits. Show preview of affected templates. Summary of updated/skipped. Template notes field editable with cascade support. | medium | Template Cascade | T105, T106, T104 | cascade-slot-edits |
+
+### Track C: Mixed Templates UI
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T117 | Mixed template creation form: "+ Mixed Workout" button, name input, section editor (add sections with name + modality, modality-specific fields per section, drag-reorder, min 2 sections with different modalities). Reuses existing slot editor for resistance sections. | large | Template System | T107 | mixed-modality-templates |
+
+### Track D: Routines + Polish
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T118 | Update routine scope filtering for frequency modes: daily=every day, specific_days=check day-of-week, weekly_target=every day (existing). Filter after scope check. | medium | Daily Habits | T097, T110 | routines-ux-improvements |
+| T119 | Header/padding audit: standardize all page headers to PageHeader with mb-6, H2 with mt-8 mb-4. Ensure all pages use PageContainer. Fix inconsistent card spacing. Verify mobile pt-14 offset. 44px touch targets. Typography scale enforcement. | medium | Navigation & Discoverability | — | ui-polish-headers-padding |
+
+### Track E: Backward Compat
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T120 | Clone mesocycle: copy period + time_slot for schedule entries. Copy template_sections + section-associated exercise slots for mixed templates. | small | Mesocycle Cloning | T095, T096 | workout-time-slots, mixed-modality-templates |
+
+## Wave F4: Enhancement — Completion
+
+> Depends on Wave F3. Final integration tasks.
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T121 | Mixed template display on Today page: render sections in order with headers + modality badges. Resistance sections show exercise slots. Running sections show run plan. MMA sections show duration. Visual separator between sections. | medium | Template System | T096, T114 | mixed-modality-templates |
+| T122 | Mixed template logging form: section-by-section inputs (resistance, running, MMA — reuses existing logging form components embedded per section). Single "Save Workout" button. Atomic save SA. Template snapshot v2 with sections array. | large | Template System | T121 | mixed-modality-templates |
+| T123 | Calendar + schedule: mixed templates show combined modality badge. Schedule grid assigns mixed templates like any other. Canonical name cascade works for mixed. | small | Template System | T096, T117 | mixed-modality-templates |
+| T124 | Calendar day detail: quick link to "Edit template" next to workout name → /mesocycles/[id]. Rest days link to schedule grid. (Depends on T066 day detail existing.) | small | Navigation | T066 | navigation-discoverability |
+
+---
+
+## Enhancement Dependency Graph
+
+```
+T095 (time slots schema)
+├── T102 (period selector) ──┬── T113 (schedule grid multi)
+│                            │── T114 (today multi-session) ── T121 (mixed today display) ── T122 (mixed logging)
+├── T103 (assign SA) ────────┘
+├── T115 (calendar multi)
+└── T120 (clone copy)
+
+T096 (mixed schema)
+├── T107 (mixed SAs) ── T117 (mixed form UI) ── T123 (calendar mixed)
+├── T121 (mixed today)
+├── T120 (clone copy)
+└── T123 (calendar mixed)
+
+T097 (routines schema)
+├── T110 (frequency selector) ── T111 (routine forms)
+└── T118 (scope filtering)
+
+T098 (combobox)
+├── T108 (exercise form)
+├── T109 (edit exercise form)
+└── T111 (routine forms)
+
+T099 (distinct queries) ── T108, T109, T111
+
+T100 (progression nav) ── standalone
+
+T101 (slot matching)
+├── T104 (running/MMA editable)
+├── T105 (cascade slot params) ──┬── T116 (cascade scope UI)
+└── T106 (cascade add/remove) ──┘
+
+T112 (today quick links) ── standalone
+T119 (header/padding audit) ── standalone
+T124 (calendar quick links) ── T066
+```
+
+## Enhancement Critical Path
+
+T096 → T107 → T117 → T121 → T122 (estimated: M + M + L + M + L = ~22-30h)
+
+Alternative path: T101 → T105 → T116 (M + L + M = ~12-16h)
+
+## Enhancement Scope Summary
+
+| Scope | Count | Est. Hours Each | Total |
+|-------|-------|-----------------|-------|
+| Small | 12 | 1-2h | ~18h |
+| Medium | 14 | 2-4h | ~42h |
+| Large | 4 | 4-8h | ~24h |
+| **Total** | **30** | | **~84h** |
+
+## Enhancement Epics
+
+| Epic | Task Count | Spec |
+|------|-----------|------|
+| Schedule & Calendar (Time Slots) | 7 | workout-time-slots |
+| Template Cascade Extension | 6 | cascade-slot-edits |
+| Template System (Mixed Modality) | 7 | mixed-modality-templates |
+| Exercise Library UX | 2 | exercise-creation-ux |
+| Daily Habits (Routines) | 4 | routines-ux-improvements |
+| Navigation & Discoverability | 4 | navigation-discoverability, ui-polish-headers-padding |
+
+## Enhancement Gap Analysis
+
+1. **workout-time-slots**: Unique constraint on `(day, variant, period)` caps at 3 workouts per day. User said "don't need 3 but might later." If N>3 needed, constraint changes. Acceptable for now.
+2. **cascade-slot-edits**: Same exercise appearing multiple times in a template (e.g., two bench press slots) creates ambiguous matching. Spec defines fallback but not the ambiguous case. **Mitigated**: skip if ambiguous, report in summary.
+3. **mixed-modality-templates**: Running fields stored on template_sections for mixed, but on workout_templates for pure running. Query layer must handle both. No migration of existing data needed — pure templates keep fields on workout_templates.
+4. **routines-ux-improvements**: `specific_days` filtering is additive to scope. Sequence: scope filter first (global/mesocycle/date_range), then frequency filter (daily=pass, specific_days=check day, weekly_target=pass).
+5. **navigation-discoverability**: T124 (calendar quick links) depends on T066 (day detail) which is not yet implemented. Deferred to Wave F4.
+6. **ui-polish-headers-padding**: Broad spec based on code review. Will refine after visual browser audit.
+
+## Enhancement Risk Areas
+
+- **T096 (mixed schema)**: template_sections stores running fields per-section. Must not break existing pure-modality template queries. Test backward compat thoroughly.
+- **T105/T106 (cascade slot edits)**: Complex matching logic across diverged templates. Edge cases with reordered/added/removed exercises. Needs comprehensive test coverage.
+- **T122 (mixed logging)**: Composite form saving multiple modalities atomically. Snapshot v2 format change. Must not break existing snapshot v1 reads.
+- **T095 (time slots schema)**: Adding NOT NULL column with default to existing rows. Migration must handle existing schedule data correctly.
