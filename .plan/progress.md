@@ -102,3 +102,33 @@
 | T092 | Card normalization pass | R3 | [ ] | | | | |
 | T093 | Empty state component | R3 | [ ] | | | | |
 | T094 | Progressive padding + interactive feedback | R3 | [ ] | | | | |
+| T095 | Time slots schema: period + time_slot on weekly_schedule | F1 | [ ] | | | | |
+| T096 | Mixed modality schema: template_sections + section_id + mixed enum | F1 | [ ] | | | | |
+| T097 | Routines frequency schema: frequency_mode + frequency_days | F1 | [ ] | | | | |
+| T098 | Shared auto-suggest combobox component | F1 | [ ] | | | | |
+| T099 | Distinct values queries (exercise + routine) | F1 | [ ] | | | | |
+| T100 | Add Progression to main nav | F1 | [ ] | | | | |
+| T101 | Slot matching utility for cross-template cascade | F1 | [ ] | | | | |
+| T102 | Period pill selector + optional time picker component | F2 | [ ] | | | | |
+| T103 | Schedule assignment SA: period + time_slot | F2 | [ ] | | | | |
+| T104 | Running/MMA template fields editable post-creation + cascade | F2 | [ ] | | | | |
+| T105 | Cascade slot parameter changes SA (3 scopes) | F2 | [ ] | | | | |
+| T106 | Cascade add/remove exercise slot SA | F2 | [ ] | | | | |
+| T107 | Mixed template creation + section management SAs | F2 | [ ] | | | | |
+| T108 | Collapsible exercise form + comboboxes | F2 | [ ] | | | | |
+| T109 | Edit exercise form comboboxes | F2 | [ ] | | | | |
+| T110 | Frequency mode selector + day picker component | F2 | [ ] | | | | |
+| T111 | Routine create/edit forms: frequency mode + category combobox | F2 | [ ] | | | | |
+| T112 | Today page quick links to template editing | F2 | [ ] | | | | |
+| T113 | Schedule grid multi-entry per day | F3 | [ ] | | | | |
+| T114 | Today API array response + multi-session display | F3 | [ ] | | | | |
+| T115 | Calendar multi-workout per day + period labels | F3 | [ ] | | | | |
+| T116 | Cascade scope selector UI on all edit operations | F3 | [ ] | | | | |
+| T117 | Mixed template creation form UI | F3 | [ ] | | | | |
+| T118 | Routine scope filtering for frequency modes | F3 | [ ] | | | | |
+| T119 | Header/padding audit + standardization pass | F3 | [ ] | | | | |
+| T120 | Clone mesocycle: copy period, time_slot, template_sections | F3 | [ ] | | | | |
+| T121 | Mixed template display on Today page | F4 | [ ] | | | | |
+| T122 | Mixed template logging form + composite save SA | F4 | [ ] | | | | |
+| T123 | Calendar + schedule integration for mixed templates | F4 | [ ] | | | | |
+| T124 | Calendar day detail quick links to template editing | F4 | [ ] | | | | |

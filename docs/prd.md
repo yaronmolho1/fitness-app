@@ -55,10 +55,20 @@ Single user. Two usage contexts that drive distinct UX requirements:
   - Story: As a coach, I want a 7-day grid where I assign templates to days, so each week is fully mapped.
   - Story: As a coach, I want separate Normal and Deload schedule tabs, so deload weeks use different templates entirely (not just lighter loads).
   - Story: As a coach, I want rest days to be explicitly empty (no template assigned), so they're visible in the plan.
+  - Story: As a coach, I want to assign a time period (morning/afternoon/evening) and optional clock time to each scheduled workout, so days with multiple sessions are distinguishable.
+  - Story: As a coach, I want to schedule multiple workouts per day (e.g., morning strength + evening run), so split sessions are first-class.
 
 - Task 1.5: Cascade template changes
   - Story: As a coach, when I edit a template, I want to choose "Apply to: this phase only / this + all future / all phases," so changes propagate without me updating each phase manually.
   - Story: As a coach, I want cascade to never modify completed mesocycles, so past data stays intact.
+  - Story: As a coach, when I edit exercise slot parameters (sets, reps, weight, RPE, rest) I want the same 3-scope cascade options, so I don't manually update each phase's slots.
+  - Story: As a coach, when I add or remove an exercise from a template I want to cascade that change, so all future phases stay in sync.
+  - Story: As a coach, I want to edit running template fields (pace, HR zone, intervals, cues) after creation with cascade, so running plans evolve across phases.
+
+- Task 1.6: Build mixed-modality templates
+  - Story: As a coach, I want to create a single workout template that contains both resistance and running sections (e.g., strength + conditioning finisher), so combined sessions are one logical unit.
+  - Story: As a coach, I want to add ordered sections to a mixed template, each with its own modality and modality-specific configuration, so the workout flows from one type to another.
+  - Story: As a coach, I want mixed templates to appear as a single entry in the weekly schedule and calendar, so they don't feel like two separate workouts.
 
 ### Activity 2: Look Ahead (Coach)
 
@@ -77,6 +87,8 @@ Single user. Two usage contexts that drive distinct UX requirements:
 - Task 3.1: Manage routine items (Coach)
   - Story: As a coach, I want to create daily routine items (shoulder mobility, hip stretches, cold exposure) with category, custom input fields (weight, length, duration, sets, reps — pick 1+), and frequency target.
   - Story: As a coach, I want flexible scoping — global, per-mesocycle, date-range, or skip-on-deload — so routines appear only when relevant.
+  - Story: As a coach, I want to set frequency as specific days of the week (like Google Calendar day selector), daily, or N times per week, so I control exactly when routines appear.
+  - Story: As a coach, I want category selection via auto-suggest from existing categories with the option to type a new one, so categories stay consistent without a fixed list.
 
 - Task 3.2: Check off daily routines (Athlete)
   - Story: As an athlete, I want to see today's active routines and quickly fill in values (= done) or explicitly skip, so tracking takes seconds.
@@ -111,6 +123,15 @@ Single user. Two usage contexts that drive distinct UX requirements:
   - Story: As a coach, I want a searchable exercise database with name, modality, muscle group, and equipment, so I can build templates from a consistent library.
   - Story: As a coach, I want to filter by modality (resistance/running/mma), so I find exercises fast.
   - Story: As a coach, I want deletion blocked if an exercise is used in a template, so I don't break existing plans.
+  - Story: As a coach, I want the exercise creation form collapsed by default with a toggle to expand, so the page focuses on the library view.
+  - Story: As a coach, I want equipment and muscle group fields as auto-suggest comboboxes populated from existing values, so I get consistency without rigid lists.
+
+### Activity 6: Navigation & Discoverability (Coach + Athlete)
+
+- Task 6.1: Improve navigation
+  - Story: As a user, I want progression accessible from the main navigation, so I can review my training history without hunting for it.
+  - Story: As a user, I want quick links from calendar days and today's workout to template editing, so I can adjust plans without navigating through mesocycle details.
+  - Story: As a user, I want consistent header spacing, padding, and typography across all pages, so the app feels polished and cohesive.
 
 ## V1 Scope (SLC Slice)
 
