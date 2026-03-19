@@ -67,9 +67,11 @@ function createTestDb() {
       day_of_week INTEGER NOT NULL,
       template_id INTEGER REFERENCES workout_templates(id),
       week_type TEXT NOT NULL DEFAULT 'normal',
+      period TEXT NOT NULL DEFAULT 'morning',
+      time_slot TEXT,
       created_at INTEGER
     );
-    CREATE UNIQUE INDEX weekly_schedule_meso_day_type_idx ON weekly_schedule(mesocycle_id, day_of_week, week_type);
+    CREATE UNIQUE INDEX weekly_schedule_meso_day_type_period_idx ON weekly_schedule(mesocycle_id, day_of_week, week_type, period);
     CREATE TABLE logged_workouts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       template_id INTEGER,

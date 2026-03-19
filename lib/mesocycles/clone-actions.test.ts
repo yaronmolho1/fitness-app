@@ -90,8 +90,10 @@ function resetTables() {
     day_of_week INTEGER NOT NULL,
     template_id INTEGER REFERENCES workout_templates(id),
     week_type TEXT NOT NULL DEFAULT 'normal',
+    period TEXT NOT NULL DEFAULT 'morning',
+    time_slot TEXT,
     created_at INTEGER,
-    UNIQUE(mesocycle_id, day_of_week, week_type)
+    UNIQUE(mesocycle_id, day_of_week, week_type, period)
   )`)
 }
 

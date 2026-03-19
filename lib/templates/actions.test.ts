@@ -856,6 +856,8 @@ describe('deleteTemplate', () => {
         template_id INTEGER NOT NULL REFERENCES workout_templates(id),
         day_of_week INTEGER NOT NULL,
         week_type TEXT NOT NULL DEFAULT 'normal',
+        period TEXT NOT NULL DEFAULT 'morning',
+        time_slot TEXT,
         created_at INTEGER
       )
     `)

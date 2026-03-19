@@ -137,6 +137,8 @@ describe('ScheduleGrid', () => {
         day_of_week: 0,
         template_id: 2,
         week_type: 'normal',
+        period: 'morning',
+        time_slot: null,
         created_at: new Date(),
       },
     })
@@ -231,6 +233,8 @@ describe('ScheduleGrid', () => {
         day_of_week: 0,
         template_id: 1,
         week_type: 'normal',
+        period: 'morning',
+        time_slot: null,
         created_at: new Date(),
       },
     })
