@@ -1,5 +1,5 @@
 # Cascade Slot-Level Edits
-**Status:** planned
+**Status:** partial
 **Epic:** Template Cascade
 **Depends:** specs/cascade-scope-selection.md, specs/exercise-slots.md
 
