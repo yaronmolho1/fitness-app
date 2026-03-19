@@ -50,6 +50,13 @@
       "when": 1773814002634,
       "tag": "0006_flowery_venom",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1773931341126,
+      "tag": "0007_brief_omega_red",
+      "breakpoints": true
     }
   ]
 }

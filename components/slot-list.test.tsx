@@ -22,6 +22,7 @@ const makeSlot = (overrides: Partial<SlotWithExercise> = {}): SlotWithExercise =
   id: 1,
   template_id: 1,
   exercise_id: 1,
+  section_id: null,
   sets: 3,
   reps: '10',
   weight: 80,

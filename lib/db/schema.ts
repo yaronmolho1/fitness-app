@@ -46,7 +46,7 @@ export const workout_templates = sqliteTable('workout_templates', {
   name: text('name').notNull(),
   canonical_name: text('canonical_name').notNull(),
   modality: text('modality', {
-    enum: ['resistance', 'running', 'mma'],
+    enum: ['resistance', 'running', 'mma', 'mixed'],
   }).notNull(),
   notes: text('notes'),
   // Running-specific fields (null for non-running templates)
@@ -63,6 +63,30 @@ export const workout_templates = sqliteTable('workout_templates', {
   created_at: integer('created_at', { mode: 'timestamp' }),
 })
 
+export const template_sections = sqliteTable('template_sections', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  template_id: integer('template_id')
+    .notNull()
+    .references(() => workout_templates.id, { onDelete: 'cascade' }),
+  modality: text('modality', {
+    enum: ['resistance', 'running', 'mma'],
+  }).notNull(),
+  section_name: text('section_name').notNull(),
+  order: integer('order').notNull(),
+  // Running-specific fields
+  run_type: text('run_type', {
+    enum: ['easy', 'tempo', 'interval', 'long', 'race'],
+  }),
+  target_pace: text('target_pace'),
+  hr_zone: integer('hr_zone'),
+  interval_count: integer('interval_count'),
+  interval_rest: integer('interval_rest'),
+  coaching_cues: text('coaching_cues'),
+  // MMA-specific
+  planned_duration: integer('planned_duration'),
+  created_at: integer('created_at', { mode: 'timestamp' }),
+})
+
 export const exercise_slots = sqliteTable('exercise_slots', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   template_id: integer('template_id')
@@ -71,6 +95,7 @@ export const exercise_slots = sqliteTable('exercise_slots', {
   exercise_id: integer('exercise_id')
     .notNull()
     .references(() => exercises.id), // NO cascade
+  section_id: integer('section_id').references(() => template_sections.id), // nullable for backward compat
   sets: integer('sets').notNull(),
   reps: text('reps').notNull(),
   weight: real('weight'),
