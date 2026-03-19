@@ -1,5 +1,5 @@
 # Exercise Creation UX
-**Status:** planned
+**Status:** in-progress
 **Epic:** Exercise Library
 **Depends:** specs/exercise-crud.md
 
