@@ -95,6 +95,8 @@ const CREATE_SQL = `
     scope TEXT NOT NULL, mesocycle_id INTEGER REFERENCES mesocycles(id),
     start_date TEXT, end_date TEXT,
     skip_on_deload INTEGER NOT NULL DEFAULT 0,
+    frequency_mode TEXT NOT NULL DEFAULT 'weekly_target',
+    frequency_days TEXT,
     created_at INTEGER
   );
   CREATE TABLE routine_logs (

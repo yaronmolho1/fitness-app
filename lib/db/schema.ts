@@ -172,6 +172,12 @@ export const routine_items = sqliteTable('routine_items', {
   skip_on_deload: integer('skip_on_deload', { mode: 'boolean' })
     .notNull()
     .default(false),
+  frequency_mode: text('frequency_mode', {
+    enum: ['daily', 'specific_days', 'weekly_target'],
+  })
+    .notNull()
+    .default('weekly_target'),
+  frequency_days: text('frequency_days', { mode: 'json' }).$type<number[]>(),
   created_at: integer('created_at', { mode: 'timestamp' }),
 })
 

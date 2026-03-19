@@ -39,6 +39,8 @@ function createTables() {
       start_date TEXT,
       end_date TEXT,
       skip_on_deload INTEGER NOT NULL DEFAULT 0,
+      frequency_mode TEXT NOT NULL DEFAULT 'weekly_target',
+      frequency_days TEXT,
       created_at INTEGER
     )
   `)
