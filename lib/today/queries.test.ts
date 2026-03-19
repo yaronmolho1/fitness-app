@@ -78,6 +78,7 @@ function createTables() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       template_id INTEGER NOT NULL REFERENCES workout_templates(id) ON DELETE CASCADE,
       exercise_id INTEGER NOT NULL REFERENCES exercises(id),
+    section_id INTEGER,
       sets INTEGER NOT NULL,
       reps TEXT NOT NULL,
       weight REAL,

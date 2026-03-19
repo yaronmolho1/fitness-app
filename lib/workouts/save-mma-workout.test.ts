@@ -36,6 +36,7 @@ const CREATE_SQL = `
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     template_id INTEGER NOT NULL REFERENCES workout_templates(id) ON DELETE CASCADE,
     exercise_id INTEGER NOT NULL REFERENCES exercises(id),
+    section_id INTEGER,
     sets INTEGER NOT NULL, reps TEXT NOT NULL, weight REAL, rpe REAL,
     rest_seconds INTEGER, guidelines TEXT, "order" INTEGER NOT NULL,
     is_main INTEGER NOT NULL DEFAULT 0, created_at INTEGER

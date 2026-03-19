@@ -2,6 +2,7 @@ import { relations } from 'drizzle-orm'
 import {
   mesocycles,
   workout_templates,
+  template_sections,
   weekly_schedule,
   routine_items,
   exercise_slots,
@@ -22,10 +23,22 @@ export const workout_templatesRelations = relations(
   workout_templates,
   ({ many, one }) => ({
     exercise_slots: many(exercise_slots),
+    template_sections: many(template_sections),
     mesocycle: one(mesocycles, {
       fields: [workout_templates.mesocycle_id],
       references: [mesocycles.id],
     }),
+  })
+)
+
+export const template_sectionsRelations = relations(
+  template_sections,
+  ({ many, one }) => ({
+    template: one(workout_templates, {
+      fields: [template_sections.template_id],
+      references: [workout_templates.id],
+    }),
+    exercise_slots: many(exercise_slots),
   })
 )
 
@@ -37,6 +50,10 @@ export const exercise_slotsRelations = relations(exercise_slots, ({ one }) => ({
   exercise: one(exercises, {
     fields: [exercise_slots.exercise_id],
     references: [exercises.id],
+  }),
+  section: one(template_sections, {
+    fields: [exercise_slots.section_id],
+    references: [template_sections.id],
   }),
 }))
 
