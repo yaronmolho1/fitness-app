@@ -9,12 +9,31 @@ if [ -z "$DATABASE_URL" ]; then
 fi
 
 echo "Running database migrations..."
-if ./node_modules/.bin/drizzle-kit migrate 2>/dev/null; then
-  echo "Migrations complete"
+if node -e "
+const Database = require('better-sqlite3');
+const fs = require('fs');
+const path = require('path');
+const db = new Database(process.env.DATABASE_URL);
+db.pragma('journal_mode = WAL');
+db.pragma('foreign_keys = ON');
+db.exec('CREATE TABLE IF NOT EXISTS __drizzle_migrations (id INTEGER PRIMARY KEY AUTOINCREMENT, hash TEXT NOT NULL, created_at INTEGER)');
+const journal = JSON.parse(fs.readFileSync('./lib/db/migrations/meta/_journal.json', 'utf8'));
+const applied = new Set(db.prepare('SELECT hash FROM __drizzle_migrations').all().map(r => r.hash));
+for (const entry of journal.entries) {
+  if (applied.has(entry.tag)) continue;
+  const sql = fs.readFileSync(path.join('./lib/db/migrations', entry.tag + '.sql'), 'utf8');
+  const stmts = sql.split('--> statement-breakpoint').map(s => s.trim()).filter(Boolean);
+  const tx = db.transaction(() => { for (const s of stmts) db.exec(s); db.prepare('INSERT INTO __drizzle_migrations (hash, created_at) VALUES (?, ?)').run(entry.tag, Date.now()); });
+  tx();
+  console.log('Applied: ' + entry.tag);
+}
+db.close();
+console.log('Migrations complete');
+"; then
+  echo "Migrations OK"
 else
   EXIT_CODE=$?
   echo "Migration warning (exit $EXIT_CODE) — app will start anyway"
-  echo "Run manually: docker compose exec app ./node_modules/.bin/drizzle-kit migrate"
 fi
 
 echo "Starting application..."
