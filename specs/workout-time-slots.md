@@ -1,5 +1,5 @@
 # Workout Time Slots
-**Status:** planned
+**Status:** in-progress
 **Epic:** Schedule & Calendar
 **Depends:** specs/7-day-assignment-grid.md, specs/projected-calendar.md
 
