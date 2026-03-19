@@ -89,6 +89,8 @@ describe('Interactive feedback — transition classes', () => {
             has_sets: false,
             has_reps: false,
             frequency_target: 7,
+            frequency_mode: 'weekly_target' as const,
+            frequency_days: null,
             scope: 'global' as const,
             skip_on_deload: false,
             mesocycle_id: null,

@@ -14,6 +14,8 @@ function makeItem(overrides: Partial<RoutineItemRow> = {}): RoutineItemRow {
     has_sets: false,
     has_reps: false,
     frequency_target: 7,
+    frequency_mode: 'weekly_target' as const,
+    frequency_days: null,
     scope: 'global',
     mesocycle_id: null,
     start_date: null,

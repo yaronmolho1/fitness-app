@@ -64,6 +64,13 @@
       "when": 1773935087531,
       "tag": "0008_jittery_iron_monger",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1773936475552,
+      "tag": "0009_marvelous_wolfsbane",
+      "breakpoints": true
     }
   ]
 }
