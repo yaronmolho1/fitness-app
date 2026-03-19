@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ListChecks } from 'lucide-react'
+import { ListChecks, Plus } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/empty-state'
@@ -10,6 +10,7 @@ import { formatInputFields, formatScopeSummary } from '@/lib/routines/format'
 import type { RoutineItemWithMesocycle } from '@/lib/routines/queries'
 import { deleteRoutineItem } from '@/lib/routines/actions'
 import { EditRoutineItemForm } from '@/components/edit-routine-item-form'
+import { CreateRoutineItemForm } from '@/components/create-routine-item-form'
 
 type Mesocycle = { id: number; name: string }
 
@@ -21,6 +22,7 @@ export function RoutineItemList({
   mesocycles: Mesocycle[]
 }) {
   const [editingId, setEditingId] = useState<number | null>(null)
+  const [showCreate, setShowCreate] = useState(false)
   const router = useRouter()
 
   async function handleDelete(id: number, name: string) {
@@ -33,16 +35,50 @@ export function RoutineItemList({
 
   if (items.length === 0) {
     return (
-      <EmptyState
-        icon={ListChecks}
-        message="No routine items yet"
-        description="Create your first routine item to start tracking."
-      />
+      <div className="space-y-4">
+        {showCreate ? (
+          <CreateRoutineItemForm
+            mesocycles={mesocycles}
+            onCancel={() => setShowCreate(false)}
+            onCreated={() => { setShowCreate(false); router.refresh() }}
+          />
+        ) : (
+          <>
+            <EmptyState
+              icon={ListChecks}
+              message="No routine items yet"
+              description="Create your first routine item to start tracking."
+            />
+            <div className="flex justify-center">
+              <Button onClick={() => setShowCreate(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                New Routine Item
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
     )
   }
 
   return (
-    <div className="divide-y rounded-xl border">
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button onClick={() => setShowCreate(!showCreate)} variant={showCreate ? 'outline' : 'default'} size="sm">
+          <Plus className="mr-2 h-4 w-4" />
+          {showCreate ? 'Cancel' : 'New Routine Item'}
+        </Button>
+      </div>
+
+      {showCreate && (
+        <CreateRoutineItemForm
+          mesocycles={mesocycles}
+          onCancel={() => setShowCreate(false)}
+          onCreated={() => { setShowCreate(false); router.refresh() }}
+        />
+      )}
+
+      <div className="divide-y rounded-xl border">
       {items.map(({ routine_item: item, mesocycle_name }) => (
         <div key={item.id} className="px-4 py-3 transition-colors duration-150 hover:bg-muted/50">
           {editingId === item.id ? (
@@ -96,6 +132,7 @@ export function RoutineItemList({
           )}
         </div>
       ))}
+    </div>
     </div>
   )
 }
