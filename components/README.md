@@ -32,6 +32,7 @@ Shared React components — app-level UI and navigation.
 - `running-logging-form.tsx` — `RunningLoggingForm` post-workout logging form for running templates (pace, HR, intervals)
 - `mma-logging-form.tsx` — `MmaLoggingForm` post-workout logging form for MMA/BJJ templates (duration, feeling, notes)
 - `empty-state.tsx` — `EmptyState` shared empty state with optional icon, message, description, and action button
+- `mixed-template-form.tsx` — `MixedTemplateForm` creation form for mixed-modality templates: name input, dynamic section editor (add/remove/reorder), per-section modality-specific fields, 2+ sections with 2+ modalities validation
 
 ## Subdirectories
 - `layout/` — app shell navigation: desktop sidebar, mobile header + drawer ([README](./layout/README.md))
