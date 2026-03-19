@@ -650,6 +650,28 @@ describe('reorderSections', () => {
     if (!result.success) expect(result.error).toMatch(/template/i)
   })
 
+  it('rejects non-mixed template', async () => {
+    const meso = seedMesocycle()
+    const tmpl = testDb
+      .insert(schema.workout_templates)
+      .values({
+        mesocycle_id: meso.id,
+        name: 'Push A',
+        canonical_name: 'push-a',
+        modality: 'resistance',
+        created_at: new Date(),
+      })
+      .returning()
+      .get()
+
+    const result = await reorderSections({
+      template_id: tmpl.id,
+      section_ids: [1, 2],
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toMatch(/mixed/i)
+  })
+
   it('rejects on completed mesocycle', async () => {
     const meso = seedMesocycle({ status: 'completed' })
     const tmpl = seedMixedTemplate(meso.id)

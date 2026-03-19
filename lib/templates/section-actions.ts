@@ -416,6 +416,10 @@ export async function reorderSections(
     return { success: false, error: 'Template not found' }
   }
 
+  if (template.modality !== 'mixed') {
+    return { success: false, error: 'Can only reorder sections on mixed templates' }
+  }
+
   const completedError = checkCompletedMesocycle(template_id)
   if (completedError) {
     return { success: false, error: completedError }
