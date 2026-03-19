@@ -78,13 +78,46 @@ const SECTIONS_DDL = sql`
   )
 `
 
+const EXERCISES_DDL = sql`
+  CREATE TABLE exercises (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    modality TEXT NOT NULL DEFAULT 'resistance',
+    muscle_group TEXT,
+    equipment TEXT,
+    created_at INTEGER
+  )
+`
+
+const SLOTS_DDL = sql`
+  CREATE TABLE exercise_slots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    template_id INTEGER NOT NULL REFERENCES workout_templates(id) ON DELETE CASCADE,
+    exercise_id INTEGER NOT NULL REFERENCES exercises(id),
+    section_id INTEGER REFERENCES template_sections(id),
+    sets INTEGER NOT NULL,
+    reps TEXT NOT NULL,
+    weight REAL,
+    rpe REAL,
+    rest_seconds INTEGER,
+    guidelines TEXT,
+    "order" INTEGER NOT NULL,
+    is_main INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER
+  )
+`
+
 function seedDb() {
+  testDb.run(sql`DROP TABLE IF EXISTS exercise_slots`)
   testDb.run(sql`DROP TABLE IF EXISTS template_sections`)
+  testDb.run(sql`DROP TABLE IF EXISTS exercises`)
   testDb.run(sql`DROP TABLE IF EXISTS workout_templates`)
   testDb.run(sql`DROP TABLE IF EXISTS mesocycles`)
   testDb.run(MESO_DDL)
   testDb.run(TEMPLATES_DDL)
   testDb.run(SECTIONS_DDL)
+  testDb.run(EXERCISES_DDL)
+  testDb.run(SLOTS_DDL)
 }
 
 function seedMesocycle(
@@ -516,6 +549,37 @@ describe('removeSection', () => {
     const result = await removeSection(s1.id)
     expect(result.success).toBe(false)
     if (!result.success) expect(result.error).toMatch(/completed/i)
+  })
+
+  it('deletes associated exercise_slots when removing a section', async () => {
+    const meso = seedMesocycle()
+    const tmpl = seedMixedTemplate(meso.id)
+    const s1 = seedSection(tmpl.id, 'resistance', 1, 'Lift A')
+    const s2 = seedSection(tmpl.id, 'resistance', 2, 'Lift B')
+    seedSection(tmpl.id, 'running', 3, 'Run')
+
+    // Create exercise + slots tied to s1
+    const ex = testDb
+      .insert(schema.exercises)
+      .values({ name: 'Bench Press', modality: 'resistance' })
+      .returning({ id: schema.exercises.id })
+      .get()
+    testDb
+      .insert(schema.exercise_slots)
+      .values({ template_id: tmpl.id, exercise_id: ex.id, section_id: s1.id, sets: 3, reps: '8', order: 1 })
+      .run()
+    testDb
+      .insert(schema.exercise_slots)
+      .values({ template_id: tmpl.id, exercise_id: ex.id, section_id: s2.id, sets: 4, reps: '10', order: 2 })
+      .run()
+
+    const result = await removeSection(s1.id)
+    expect(result.success).toBe(true)
+
+    // Slots for s1 should be gone, slots for s2 remain
+    const remainingSlots = testDb.select().from(schema.exercise_slots).all()
+    expect(remainingSlots).toHaveLength(1)
+    expect(remainingSlots[0].section_id).toBe(s2.id)
   })
 })
 

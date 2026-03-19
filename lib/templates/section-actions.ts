@@ -8,6 +8,7 @@ import {
   workout_templates,
   mesocycles,
   template_sections,
+  exercise_slots,
 } from '@/lib/db/schema'
 import { generateCanonicalName } from './utils'
 
@@ -363,9 +364,15 @@ export async function removeSection(sectionId: number): Promise<RemoveResult> {
     }
   }
 
-  db.delete(template_sections)
-    .where(eq(template_sections.id, sectionId))
-    .run()
+  // Delete associated exercise_slots first (section_id FK has no ON DELETE action)
+  db.transaction((tx) => {
+    tx.delete(exercise_slots)
+      .where(eq(exercise_slots.section_id, sectionId))
+      .run()
+    tx.delete(template_sections)
+      .where(eq(template_sections.id, sectionId))
+      .run()
+  })
 
   revalidatePath('/mesocycles')
   return { success: true }
