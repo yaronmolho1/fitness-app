@@ -11,3 +11,5 @@ Workout template server actions for all modalities (resistance, running, MMA/BJJ
 - `cascade-types.ts` — `CascadeScope`, `CascadeUpdates`, `CascadeSummary` shared types — safe to import from client components
 - `cascade-actions.ts` — `cascadeUpdateTemplates()` Server Action for atomic cascade updates (name/notes) across sibling templates, skips templates with logged workouts inside a transaction
 - `section-actions.ts` — `createMixedTemplate()`, `addSection()`, `removeSection()`, `reorderSections()` Server Actions for mixed-modality templates and template_sections management
+- `slot-matching.ts` — `findMatchingSlots()` matches exercise slots between source and target templates by exercise ID, order, and role; exports `SlotIdentifier`, `MatchType`, `SlotMatch`, `SkipReason`, `SlotMatchResult`
+- `slot-matching.test.ts` — 12 test cases for slot matching (exact, reordered, partial, role filtering, skip reasons)
