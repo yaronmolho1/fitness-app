@@ -36,4 +36,5 @@ Shared React components — app-level UI and navigation.
 
 ## Subdirectories
 - `layout/` — app shell navigation: desktop sidebar, mobile header + drawer ([README](./layout/README.md))
+- `schedule/` — schedule assignment UI: period selector, time slot picker ([README](./schedule/README.md))
 - `ui/` — shadcn/ui primitives ([README](./ui/README.md))
