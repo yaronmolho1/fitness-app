@@ -20,10 +20,6 @@ interface DayDetailPanelProps {
   onClose: () => void
 }
 
-function formatDate(dateStr: string): string {
-  return formatDateLong(dateStr)
-}
-
 function ModalityBadge({ modality }: { modality: string }) {
   return (
     <Badge className={getModalityBadgeClasses(modality)} variant="secondary">
@@ -169,7 +165,7 @@ export function DayDetailPanel({ date, onClose }: DayDetailPanelProps) {
     <Sheet open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose() }}>
       <SheetContent side="right" className="overflow-y-auto" data-testid="day-detail-panel">
         <SheetHeader>
-          <SheetTitle>{date ? formatDate(date) : ''}</SheetTitle>
+          <SheetTitle>{date ? formatDateLong(date) : ''}</SheetTitle>
           <SheetDescription>
             {detail?.type === 'rest' && 'Rest Day'}
             {detail?.type === 'projected' && 'Projected workout'}
