@@ -119,7 +119,7 @@ Route Handlers are intentionally kept for reads that may serve V2 consumers (LLM
 | Schedule | Weekly day-to-template assignment, normal + deload variants |
 | Logging | Workout log creation (snapshot + normalized rows), immutable after save |
 | Routines | Routine item CRUD with flexible scoping, daily log tracking |
-| Calendar / Progression | Computed views: projected calendar, exercise progression charts, today's workout |
+| Calendar / Progression | Computed views: projected calendar, exercise progression charts, today's sessions (multi-session per day) |
 
 For response format and status codes, see `docs/api-standards.md`.
 
