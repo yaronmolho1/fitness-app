@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { ExercisePicker } from '@/components/exercise-picker'
+import { SlotCascadeScopeSelector } from '@/components/slot-cascade-scope-selector'
 import { updateExerciseSlot, removeExerciseSlot, addExerciseSlot, reorderExerciseSlots } from '@/lib/templates/slot-actions'
 import type { SlotWithExercise } from '@/lib/templates/slot-queries'
 import type { Exercise } from '@/lib/exercises/filters'
@@ -26,6 +27,9 @@ export function SlotList({ slots, templateId, exercises, isCompleted }: SlotList
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [dropIndex, setDropIndex] = useState<number | null>(null)
   const [isReordering, setIsReordering] = useState(false)
+
+  // Cascade state for add-slot operation
+  const [addCascadeSlotId, setAddCascadeSlotId] = useState<number | null>(null)
 
   // Touch drag state
   const touchDragIndex = useRef<number | null>(null)
@@ -145,13 +149,13 @@ export function SlotList({ slots, templateId, exercises, isCompleted }: SlotList
       })
       if (result.success) {
         setShowPicker(false)
-        router.refresh()
+        setAddCascadeSlotId(result.data.id)
       }
     })
   }
 
-  // Empty state
-  if (orderedSlots.length === 0 && !showPicker) {
+  // Empty state (not shown during cascade)
+  if (orderedSlots.length === 0 && !showPicker && addCascadeSlotId === null) {
     return (
       <div className="rounded-xl border border-dashed p-6 text-center">
         <p className="text-sm font-medium text-muted-foreground">No exercises added</p>
@@ -178,6 +182,7 @@ export function SlotList({ slots, templateId, exercises, isCompleted }: SlotList
         <SlotRow
           key={slot.id}
           slot={slot}
+          templateId={templateId}
           isCompleted={isCompleted}
           onUpdated={() => router.refresh()}
           showDragHandle={canDrag}
@@ -223,6 +228,16 @@ export function SlotList({ slots, templateId, exercises, isCompleted }: SlotList
           {isPending && <p className="text-xs text-muted-foreground">Adding...</p>}
         </div>
       )}
+
+      {addCascadeSlotId !== null && (
+        <SlotCascadeScopeSelector
+          templateId={templateId}
+          operation="add-slot"
+          sourceSlotId={addCascadeSlotId}
+          onComplete={() => { setAddCascadeSlotId(null); router.refresh() }}
+          onCancel={() => { setAddCascadeSlotId(null); router.refresh() }}
+        />
+      )}
     </div>
   )
 }
@@ -233,6 +248,7 @@ export function SlotList({ slots, templateId, exercises, isCompleted }: SlotList
 
 type SlotRowProps = {
   slot: SlotWithExercise
+  templateId: number
   isCompleted: boolean
   onUpdated: () => void
   showDragHandle?: boolean
@@ -247,14 +263,15 @@ type SlotRowProps = {
 }
 
 function SlotRow({
-  slot, isCompleted, onUpdated,
+  slot, templateId, isCompleted, onUpdated,
   showDragHandle, isDragging, isDropTarget,
   onDragStart, onDragOver, onDragEnd,
   onTouchStart, onTouchMove, onTouchEnd,
 }: SlotRowProps) {
-  const [mode, setMode] = useState<'display' | 'edit' | 'confirm-remove'>('display')
+  const [mode, setMode] = useState<'display' | 'edit' | 'confirm-remove' | 'cascade-params' | 'cascade-remove'>('display')
   const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
+  const [pendingParamUpdates, setPendingParamUpdates] = useState<Record<string, unknown>>({})
 
   // Edit form state
   const [sets, setSets] = useState(slot.sets)
@@ -285,6 +302,19 @@ function SlotRow({
   }
 
   function handleSave() {
+    // Compute diff of changed params for cascade
+    const diff: Record<string, unknown> = {}
+    if (sets !== slot.sets) diff.sets = sets
+    if (reps !== Number(slot.reps)) diff.reps = reps
+    const weightVal = weight === '' ? null : weight
+    if (weightVal !== slot.weight) diff.weight = weightVal
+    const rpeVal = rpe === '' ? null : rpe
+    if (rpeVal !== slot.rpe) diff.rpe = rpeVal
+    const restVal = restSeconds === '' ? null : restSeconds
+    if (restVal !== slot.rest_seconds) diff.rest_seconds = restVal
+    const guidelinesVal = guidelines || null
+    if (guidelinesVal !== slot.guidelines) diff.guidelines = guidelinesVal
+
     startTransition(async () => {
       const result = await updateExerciseSlot({
         id: slot.id,
@@ -297,8 +327,13 @@ function SlotRow({
       })
       if (result.success) {
         setError('')
-        setMode('display')
-        onUpdated()
+        if (Object.keys(diff).length > 0) {
+          setPendingParamUpdates(diff)
+          setMode('cascade-params')
+        } else {
+          setMode('display')
+          onUpdated()
+        }
       } else {
         setError(result.error)
       }
@@ -309,7 +344,7 @@ function SlotRow({
     startTransition(async () => {
       const result = await removeExerciseSlot(slot.id)
       if (result.success) {
-        onUpdated()
+        setMode('cascade-remove')
       } else {
         setError(result.error)
         setMode('display')
@@ -324,6 +359,38 @@ function SlotRow({
       return secs > 0 ? `${mins}m${secs}s` : `${mins}m`
     }
     return `${seconds}s`
+  }
+
+  // Cascade mode for param edits
+  if (mode === 'cascade-params') {
+    return (
+      <div data-testid="slot-row">
+        <SlotCascadeScopeSelector
+          templateId={templateId}
+          operation="update-params"
+          slotId={slot.id}
+          paramUpdates={pendingParamUpdates}
+          onComplete={() => { setMode('display'); onUpdated() }}
+          onCancel={() => { setMode('display'); onUpdated() }}
+        />
+      </div>
+    )
+  }
+
+  // Cascade mode for slot removal
+  if (mode === 'cascade-remove') {
+    return (
+      <div data-testid="slot-row">
+        <SlotCascadeScopeSelector
+          templateId={templateId}
+          operation="remove-slot"
+          sourceExerciseId={slot.exercise_id}
+          sourceOrder={slot.order}
+          onComplete={() => { setMode('display'); onUpdated() }}
+          onCancel={() => { setMode('display'); onUpdated() }}
+        />
+      </div>
+    )
   }
 
   // Edit mode

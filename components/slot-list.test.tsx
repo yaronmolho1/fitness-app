@@ -14,6 +14,23 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: vi.fn() }),
 }))
 
+// Mock cascade dependencies to prevent unhandled DB calls
+vi.mock('@/lib/templates/cascade-actions', () => ({
+  getCascadePreview: vi.fn().mockResolvedValue({
+    success: true,
+    data: { totalTargets: 0, skippedCount: 0, targets: [] },
+  }),
+}))
+
+vi.mock('@/lib/templates/cascade-slot-params', () => ({
+  cascadeSlotParams: vi.fn(),
+}))
+
+vi.mock('@/lib/templates/cascade-slot-ops', () => ({
+  cascadeAddSlot: vi.fn(),
+  cascadeRemoveSlot: vi.fn(),
+}))
+
 import { SlotList } from './slot-list'
 import { updateExerciseSlot, removeExerciseSlot } from '@/lib/templates/slot-actions'
 import type { SlotWithExercise } from '@/lib/templates/slot-queries'
