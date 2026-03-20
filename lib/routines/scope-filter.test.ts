@@ -267,6 +267,134 @@ describe('filterActiveRoutineItems', () => {
     })
   })
 
+  describe('frequency_mode filtering (T118)', () => {
+    it('daily mode: item active every day', () => {
+      const items = [makeItem({ frequency_mode: 'daily', frequency_days: null })]
+      // Sunday through Saturday — all should pass
+      for (const date of ['2026-03-15', '2026-03-16', '2026-03-17', '2026-03-18', '2026-03-19', '2026-03-20', '2026-03-21']) {
+        const result = filterActiveRoutineItems(items, [], date)
+        expect(result).toHaveLength(1)
+      }
+    })
+
+    it('weekly_target mode: item active every day', () => {
+      const items = [makeItem({ frequency_mode: 'weekly_target', frequency_target: 3 })]
+      for (const date of ['2026-03-15', '2026-03-16', '2026-03-17', '2026-03-18', '2026-03-19', '2026-03-20', '2026-03-21']) {
+        const result = filterActiveRoutineItems(items, [], date)
+        expect(result).toHaveLength(1)
+      }
+    })
+
+    it('specific_days mode: item active only on matching days', () => {
+      // frequency_days=[1,3,5] = Mon, Wed, Fri
+      const items = [
+        makeItem({ frequency_mode: 'specific_days', frequency_days: [1, 3, 5] }),
+      ]
+      // Monday (day 1) — should pass
+      expect(filterActiveRoutineItems(items, [], '2026-03-16')).toHaveLength(1)
+      // Wednesday (day 3) — should pass
+      expect(filterActiveRoutineItems(items, [], '2026-03-18')).toHaveLength(1)
+      // Friday (day 5) — should pass
+      expect(filterActiveRoutineItems(items, [], '2026-03-20')).toHaveLength(1)
+      // Sunday (day 0) — should NOT pass
+      expect(filterActiveRoutineItems(items, [], '2026-03-15')).toHaveLength(0)
+      // Tuesday (day 2) — should NOT pass
+      expect(filterActiveRoutineItems(items, [], '2026-03-17')).toHaveLength(0)
+      // Thursday (day 4) — should NOT pass
+      expect(filterActiveRoutineItems(items, [], '2026-03-19')).toHaveLength(0)
+      // Saturday (day 6) — should NOT pass
+      expect(filterActiveRoutineItems(items, [], '2026-03-21')).toHaveLength(0)
+    })
+
+    it('specific_days with null frequency_days: excluded (no valid days)', () => {
+      const items = [
+        makeItem({ frequency_mode: 'specific_days', frequency_days: null }),
+      ]
+      const result = filterActiveRoutineItems(items, [], '2026-03-15')
+      expect(result).toHaveLength(0)
+    })
+
+    it('specific_days with empty frequency_days: excluded', () => {
+      const items = [
+        makeItem({ frequency_mode: 'specific_days', frequency_days: [] }),
+      ]
+      const result = filterActiveRoutineItems(items, [], '2026-03-15')
+      expect(result).toHaveLength(0)
+    })
+
+    it('frequency filtering applies after scope check', () => {
+      // Mesocycle-scoped item with specific_days — scope must pass first
+      const meso = makeMeso({ id: 1, status: 'active' })
+      const items = [
+        makeItem({
+          scope: 'mesocycle',
+          mesocycle_id: 1,
+          frequency_mode: 'specific_days',
+          frequency_days: [1], // Monday only
+        }),
+      ]
+      // Monday, in meso range — should pass both scope and frequency
+      expect(filterActiveRoutineItems(items, [meso], '2026-03-16')).toHaveLength(1)
+      // Tuesday, in meso range — passes scope, fails frequency
+      expect(filterActiveRoutineItems(items, [meso], '2026-03-17')).toHaveLength(0)
+      // Monday, outside meso range — fails scope
+      expect(filterActiveRoutineItems(items, [meso], '2026-05-04')).toHaveLength(0)
+    })
+
+    it('specific_days + skip_on_deload: deload check takes priority', () => {
+      const meso = makeMeso({ id: 1, status: 'active' })
+      const items = [
+        makeItem({
+          frequency_mode: 'specific_days',
+          frequency_days: [1], // Monday
+          skip_on_deload: true,
+        }),
+      ]
+      // 2026-03-30 is Monday (day 1) and in deload week (Mar 29+)
+      // skip_on_deload should exclude it even though day matches
+      expect(filterActiveRoutineItems(items, [meso], '2026-03-30')).toHaveLength(0)
+    })
+
+    it('daily mode + skip_on_deload: excluded during deload', () => {
+      const meso = makeMeso({ id: 1, status: 'active' })
+      const items = [
+        makeItem({ frequency_mode: 'daily', skip_on_deload: true }),
+      ]
+      expect(filterActiveRoutineItems(items, [meso], '2026-03-30')).toHaveLength(0)
+    })
+
+    it('specific_days with single day selected', () => {
+      const items = [
+        makeItem({ frequency_mode: 'specific_days', frequency_days: [0] }), // Sunday only
+      ]
+      expect(filterActiveRoutineItems(items, [], '2026-03-15')).toHaveLength(1) // Sunday
+      expect(filterActiveRoutineItems(items, [], '2026-03-16')).toHaveLength(0) // Monday
+    })
+
+    it('specific_days with all days selected behaves like daily', () => {
+      const items = [
+        makeItem({ frequency_mode: 'specific_days', frequency_days: [0, 1, 2, 3, 4, 5, 6] }),
+      ]
+      for (const date of ['2026-03-15', '2026-03-16', '2026-03-17', '2026-03-18', '2026-03-19', '2026-03-20', '2026-03-21']) {
+        expect(filterActiveRoutineItems(items, [], date)).toHaveLength(1)
+      }
+    })
+
+    it('mixed frequency modes filter correctly together', () => {
+      const items = [
+        makeItem({ id: 1, frequency_mode: 'daily' }),
+        makeItem({ id: 2, frequency_mode: 'weekly_target', frequency_target: 3 }),
+        makeItem({ id: 3, frequency_mode: 'specific_days', frequency_days: [1, 3, 5] }), // Mon/Wed/Fri
+      ]
+      // Sunday — daily + weekly pass, specific_days fails
+      const sunday = filterActiveRoutineItems(items, [], '2026-03-15')
+      expect(sunday.map((i) => i.id)).toEqual([1, 2])
+      // Monday — all pass
+      const monday = filterActiveRoutineItems(items, [], '2026-03-16')
+      expect(monday.map((i) => i.id)).toEqual([1, 2, 3])
+    })
+  })
+
   describe('mixed items', () => {
     it('filters correctly with multiple items of different scopes', () => {
       const meso = makeMeso({ id: 1, status: 'active' })

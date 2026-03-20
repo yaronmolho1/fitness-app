@@ -109,9 +109,8 @@ describe('filterActiveRoutineItems — frequency_mode passthrough', () => {
     expect(result[0].frequency_mode).toBe('daily')
   })
 
-  it('does not filter by frequency_mode=specific_days — item passes through regardless of day', () => {
+  it('filters by frequency_mode=specific_days — excludes on non-matching days (T118)', () => {
     // 2026-03-15 is a Sunday (day 0). frequency_days=[1,3] (Mon, Wed)
-    // Current code does NOT check frequency_days, so it passes through
     const items = [
       makeItem({
         frequency_mode: 'specific_days',
@@ -120,9 +119,7 @@ describe('filterActiveRoutineItems — frequency_mode passthrough', () => {
       }),
     ]
     const result = filterActiveRoutineItems(items, [], '2026-03-15') // Sunday
-    expect(result).toHaveLength(1)
-    // NOTE: possible bug — specific_days items show even on non-matching days.
-    // T118 will add day-of-week filtering for specific_days mode.
+    expect(result).toHaveLength(0)
   })
 
   it('does not filter by frequency_mode=weekly_target', () => {
@@ -131,7 +128,7 @@ describe('filterActiveRoutineItems — frequency_mode passthrough', () => {
     expect(result).toHaveLength(1)
   })
 
-  it('frequency_days=null with specific_days still passes through', () => {
+  it('frequency_days=null with specific_days is excluded (T118)', () => {
     const items = [
       makeItem({
         frequency_mode: 'specific_days',
@@ -140,7 +137,7 @@ describe('filterActiveRoutineItems — frequency_mode passthrough', () => {
       }),
     ]
     const result = filterActiveRoutineItems(items, [], '2026-03-15')
-    expect(result).toHaveLength(1)
+    expect(result).toHaveLength(0)
   })
 
   it('frequency_mode does not interact with skip_on_deload', () => {
