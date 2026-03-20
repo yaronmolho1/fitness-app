@@ -5,6 +5,15 @@ export type CascadeScope = 'this-only' | 'this-and-future' | 'all-phases'
 export type CascadeUpdates = {
   name?: string
   notes?: string
+  // Running-specific fields
+  run_type?: 'easy' | 'tempo' | 'interval' | 'long' | 'race'
+  target_pace?: string | null
+  hr_zone?: number | null
+  interval_count?: number | null
+  interval_rest?: number | null
+  coaching_cues?: string | null
+  // MMA-specific
+  planned_duration?: number | null
 }
 
 export type CascadeSummary = {

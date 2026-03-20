@@ -216,6 +216,18 @@ type TemplateRowProps = {
   onUpdated: () => void
 }
 
+const RUN_TYPES = [
+  { value: 'easy', label: 'Easy' },
+  { value: 'tempo', label: 'Tempo' },
+  { value: 'interval', label: 'Interval' },
+  { value: 'long', label: 'Long Run' },
+  { value: 'race', label: 'Race' },
+] as const
+
+const HR_ZONES = [1, 2, 3, 4, 5] as const
+
+type RunType = 'easy' | 'tempo' | 'interval' | 'long' | 'race'
+
 function TemplateRow({ template, slots, exercises, isCompleted, onUpdated }: TemplateRowProps) {
   const [editing, setEditing] = useState(false)
   const [cascading, setCascading] = useState(false)
@@ -223,19 +235,61 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated }: Tem
   const [expanded, setExpanded] = useState(false)
   const [name, setName] = useState(template.name)
   const [canonicalName, setCanonicalName] = useState(template.canonical_name)
+  const [notes, setNotes] = useState(template.notes ?? '')
+  // Running fields
+  const [runType, setRunType] = useState<RunType | ''>(template.run_type ?? '')
+  const [targetPace, setTargetPace] = useState(template.target_pace ?? '')
+  const [hrZone, setHrZone] = useState(template.hr_zone?.toString() ?? '')
+  const [intervalCount, setIntervalCount] = useState(template.interval_count?.toString() ?? '')
+  const [intervalRest, setIntervalRest] = useState(template.interval_rest?.toString() ?? '')
+  const [coachingCues, setCoachingCues] = useState(template.coaching_cues ?? '')
+  // MMA fields
+  const [plannedDuration, setPlannedDuration] = useState(template.planned_duration?.toString() ?? '')
   const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
+  const [pendingUpdates, setPendingUpdates] = useState<import('@/lib/templates/cascade-types').CascadeUpdates>({})
 
   const canonicalChanged = canonicalName !== template.canonical_name
+  const isRunning = template.modality === 'running'
+  const isMma = template.modality === 'mma'
+  const isInterval = runType === 'interval'
+
+  function buildUpdates(): import('@/lib/templates/cascade-types').CascadeUpdates {
+    const updates: import('@/lib/templates/cascade-types').CascadeUpdates = {}
+
+    if (name !== template.name) updates.name = name
+    if (notes !== (template.notes ?? '')) updates.notes = notes
+
+    if (isRunning) {
+      if (runType && runType !== template.run_type) updates.run_type = runType as RunType
+      const newPace = targetPace || null
+      if (newPace !== template.target_pace) updates.target_pace = newPace
+      const newHrZone = hrZone ? Number(hrZone) : null
+      if (newHrZone !== template.hr_zone) updates.hr_zone = newHrZone
+      const newIntervalCount = (runType === 'interval' && intervalCount) ? Number(intervalCount) : null
+      if (newIntervalCount !== template.interval_count) updates.interval_count = newIntervalCount
+      const newIntervalRest = (runType === 'interval' && intervalRest) ? Number(intervalRest) : null
+      if (newIntervalRest !== template.interval_rest) updates.interval_rest = newIntervalRest
+      const newCues = coachingCues || null
+      if (newCues !== template.coaching_cues) updates.coaching_cues = newCues
+    }
+
+    if (isMma) {
+      const newDuration = plannedDuration ? Number(plannedDuration) : null
+      if (newDuration !== template.planned_duration) updates.planned_duration = newDuration
+    }
+
+    return updates
+  }
 
   function handleSave() {
-    const nameChanged = name !== template.name
-    if (!nameChanged && !canonicalChanged) {
+    const updates = buildUpdates()
+    if (Object.keys(updates).length === 0 && !canonicalChanged) {
       setEditing(false)
       return
     }
 
-    // Build cascade updates from changed fields
+    setPendingUpdates(updates)
     setEditing(false)
     setCascading(true)
   }
@@ -248,13 +302,20 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated }: Tem
 
   function handleCascadeCancel() {
     setCascading(false)
-    // Return to edit mode so user can modify or re-save
     setEditing(true)
   }
 
   function handleCancel() {
     setName(template.name)
     setCanonicalName(template.canonical_name)
+    setNotes(template.notes ?? '')
+    setRunType(template.run_type ?? '')
+    setTargetPace(template.target_pace ?? '')
+    setHrZone(template.hr_zone?.toString() ?? '')
+    setIntervalCount(template.interval_count?.toString() ?? '')
+    setIntervalRest(template.interval_rest?.toString() ?? '')
+    setCoachingCues(template.coaching_cues ?? '')
+    setPlannedDuration(template.planned_duration?.toString() ?? '')
     setError('')
     setEditing(false)
     setCascading(false)
@@ -273,17 +334,12 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated }: Tem
     })
   }
 
-  // Cascade scope selection step (shown after clicking Save in edit mode)
+  // Cascade scope selection step
   if (cascading) {
-    const nameChanged = name !== template.name
-    const updates = {
-      ...(nameChanged ? { name } : {}),
-    }
-
     return (
       <CascadeScopeSelector
         templateId={template.id}
-        updates={updates}
+        updates={pendingUpdates}
         onComplete={handleCascadeComplete}
         onCancel={handleCascadeCancel}
       />
@@ -318,6 +374,117 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated }: Tem
             </p>
           )}
         </div>
+
+        {isRunning && (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor={`run-type-${template.id}`}>Run Type</Label>
+              <select
+                id={`run-type-${template.id}`}
+                value={runType}
+                onChange={(e) => setRunType(e.target.value as RunType | '')}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <option value="">Select run type</option>
+                {RUN_TYPES.map((rt) => (
+                  <option key={rt.value} value={rt.value}>{rt.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor={`pace-${template.id}`}>Target Pace</Label>
+                <Input
+                  id={`pace-${template.id}`}
+                  value={targetPace}
+                  onChange={(e) => setTargetPace(e.target.value)}
+                  placeholder="5:30/km"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={`hr-zone-${template.id}`}>HR Zone</Label>
+                <select
+                  id={`hr-zone-${template.id}`}
+                  value={hrZone}
+                  onChange={(e) => setHrZone(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <option value="">—</option>
+                  {HR_ZONES.map((z) => (
+                    <option key={z} value={z}>Zone {z}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            {isInterval && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor={`intervals-${template.id}`}>Intervals</Label>
+                  <Input
+                    id={`intervals-${template.id}`}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={intervalCount}
+                    onChange={(e) => setIntervalCount(e.target.value)}
+                    placeholder="e.g. 6"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor={`rest-${template.id}`}>Rest (seconds)</Label>
+                  <Input
+                    id={`rest-${template.id}`}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={intervalRest}
+                    onChange={(e) => setIntervalRest(e.target.value)}
+                    placeholder="e.g. 90"
+                  />
+                </div>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor={`cues-${template.id}`}>Coaching Cues</Label>
+              <textarea
+                id={`cues-${template.id}`}
+                value={coachingCues}
+                onChange={(e) => setCoachingCues(e.target.value)}
+                placeholder="Notes visible to athlete..."
+                rows={2}
+                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              />
+            </div>
+          </>
+        )}
+
+        {isMma && (
+          <div className="space-y-2">
+            <Label htmlFor={`duration-${template.id}`}>Planned Duration (minutes)</Label>
+            <Input
+              id={`duration-${template.id}`}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={plannedDuration}
+              onChange={(e) => setPlannedDuration(e.target.value)}
+              placeholder="e.g. 90"
+            />
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <Label htmlFor={`notes-${template.id}`}>Notes</Label>
+          <textarea
+            id={`notes-${template.id}`}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Template notes..."
+            rows={2}
+            className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          />
+        </div>
+
         <div className="flex gap-2">
           <Button size="sm" onClick={handleSave} disabled={isPending}>
             {isPending ? 'Saving...' : 'Save'}
@@ -367,6 +534,23 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated }: Tem
           {isResistance && (
             <span className="ml-2 text-xs text-muted-foreground">
               {slots.length} exercise{slots.length !== 1 ? 's' : ''}
+            </span>
+          )}
+          {isRunning && template.run_type && (
+            <span className="ml-2 text-xs text-muted-foreground">
+              {template.run_type}
+              {template.target_pace && ` · ${template.target_pace}`}
+              {template.hr_zone && ` · Z${template.hr_zone}`}
+            </span>
+          )}
+          {isMma && template.planned_duration && (
+            <span className="ml-2 text-xs text-muted-foreground">
+              {template.planned_duration} min
+            </span>
+          )}
+          {template.notes && (
+            <span className="ml-2 text-xs text-muted-foreground italic">
+              {template.notes}
             </span>
           )}
         </div>
