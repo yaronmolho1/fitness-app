@@ -4,6 +4,7 @@ import {
   mesocycles,
   weekly_schedule,
   workout_templates,
+  template_sections,
   exercise_slots,
   exercises,
   logged_workouts,
@@ -55,6 +56,24 @@ export type TemplateInfo = {
   planned_duration: number | null
 }
 
+export type SectionData = {
+  id: number
+  section_name: string
+  modality: string
+  order: number
+  // Running-specific
+  run_type: string | null
+  target_pace: string | null
+  hr_zone: number | null
+  interval_count: number | null
+  interval_rest: number | null
+  coaching_cues: string | null
+  // MMA-specific
+  planned_duration: number | null
+  // Resistance sections carry their exercise slots
+  slots?: SlotData[]
+}
+
 export type Period = 'morning' | 'afternoon' | 'evening'
 
 type WorkoutResult = {
@@ -63,6 +82,7 @@ type WorkoutResult = {
   mesocycle: MesocycleInfo
   template: TemplateInfo
   slots: SlotData[]
+  sections?: SectionData[]
   period: Period
   time_slot: string | null
 }
@@ -403,7 +423,65 @@ export async function getTodayWorkout(today: string): Promise<TodayResult[]> {
       .orderBy(asc(exercise_slots.order))
       .all()
 
-    results.push({
+    // Load sections for mixed templates
+    let sections: SectionData[] | undefined
+    if (template.modality === 'mixed') {
+      const sectionRows = await db
+        .select({
+          id: template_sections.id,
+          section_name: template_sections.section_name,
+          modality: template_sections.modality,
+          order: template_sections.order,
+          run_type: template_sections.run_type,
+          target_pace: template_sections.target_pace,
+          hr_zone: template_sections.hr_zone,
+          interval_count: template_sections.interval_count,
+          interval_rest: template_sections.interval_rest,
+          coaching_cues: template_sections.coaching_cues,
+          planned_duration: template_sections.planned_duration,
+        })
+        .from(template_sections)
+        .where(eq(template_sections.template_id, template.id))
+        .orderBy(asc(template_sections.order))
+        .all()
+
+      sections = []
+      for (const sec of sectionRows) {
+        const sectionSlots = sec.modality === 'resistance'
+          ? await db
+              .select({
+                id: exercise_slots.id,
+                exercise_id: exercise_slots.exercise_id,
+                exercise_name: exercises.name,
+                sets: exercise_slots.sets,
+                reps: exercise_slots.reps,
+                weight: exercise_slots.weight,
+                rpe: exercise_slots.rpe,
+                rest_seconds: exercise_slots.rest_seconds,
+                guidelines: exercise_slots.guidelines,
+                order: exercise_slots.order,
+                is_main: exercise_slots.is_main,
+              })
+              .from(exercise_slots)
+              .innerJoin(exercises, eq(exercise_slots.exercise_id, exercises.id))
+              .where(
+                and(
+                  eq(exercise_slots.template_id, template.id),
+                  eq(exercise_slots.section_id, sec.id)
+                )
+              )
+              .orderBy(asc(exercise_slots.order))
+              .all()
+          : undefined
+
+        sections.push({
+          ...sec,
+          slots: sectionSlots as SlotData[] | undefined,
+        })
+      }
+    }
+
+    const workoutResult: WorkoutResult = {
       type: 'workout',
       date: today,
       mesocycle: mesoInfo,
@@ -423,7 +501,11 @@ export async function getTodayWorkout(today: string): Promise<TodayResult[]> {
       slots: slots as SlotData[],
       period,
       time_slot: timeSlot,
-    })
+    }
+    if (sections) {
+      workoutResult.sections = sections
+    }
+    results.push(workoutResult)
   }
 
   // If all templates were invalid, fall back to rest day

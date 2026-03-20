@@ -8,7 +8,8 @@ import { MmaLoggingForm } from '@/components/mma-logging-form'
 import { RoutineCheckOff } from '@/components/routine-check-off'
 import { cn } from '@/lib/utils'
 import { getModalityAccentClass } from '@/lib/ui/modality-colors'
-import type { SlotData, MesocycleInfo, TemplateInfo, RoutineItemInfo, RoutineLogInfo, LoggedExerciseData, Period } from '@/lib/today/queries'
+import type { SlotData, SectionData, MesocycleInfo, TemplateInfo, RoutineItemInfo, RoutineLogInfo, LoggedExerciseData, Period } from '@/lib/today/queries'
+import { getModalityBadgeClasses } from '@/lib/ui/modality-colors'
 import { Badge } from '@/components/ui/badge'
 
 type WorkoutResponse = {
@@ -17,6 +18,7 @@ type WorkoutResponse = {
   mesocycle: MesocycleInfo
   template: TemplateInfo
   slots: SlotData[]
+  sections?: SectionData[]
   period: Period
   time_slot: string | null
 }
@@ -331,6 +333,121 @@ function MmaDisplay({
   )
 }
 
+const MODALITY_LABELS: Record<string, string> = {
+  resistance: 'Resistance',
+  running: 'Running',
+  mma: 'MMA',
+}
+
+function SectionRunningContent({ section }: { section: SectionData }) {
+  const config = section.run_type ? runTypeConfig[section.run_type] : null
+  const isInterval = section.run_type === 'interval'
+
+  return (
+    <Card className={cn('border-l-4', getModalityAccentClass('running'))}>
+      <CardContent className="pt-6">
+        {config && (
+          <div className="mb-4">
+            <span
+              data-testid="run-type-badge"
+              className={cn('rounded-full px-3 py-1 text-sm font-semibold', config.color)}
+            >
+              {config.label}
+            </span>
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {section.target_pace && (
+            <TargetCell label="Pace" value={section.target_pace} />
+          )}
+          {section.hr_zone !== null && (
+            <TargetCell label="HR Zone" value={`Zone ${section.hr_zone}`} />
+          )}
+          {isInterval && section.interval_count !== null && (
+            <TargetCell label="Intervals" value={String(section.interval_count)} />
+          )}
+          {isInterval && section.interval_rest !== null && (
+            <TargetCell label="Rest" value={formatRest(section.interval_rest)} />
+          )}
+        </div>
+
+        {section.coaching_cues && (
+          <div className="mt-4 rounded-md bg-green-500/5 p-3">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Coaching Cues
+            </p>
+            <p className="mt-1 text-sm">{section.coaching_cues}</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function SectionMmaContent({ section }: { section: SectionData }) {
+  return (
+    <Card className={cn('border-l-4', getModalityAccentClass('mma'))}>
+      <CardContent className="pt-6">
+        {section.planned_duration !== null && (
+          <TargetCell label="Duration" value={`${section.planned_duration} min`} />
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function SectionResistanceContent({ section }: { section: SectionData }) {
+  const slots = section.slots ?? []
+  if (slots.length === 0) return null
+
+  return (
+    <div className="space-y-3">
+      {slots.map((slot) => (
+        <ExerciseSlot key={slot.id} slot={slot} />
+      ))}
+    </div>
+  )
+}
+
+function MixedDisplay({ data }: { data: WorkoutResponse }) {
+  const sections = data.sections ?? []
+
+  return (
+    <div data-testid="mixed-display" className="space-y-4">
+      <WorkoutHeader data={data} />
+
+      {sections.map((section, i) => (
+        <div key={section.id}>
+          {i > 0 && (
+            <div data-testid="section-separator" className="my-6 border-t border-border" />
+          )}
+
+          <div data-testid="section-header" className="mb-3 flex items-center gap-2">
+            <h3 className="text-lg font-semibold">{section.section_name}</h3>
+            <span
+              data-testid="modality-badge"
+              className={cn('rounded-full px-2.5 py-0.5 text-xs font-medium', getModalityBadgeClasses(section.modality))}
+            >
+              {MODALITY_LABELS[section.modality] ?? section.modality}
+            </span>
+          </div>
+
+          {section.modality === 'resistance' && (
+            <SectionResistanceContent section={section} />
+          )}
+          {section.modality === 'running' && (
+            <SectionRunningContent section={section} />
+          )}
+          {section.modality === 'mma' && (
+            <SectionMmaContent section={section} />
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function formatLoggedAt(isoStr: string): string {
   const d = new Date(isoStr)
   return d.toLocaleTimeString('en-US', {
@@ -504,7 +621,9 @@ function SessionSection({
             {formatPeriodLabel(session.period, session.time_slot)}
           </h2>
         )}
-        {session.template.modality === 'running' ? (
+        {session.template.modality === 'mixed' ? (
+          <MixedDisplay data={session} />
+        ) : session.template.modality === 'running' ? (
           <RunningDisplay data={session} onStartLogging={() => onStartLogging(key)} />
         ) : session.template.modality === 'mma' ? (
           <MmaDisplay data={session} onStartLogging={() => onStartLogging(key)} />
@@ -637,6 +756,9 @@ export function TodayWorkout() {
         return <WorkoutLoggingForm data={session} />
       }
 
+      if (session.template.modality === 'mixed') {
+        return <MixedDisplay data={session} />
+      }
       if (session.template.modality === 'running') {
         return (
           <RunningDisplay data={session} onStartLogging={() => startLogging(key)} />
