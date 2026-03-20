@@ -1,6 +1,13 @@
 // @vitest-environment jsdom
 import { render, screen, cleanup, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
+
+vi.mock('next/link', () => ({
+  default: ({ children, href, ...props }: { children: React.ReactNode; href: string; [key: string]: unknown }) => (
+    <a href={href} {...props}>{children}</a>
+  ),
+}))
+
 import { DayDetailPanel } from './day-detail-panel'
 import type { DayDetailResult } from '@/lib/calendar/day-detail'
 
@@ -45,6 +52,8 @@ describe('DayDetailPanel', () => {
     const projected: DayDetailResult = {
       type: 'projected',
       date: '2026-03-02',
+      mesocycle_id: 1,
+      mesocycle_status: 'active',
       template: {
         id: 1,
         name: 'Push A',
@@ -94,6 +103,8 @@ describe('DayDetailPanel', () => {
     const projected: DayDetailResult = {
       type: 'projected',
       date: '2026-03-04',
+      mesocycle_id: 1,
+      mesocycle_status: 'active',
       template: {
         id: 2,
         name: 'Tempo Run',
@@ -130,6 +141,8 @@ describe('DayDetailPanel', () => {
     const projected: DayDetailResult = {
       type: 'projected',
       date: '2026-03-06',
+      mesocycle_id: 1,
+      mesocycle_status: 'active',
       template: {
         id: 3,
         name: 'BJJ Sparring',
@@ -166,6 +179,8 @@ describe('DayDetailPanel', () => {
     const completed: DayDetailResult = {
       type: 'completed',
       date: '2026-03-02',
+      mesocycle_id: 1,
+      mesocycle_status: 'active',
       snapshot: {
         version: 1,
         name: 'Push A Snapshot',
@@ -221,6 +236,8 @@ describe('DayDetailPanel', () => {
     const completed: DayDetailResult = {
       type: 'completed',
       date: '2026-03-02',
+      mesocycle_id: 1,
+      mesocycle_status: 'active',
       snapshot: {
         version: 1,
         name: 'Push A v1 Original',
@@ -249,6 +266,8 @@ describe('DayDetailPanel', () => {
     const projected: DayDetailResult = {
       type: 'projected',
       date: '2026-03-09',
+      mesocycle_id: 1,
+      mesocycle_status: 'active',
       template: {
         id: 2,
         name: 'Push Deload',
@@ -287,6 +306,184 @@ describe('DayDetailPanel', () => {
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith('/api/calendar/day?date=2026-03-10')
+    })
+  })
+
+  // ============================================================================
+  // T124: Quick links — Edit template + schedule grid
+  // ============================================================================
+
+  describe('Quick links (T124)', () => {
+    it('shows "Edit template" link next to projected workout name for active mesocycle', async () => {
+      const projected: DayDetailResult = {
+        type: 'projected',
+        date: '2026-03-02',
+        mesocycle_id: 5,
+        mesocycle_status: 'active',
+        template: {
+          id: 1,
+          name: 'Push A',
+          modality: 'resistance',
+          notes: null,
+          run_type: null, target_pace: null, hr_zone: null,
+          interval_count: null, interval_rest: null, coaching_cues: null,
+          planned_duration: null,
+        },
+        slots: [],
+        is_deload: false,
+      }
+      mockFetchResponse(projected)
+
+      render(<DayDetailPanel date="2026-03-02" onClose={() => {}} />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Push A')).toBeInTheDocument()
+      })
+
+      const editLink = screen.getByTestId('edit-template-link')
+      expect(editLink).toBeInTheDocument()
+      expect(editLink).toHaveAttribute('href', '/mesocycles/5')
+    })
+
+    it('hides "Edit template" link when mesocycle is completed', async () => {
+      const projected: DayDetailResult = {
+        type: 'projected',
+        date: '2026-03-02',
+        mesocycle_id: 5,
+        mesocycle_status: 'completed',
+        template: {
+          id: 1,
+          name: 'Push A',
+          modality: 'resistance',
+          notes: null,
+          run_type: null, target_pace: null, hr_zone: null,
+          interval_count: null, interval_rest: null, coaching_cues: null,
+          planned_duration: null,
+        },
+        slots: [],
+        is_deload: false,
+      }
+      mockFetchResponse(projected)
+
+      render(<DayDetailPanel date="2026-03-02" onClose={() => {}} />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Push A')).toBeInTheDocument()
+      })
+
+      expect(screen.queryByTestId('edit-template-link')).not.toBeInTheDocument()
+    })
+
+    it('rest day within active mesocycle shows schedule grid link', async () => {
+      const rest: DayDetailResult = {
+        type: 'rest',
+        date: '2026-03-03',
+        mesocycle_id: 5,
+        mesocycle_status: 'active',
+      }
+      mockFetchResponse(rest)
+
+      render(<DayDetailPanel date="2026-03-03" onClose={() => {}} />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('rest-day-message')).toBeInTheDocument()
+      })
+
+      const scheduleLink = screen.getByTestId('schedule-link')
+      expect(scheduleLink).toBeInTheDocument()
+      expect(scheduleLink).toHaveAttribute('href', '/mesocycles/5')
+    })
+
+    it('rest day outside mesocycle has no schedule link', async () => {
+      const rest: DayDetailResult = {
+        type: 'rest',
+        date: '2026-03-10',
+      }
+      mockFetchResponse(rest)
+
+      render(<DayDetailPanel date="2026-03-10" onClose={() => {}} />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('rest-day-message')).toBeInTheDocument()
+      })
+
+      expect(screen.queryByTestId('schedule-link')).not.toBeInTheDocument()
+    })
+
+    it('rest day within completed mesocycle has no schedule link', async () => {
+      const rest: DayDetailResult = {
+        type: 'rest',
+        date: '2026-03-03',
+        mesocycle_id: 5,
+        mesocycle_status: 'completed',
+      }
+      mockFetchResponse(rest)
+
+      render(<DayDetailPanel date="2026-03-03" onClose={() => {}} />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('rest-day-message')).toBeInTheDocument()
+      })
+
+      expect(screen.queryByTestId('schedule-link')).not.toBeInTheDocument()
+    })
+
+    it('completed day within active mesocycle shows edit template link', async () => {
+      const completed: DayDetailResult = {
+        type: 'completed',
+        date: '2026-03-02',
+        mesocycle_id: 5,
+        mesocycle_status: 'active',
+        snapshot: {
+          version: 1,
+          name: 'Push A',
+          modality: 'resistance',
+          notes: null,
+        },
+        exercises: [],
+        rating: 4,
+        notes: null,
+        is_deload: false,
+      }
+      mockFetchResponse(completed)
+
+      render(<DayDetailPanel date="2026-03-02" onClose={() => {}} />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Push A')).toBeInTheDocument()
+      })
+
+      const editLink = screen.getByTestId('edit-template-link')
+      expect(editLink).toBeInTheDocument()
+      expect(editLink).toHaveAttribute('href', '/mesocycles/5')
+    })
+
+    it('completed day within completed mesocycle hides edit template link', async () => {
+      const completed: DayDetailResult = {
+        type: 'completed',
+        date: '2026-03-02',
+        mesocycle_id: 5,
+        mesocycle_status: 'completed',
+        snapshot: {
+          version: 1,
+          name: 'Push A',
+          modality: 'resistance',
+          notes: null,
+        },
+        exercises: [],
+        rating: 4,
+        notes: null,
+        is_deload: false,
+      }
+      mockFetchResponse(completed)
+
+      render(<DayDetailPanel date="2026-03-02" onClose={() => {}} />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Push A')).toBeInTheDocument()
+      })
+
+      expect(screen.queryByTestId('edit-template-link')).not.toBeInTheDocument()
     })
   })
 })
