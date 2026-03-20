@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Layers } from 'lucide-react'
 import { getMesocycles } from '@/lib/mesocycles/queries'
+import { formatDateDisplay } from '@/lib/date-format'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
 import { EmptyState } from '@/components/empty-state'
@@ -49,8 +50,8 @@ export default async function MesocyclesPage() {
                       <StatusBadge status={meso.status} />
                     </div>
                     <div className="mt-2 flex flex-wrap gap-4 text-sm text-muted-foreground">
-                      <span>{meso.start_date}</span>
-                      <span>{meso.end_date}</span>
+                      <span>{formatDateDisplay(meso.start_date)}</span>
+                      <span>{formatDateDisplay(meso.end_date)}</span>
                       <span>{meso.work_weeks} weeks</span>
                       {meso.has_deload && <span>+ deload</span>}
                     </div>

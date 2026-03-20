@@ -11,6 +11,7 @@ import { StatusBadge } from '@/components/status-badge'
 import { StatusTransitionButton } from '@/components/status-transition-button'
 import { TemplateSection } from '@/components/template-section'
 import { Button } from '@/components/ui/button'
+import { formatDateDisplay } from '@/lib/date-format'
 
 export const dynamic = 'force-dynamic'
 
@@ -55,6 +56,11 @@ export default async function MesocycleDetailPage({
           }
           actions={
             <div className="flex items-center gap-2">
+              {meso.status !== 'completed' && (
+                <Button variant="outline" asChild>
+                  <Link href={`/mesocycles/${meso.id}/edit`}>Edit</Link>
+                </Button>
+              )}
               <Button variant="outline" asChild>
                 <Link href={`/mesocycles/${meso.id}/clone`}>Clone</Link>
               </Button>
@@ -65,8 +71,8 @@ export default async function MesocycleDetailPage({
         <div className="-mt-4 flex flex-wrap items-center gap-3">
           <StatusBadge status={meso.status} />
           <span className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-            <span>{meso.start_date}</span>
-            <span>{meso.end_date}</span>
+            <span>{formatDateDisplay(meso.start_date)}</span>
+            <span>{formatDateDisplay(meso.end_date)}</span>
             <span>{meso.work_weeks} weeks</span>
             {meso.has_deload && <span>+ deload</span>}
           </span>

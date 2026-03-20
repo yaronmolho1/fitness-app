@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createMesocycle } from '@/lib/mesocycles/actions'
+import { createMesocycle, updateMesocycle } from '@/lib/mesocycles/actions'
 import { calculateEndDate } from '@/lib/mesocycles/utils'
 import { formatDateDisplay } from '@/lib/date-format'
 import { Button } from '@/components/ui/button'
@@ -21,12 +21,23 @@ function formatDuration(workWeeks: number, hasDeload: boolean): string {
   return `${parts.join(' + ')} = ${totalDays} days`
 }
 
-export function MesocycleForm() {
+type MesocycleFormProps = {
+  mode?: 'create' | 'edit'
+  initialData?: {
+    id: number
+    name: string
+    start_date: string
+    work_weeks: number
+    has_deload: boolean
+  }
+}
+
+export function MesocycleForm({ mode = 'create', initialData }: MesocycleFormProps) {
   const router = useRouter()
-  const [name, setName] = useState('')
-  const [startDate, setStartDate] = useState('')
-  const [workWeeks, setWorkWeeks] = useState('')
-  const [hasDeload, setHasDeload] = useState(false)
+  const [name, setName] = useState(initialData?.name ?? '')
+  const [startDate, setStartDate] = useState(initialData?.start_date ?? '')
+  const [workWeeks, setWorkWeeks] = useState(initialData ? String(initialData.work_weeks) : '')
+  const [hasDeload, setHasDeload] = useState(initialData?.has_deload ?? false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
 
@@ -69,7 +80,9 @@ export function MesocycleForm() {
       fd.append('work_weeks', workWeeks)
       fd.append('has_deload', hasDeload ? 'true' : 'false')
 
-      const result = await createMesocycle(fd)
+      const result = mode === 'edit'
+        ? await updateMesocycle(initialData!.id, fd)
+        : await createMesocycle(fd)
 
       if (result.success) {
         router.push(`/mesocycles/${result.id}`)
@@ -154,7 +167,9 @@ export function MesocycleForm() {
       </div>
 
       <Button type="submit" className="w-full" disabled={submitting}>
-        {submitting ? 'Creating...' : 'Create Mesocycle'}
+        {submitting
+          ? (mode === 'edit' ? 'Saving...' : 'Creating...')
+          : (mode === 'edit' ? 'Save Changes' : 'Create Mesocycle')}
       </Button>
     </form>
   )
