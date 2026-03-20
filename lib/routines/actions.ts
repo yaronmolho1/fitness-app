@@ -69,16 +69,6 @@ function validateScope(data: z.infer<typeof baseSchema>): string | null {
   return null
 }
 
-// Frequency mode validation
-function validateFrequency(data: z.infer<typeof baseSchema>): string | null {
-  if (data.frequency_mode === 'specific_days') {
-    if (!data.frequency_days || data.frequency_days.length === 0) {
-      return 'At least one day must be selected for specific days mode'
-    }
-  }
-  return null
-}
-
 // Map frequency mode to DB columns
 function frequencyToDb(data: z.infer<typeof baseSchema>) {
   const mode = data.frequency_mode ?? 'weekly_target'
@@ -146,7 +136,7 @@ export async function createRoutineItem(
   const scopeError = validateScope(parsed.data)
   if (scopeError) return { success: false, error: scopeError }
 
-  const { name, category, input_fields, frequency_target, frequency_mode, frequency_days, scope_type, mesocycle_id, start_date, end_date } = parsed.data
+  const { name, category, input_fields, scope_type, mesocycle_id, start_date, end_date } = parsed.data
 
   // Verify mesocycle exists for per_mesocycle scope
   if (scope_type === 'per_mesocycle' && mesocycle_id) {
@@ -170,9 +160,7 @@ export async function createRoutineItem(
         name,
         category: category || null,
         ...columns,
-        frequency_target,
-        frequency_mode,
-        frequency_days: frequency_mode === 'specific_days' ? (frequency_days ?? null) : null,
+        ...freq,
         scope,
         mesocycle_id: scope_type === 'per_mesocycle' ? mesocycle_id! : null,
         start_date: scope_type === 'date_range' ? start_date! : null,
@@ -212,7 +200,7 @@ export async function updateRoutineItem(
   const scopeError = validateScope(parsed.data)
   if (scopeError) return { success: false, error: scopeError }
 
-  const { name, category, input_fields, frequency_target, frequency_mode, frequency_days, scope_type, mesocycle_id, start_date, end_date } = parsed.data
+  const { name, category, input_fields, scope_type, mesocycle_id, start_date, end_date } = parsed.data
 
   // Verify mesocycle exists for per_mesocycle scope
   if (scope_type === 'per_mesocycle' && mesocycle_id) {
@@ -236,9 +224,7 @@ export async function updateRoutineItem(
         name,
         category: category || null,
         ...columns,
-        frequency_target,
-        frequency_mode,
-        frequency_days: frequency_mode === 'specific_days' ? (frequency_days ?? null) : null,
+        ...freq,
         scope,
         mesocycle_id: scope_type === 'per_mesocycle' ? mesocycle_id! : null,
         start_date: scope_type === 'date_range' ? start_date! : null,

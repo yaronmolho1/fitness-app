@@ -132,10 +132,6 @@ export function EditRoutineItemForm({
       return
     }
 
-    const frequencyTarget =
-      frequencyMode === 'weekly_target' ? weeklyTarget :
-      frequencyMode === 'daily' ? 7 : selectedDays.length
-
     setSubmitting(true)
     try {
       const frequencyTarget = frequencyMode === 'daily' ? 7 : weeklyTarget
