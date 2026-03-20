@@ -15,10 +15,6 @@ export type MmaWorkoutData = {
   template: TemplateInfo
 }
 
-function formatDate(dateStr: string): string {
-  return formatDateWithWeekday(dateStr)
-}
-
 export function MmaLoggingForm({ data }: { data: MmaWorkoutData }) {
   const { template } = data
 
@@ -67,7 +63,7 @@ export function MmaLoggingForm({ data }: { data: MmaWorkoutData }) {
             {data.mesocycle.name}
           </span>
           <span className="text-xs text-muted-foreground">
-            {formatDate(data.date)}
+            {formatDateWithWeekday(data.date)}
           </span>
         </div>
         <h1 className="mt-1 text-xl font-bold tracking-tight">

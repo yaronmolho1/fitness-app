@@ -83,10 +83,6 @@ function formatRest(seconds: number): string {
   return `${seconds}s`
 }
 
-function formatDate(dateStr: string): string {
-  return formatDateLong(dateStr)
-}
-
 function ExerciseSlot({ slot }: { slot: SlotData }) {
   return (
     <div
@@ -231,7 +227,7 @@ function WorkoutHeader({ data }: { data: WorkoutResponse }) {
             </Link>
           )}
         </div>
-        <p className="text-sm text-muted-foreground">{formatDate(data.date)}</p>
+        <p className="text-sm text-muted-foreground">{formatDateLong(data.date)}</p>
       </CardHeader>
       {data.template.notes && (
         <CardContent className="pt-0">

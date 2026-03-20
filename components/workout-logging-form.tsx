@@ -53,10 +53,6 @@ function buildInitialSets(slots: SlotData[]): SetFormData[][] {
   )
 }
 
-function formatDate(dateStr: string): string {
-  return formatDateWithWeekday(dateStr)
-}
-
 export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
   const sortedSlots = [...data.slots].sort((a, b) => a.order - b.order)
   const [sets, setSets] = useState<SetFormData[][]>(() =>
@@ -145,7 +141,7 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
             {data.mesocycle.name}
           </span>
           <span className="text-xs text-muted-foreground">
-            {formatDate(data.date)}
+            {formatDateWithWeekday(data.date)}
           </span>
         </div>
         <h1 className="mt-1 text-xl font-bold tracking-tight">

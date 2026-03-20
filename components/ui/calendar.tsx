@@ -214,7 +214,6 @@ function Calendar({
         ),
         MonthGrid: ({ className, children, ...props }) => (
           <MonthGrid
-            children={children}
             className={className}
             displayYears={displayYears}
             setMonth={setMonth}
@@ -224,7 +223,9 @@ function Calendar({
             setNavView={setNavView}
             month={month}
             {...props}
-          />
+          >
+            {children}
+          </MonthGrid>
         ),
         ...components,
       }}
@@ -481,7 +482,6 @@ function MonthGrid({
         endMonth={endMonth}
         setNavView={setNavView}
         setMonth={setMonth}
-        navView={navView}
         month={month}
         className={className}
         {...props}
@@ -515,7 +515,6 @@ function YearGrid({
   endMonth,
   setNavView,
   setMonth,
-  navView,
   month,
   ...props
 }: {
@@ -525,7 +524,6 @@ function YearGrid({
   endMonth?: Date
   setNavView: React.Dispatch<React.SetStateAction<NavView>>
   setMonth: React.Dispatch<React.SetStateAction<Date>>
-  navView: NavView
   month: Date
 } & React.HTMLAttributes<HTMLDivElement>) {
 

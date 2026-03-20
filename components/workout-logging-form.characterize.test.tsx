@@ -50,17 +50,16 @@ describe('WorkoutLoggingForm — characterization', () => {
   })
 
   describe('formatDate output', () => {
-    it('formats YYYY-MM-DD as short weekday + month + day', () => {
+    it('formats YYYY-MM-DD as short weekday + dd/mm/yyyy', () => {
       const data = makeWorkoutData({ date: '2026-03-15' })
       render(<WorkoutLoggingForm data={data} />)
-      // Sun, Mar 15
-      expect(screen.getByText('Sun, Mar 15')).toBeInTheDocument()
+      expect(screen.getByText('Sun 15/03/2026')).toBeInTheDocument()
     })
 
     it('formats a different date correctly', () => {
       const data = makeWorkoutData({ date: '2026-01-01' })
       render(<WorkoutLoggingForm data={data} />)
-      expect(screen.getByText('Thu, Jan 1')).toBeInTheDocument()
+      expect(screen.getByText('Thu 01/01/2026')).toBeInTheDocument()
     })
   })
 

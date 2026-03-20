@@ -23,10 +23,6 @@ const runTypeConfig: Record<string, { label: string; color: string }> = {
   race: { label: 'Race', color: 'bg-purple-500/15 text-purple-700 dark:text-purple-400' },
 }
 
-function formatDate(dateStr: string): string {
-  return formatDateWithWeekday(dateStr)
-}
-
 function formatRest(seconds: number): string {
   if (seconds >= 60) {
     const mins = Math.floor(seconds / 60)
@@ -148,7 +144,7 @@ export function RunningLoggingForm({ data }: { data: RunningWorkoutData }) {
             {data.mesocycle.name}
           </span>
           <span className="text-xs text-muted-foreground">
-            {formatDate(data.date)}
+            {formatDateWithWeekday(data.date)}
           </span>
         </div>
         <h1 className="mt-1 text-xl font-bold tracking-tight">
