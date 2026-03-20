@@ -8,6 +8,7 @@ import {
   workout_templates,
   exercise_slots,
   weekly_schedule,
+  template_sections,
 } from '@/lib/db/schema'
 import { calculateEndDate } from './utils'
 
@@ -102,6 +103,36 @@ export async function cloneMesocycle(input: CloneInput): Promise<CloneResult> {
 
       templateIdMap.set(tmpl.id, newTmpl.id)
 
+      // Clone template_sections and build section ID mapping
+      const sectionIdMap = new Map<number, number>()
+      const sections = tx
+        .select()
+        .from(template_sections)
+        .where(eq(template_sections.template_id, tmpl.id))
+        .all()
+
+      for (const section of sections) {
+        const newSection = tx
+          .insert(template_sections)
+          .values({
+            template_id: newTmpl.id,
+            modality: section.modality,
+            section_name: section.section_name,
+            order: section.order,
+            run_type: section.run_type,
+            target_pace: section.target_pace,
+            hr_zone: section.hr_zone,
+            interval_count: section.interval_count,
+            interval_rest: section.interval_rest,
+            coaching_cues: section.coaching_cues,
+            planned_duration: section.planned_duration,
+          })
+          .returning({ id: template_sections.id })
+          .get()
+
+        sectionIdMap.set(section.id, newSection.id)
+      }
+
       // Clone exercise slots for this template
       const slots = tx
         .select()
@@ -110,10 +141,15 @@ export async function cloneMesocycle(input: CloneInput): Promise<CloneResult> {
         .all()
 
       for (const slot of slots) {
+        const newSectionId = slot.section_id
+          ? sectionIdMap.get(slot.section_id) ?? null
+          : null
+
         tx.insert(exercise_slots)
           .values({
             template_id: newTmpl.id,
             exercise_id: slot.exercise_id,
+            section_id: newSectionId,
             sets: slot.sets,
             reps: slot.reps,
             weight: slot.weight,
@@ -148,6 +184,8 @@ export async function cloneMesocycle(input: CloneInput): Promise<CloneResult> {
           day_of_week: row.day_of_week,
           template_id: newTemplateId,
           week_type: row.week_type,
+          period: row.period,
+          time_slot: row.time_slot,
         })
         .run()
     }
