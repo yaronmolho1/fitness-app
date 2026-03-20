@@ -13,6 +13,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { FrequencyModeSelector } from '@/components/frequency-mode-selector'
+import type { FrequencyMode } from '@/components/frequency-mode-selector'
+import { AutoSuggestCombobox } from '@/components/ui/auto-suggest-combobox'
 
 const INPUT_FIELD_OPTIONS = [
   { value: 'weight', label: 'Weight (kg)' },
@@ -37,17 +40,21 @@ type Mesocycle = { id: number; name: string }
 
 export function CreateRoutineItemForm({
   mesocycles,
+  categories,
   onCancel,
   onCreated,
 }: {
   mesocycles: Mesocycle[]
+  categories: string[]
   onCancel: () => void
   onCreated: () => void
 }) {
   const [name, setName] = useState('')
   const [category, setCategory] = useState('')
   const [inputFields, setInputFields] = useState<InputField[]>([])
-  const [frequencyTarget, setFrequencyTarget] = useState('3')
+  const [frequencyMode, setFrequencyMode] = useState<FrequencyMode>('weekly_target')
+  const [weeklyTarget, setWeeklyTarget] = useState(3)
+  const [selectedDays, setSelectedDays] = useState<number[]>([1]) // Monday default
   const [scopeType, setScopeType] = useState<ScopeType>('global')
   const [mesocycleId, setMesocycleId] = useState('')
   const [startDate, setStartDate] = useState('')
@@ -61,6 +68,20 @@ export function CreateRoutineItemForm({
     )
   }
 
+  function handleModeChange(mode: FrequencyMode) {
+    setFrequencyMode(mode)
+    // Reset mode-specific data when switching
+    if (mode === 'weekly_target') {
+      setSelectedDays([1])
+    } else if (mode === 'specific_days') {
+      setWeeklyTarget(3)
+    } else {
+      // daily
+      setSelectedDays([1])
+      setWeeklyTarget(3)
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
@@ -70,13 +91,22 @@ export function CreateRoutineItemForm({
       return
     }
 
+    if (frequencyMode === 'specific_days' && selectedDays.length === 0) {
+      setError('At least one day must be selected')
+      return
+    }
+
     setSubmitting(true)
     try {
+      const frequencyTarget = frequencyMode === 'daily' ? 7 : weeklyTarget
+
       const result = await createRoutineItem({
         name,
         category: category || undefined,
         input_fields: inputFields,
-        frequency_target: Number(frequencyTarget),
+        frequency_target: frequencyTarget,
+        frequency_mode: frequencyMode,
+        frequency_days: frequencyMode === 'specific_days' ? selectedDays : undefined,
         scope_type: scopeType,
         mesocycle_id: scopeType === 'per_mesocycle' ? Number(mesocycleId) : undefined,
         start_date: scopeType === 'date_range' ? startDate : undefined,
@@ -112,15 +142,13 @@ export function CreateRoutineItemForm({
         />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="create-category">Category</Label>
-        <Input
-          id="create-category"
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          placeholder="e.g. mobility, recovery"
-        />
-      </div>
+      <AutoSuggestCombobox
+        items={categories}
+        value={category}
+        onChange={setCategory}
+        label="Category"
+        placeholder="e.g. mobility, recovery"
+      />
 
       <div className="space-y-2">
         <Label>Input Fields</Label>
@@ -137,16 +165,14 @@ export function CreateRoutineItemForm({
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="create-freq">Frequency Target (per week)</Label>
-        <Input
-          id="create-freq"
-          type="number"
-          min="1"
-          value={frequencyTarget}
-          onChange={(e) => setFrequencyTarget(e.target.value)}
-        />
-      </div>
+      <FrequencyModeSelector
+        mode={frequencyMode}
+        weeklyTarget={weeklyTarget}
+        selectedDays={selectedDays}
+        onModeChange={handleModeChange}
+        onWeeklyTargetChange={setWeeklyTarget}
+        onSelectedDaysChange={setSelectedDays}
+      />
 
       <div className="space-y-2">
         <Label>Scope</Label>
