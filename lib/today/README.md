@@ -3,5 +3,5 @@
 Query module for the "today" workout lookup — resolves the active mesocycle, schedule slot, and exercise slots for a given date.
 
 ## Files
-- `queries.ts` — `getTodayWorkout` (lookup chain: active meso → day_of_week → schedule → template + slots), `isDeloadWeek` (date math for deload detection); exports `TodayResult` union type (`workout | rest_day | no_active_mesocycle`)
-- `queries.test.ts` — unit tests covering no active meso, rest day, workout with slots, and deload week detection
+- `queries.ts` — `getTodayWorkout` returns `TodayResult[]` (array of sessions per day, sorted by period). Lookup chain: active meso → day_of_week → all schedule entries → template + slots per session. Exports `TodayResult` union type, `Period` type, `isDeloadWeek` helper.
+- `queries.test.ts` — unit tests covering no active meso, rest day, workout with slots, deload week detection, and multi-session scenarios

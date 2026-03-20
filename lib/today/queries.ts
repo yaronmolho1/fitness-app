@@ -55,12 +55,16 @@ export type TemplateInfo = {
   planned_duration: number | null
 }
 
+export type Period = 'morning' | 'afternoon' | 'evening'
+
 type WorkoutResult = {
   type: 'workout'
   date: string
   mesocycle: MesocycleInfo
   template: TemplateInfo
   slots: SlotData[]
+  period: Period
+  time_slot: string | null
 }
 
 export type RoutineItemInfo = {
@@ -136,9 +140,18 @@ type AlreadyLoggedResult = {
   date: string
   mesocycle: MesocycleInfo
   loggedWorkout: LoggedWorkoutSummary
+  period: Period
+  time_slot: string | null
 }
 
 export type TodayResult = WorkoutResult | RestDayResult | NoActiveMesoResult | AlreadyLoggedResult
+
+// Period ordering for sorting sessions
+const PERIOD_ORDER: Record<Period, number> = {
+  morning: 0,
+  afternoon: 1,
+  evening: 2,
+}
 
 // Determine if the given date falls in the deload week of a mesocycle
 export function isDeloadWeek(
@@ -210,8 +223,65 @@ async function getRestDayRoutines(today: string): Promise<RestDayRoutines> {
   }
 }
 
-// Main lookup chain
-export async function getTodayWorkout(today: string): Promise<TodayResult> {
+// Build already_logged result for a specific template
+async function buildAlreadyLoggedResult(
+  existingLog: {
+    id: number
+    log_date: string
+    logged_at: Date
+    canonical_name: string | null
+    rating: number | null
+    notes: string | null
+    template_snapshot: { version: number; [key: string]: unknown }
+  },
+  today: string,
+  mesoInfo: MesocycleInfo,
+  period: Period,
+  timeSlot: string | null
+): Promise<AlreadyLoggedResult> {
+  const loggedExerciseRows = await db
+    .select({
+      id: logged_exercises.id,
+      exercise_name: logged_exercises.exercise_name,
+      order: logged_exercises.order,
+      actual_rpe: logged_exercises.actual_rpe,
+    })
+    .from(logged_exercises)
+    .where(eq(logged_exercises.logged_workout_id, existingLog.id))
+    .orderBy(asc(logged_exercises.order))
+    .all()
+
+  const exercisesWithSets: LoggedExerciseData[] = []
+  for (const ex of loggedExerciseRows) {
+    const sets = await db
+      .select({
+        set_number: logged_sets.set_number,
+        actual_reps: logged_sets.actual_reps,
+        actual_weight: logged_sets.actual_weight,
+      })
+      .from(logged_sets)
+      .where(eq(logged_sets.logged_exercise_id, ex.id))
+      .orderBy(asc(logged_sets.set_number))
+      .all()
+
+    exercisesWithSets.push({ ...ex, sets })
+  }
+
+  return {
+    type: 'already_logged',
+    date: today,
+    mesocycle: mesoInfo,
+    loggedWorkout: {
+      ...existingLog,
+      exercises: exercisesWithSets,
+    },
+    period,
+    time_slot: timeSlot,
+  }
+}
+
+// Main lookup chain — returns array of sessions for the day
+export async function getTodayWorkout(today: string): Promise<TodayResult[]> {
   // Step 1: find active mesocycle
   const activeMeso = await db
     .select()
@@ -220,7 +290,7 @@ export async function getTodayWorkout(today: string): Promise<TodayResult> {
     .get()
 
   if (!activeMeso) {
-    return { type: 'no_active_mesocycle', date: today }
+    return [{ type: 'no_active_mesocycle', date: today }]
   }
 
   // Step 2: determine day_of_week
@@ -243,10 +313,12 @@ export async function getTodayWorkout(today: string): Promise<TodayResult> {
     week_type: weekType,
   }
 
-  // Step 4: query weekly_schedule
-  const scheduleRow = await db
+  // Step 4: query all schedule entries for this day
+  const scheduleRows = await db
     .select({
       template_id: weekly_schedule.template_id,
+      period: weekly_schedule.period,
+      time_slot: weekly_schedule.time_slot,
     })
     .from(weekly_schedule)
     .where(
@@ -256,129 +328,116 @@ export async function getTodayWorkout(today: string): Promise<TodayResult> {
         eq(weekly_schedule.week_type, weekType)
       )
     )
-    .get()
-
-  // Step 5: no schedule = rest day
-  if (!scheduleRow || !scheduleRow.template_id) {
-    const routines = await getRestDayRoutines(today)
-    return { type: 'rest_day', date: today, mesocycle: mesoInfo, routines }
-  }
-
-  // Step 6: load template
-  const template = await db
-    .select()
-    .from(workout_templates)
-    .where(eq(workout_templates.id, scheduleRow.template_id))
-    .get()
-
-  if (!template) {
-    const routines = await getRestDayRoutines(today)
-    return { type: 'rest_day', date: today, mesocycle: mesoInfo, routines }
-  }
-
-  // Step 7: check if already logged for today + active mesocycle
-  const existingLog = await db
-    .select({
-      id: logged_workouts.id,
-      log_date: logged_workouts.log_date,
-      logged_at: logged_workouts.logged_at,
-      canonical_name: logged_workouts.canonical_name,
-      rating: logged_workouts.rating,
-      notes: logged_workouts.notes,
-      template_snapshot: logged_workouts.template_snapshot,
-    })
-    .from(logged_workouts)
-    .innerJoin(
-      workout_templates,
-      eq(logged_workouts.template_id, workout_templates.id)
-    )
-    .where(
-      and(
-        eq(logged_workouts.log_date, today),
-        eq(workout_templates.mesocycle_id, activeMeso.id)
-      )
-    )
-    .get()
-
-  if (existingLog) {
-    // Fetch logged exercises + sets for resistance summary
-    const loggedExerciseRows = await db
-      .select({
-        id: logged_exercises.id,
-        exercise_name: logged_exercises.exercise_name,
-        order: logged_exercises.order,
-        actual_rpe: logged_exercises.actual_rpe,
-      })
-      .from(logged_exercises)
-      .where(eq(logged_exercises.logged_workout_id, existingLog.id))
-      .orderBy(asc(logged_exercises.order))
-      .all()
-
-    const exercisesWithSets: LoggedExerciseData[] = []
-    for (const ex of loggedExerciseRows) {
-      const sets = await db
-        .select({
-          set_number: logged_sets.set_number,
-          actual_reps: logged_sets.actual_reps,
-          actual_weight: logged_sets.actual_weight,
-        })
-        .from(logged_sets)
-        .where(eq(logged_sets.logged_exercise_id, ex.id))
-        .orderBy(asc(logged_sets.set_number))
-        .all()
-
-      exercisesWithSets.push({ ...ex, sets })
-    }
-
-    return {
-      type: 'already_logged',
-      date: today,
-      mesocycle: mesoInfo,
-      loggedWorkout: {
-        ...existingLog,
-        exercises: exercisesWithSets,
-      },
-    }
-  }
-
-  // Step 8: load exercise slots
-  const slots = await db
-    .select({
-      id: exercise_slots.id,
-      exercise_id: exercise_slots.exercise_id,
-      exercise_name: exercises.name,
-      sets: exercise_slots.sets,
-      reps: exercise_slots.reps,
-      weight: exercise_slots.weight,
-      rpe: exercise_slots.rpe,
-      rest_seconds: exercise_slots.rest_seconds,
-      guidelines: exercise_slots.guidelines,
-      order: exercise_slots.order,
-      is_main: exercise_slots.is_main,
-    })
-    .from(exercise_slots)
-    .innerJoin(exercises, eq(exercise_slots.exercise_id, exercises.id))
-    .where(eq(exercise_slots.template_id, template.id))
-    .orderBy(asc(exercise_slots.order))
     .all()
 
-  return {
-    type: 'workout',
-    date: today,
-    mesocycle: mesoInfo,
-    template: {
-      id: template.id,
-      name: template.name,
-      modality: template.modality,
-      notes: template.notes,
-      run_type: template.run_type,
-      target_pace: template.target_pace,
-      hr_zone: template.hr_zone,
-      interval_count: template.interval_count,
-      interval_rest: template.interval_rest,
-      coaching_cues: template.coaching_cues,
-      planned_duration: template.planned_duration,
-    },
-    slots: slots as SlotData[],
+  // Filter to rows with valid template_id
+  const validRows = scheduleRows.filter((r) => r.template_id !== null)
+
+  // Step 5: no schedule = rest day
+  if (validRows.length === 0) {
+    const routines = await getRestDayRoutines(today)
+    return [{ type: 'rest_day', date: today, mesocycle: mesoInfo, routines }]
   }
+
+  // Step 6: build result for each scheduled session
+  const results: TodayResult[] = []
+
+  for (const row of validRows) {
+    const period = row.period as Period
+    const timeSlot = row.time_slot
+
+    // Load template
+    const template = await db
+      .select()
+      .from(workout_templates)
+      .where(eq(workout_templates.id, row.template_id!))
+      .get()
+
+    if (!template) continue
+
+    // Check if already logged for this specific template
+    const existingLog = await db
+      .select({
+        id: logged_workouts.id,
+        log_date: logged_workouts.log_date,
+        logged_at: logged_workouts.logged_at,
+        canonical_name: logged_workouts.canonical_name,
+        rating: logged_workouts.rating,
+        notes: logged_workouts.notes,
+        template_snapshot: logged_workouts.template_snapshot,
+      })
+      .from(logged_workouts)
+      .where(
+        and(
+          eq(logged_workouts.log_date, today),
+          eq(logged_workouts.template_id, template.id)
+        )
+      )
+      .get()
+
+    if (existingLog) {
+      results.push(
+        await buildAlreadyLoggedResult(existingLog, today, mesoInfo, period, timeSlot)
+      )
+      continue
+    }
+
+    // Load exercise slots
+    const slots = await db
+      .select({
+        id: exercise_slots.id,
+        exercise_id: exercise_slots.exercise_id,
+        exercise_name: exercises.name,
+        sets: exercise_slots.sets,
+        reps: exercise_slots.reps,
+        weight: exercise_slots.weight,
+        rpe: exercise_slots.rpe,
+        rest_seconds: exercise_slots.rest_seconds,
+        guidelines: exercise_slots.guidelines,
+        order: exercise_slots.order,
+        is_main: exercise_slots.is_main,
+      })
+      .from(exercise_slots)
+      .innerJoin(exercises, eq(exercise_slots.exercise_id, exercises.id))
+      .where(eq(exercise_slots.template_id, template.id))
+      .orderBy(asc(exercise_slots.order))
+      .all()
+
+    results.push({
+      type: 'workout',
+      date: today,
+      mesocycle: mesoInfo,
+      template: {
+        id: template.id,
+        name: template.name,
+        modality: template.modality,
+        notes: template.notes,
+        run_type: template.run_type,
+        target_pace: template.target_pace,
+        hr_zone: template.hr_zone,
+        interval_count: template.interval_count,
+        interval_rest: template.interval_rest,
+        coaching_cues: template.coaching_cues,
+        planned_duration: template.planned_duration,
+      },
+      slots: slots as SlotData[],
+      period,
+      time_slot: timeSlot,
+    })
+  }
+
+  // If all templates were invalid, fall back to rest day
+  if (results.length === 0) {
+    const routines = await getRestDayRoutines(today)
+    return [{ type: 'rest_day', date: today, mesocycle: mesoInfo, routines }]
+  }
+
+  // Sort by period order (morning → afternoon → evening)
+  results.sort((a, b) => {
+    const aPeriod = 'period' in a ? PERIOD_ORDER[a.period] : 0
+    const bPeriod = 'period' in b ? PERIOD_ORDER[b.period] : 0
+    return aPeriod - bPeriod
+  })
+
+  return results
 }

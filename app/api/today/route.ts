@@ -12,8 +12,8 @@ function todayDateString(): string {
 export async function GET() {
   try {
     const today = todayDateString()
-    const result = await getTodayWorkout(today)
-    return NextResponse.json(result)
+    const results = await getTodayWorkout(today)
+    return NextResponse.json(results)
   } catch {
     return NextResponse.json(
       { error: 'Internal server error' },

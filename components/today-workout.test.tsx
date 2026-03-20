@@ -18,9 +18,11 @@ vi.stubGlobal('fetch', mockFetch)
 import { TodayWorkout } from './today-workout'
 
 function mockApiResponse(data: unknown) {
+  // API returns TodayResult[] — auto-wrap single objects for convenience
+  const payload = Array.isArray(data) ? data : [data]
   mockFetch.mockResolvedValue({
     ok: true,
-    json: () => Promise.resolve(data),
+    json: () => Promise.resolve(payload),
   })
 }
 

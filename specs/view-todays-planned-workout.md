@@ -40,9 +40,11 @@ As an athlete, I can open the app on my phone and immediately see today's planne
 - [ ] The page loads and displays content without requiring additional navigation
 
 ### API Response
-- [ ] `GET /api/today` returns the resolved workout data (template + slots/fields) as JSON
-- [ ] Response includes a `type` field indicating the state: `workout` | `rest_day` | `no_active_mesocycle`
-- [ ] Response includes today's date in the payload
+- [x] `GET /api/today` returns an array of resolved session data as JSON (supports multi-session days via T114)
+- [x] Each element includes a `type` field: `workout` | `rest_day` | `no_active_mesocycle` | `already_logged`
+- [x] Each element includes today's date in the payload
+- [x] Workout and already_logged elements include `period` (morning/afternoon/evening) and optional `time_slot`
+- [x] Results are sorted by period order (morning → afternoon → evening)
 
 ## Edge Cases
 - No active mesocycle: `GET /api/today` returns `type: no_active_mesocycle`; UI shows a message indicating no active training phase (not an error state)

@@ -36,11 +36,11 @@ As a coach, I can assign a time period (morning/afternoon/evening) and optional 
 
 ### Calendar integration
 - [ ] Calendar month grid shows multiple workouts per day as stacked pills/badges with period labels
-- [ ] Today's workout page shows all scheduled sessions for the day, grouped by period
-- [ ] Period label (e.g., "Morning", "6:30 AM") appears above each workout section on the Today page
+- [x] Today's workout page shows all scheduled sessions for the day, grouped by period
+- [x] Period label (e.g., "Morning", "6:30 AM") appears above each workout section on the Today page
 
 ### API changes
-- [ ] `GET /api/today` returns an array of workouts (not a single object) when multiple sessions exist
+- [x] `GET /api/today` returns an array of workouts (not a single object) when multiple sessions exist
 - [ ] `GET /api/calendar` includes period and time_slot in projected day data
 - [ ] Schedule assignment SA accepts period (required) and time_slot (optional)
 
