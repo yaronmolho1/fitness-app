@@ -12,6 +12,8 @@ import { getModalityAccentClass } from '@/lib/ui/modality-colors'
 import type { SlotData, SectionData, MesocycleInfo, TemplateInfo, RoutineItemInfo, RoutineLogInfo, LoggedExerciseData, Period } from '@/lib/today/queries'
 import { getModalityBadgeClasses } from '@/lib/ui/modality-colors'
 import { Badge } from '@/components/ui/badge'
+import Link from 'next/link'
+import { Pencil } from 'lucide-react'
 
 type WorkoutResponse = {
   type: 'workout'
@@ -217,9 +219,21 @@ function WorkoutHeader({ data }: { data: WorkoutResponse }) {
             {data.mesocycle.week_type === 'deload' ? 'Deload' : 'Normal'}
           </span>
         </div>
-        <CardTitle className="text-2xl font-bold tracking-tight">
-          {data.template.name}
-        </CardTitle>
+        <div className="flex items-center gap-2">
+          <CardTitle className="text-2xl font-bold tracking-tight">
+            {data.template.name}
+          </CardTitle>
+          {data.mesocycle.status !== 'completed' && (
+            <Link
+              href={`/mesocycles/${data.mesocycle.id}`}
+              data-testid="edit-template-link"
+              className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              title="Edit template"
+            >
+              <Pencil className="h-4 w-4" />
+            </Link>
+          )}
+        </div>
         <p className="text-sm text-muted-foreground">{formatDate(data.date)}</p>
       </CardHeader>
       {data.template.notes && (
@@ -718,6 +732,13 @@ export function TodayWorkout() {
           <p className="mt-1 text-sm text-muted-foreground">
             Create and activate a mesocycle to see your daily workout.
           </p>
+          <Link
+            href="/mesocycles"
+            data-testid="create-mesocycle-link"
+            className="mt-4 inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            Go to Mesocycles
+          </Link>
         </CardContent>
       </Card>
     )

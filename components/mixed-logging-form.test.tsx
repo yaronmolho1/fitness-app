@@ -50,6 +50,7 @@ function makeData(overrides: Record<string, unknown> = {}) {
       start_date: '2026-03-01',
       end_date: '2026-04-01',
       week_type: 'normal' as const,
+      status: 'active' as const,
     },
     template: {
       id: 100,

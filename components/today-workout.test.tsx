@@ -6,6 +6,12 @@ vi.mock('next/navigation', () => ({
   useRouter: vi.fn(() => ({ refresh: vi.fn() })),
 }))
 
+vi.mock('next/link', () => ({
+  default: ({ children, href, ...props }: { children: React.ReactNode; href: string; [key: string]: unknown }) => (
+    <a href={href} {...props}>{children}</a>
+  ),
+}))
+
 vi.mock('@/lib/routines/actions', () => ({
   markRoutineDone: vi.fn(() => Promise.resolve({ success: true, data: {} })),
   markRoutineSkipped: vi.fn(() => Promise.resolve({ success: true, data: {} })),
@@ -890,6 +896,121 @@ describe('TodayWorkout', () => {
         expect(screen.getByTestId('already-logged-summary')).toBeInTheDocument()
       })
       expect(screen.queryByTestId('workout-rating')).not.toBeInTheDocument()
+    })
+  })
+
+  // --- Quick links (T112) ---
+
+  describe('Quick links', () => {
+    const activeMeso = { id: 5, name: 'Block A', start_date: '2026-03-01', end_date: '2026-04-01', week_type: 'normal' as const, status: 'active' as const }
+    const completedMeso = { id: 5, name: 'Block A', start_date: '2026-03-01', end_date: '2026-04-01', week_type: 'normal' as const, status: 'completed' as const }
+
+    it('shows edit template link on workout card for active mesocycle', async () => {
+      mockApiResponse({
+        type: 'workout',
+        date: '2026-03-15',
+        mesocycle: activeMeso,
+        template: { id: 10, name: 'Push Day A', modality: 'resistance', notes: null },
+        slots: [],
+      })
+      render(<TodayWorkout />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('workout-display')).toBeInTheDocument()
+      })
+      const editLink = screen.getByTestId('edit-template-link')
+      expect(editLink).toBeInTheDocument()
+      expect(editLink).toHaveAttribute('href', '/mesocycles/5')
+    })
+
+    it('hides edit template link when mesocycle is completed', async () => {
+      mockApiResponse({
+        type: 'workout',
+        date: '2026-03-15',
+        mesocycle: completedMeso,
+        template: { id: 10, name: 'Push Day A', modality: 'resistance', notes: null },
+        slots: [],
+      })
+      render(<TodayWorkout />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('workout-display')).toBeInTheDocument()
+      })
+      expect(screen.queryByTestId('edit-template-link')).not.toBeInTheDocument()
+    })
+
+    it('shows edit link on running workout for active mesocycle', async () => {
+      mockApiResponse({
+        type: 'workout',
+        date: '2026-03-15',
+        mesocycle: activeMeso,
+        template: {
+          id: 10, name: 'Easy Run', modality: 'running', notes: null,
+          run_type: 'easy', target_pace: '5:30/km', hr_zone: 2,
+          interval_count: null, interval_rest: null, coaching_cues: null,
+          planned_duration: null,
+        },
+        slots: [],
+      })
+      render(<TodayWorkout />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('running-display')).toBeInTheDocument()
+      })
+      const editLink = screen.getByTestId('edit-template-link')
+      expect(editLink).toHaveAttribute('href', '/mesocycles/5')
+    })
+
+    it('shows edit link on MMA workout for active mesocycle', async () => {
+      mockApiResponse({
+        type: 'workout',
+        date: '2026-03-15',
+        mesocycle: activeMeso,
+        template: {
+          id: 10, name: 'BJJ', modality: 'mma', notes: null,
+          run_type: null, target_pace: null, hr_zone: null,
+          interval_count: null, interval_rest: null, coaching_cues: null,
+          planned_duration: 60,
+        },
+        slots: [],
+      })
+      render(<TodayWorkout />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('mma-display')).toBeInTheDocument()
+      })
+      const editLink = screen.getByTestId('edit-template-link')
+      expect(editLink).toHaveAttribute('href', '/mesocycles/5')
+    })
+
+    it('shows edit link on mixed workout for active mesocycle', async () => {
+      mockApiResponse({
+        type: 'workout',
+        date: '2026-03-15',
+        mesocycle: activeMeso,
+        template: { id: 10, name: 'Mixed Day', modality: 'mixed', notes: null },
+        sections: [],
+        slots: [],
+      })
+      render(<TodayWorkout />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('mixed-display')).toBeInTheDocument()
+      })
+      const editLink = screen.getByTestId('edit-template-link')
+      expect(editLink).toHaveAttribute('href', '/mesocycles/5')
+    })
+
+    it('no-active-mesocycle state includes link to mesocycles page', async () => {
+      mockApiResponse({ type: 'no_active_mesocycle', date: '2026-03-15' })
+      render(<TodayWorkout />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('no-active-mesocycle')).toBeInTheDocument()
+      })
+      const link = screen.getByTestId('create-mesocycle-link')
+      expect(link).toBeInTheDocument()
+      expect(link).toHaveAttribute('href', '/mesocycles')
     })
   })
 })
