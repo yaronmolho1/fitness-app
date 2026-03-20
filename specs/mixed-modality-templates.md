@@ -29,11 +29,11 @@ Support workout templates containing multiple modalities (e.g., resistance + run
 - [ ] Mixed templates must contain at least 2 different modalities
 
 ### Display on Today page
-- [ ] Mixed workouts render sections in order, each with a section header showing name + modality badge
-- [ ] Resistance sections render exercise slots with all targets
-- [ ] Running sections render run plan details
-- [ ] MMA sections render duration target
-- [ ] Visual separator between sections
+- [x] Mixed workouts render sections in order, each with a section header showing name + modality badge
+- [x] Resistance sections render exercise slots with all targets
+- [x] Running sections render run plan details
+- [x] MMA sections render duration target
+- [x] Visual separator between sections
 
 ### Logging mixed workouts
 - [ ] Logging form renders section-by-section, each with modality-specific inputs
