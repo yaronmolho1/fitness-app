@@ -6,6 +6,8 @@ export type ScheduleEntry = {
   day_of_week: number
   template_id: number
   template_name: string
+  period: 'morning' | 'afternoon' | 'evening'
+  time_slot: string | null
 }
 
 // Fetches schedule assignments for a mesocycle, joining template names
@@ -18,6 +20,8 @@ export async function getScheduleForMesocycle(
       day_of_week: weekly_schedule.day_of_week,
       template_id: weekly_schedule.template_id,
       template_name: workout_templates.name,
+      period: weekly_schedule.period,
+      time_slot: weekly_schedule.time_slot,
     })
     .from(weekly_schedule)
     .innerJoin(workout_templates, eq(weekly_schedule.template_id, workout_templates.id))
@@ -27,7 +31,7 @@ export async function getScheduleForMesocycle(
         eq(weekly_schedule.week_type, weekType)
       )
     )
-    .orderBy(asc(weekly_schedule.day_of_week))
+    .orderBy(asc(weekly_schedule.day_of_week), asc(weekly_schedule.period))
     .all()
 
   return rows as ScheduleEntry[]
