@@ -11,12 +11,28 @@ vi.mock('next/navigation', () => ({
   useRouter: vi.fn(() => ({ push: vi.fn(), refresh: vi.fn() })),
 }))
 
+// Mock DatePicker as a simple text input so tests can set date values
+vi.mock('@/components/ui/date-picker', () => ({
+  DatePicker: ({ value, onChange, placeholder }: { value?: string; onChange: (v: string) => void; placeholder?: string }) => (
+    <input
+      data-testid="date-picker"
+      value={value ?? ''}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder ?? 'DD/MM/YYYY'}
+    />
+  ),
+}))
+
 import { MesocycleForm } from './mesocycle-form'
 import { createMesocycle } from '@/lib/mesocycles/actions'
 
 // Helper: set input value via fireEvent (reliable for date/number inputs in jsdom)
 function setInputValue(element: HTMLElement, value: string) {
   fireEvent.change(element, { target: { value } })
+}
+
+function getDateInput() {
+  return screen.getByTestId('date-picker')
 }
 
 describe('MesocycleForm', () => {
@@ -32,7 +48,7 @@ describe('MesocycleForm', () => {
     render(<MesocycleForm />)
 
     expect(screen.getByLabelText(/name/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/start date/i)).toBeInTheDocument()
+    expect(getDateInput()).toBeInTheDocument()
     expect(screen.getByLabelText(/work weeks/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/deload/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /create/i })).toBeInTheDocument()
@@ -53,54 +69,54 @@ describe('MesocycleForm', () => {
   it('computes end date for 4 weeks without deload', () => {
     render(<MesocycleForm />)
 
-    setInputValue(screen.getByLabelText(/start date/i), '2026-03-01')
+    setInputValue(getDateInput(), '2026-03-01')
     setInputValue(screen.getByLabelText(/work weeks/i), '4')
 
-    expect(screen.getByText('2026-03-28')).toBeInTheDocument()
+    expect(screen.getByText('28/03/2026')).toBeInTheDocument()
   })
 
   it('computes end date for 4 weeks with deload', () => {
     render(<MesocycleForm />)
 
-    setInputValue(screen.getByLabelText(/start date/i), '2026-03-01')
+    setInputValue(getDateInput(), '2026-03-01')
     setInputValue(screen.getByLabelText(/work weeks/i), '4')
     fireEvent.click(screen.getByLabelText(/deload/i))
 
-    expect(screen.getByText('2026-04-04')).toBeInTheDocument()
+    expect(screen.getByText('04/04/2026')).toBeInTheDocument()
   })
 
   it('updates end date live when work_weeks changes', () => {
     render(<MesocycleForm />)
 
-    setInputValue(screen.getByLabelText(/start date/i), '2026-03-01')
+    setInputValue(getDateInput(), '2026-03-01')
     setInputValue(screen.getByLabelText(/work weeks/i), '2')
 
-    expect(screen.getByText('2026-03-14')).toBeInTheDocument()
+    expect(screen.getByText('14/03/2026')).toBeInTheDocument()
 
     setInputValue(screen.getByLabelText(/work weeks/i), '6')
 
-    expect(screen.getByText('2026-04-11')).toBeInTheDocument()
+    expect(screen.getByText('11/04/2026')).toBeInTheDocument()
   })
 
   it('updates end date live when start_date changes', () => {
     render(<MesocycleForm />)
 
     setInputValue(screen.getByLabelText(/work weeks/i), '4')
-    setInputValue(screen.getByLabelText(/start date/i), '2026-06-01')
+    setInputValue(getDateInput(), '2026-06-01')
 
-    expect(screen.getByText('2026-06-28')).toBeInTheDocument()
+    expect(screen.getByText('28/06/2026')).toBeInTheDocument()
   })
 
   it('shows no end date when inputs are incomplete', () => {
     render(<MesocycleForm />)
-    expect(screen.queryByText(/^\d{4}-\d{2}-\d{2}$/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/^\d{2}\/\d{2}\/\d{4}$/)).not.toBeInTheDocument()
   })
 
   it('shows validation error when name is empty on submit', async () => {
     const user = userEvent.setup()
     render(<MesocycleForm />)
 
-    setInputValue(screen.getByLabelText(/start date/i), '2026-03-01')
+    setInputValue(getDateInput(), '2026-03-01')
     setInputValue(screen.getByLabelText(/work weeks/i), '4')
     await user.click(screen.getByRole('button', { name: /create/i }))
 
@@ -125,7 +141,7 @@ describe('MesocycleForm', () => {
     render(<MesocycleForm />)
 
     await user.type(screen.getByLabelText(/name/i), 'Test Meso')
-    setInputValue(screen.getByLabelText(/start date/i), '2026-03-01')
+    setInputValue(getDateInput(), '2026-03-01')
     // Leave work_weeks empty
     await user.click(screen.getByRole('button', { name: /create/i }))
 
@@ -137,7 +153,7 @@ describe('MesocycleForm', () => {
     render(<MesocycleForm />)
 
     setInputValue(screen.getByLabelText(/name/i), 'Test Meso')
-    setInputValue(screen.getByLabelText(/start date/i), '2026-03-01')
+    setInputValue(getDateInput(), '2026-03-01')
     setInputValue(screen.getByLabelText(/work weeks/i), '4.5')
     fireEvent.submit(screen.getByRole('button', { name: /create/i }).closest('form')!)
 
@@ -150,7 +166,7 @@ describe('MesocycleForm', () => {
     render(<MesocycleForm />)
 
     await user.type(screen.getByLabelText(/name/i), 'Test Meso')
-    setInputValue(screen.getByLabelText(/start date/i), '2026-03-01')
+    setInputValue(getDateInput(), '2026-03-01')
     setInputValue(screen.getByLabelText(/work weeks/i), '0')
     await user.click(screen.getByRole('button', { name: /create/i }))
 
@@ -165,7 +181,7 @@ describe('MesocycleForm', () => {
     render(<MesocycleForm />)
 
     await user.type(screen.getByLabelText(/name/i), 'Hypertrophy Block')
-    setInputValue(screen.getByLabelText(/start date/i), '2026-03-01')
+    setInputValue(getDateInput(), '2026-03-01')
     setInputValue(screen.getByLabelText(/work weeks/i), '4')
     await user.click(screen.getByRole('button', { name: /create/i }))
 
@@ -187,7 +203,7 @@ describe('MesocycleForm', () => {
     render(<MesocycleForm />)
 
     await user.type(screen.getByLabelText(/name/i), 'Deload Meso')
-    setInputValue(screen.getByLabelText(/start date/i), '2026-03-01')
+    setInputValue(getDateInput(), '2026-03-01')
     setInputValue(screen.getByLabelText(/work weeks/i), '4')
     fireEvent.click(screen.getByLabelText(/deload/i))
     await user.click(screen.getByRole('button', { name: /create/i }))
@@ -210,7 +226,7 @@ describe('MesocycleForm', () => {
     render(<MesocycleForm />)
 
     await user.type(screen.getByLabelText(/name/i), 'x')
-    setInputValue(screen.getByLabelText(/start date/i), '2026-03-01')
+    setInputValue(getDateInput(), '2026-03-01')
     setInputValue(screen.getByLabelText(/work weeks/i), '4')
     await user.click(screen.getByRole('button', { name: /create/i }))
 
@@ -235,7 +251,7 @@ describe('MesocycleForm', () => {
     render(<MesocycleForm />)
 
     await user.type(screen.getByLabelText(/name/i), 'Test')
-    setInputValue(screen.getByLabelText(/start date/i), '2026-03-01')
+    setInputValue(getDateInput(), '2026-03-01')
     setInputValue(screen.getByLabelText(/work weeks/i), '4')
     await user.click(screen.getByRole('button', { name: /create/i }))
 

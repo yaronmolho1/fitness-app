@@ -124,13 +124,13 @@ describe('formatScopeSummary', () => {
   it('returns formatted date range', () => {
     expect(
       formatScopeSummary('date_range', false, null, '2026-03-01', '2026-04-30')
-    ).toBe('Mar 1 – Apr 30')
+    ).toBe('01/03 – 30/04')
   })
 
   it('handles same-year date range', () => {
     expect(
       formatScopeSummary('date_range', false, null, '2026-01-15', '2026-02-28')
-    ).toBe('Jan 15 – Feb 28')
+    ).toBe('15/01 – 28/02')
   })
 })
 
