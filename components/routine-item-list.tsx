@@ -17,9 +17,11 @@ type Mesocycle = { id: number; name: string }
 export function RoutineItemList({
   items,
   mesocycles,
+  categories,
 }: {
   items: RoutineItemWithMesocycle[]
   mesocycles: Mesocycle[]
+  categories: string[]
 }) {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [showCreate, setShowCreate] = useState(false)
@@ -39,6 +41,7 @@ export function RoutineItemList({
         {showCreate ? (
           <CreateRoutineItemForm
             mesocycles={mesocycles}
+            categories={categories}
             onCancel={() => setShowCreate(false)}
             onCreated={() => { setShowCreate(false); router.refresh() }}
           />
@@ -73,6 +76,7 @@ export function RoutineItemList({
       {showCreate && (
         <CreateRoutineItemForm
           mesocycles={mesocycles}
+          categories={categories}
           onCancel={() => setShowCreate(false)}
           onCreated={() => { setShowCreate(false); router.refresh() }}
         />
@@ -85,6 +89,7 @@ export function RoutineItemList({
             <EditRoutineItemForm
               item={item}
               mesocycles={mesocycles}
+              categories={categories}
               onCancel={() => setEditingId(null)}
               onSaved={() => {
                 setEditingId(null)

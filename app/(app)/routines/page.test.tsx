@@ -4,6 +4,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 
 vi.mock('@/lib/routines/queries', () => ({
   getRoutineItems: vi.fn(() => []),
+  getDistinctRoutineCategories: vi.fn(() => []),
   formatInputFields: vi.fn(() => ''),
   formatScopeSummary: vi.fn(() => ''),
 }))
@@ -65,6 +66,8 @@ describe('RoutinesPage', () => {
           has_sets: true,
           has_reps: true,
           frequency_target: 3,
+          frequency_mode: 'weekly_target' as const,
+          frequency_days: null,
           scope: 'global' as const,
           mesocycle_id: null,
           start_date: null,
@@ -79,6 +82,7 @@ describe('RoutinesPage', () => {
     vi.resetModules()
     vi.doMock('@/lib/routines/queries', () => ({
       getRoutineItems: vi.fn(() => mockItems),
+      getDistinctRoutineCategories: vi.fn(() => []),
       formatInputFields: vi.fn(() => 'duration, sets, reps'),
       formatScopeSummary: vi.fn(() => 'Global'),
     }))
