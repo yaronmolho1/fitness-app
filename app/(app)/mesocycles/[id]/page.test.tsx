@@ -64,8 +64,8 @@ describe('MesocycleDetailPage', () => {
 
     expect(screen.getByRole('heading', { name: /hypertrophy block/i })).toBeInTheDocument()
     expect(screen.getByText('Planned')).toBeInTheDocument()
-    expect(screen.getByText('2026-03-01')).toBeInTheDocument()
-    expect(screen.getByText('2026-03-28')).toBeInTheDocument()
+    expect(screen.getByText('01/03/2026')).toBeInTheDocument()
+    expect(screen.getByText('28/03/2026')).toBeInTheDocument()
     expect(screen.getByText('4 weeks')).toBeInTheDocument()
   })
 

@@ -11,6 +11,18 @@ vi.mock('next/navigation', () => ({
   useRouter: vi.fn(() => ({ push: vi.fn(), refresh: vi.fn() })),
 }))
 
+// Mock DatePicker as a simple text input so tests can set date values
+vi.mock('@/components/ui/date-picker', () => ({
+  DatePicker: ({ value, onChange, placeholder }: { value?: string; onChange: (v: string) => void; placeholder?: string }) => (
+    <input
+      data-testid="date-picker"
+      value={value ?? ''}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder ?? 'DD/MM/YYYY'}
+    />
+  ),
+}))
+
 import { CloneMesocycleForm } from './clone-mesocycle-form'
 import { cloneMesocycle } from '@/lib/mesocycles/clone-actions'
 
@@ -26,6 +38,10 @@ function setInputValue(element: HTMLElement, value: string) {
   fireEvent.change(element, { target: { value } })
 }
 
+function getDateInput() {
+  return screen.getByTestId('date-picker')
+}
+
 describe('CloneMesocycleForm', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -39,7 +55,7 @@ describe('CloneMesocycleForm', () => {
     render(<CloneMesocycleForm source={defaultSource} />)
 
     expect(screen.getByLabelText(/name/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/start date/i)).toBeInTheDocument()
+    expect(getDateInput()).toBeInTheDocument()
     expect(screen.getByLabelText(/work weeks/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/deload/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /clone/i })).toBeInTheDocument()
@@ -66,7 +82,7 @@ describe('CloneMesocycleForm', () => {
     const user = userEvent.setup()
     render(<CloneMesocycleForm source={defaultSource} />)
 
-    setInputValue(screen.getByLabelText(/start date/i), '2026-04-01')
+    setInputValue(getDateInput(), '2026-04-01')
     await user.click(screen.getByRole('button', { name: /clone/i }))
 
     expect(await screen.findByText(/name is required/i)).toBeInTheDocument()
@@ -91,7 +107,7 @@ describe('CloneMesocycleForm', () => {
     render(<CloneMesocycleForm source={defaultSource} />)
 
     await user.type(screen.getByLabelText(/name/i), 'Cloned Block')
-    setInputValue(screen.getByLabelText(/start date/i), '2026-04-01')
+    setInputValue(getDateInput(), '2026-04-01')
     await user.click(screen.getByRole('button', { name: /clone/i }))
 
     await waitFor(() => {
@@ -114,7 +130,7 @@ describe('CloneMesocycleForm', () => {
     render(<CloneMesocycleForm source={defaultSource} />)
 
     await user.type(screen.getByLabelText(/name/i), 'Modified Clone')
-    setInputValue(screen.getByLabelText(/start date/i), '2026-04-01')
+    setInputValue(getDateInput(), '2026-04-01')
     setInputValue(screen.getByLabelText(/work weeks/i), '6')
     fireEvent.click(screen.getByLabelText(/deload/i)) // uncheck
     await user.click(screen.getByRole('button', { name: /clone/i }))
@@ -150,7 +166,7 @@ describe('CloneMesocycleForm', () => {
     render(<CloneMesocycleForm source={defaultSource} />)
 
     await user.type(screen.getByLabelText(/name/i), 'Clone')
-    setInputValue(screen.getByLabelText(/start date/i), '2026-04-01')
+    setInputValue(getDateInput(), '2026-04-01')
     await user.click(screen.getByRole('button', { name: /clone/i }))
 
     await waitFor(() => {
@@ -168,7 +184,7 @@ describe('CloneMesocycleForm', () => {
     render(<CloneMesocycleForm source={defaultSource} />)
 
     await user.type(screen.getByLabelText(/name/i), 'Clone')
-    setInputValue(screen.getByLabelText(/start date/i), '2026-04-01')
+    setInputValue(getDateInput(), '2026-04-01')
     await user.click(screen.getByRole('button', { name: /clone/i }))
 
     expect(await screen.findByText(/cannot clone a mesocycle with no templates/i)).toBeInTheDocument()
@@ -177,10 +193,10 @@ describe('CloneMesocycleForm', () => {
   it('shows end date preview', () => {
     render(<CloneMesocycleForm source={defaultSource} />)
 
-    setInputValue(screen.getByLabelText(/start date/i), '2026-04-01')
+    setInputValue(getDateInput(), '2026-04-01')
 
     // 4 work weeks + 1 deload = 35 days from April 1
-    expect(screen.getByText('2026-05-05')).toBeInTheDocument()
+    expect(screen.getByText('05/05/2026')).toBeInTheDocument()
   })
 
   it('disables submit button while submitting', async () => {
@@ -193,7 +209,7 @@ describe('CloneMesocycleForm', () => {
     render(<CloneMesocycleForm source={defaultSource} />)
 
     await user.type(screen.getByLabelText(/name/i), 'Clone')
-    setInputValue(screen.getByLabelText(/start date/i), '2026-04-01')
+    setInputValue(getDateInput(), '2026-04-01')
     await user.click(screen.getByRole('button', { name: /clone/i }))
 
     await waitFor(() => {
@@ -214,7 +230,7 @@ describe('CloneMesocycleForm', () => {
     render(<CloneMesocycleForm source={defaultSource} />)
 
     setInputValue(screen.getByLabelText(/name/i), 'Clone')
-    setInputValue(screen.getByLabelText(/start date/i), '2026-04-01')
+    setInputValue(getDateInput(), '2026-04-01')
     setInputValue(screen.getByLabelText(/work weeks/i), '0')
     fireEvent.submit(screen.getByRole('button', { name: /clone/i }).closest('form')!)
 
