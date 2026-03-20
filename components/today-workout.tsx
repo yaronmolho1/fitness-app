@@ -8,6 +8,7 @@ import { MmaLoggingForm } from '@/components/mma-logging-form'
 import { MixedLoggingForm } from '@/components/mixed-logging-form'
 import { RoutineCheckOff } from '@/components/routine-check-off'
 import { cn } from '@/lib/utils'
+import { formatDateLong } from '@/lib/date-format'
 import { getModalityAccentClass } from '@/lib/ui/modality-colors'
 import type { SlotData, SectionData, MesocycleInfo, TemplateInfo, RoutineItemInfo, RoutineLogInfo, LoggedExerciseData, Period } from '@/lib/today/queries'
 import { getModalityBadgeClasses } from '@/lib/ui/modality-colors'
@@ -83,12 +84,7 @@ function formatRest(seconds: number): string {
 }
 
 function formatDate(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00')
-  return date.toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'short',
-    day: 'numeric',
-  })
+  return formatDateLong(dateStr)
 }
 
 function ExerciseSlot({ slot }: { slot: SlotData }) {

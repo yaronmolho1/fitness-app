@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { cn } from '@/lib/utils'
 import { SectionHeading } from '@/components/layout/section-heading'
+import { formatDateWithWeekday } from '@/lib/date-format'
 import { saveWorkout } from '@/lib/workouts/actions'
 import type { SaveWorkoutInput } from '@/lib/workouts/actions'
 
@@ -53,12 +54,7 @@ function buildInitialSets(slots: SlotData[]): SetFormData[][] {
 }
 
 function formatDate(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00')
-  return date.toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  })
+  return formatDateWithWeekday(dateStr)
 }
 
 export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {

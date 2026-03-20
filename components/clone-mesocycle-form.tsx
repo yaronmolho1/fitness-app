@@ -4,8 +4,10 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { cloneMesocycle } from '@/lib/mesocycles/clone-actions'
 import { calculateEndDate } from '@/lib/mesocycles/utils'
+import { formatDateDisplay } from '@/lib/date-format'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import { DatePicker } from '@/components/ui/date-picker'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
@@ -105,13 +107,8 @@ export function CloneMesocycleForm({ source }: { source: CloneSource }) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="clone-start-date">Start Date</Label>
-        <Input
-          id="clone-start-date"
-          type="date"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-        />
+        <Label>Start Date</Label>
+        <DatePicker value={startDate} onChange={setStartDate} />
         {errors.start_date && (
           <p className="text-sm text-destructive" role="alert">{errors.start_date}</p>
         )}
@@ -151,7 +148,7 @@ export function CloneMesocycleForm({ source }: { source: CloneSource }) {
         </p>
         {endDate ? (
           <>
-            <p className="mt-1 text-lg font-semibold tabular-nums">{endDate}</p>
+            <p className="mt-1 text-lg font-semibold tabular-nums">{formatDateDisplay(endDate)}</p>
             <p className="mt-0.5 text-xs text-muted-foreground">
               {formatDuration(workWeeksNum, hasDeload)}
             </p>

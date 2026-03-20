@@ -7,6 +7,7 @@ import { saveRunningWorkout } from '@/lib/workouts/actions'
 import type { SaveRunningWorkoutInput, IntervalRepData } from '@/lib/workouts/actions'
 import type { MesocycleInfo, TemplateInfo } from '@/lib/today/queries'
 import { SectionHeading } from '@/components/layout/section-heading'
+import { formatDateWithWeekday } from '@/lib/date-format'
 
 export type RunningWorkoutData = {
   date: string
@@ -23,12 +24,7 @@ const runTypeConfig: Record<string, { label: string; color: string }> = {
 }
 
 function formatDate(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00')
-  return date.toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  })
+  return formatDateWithWeekday(dateStr)
 }
 
 function formatRest(seconds: number): string {

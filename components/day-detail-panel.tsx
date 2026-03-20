@@ -12,6 +12,7 @@ import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { Pencil, CalendarDays, Star } from 'lucide-react'
 import type { DayDetailResult, SlotDetail, LoggedExerciseDetail, TemplateSnapshot } from '@/lib/calendar/day-detail'
+import { formatDateLong } from '@/lib/date-format'
 import { getModalityBadgeClasses } from '@/lib/ui/modality-colors'
 
 interface DayDetailPanelProps {
@@ -20,13 +21,7 @@ interface DayDetailPanelProps {
 }
 
 function formatDate(dateStr: string): string {
-  const d = new Date(dateStr + 'T00:00:00')
-  return d.toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  })
+  return formatDateLong(dateStr)
 }
 
 function ModalityBadge({ modality }: { modality: string }) {
