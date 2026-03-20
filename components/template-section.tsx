@@ -10,6 +10,7 @@ import { MmaBjjTemplateForm } from '@/components/mma-bjj-template-form'
 import { MixedTemplateForm } from '@/components/mixed-template-form'
 import { SlotList } from '@/components/slot-list'
 import { CascadeScopeSelector } from '@/components/cascade-scope-selector'
+import { SectionHeading } from '@/components/layout/section-heading'
 import { createResistanceTemplate, deleteTemplate } from '@/lib/templates/actions'
 import type { TemplateOption } from '@/lib/schedule/queries'
 import type { SlotWithExercise } from '@/lib/templates/slot-queries'
@@ -59,7 +60,7 @@ export function TemplateSection({ mesocycleId, templates, exercises, slotsByTemp
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold tracking-tight">Templates</h2>
+        <SectionHeading>Templates</SectionHeading>
         {!isCompleted && formType === null && (
           <div className="flex gap-2">
             <Button

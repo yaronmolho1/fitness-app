@@ -5,6 +5,7 @@ import { getScheduleForMesocycle, getTemplatesForMesocycle } from '@/lib/schedul
 import { getExercises } from '@/lib/exercises/queries'
 import { getSlotsByTemplate } from '@/lib/templates/slot-queries'
 import { PageContainer } from '@/components/layout/page-container'
+import { PageHeader } from '@/components/layout/page-header'
 import { ScheduleTabs } from '@/components/schedule-tabs'
 import { StatusBadge } from '@/components/status-badge'
 import { StatusTransitionButton } from '@/components/status-transition-button'
@@ -44,29 +45,31 @@ export default async function MesocycleDetailPage({
   return (
     <PageContainer variant="wide">
       <div className="space-y-6">
-        <Link href="/mesocycles" className="text-sm text-muted-foreground transition-colors hover:text-foreground hover:underline">
-          Mesocycles
-        </Link>
-
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold">{meso.name}</h1>
-              <StatusBadge status={meso.status} />
+        <PageHeader
+          title={meso.name}
+          className="mb-0"
+          breadcrumb={
+            <Link href="/mesocycles" className="text-sm text-muted-foreground transition-colors hover:text-foreground hover:underline">
+              Mesocycles
+            </Link>
+          }
+          actions={
+            <div className="flex items-center gap-2">
+              <Button variant="outline" asChild>
+                <Link href={`/mesocycles/${meso.id}/clone`}>Clone</Link>
+              </Button>
+              <StatusTransitionButton mesocycleId={meso.id} status={meso.status} />
             </div>
-            <div className="mt-2 flex flex-wrap gap-4 text-sm text-muted-foreground">
-              <span>{meso.start_date}</span>
-              <span>{meso.end_date}</span>
-              <span>{meso.work_weeks} weeks</span>
-              {meso.has_deload && <span>+ deload</span>}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" asChild>
-              <Link href={`/mesocycles/${meso.id}/clone`}>Clone</Link>
-            </Button>
-            <StatusTransitionButton mesocycleId={meso.id} status={meso.status} />
-          </div>
+          }
+        />
+        <div className="-mt-4 flex flex-wrap items-center gap-3">
+          <StatusBadge status={meso.status} />
+          <span className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+            <span>{meso.start_date}</span>
+            <span>{meso.end_date}</span>
+            <span>{meso.work_weeks} weeks</span>
+            {meso.has_deload && <span>+ deload</span>}
+          </span>
         </div>
 
         <TemplateSection

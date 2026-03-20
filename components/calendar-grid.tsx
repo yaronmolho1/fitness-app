@@ -131,7 +131,7 @@ export function CalendarGrid({ initialMonth }: CalendarGridProps = {}) {
         <Button variant="outline" size="icon" onClick={goPrev} aria-label="Previous month">
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <h2 className="text-lg font-semibold">{monthLabel(year, month)}</h2>
+        <h2 className="text-lg font-semibold tracking-tight">{monthLabel(year, month)}</h2>
         <Button variant="outline" size="icon" onClick={goNext} aria-label="Next month">
           <ChevronRight className="h-4 w-4" />
         </Button>

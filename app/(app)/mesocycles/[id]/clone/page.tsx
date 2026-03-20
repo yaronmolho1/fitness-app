@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getMesocycleById } from '@/lib/mesocycles/queries'
 import { PageContainer } from '@/components/layout/page-container'
+import { PageHeader } from '@/components/layout/page-header'
 import { CloneMesocycleForm } from '@/components/clone-mesocycle-form'
 
 export const dynamic = 'force-dynamic'
@@ -21,12 +22,15 @@ export default async function CloneMesocyclePage({
   return (
     <PageContainer variant="narrow">
       <div className="space-y-6">
-        <div className="space-y-1">
-          <Link href={`/mesocycles/${meso.id}`} className="text-sm text-muted-foreground transition-colors hover:text-foreground hover:underline">
-            {meso.name}
-          </Link>
-          <h1 className="text-2xl font-bold">Clone Mesocycle</h1>
-        </div>
+        <PageHeader
+          title="Clone Mesocycle"
+          className="mb-0"
+          breadcrumb={
+            <Link href={`/mesocycles/${meso.id}`} className="text-sm text-muted-foreground transition-colors hover:text-foreground hover:underline">
+              {meso.name}
+            </Link>
+          }
+        />
 
         <CloneMesocycleForm
           source={{

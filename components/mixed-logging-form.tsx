@@ -667,7 +667,7 @@ export function MixedLoggingForm({ data }: { data: MixedWorkoutData }) {
               <div className="my-6 border-t border-border" />
             )}
             <div data-testid="mixed-section-header" className="mb-3 flex items-center gap-2">
-              <h2 className="text-lg font-semibold">{section.section_name}</h2>
+              <h2 className="text-lg font-semibold tracking-tight">{section.section_name}</h2>
               <span
                 data-testid="mixed-section-modality"
                 className={cn('rounded-full px-2.5 py-0.5 text-xs font-medium', getModalityBadgeClasses(section.modality))}

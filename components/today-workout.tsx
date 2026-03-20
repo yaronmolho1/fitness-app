@@ -760,7 +760,7 @@ export function TodayWorkout() {
         </Card>
 
         <div>
-          <h2 className="mb-3 text-lg font-semibold">Daily Routines</h2>
+          <h2 className="mb-3 text-lg font-semibold tracking-tight">Daily Routines</h2>
           <RoutineCheckOff
             items={first.routines.items}
             logs={first.routines.logs}
