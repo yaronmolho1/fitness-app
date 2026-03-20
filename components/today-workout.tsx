@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { WorkoutLoggingForm } from '@/components/workout-logging-form'
 import { RunningLoggingForm } from '@/components/running-logging-form'
 import { MmaLoggingForm } from '@/components/mma-logging-form'
+import { MixedLoggingForm } from '@/components/mixed-logging-form'
 import { RoutineCheckOff } from '@/components/routine-check-off'
 import { cn } from '@/lib/utils'
 import { getModalityAccentClass } from '@/lib/ui/modality-colors'
@@ -410,7 +411,13 @@ function SectionResistanceContent({ section }: { section: SectionData }) {
   )
 }
 
-function MixedDisplay({ data }: { data: WorkoutResponse }) {
+function MixedDisplay({
+  data,
+  onStartLogging,
+}: {
+  data: WorkoutResponse
+  onStartLogging: () => void
+}) {
   const sections = data.sections ?? []
 
   return (
@@ -444,6 +451,15 @@ function MixedDisplay({ data }: { data: WorkoutResponse }) {
           )}
         </div>
       ))}
+
+      <button
+        type="button"
+        data-testid="start-mixed-logging-btn"
+        onClick={onStartLogging}
+        className="w-full rounded-xl bg-primary py-3.5 text-base font-semibold text-primary-foreground shadow-lg active:scale-[0.98] transition-transform"
+      >
+        Log Workout
+      </button>
     </div>
   )
 }
@@ -605,6 +621,9 @@ function SessionSection({
     const isLogging = loggingState[key] ?? false
 
     if (isLogging) {
+      if (session.template.modality === 'mixed') {
+        return <MixedLoggingForm data={{ ...session, sections: session.sections ?? [] }} />
+      }
       if (session.template.modality === 'running') {
         return <RunningLoggingForm data={session} />
       }
@@ -622,7 +641,7 @@ function SessionSection({
           </h2>
         )}
         {session.template.modality === 'mixed' ? (
-          <MixedDisplay data={session} />
+          <MixedDisplay data={session} onStartLogging={() => onStartLogging(key)} />
         ) : session.template.modality === 'running' ? (
           <RunningDisplay data={session} onStartLogging={() => onStartLogging(key)} />
         ) : session.template.modality === 'mma' ? (
@@ -747,6 +766,9 @@ export function TodayWorkout() {
       const isLogging = loggingState[key] ?? false
 
       if (isLogging) {
+        if (session.template.modality === 'mixed') {
+          return <MixedLoggingForm data={{ ...session, sections: session.sections ?? [] }} />
+        }
         if (session.template.modality === 'running') {
           return <RunningLoggingForm data={session} />
         }
@@ -757,7 +779,7 @@ export function TodayWorkout() {
       }
 
       if (session.template.modality === 'mixed') {
-        return <MixedDisplay data={session} />
+        return <MixedDisplay data={session} onStartLogging={() => startLogging(key)} />
       }
       if (session.template.modality === 'running') {
         return (
