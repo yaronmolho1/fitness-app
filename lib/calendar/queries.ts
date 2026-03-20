@@ -14,10 +14,18 @@ export type CalendarDay = {
   mesocycle_id: number | null
   is_deload: boolean
   status: 'completed' | 'projected' | 'rest'
+  period: 'morning' | 'afternoon' | 'evening' | null
+  time_slot: string | null
 }
 
 export type CalendarProjection = {
   days: CalendarDay[]
+}
+
+const PERIOD_ORDER: Record<string, number> = {
+  morning: 0,
+  afternoon: 1,
+  evening: 2,
 }
 
 // Returns 0=Monday..6=Sunday from a YYYY-MM-DD string
@@ -61,6 +69,8 @@ type ScheduleRow = {
   week_type: string
   template_name: string | null
   modality: string | null
+  period: string
+  time_slot: string | null
 }
 
 export async function getCalendarProjection(
@@ -84,8 +94,8 @@ export async function getCalendarProjection(
     .where(and(lte(mesocycles.start_date, lastDate), gte(mesocycles.end_date, firstDate)))
     .all() as MesocycleRow[]
 
-  // Build schedule lookup: mesocycle_id -> Map<`${day_of_week}-${week_type}`, ScheduleRow>
-  const scheduleLookup = new Map<number, Map<string, ScheduleRow>>()
+  // Build schedule lookup: mesocycle_id -> Map<`${day_of_week}-${week_type}`, ScheduleRow[]>
+  const scheduleLookup = new Map<number, Map<string, ScheduleRow[]>>()
 
   if (mesoRows.length > 0) {
     const mesoIds = mesoRows.map((m) => m.id)
@@ -98,6 +108,8 @@ export async function getCalendarProjection(
         week_type: weekly_schedule.week_type,
         template_name: workout_templates.name,
         modality: workout_templates.modality,
+        period: weekly_schedule.period,
+        time_slot: weekly_schedule.time_slot,
       })
       .from(weekly_schedule)
       .leftJoin(workout_templates, eq(weekly_schedule.template_id, workout_templates.id))
@@ -108,9 +120,12 @@ export async function getCalendarProjection(
       if (!scheduleLookup.has(row.mesocycle_id)) {
         scheduleLookup.set(row.mesocycle_id, new Map())
       }
-      scheduleLookup
-        .get(row.mesocycle_id)!
-        .set(`${row.day_of_week}-${row.week_type}`, row)
+      const key = `${row.day_of_week}-${row.week_type}`
+      const mesoMap = scheduleLookup.get(row.mesocycle_id)!
+      if (!mesoMap.has(key)) {
+        mesoMap.set(key, [])
+      }
+      mesoMap.get(key)!.push(row)
     }
   }
 
@@ -125,20 +140,22 @@ export async function getCalendarProjection(
 
   const loggedDates = new Set(loggedRows.map((r) => r.log_date))
 
-  // Build projection
-  const days: CalendarDay[] = dates.map((date) => {
+  // Build projection — flatMap to support multiple entries per date
+  const days: CalendarDay[] = dates.flatMap((date): CalendarDay[] => {
     // Find which mesocycle contains this date
     const meso = mesoRows.find((m) => date >= m.start_date && date <= m.end_date)
 
     if (!meso) {
-      return {
+      return [{
         date,
         template_name: null,
         modality: null,
         mesocycle_id: null,
         is_deload: false,
         status: 'rest' as const,
-      }
+        period: null,
+        time_slot: null,
+      }]
     }
 
     // Compute week number (1-based) from mesocycle start
@@ -150,32 +167,53 @@ export async function getCalendarProjection(
     const isDeload = hasDeload && weekNumber > meso.work_weeks
     const weekType = isDeload ? 'deload' : 'normal'
 
-    // Look up schedule for this day
+    // Look up schedule entries for this day (may be multiple)
     const dow = isoDayOfWeek(date)
     const schedMap = scheduleLookup.get(meso.id)
-    const schedEntry = schedMap?.get(`${dow}-${weekType}`)
+    const schedEntries = schedMap?.get(`${dow}-${weekType}`)
 
-    const templateName = schedEntry?.template_name ?? null
-    const modality = (schedEntry?.modality as CalendarDay['modality']) ?? null
-
-    // Determine status
-    let status: CalendarDay['status']
-    if (templateName === null) {
-      status = 'rest'
-    } else if (loggedDates.has(date)) {
-      status = 'completed'
-    } else {
-      status = 'projected'
+    if (!schedEntries || schedEntries.length === 0) {
+      return [{
+        date,
+        template_name: null,
+        modality: null,
+        mesocycle_id: meso.id,
+        is_deload: isDeload,
+        status: 'rest' as const,
+        period: null,
+        time_slot: null,
+      }]
     }
 
-    return {
-      date,
-      template_name: templateName,
-      modality,
-      mesocycle_id: meso.id,
-      is_deload: isDeload,
-      status,
-    }
+    // Sort by period order: morning → afternoon → evening
+    const sorted = [...schedEntries].sort(
+      (a, b) => (PERIOD_ORDER[a.period] ?? 99) - (PERIOD_ORDER[b.period] ?? 99)
+    )
+
+    return sorted.map((entry) => {
+      const templateName = entry.template_name ?? null
+      const modality = (entry.modality as CalendarDay['modality']) ?? null
+
+      let status: CalendarDay['status']
+      if (templateName === null) {
+        status = 'rest'
+      } else if (loggedDates.has(date)) {
+        status = 'completed'
+      } else {
+        status = 'projected'
+      }
+
+      return {
+        date,
+        template_name: templateName,
+        modality,
+        mesocycle_id: meso.id,
+        is_deload: isDeload,
+        status,
+        period: entry.period as CalendarDay['period'],
+        time_slot: entry.time_slot,
+      }
+    })
   })
 
   return { days }

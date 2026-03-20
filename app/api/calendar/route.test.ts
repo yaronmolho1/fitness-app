@@ -49,6 +49,8 @@ describe('GET /api/calendar', () => {
           mesocycle_id: null,
           is_deload: false,
           status: 'rest' as const,
+          period: null,
+          time_slot: null,
         },
       ],
     }
@@ -80,7 +82,7 @@ describe('GET /api/calendar', () => {
     expect(data.error).toBe('Internal server error')
   })
 
-  it('each day entry has required fields', async () => {
+  it('each day entry has required fields including period and time_slot', async () => {
     const mockData = {
       days: [
         {
@@ -90,6 +92,8 @@ describe('GET /api/calendar', () => {
           mesocycle_id: 1,
           is_deload: false,
           status: 'projected',
+          period: 'morning',
+          time_slot: '08:00',
         },
       ],
     }
@@ -105,5 +109,7 @@ describe('GET /api/calendar', () => {
     expect(day).toHaveProperty('mesocycle_id')
     expect(day).toHaveProperty('is_deload')
     expect(day).toHaveProperty('status')
+    expect(day).toHaveProperty('period')
+    expect(day).toHaveProperty('time_slot')
   })
 })

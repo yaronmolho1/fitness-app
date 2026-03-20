@@ -8,10 +8,10 @@ import type { CalendarDay } from '@/lib/calendar/queries'
 const MARCH_2026_DAYS: CalendarDay[] = Array.from({ length: 31 }, (_, i) => {
   const day = i + 1
   const date = `2026-03-${String(day).padStart(2, '0')}`
-  if (day === 2) return { date, template_name: 'Push A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'projected' }
-  if (day === 4) return { date, template_name: '5K Tempo', modality: 'running', mesocycle_id: 1, is_deload: false, status: 'projected' }
-  if (day === 6) return { date, template_name: 'BJJ Sparring', modality: 'mma', mesocycle_id: 1, is_deload: false, status: 'projected' }
-  return { date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest' }
+  if (day === 2) return { date, template_name: 'Push A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'morning', time_slot: null }
+  if (day === 4) return { date, template_name: '5K Tempo', modality: 'running', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'morning', time_slot: null }
+  if (day === 6) return { date, template_name: 'BJJ Sparring', modality: 'mma', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'morning', time_slot: null }
+  return { date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest', period: null, time_slot: null }
 })
 
 function mockFetch(responses: Record<string, CalendarDay[]>) {
@@ -154,7 +154,7 @@ describe('CalendarGrid', () => {
   it('navigates to previous month', async () => {
     const febDays: CalendarDay[] = Array.from({ length: 28 }, (_, i) => ({
       date: `2026-02-${String(i + 1).padStart(2, '0')}`,
-      template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest' as const,
+      template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest' as const, period: null, time_slot: null,
     }))
 
     mockFetch({ '2026-03': MARCH_2026_DAYS, '2026-02': febDays })
@@ -180,7 +180,7 @@ describe('CalendarGrid', () => {
   it('navigates to next month', async () => {
     const aprilDays: CalendarDay[] = Array.from({ length: 30 }, (_, i) => ({
       date: `2026-04-${String(i + 1).padStart(2, '0')}`,
-      template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest' as const,
+      template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest' as const, period: null, time_slot: null,
     }))
 
     mockFetch({ '2026-03': MARCH_2026_DAYS, '2026-04': aprilDays })
@@ -235,15 +235,11 @@ describe('CalendarGrid – status markers', () => {
   const DAYS_WITH_STATUS: CalendarDay[] = Array.from({ length: 31 }, (_, i) => {
     const day = i + 1
     const date = `2026-03-${String(day).padStart(2, '0')}`
-    // day 2: completed resistance workout
-    if (day === 2) return { date, template_name: 'Push A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'completed' }
-    // day 4: projected running (not yet logged)
-    if (day === 4) return { date, template_name: '5K Tempo', modality: 'running', mesocycle_id: 1, is_deload: false, status: 'projected' }
-    // day 6: completed mma workout
-    if (day === 6) return { date, template_name: 'BJJ Sparring', modality: 'mma', mesocycle_id: 1, is_deload: false, status: 'completed' }
-    // day 9: projected resistance (past, missed workout)
-    if (day === 9) return { date, template_name: 'Pull A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'projected' }
-    return { date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest' }
+    if (day === 2) return { date, template_name: 'Push A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'completed', period: 'morning', time_slot: null }
+    if (day === 4) return { date, template_name: '5K Tempo', modality: 'running', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'morning', time_slot: null }
+    if (day === 6) return { date, template_name: 'BJJ Sparring', modality: 'mma', mesocycle_id: 1, is_deload: false, status: 'completed', period: 'morning', time_slot: null }
+    if (day === 9) return { date, template_name: 'Pull A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'morning', time_slot: null }
+    return { date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest', period: null, time_slot: null }
   })
 
   afterEach(() => {
@@ -367,18 +363,13 @@ describe('CalendarGrid – deload week distinction', () => {
   const DAYS_WITH_DELOAD: CalendarDay[] = Array.from({ length: 31 }, (_, i) => {
     const day = i + 1
     const date = `2026-03-${String(day).padStart(2, '0')}`
-    // Days 2, 9: normal work week workout days
-    if (day === 2) return { date, template_name: 'Push A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'projected' }
-    if (day === 9) return { date, template_name: 'Push A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'projected' }
-    // Days 3-8, 10-15: rest within normal weeks
-    if (day >= 3 && day <= 8) return { date, template_name: null, modality: null, mesocycle_id: 1, is_deload: false, status: 'rest' }
-    if (day >= 10 && day <= 15) return { date, template_name: null, modality: null, mesocycle_id: 1, is_deload: false, status: 'rest' }
-    // Day 16: deload workout day
-    if (day === 16) return { date, template_name: 'Push Deload', modality: 'resistance', mesocycle_id: 1, is_deload: true, status: 'projected' }
-    // Days 17-22: deload rest days
-    if (day >= 17 && day <= 22) return { date, template_name: null, modality: null, mesocycle_id: 1, is_deload: true, status: 'rest' }
-    // Outside mesocycle
-    return { date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest' }
+    if (day === 2) return { date, template_name: 'Push A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'morning', time_slot: null }
+    if (day === 9) return { date, template_name: 'Push A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'morning', time_slot: null }
+    if (day >= 3 && day <= 8) return { date, template_name: null, modality: null, mesocycle_id: 1, is_deload: false, status: 'rest', period: null, time_slot: null }
+    if (day >= 10 && day <= 15) return { date, template_name: null, modality: null, mesocycle_id: 1, is_deload: false, status: 'rest', period: null, time_slot: null }
+    if (day === 16) return { date, template_name: 'Push Deload', modality: 'resistance', mesocycle_id: 1, is_deload: true, status: 'projected', period: 'morning', time_slot: null }
+    if (day >= 17 && day <= 22) return { date, template_name: null, modality: null, mesocycle_id: 1, is_deload: true, status: 'rest', period: null, time_slot: null }
+    return { date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest', period: null, time_slot: null }
   })
 
   afterEach(() => {
@@ -477,7 +468,7 @@ describe('CalendarGrid – deload week distinction', () => {
     const NO_DELOAD_DAYS: CalendarDay[] = Array.from({ length: 31 }, (_, i) => {
       const day = i + 1
       const date = `2026-03-${String(day).padStart(2, '0')}`
-      return { date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest' as const }
+      return { date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest' as const, period: null, time_slot: null }
     })
 
     mockFetch({ '2026-03': NO_DELOAD_DAYS })
@@ -488,5 +479,126 @@ describe('CalendarGrid – deload week distinction', () => {
     })
 
     expect(screen.queryByText('Deload week')).not.toBeInTheDocument()
+  })
+})
+
+// T115: multi-workout per day pills
+describe('CalendarGrid – multi-workout pills (T115)', () => {
+  // Day 2 (Monday): two workouts — morning resistance + evening running
+  const MULTI_WORKOUT_DAYS: CalendarDay[] = (() => {
+    const days: CalendarDay[] = []
+    for (let i = 1; i <= 31; i++) {
+      const date = `2026-03-${String(i).padStart(2, '0')}`
+      if (i === 2) {
+        // Two workouts on Monday
+        days.push({ date, template_name: 'Push A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'morning', time_slot: '07:00' })
+        days.push({ date, template_name: '5K Run', modality: 'running', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'evening', time_slot: '18:00' })
+      } else if (i === 4) {
+        // Single workout on Wednesday
+        days.push({ date, template_name: 'Pull A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'morning', time_slot: null })
+      } else {
+        days.push({ date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest', period: null, time_slot: null })
+      }
+    }
+    return days
+  })()
+
+  afterEach(() => {
+    cleanup()
+    vi.restoreAllMocks()
+  })
+
+  beforeEach(() => {
+    mockFetch({ '2026-03': MULTI_WORKOUT_DAYS })
+  })
+
+  it('renders multiple workout pills for a day with multiple entries', async () => {
+    render(<CalendarGrid initialMonth="2026-03" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('calendar-day-2026-03-02')).toBeInTheDocument()
+    })
+
+    const dayCell = screen.getByTestId('calendar-day-2026-03-02')
+    const pills = dayCell.querySelectorAll('[data-testid="workout-pill"]')
+    expect(pills).toHaveLength(2)
+  })
+
+  it('each pill shows the template name', async () => {
+    render(<CalendarGrid initialMonth="2026-03" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('calendar-day-2026-03-02')).toBeInTheDocument()
+    })
+
+    const dayCell = screen.getByTestId('calendar-day-2026-03-02')
+    expect(dayCell).toHaveTextContent('Push A')
+    expect(dayCell).toHaveTextContent('5K Run')
+  })
+
+  it('each pill shows the period label', async () => {
+    render(<CalendarGrid initialMonth="2026-03" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('calendar-day-2026-03-02')).toBeInTheDocument()
+    })
+
+    const dayCell = screen.getByTestId('calendar-day-2026-03-02')
+    // Period labels abbreviated: AM / PM / EVE (or Morning / Evening)
+    expect(dayCell).toHaveTextContent(/AM/i)
+    expect(dayCell).toHaveTextContent(/EVE/i)
+  })
+
+  it('single workout day renders one pill', async () => {
+    render(<CalendarGrid initialMonth="2026-03" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('calendar-day-2026-03-04')).toBeInTheDocument()
+    })
+
+    const dayCell = screen.getByTestId('calendar-day-2026-03-04')
+    const pills = dayCell.querySelectorAll('[data-testid="workout-pill"]')
+    expect(pills).toHaveLength(1)
+    expect(dayCell).toHaveTextContent('Pull A')
+  })
+
+  it('rest day renders no pills', async () => {
+    render(<CalendarGrid initialMonth="2026-03" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('calendar-day-2026-03-01')).toBeInTheDocument()
+    })
+
+    const dayCell = screen.getByTestId('calendar-day-2026-03-01')
+    const pills = dayCell.querySelectorAll('[data-testid="workout-pill"]')
+    expect(pills).toHaveLength(0)
+  })
+
+  it('pills are ordered by period within a day', async () => {
+    render(<CalendarGrid initialMonth="2026-03" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('calendar-day-2026-03-02')).toBeInTheDocument()
+    })
+
+    const dayCell = screen.getByTestId('calendar-day-2026-03-02')
+    const pills = dayCell.querySelectorAll('[data-testid="workout-pill"]')
+    // morning first, evening second
+    expect(pills[0]).toHaveTextContent('Push A')
+    expect(pills[1]).toHaveTextContent('5K Run')
+  })
+
+  it('pills have modality-specific styling', async () => {
+    render(<CalendarGrid initialMonth="2026-03" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('calendar-day-2026-03-02')).toBeInTheDocument()
+    })
+
+    const dayCell = screen.getByTestId('calendar-day-2026-03-02')
+    const pills = dayCell.querySelectorAll('[data-testid="workout-pill"]')
+    // Each pill should have its own modality class
+    expect(pills[0].className).toMatch(/blue/) // resistance
+    expect(pills[1].className).toMatch(/emerald/) // running
   })
 })
