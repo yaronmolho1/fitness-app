@@ -70,14 +70,20 @@ export type TemplateSnapshot = {
   [key: string]: unknown
 }
 
+type MesocycleStatus = 'planned' | 'active' | 'completed'
+
 type RestResult = {
   type: 'rest'
   date: string
+  mesocycle_id?: number
+  mesocycle_status?: MesocycleStatus
 }
 
 type ProjectedResult = {
   type: 'projected'
   date: string
+  mesocycle_id: number
+  mesocycle_status: MesocycleStatus
   template: TemplateDetail
   slots: SlotDetail[]
   is_deload: boolean
@@ -86,6 +92,8 @@ type ProjectedResult = {
 type CompletedResult = {
   type: 'completed'
   date: string
+  mesocycle_id: number
+  mesocycle_status: MesocycleStatus
   snapshot: TemplateSnapshot
   exercises: LoggedExerciseDetail[]
   rating: number | null
@@ -119,6 +127,7 @@ export async function getDayDetail(
       end_date: mesocycles.end_date,
       work_weeks: mesocycles.work_weeks,
       has_deload: mesocycles.has_deload,
+      status: mesocycles.status,
     })
     .from(mesocycles)
     .where(and(lte(mesocycles.start_date, date), gte(mesocycles.end_date, date)))
@@ -152,8 +161,10 @@ export async function getDayDetail(
     )
     .get()
 
+  const mesoStatus = meso.status as MesocycleStatus
+
   if (!schedEntry || !schedEntry.template_id) {
-    return { type: 'rest', date }
+    return { type: 'rest', date, mesocycle_id: meso.id, mesocycle_status: mesoStatus }
   }
 
   // Check if completed (logged workout exists for this date)
@@ -217,6 +228,8 @@ export async function getDayDetail(
     return {
       type: 'completed',
       date,
+      mesocycle_id: meso.id,
+      mesocycle_status: mesoStatus,
       snapshot: snapshot as TemplateSnapshot,
       exercises: exercisesWithSets,
       rating: loggedWorkout.rating,
@@ -271,6 +284,8 @@ export async function getDayDetail(
   return {
     type: 'projected',
     date,
+    mesocycle_id: meso.id,
+    mesocycle_status: mesoStatus,
     template,
     slots,
     is_deload: isDeload,

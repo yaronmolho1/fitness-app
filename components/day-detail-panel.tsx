@@ -8,8 +8,9 @@ import {
   SheetTitle,
   SheetDescription,
 } from '@/components/ui/sheet'
+import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
-import { Star } from 'lucide-react'
+import { Pencil, CalendarDays, Star } from 'lucide-react'
 import type { DayDetailResult, SlotDetail, LoggedExerciseDetail, TemplateSnapshot } from '@/lib/calendar/day-detail'
 import { getModalityBadgeClasses } from '@/lib/ui/modality-colors'
 
@@ -190,6 +191,16 @@ export function DayDetailPanel({ date, onClose }: DayDetailPanelProps) {
             <div data-testid="rest-day-message" className="py-8 text-center">
               <p className="text-lg font-medium text-muted-foreground">Rest Day</p>
               <p className="text-sm text-muted-foreground mt-1">No workout scheduled</p>
+              {detail.mesocycle_id != null && detail.mesocycle_status !== 'completed' && (
+                <Link
+                  href={`/mesocycles/${detail.mesocycle_id}`}
+                  data-testid="schedule-link"
+                  className="inline-flex items-center gap-1.5 mt-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <CalendarDays className="h-4 w-4" />
+                  View schedule
+                </Link>
+              )}
             </div>
           )}
 
@@ -200,6 +211,16 @@ export function DayDetailPanel({ date, onClose }: DayDetailPanelProps) {
                 <h3 className="font-semibold">{detail.template.name}</h3>
                 <ModalityBadge modality={detail.template.modality} />
                 {detail.is_deload && <Badge variant="outline">Deload</Badge>}
+                {detail.mesocycle_status !== 'completed' && (
+                  <Link
+                    href={`/mesocycles/${detail.mesocycle_id}`}
+                    data-testid="edit-template-link"
+                    className="ml-auto text-muted-foreground hover:text-foreground transition-colors"
+                    title="Edit template"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Link>
+                )}
               </div>
 
               {detail.template.notes && (
@@ -234,6 +255,16 @@ export function DayDetailPanel({ date, onClose }: DayDetailPanelProps) {
                 <h3 className="font-semibold">{detail.snapshot.name ?? 'Workout'}</h3>
                 {detail.snapshot.modality && <ModalityBadge modality={detail.snapshot.modality} />}
                 {detail.is_deload && <Badge variant="outline">Deload</Badge>}
+                {detail.mesocycle_status !== 'completed' && (
+                  <Link
+                    href={`/mesocycles/${detail.mesocycle_id}`}
+                    data-testid="edit-template-link"
+                    className="ml-auto text-muted-foreground hover:text-foreground transition-colors"
+                    title="Edit template"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Link>
+                )}
               </div>
 
               {detail.snapshot.notes && (
