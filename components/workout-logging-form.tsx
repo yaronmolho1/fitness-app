@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { cn } from '@/lib/utils'
+import { SectionHeading } from '@/components/layout/section-heading'
 import { saveWorkout } from '@/lib/workouts/actions'
 import type { SaveWorkoutInput } from '@/lib/workouts/actions'
 
@@ -171,9 +172,9 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
           >
             {/* Exercise header */}
             <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-2">
-              <h2 className="text-base font-semibold leading-tight">
+              <SectionHeading className="mt-0 mb-0 text-base leading-tight">
                 {slot.exercise_name}
-              </h2>
+              </SectionHeading>
               <span
                 className={cn(
                   'shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium',

@@ -69,8 +69,8 @@ describe('PageHeader', () => {
     const { container } = render(
       <PageHeader title="Exercises" actions={<button>Add</button>} />
     )
-    const header = container.firstElementChild
-    expect(header?.className).toContain('flex-col')
+    const row = container.querySelector('[data-slot="header-row"]')
+    expect(row?.className).toContain('flex-col')
   })
 
   // AC8: desktop — actions inline right (sm:flex-row + sm:items-center)
@@ -78,17 +78,17 @@ describe('PageHeader', () => {
     const { container } = render(
       <PageHeader title="Exercises" actions={<button>Add</button>} />
     )
-    const header = container.firstElementChild
-    expect(header?.className).toContain('sm:flex-row')
-    expect(header?.className).toContain('sm:items-center')
+    const row = container.querySelector('[data-slot="header-row"]')
+    expect(row?.className).toContain('sm:flex-row')
+    expect(row?.className).toContain('sm:items-center')
   })
 
   it('uses sm:justify-between to push actions right on desktop', () => {
     const { container } = render(
       <PageHeader title="Exercises" actions={<button>Add</button>} />
     )
-    const header = container.firstElementChild
-    expect(header?.className).toContain('sm:justify-between')
+    const row = container.querySelector('[data-slot="header-row"]')
+    expect(row?.className).toContain('sm:justify-between')
   })
 
   // Edge case: very long title wraps naturally
@@ -108,5 +108,35 @@ describe('PageHeader', () => {
     )
     const header = container.firstElementChild
     expect(header?.className).toContain('custom-class')
+  })
+
+  // Breadcrumb support for detail/form pages
+  it('renders breadcrumb slot above title when provided', () => {
+    render(
+      <PageHeader
+        title="New Mesocycle"
+        breadcrumb={<span>Mesocycles</span>}
+      />
+    )
+    expect(screen.getByText('Mesocycles')).toBeInTheDocument()
+    const heading = screen.getByRole('heading', { level: 1 })
+    expect(heading).toHaveTextContent('New Mesocycle')
+  })
+
+  it('does not render breadcrumb container when not provided', () => {
+    const { container } = render(<PageHeader title="Test" />)
+    const breadcrumb = container.querySelector('[data-slot="breadcrumb"]')
+    expect(breadcrumb).toBeNull()
+  })
+
+  it('renders breadcrumb in data-slot="breadcrumb"', () => {
+    const { container } = render(
+      <PageHeader
+        title="Clone"
+        breadcrumb={<span>My Meso</span>}
+      />
+    )
+    const breadcrumb = container.querySelector('[data-slot="breadcrumb"]')
+    expect(breadcrumb).not.toBeNull()
   })
 })

@@ -1,5 +1,6 @@
 'use client'
 
+import { SectionHeading } from '@/components/layout/section-heading'
 import { ScheduleGrid } from '@/components/schedule-grid'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import type { ScheduleEntry, TemplateOption } from '@/lib/schedule/queries'
@@ -24,7 +25,7 @@ export function ScheduleTabs({
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-4">
-        <h2 className="text-lg font-semibold tracking-tight">Weekly Schedule</h2>
+        <SectionHeading>Weekly Schedule</SectionHeading>
       </div>
 
       {hasDeload ? (

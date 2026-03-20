@@ -34,7 +34,7 @@ export function BottomBar() {
           key={href}
           href={href}
           className={cn(
-            'flex flex-1 flex-col items-center gap-1 py-2 text-xs transition-colors',
+            'flex flex-1 flex-col items-center justify-center gap-1 min-h-[44px] py-2 text-xs transition-colors',
             isActive(href)
               ? 'text-primary'
               : 'text-muted-foreground'
