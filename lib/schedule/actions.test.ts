@@ -115,6 +115,7 @@ describe('assignTemplate', () => {
         mesocycle_id: meso.id,
         day_of_week: -1,
         template_id: tmpl.id,
+        period: 'morning',
       })
       expect(result.success).toBe(false)
     })
@@ -126,6 +127,7 @@ describe('assignTemplate', () => {
         mesocycle_id: meso.id,
         day_of_week: 7,
         template_id: tmpl.id,
+        period: 'morning',
       })
       expect(result.success).toBe(false)
     })
@@ -135,6 +137,7 @@ describe('assignTemplate', () => {
         mesocycle_id: 999,
         day_of_week: 0,
         template_id: 1,
+        period: 'morning',
       })
       expect(result.success).toBe(false)
       if (!result.success) expect(result.error).toMatch(/mesocycle/i)
@@ -146,9 +149,61 @@ describe('assignTemplate', () => {
         mesocycle_id: meso.id,
         day_of_week: 0,
         template_id: 999,
+        period: 'morning',
       })
       expect(result.success).toBe(false)
       if (!result.success) expect(result.error).toMatch(/template/i)
+    })
+
+    it('rejects invalid period value', async () => {
+      const meso = seedMesocycle()
+      const tmpl = seedTemplate(meso.id)
+      const result = await assignTemplate({
+        mesocycle_id: meso.id,
+        day_of_week: 0,
+        template_id: tmpl.id,
+        period: 'midnight' as 'morning',
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects invalid time_slot format', async () => {
+      const meso = seedMesocycle()
+      const tmpl = seedTemplate(meso.id)
+      const result = await assignTemplate({
+        mesocycle_id: meso.id,
+        day_of_week: 0,
+        template_id: tmpl.id,
+        period: 'morning',
+        time_slot: '25:00',
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects time_slot with invalid minutes', async () => {
+      const meso = seedMesocycle()
+      const tmpl = seedTemplate(meso.id)
+      const result = await assignTemplate({
+        mesocycle_id: meso.id,
+        day_of_week: 0,
+        template_id: tmpl.id,
+        period: 'morning',
+        time_slot: '08:60',
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects malformed time_slot string', async () => {
+      const meso = seedMesocycle()
+      const tmpl = seedTemplate(meso.id)
+      const result = await assignTemplate({
+        mesocycle_id: meso.id,
+        day_of_week: 0,
+        template_id: tmpl.id,
+        period: 'morning',
+        time_slot: 'not-a-time',
+      })
+      expect(result.success).toBe(false)
     })
   })
 
@@ -160,6 +215,7 @@ describe('assignTemplate', () => {
         mesocycle_id: meso.id,
         day_of_week: 0,
         template_id: tmpl.id,
+        period: 'morning',
       })
       expect(result.success).toBe(false)
       if (!result.success) expect(result.error).toMatch(/completed/i)
@@ -172,6 +228,7 @@ describe('assignTemplate', () => {
         mesocycle_id: meso.id,
         day_of_week: 0,
         template_id: tmpl.id,
+        period: 'morning',
       })
       expect(result.success).toBe(true)
     })
@@ -183,6 +240,7 @@ describe('assignTemplate', () => {
         mesocycle_id: meso.id,
         day_of_week: 0,
         template_id: tmpl.id,
+        period: 'morning',
       })
       expect(result.success).toBe(true)
     })
@@ -197,6 +255,7 @@ describe('assignTemplate', () => {
         mesocycle_id: meso1.id,
         day_of_week: 0,
         template_id: tmpl.id,
+        period: 'morning',
       })
       expect(result.success).toBe(false)
       if (!result.success) expect(result.error).toMatch(/mesocycle/i)
@@ -204,13 +263,14 @@ describe('assignTemplate', () => {
   })
 
   describe('successful assignment', () => {
-    it('creates weekly_schedule row with correct fields', async () => {
+    it('creates weekly_schedule row with correct fields including period', async () => {
       const meso = seedMesocycle()
       const tmpl = seedTemplate(meso.id)
       const result = await assignTemplate({
         mesocycle_id: meso.id,
         day_of_week: 1,
         template_id: tmpl.id,
+        period: 'afternoon',
       })
       expect(result.success).toBe(true)
       if (result.success) {
@@ -218,28 +278,65 @@ describe('assignTemplate', () => {
         expect(result.data.day_of_week).toBe(1)
         expect(result.data.template_id).toBe(tmpl.id)
         expect(result.data.week_type).toBe('normal')
+        expect(result.data.period).toBe('afternoon')
       }
     })
 
-    it('persists row to database', async () => {
+    it('saves time_slot when provided', async () => {
+      const meso = seedMesocycle()
+      const tmpl = seedTemplate(meso.id)
+      const result = await assignTemplate({
+        mesocycle_id: meso.id,
+        day_of_week: 1,
+        template_id: tmpl.id,
+        period: 'morning',
+        time_slot: '06:30',
+      })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.time_slot).toBe('06:30')
+        expect(result.data.period).toBe('morning')
+      }
+    })
+
+    it('saves null time_slot when not provided', async () => {
+      const meso = seedMesocycle()
+      const tmpl = seedTemplate(meso.id)
+      const result = await assignTemplate({
+        mesocycle_id: meso.id,
+        day_of_week: 1,
+        template_id: tmpl.id,
+        period: 'evening',
+      })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.time_slot).toBeNull()
+      }
+    })
+
+    it('persists row to database with period and time_slot', async () => {
       const meso = seedMesocycle()
       const tmpl = seedTemplate(meso.id)
       await assignTemplate({
         mesocycle_id: meso.id,
         day_of_week: 3,
         template_id: tmpl.id,
+        period: 'evening',
+        time_slot: '18:00',
       })
       const rows = testDb.select().from(schema.weekly_schedule).all()
       expect(rows).toHaveLength(1)
       expect(rows[0].day_of_week).toBe(3)
       expect(rows[0].week_type).toBe('normal')
+      expect(rows[0].period).toBe('evening')
+      expect(rows[0].time_slot).toBe('18:00')
     })
 
     it('allows same template on multiple days', async () => {
       const meso = seedMesocycle()
       const tmpl = seedTemplate(meso.id)
-      await assignTemplate({ mesocycle_id: meso.id, day_of_week: 0, template_id: tmpl.id })
-      await assignTemplate({ mesocycle_id: meso.id, day_of_week: 3, template_id: tmpl.id })
+      await assignTemplate({ mesocycle_id: meso.id, day_of_week: 0, template_id: tmpl.id, period: 'morning' })
+      await assignTemplate({ mesocycle_id: meso.id, day_of_week: 3, template_id: tmpl.id, period: 'morning' })
       const rows = testDb.select().from(schema.weekly_schedule).all()
       expect(rows).toHaveLength(2)
     })
@@ -248,11 +345,42 @@ describe('assignTemplate', () => {
       const meso = seedMesocycle()
       const tmpl = seedTemplate(meso.id)
       for (let d = 0; d <= 6; d++) {
-        const r = await assignTemplate({ mesocycle_id: meso.id, day_of_week: d, template_id: tmpl.id })
+        const r = await assignTemplate({ mesocycle_id: meso.id, day_of_week: d, template_id: tmpl.id, period: 'morning' })
         expect(r.success).toBe(true)
       }
       const rows = testDb.select().from(schema.weekly_schedule).all()
       expect(rows).toHaveLength(7)
+    })
+  })
+
+  describe('multiple workouts per day', () => {
+    it('allows different periods on the same day', async () => {
+      const meso = seedMesocycle()
+      const tmpl1 = seedTemplate(meso.id, 'Push A')
+      const tmpl2 = seedTemplate(meso.id, 'Cardio')
+      const r1 = await assignTemplate({
+        mesocycle_id: meso.id, day_of_week: 0, template_id: tmpl1.id, period: 'morning',
+      })
+      const r2 = await assignTemplate({
+        mesocycle_id: meso.id, day_of_week: 0, template_id: tmpl2.id, period: 'evening',
+      })
+      expect(r1.success).toBe(true)
+      expect(r2.success).toBe(true)
+      const rows = testDb.select().from(schema.weekly_schedule).all()
+      expect(rows).toHaveLength(2)
+    })
+
+    it('allows three workouts on same day with all three periods', async () => {
+      const meso = seedMesocycle()
+      const tmpl = seedTemplate(meso.id)
+      for (const period of ['morning', 'afternoon', 'evening'] as const) {
+        const r = await assignTemplate({
+          mesocycle_id: meso.id, day_of_week: 0, template_id: tmpl.id, period,
+        })
+        expect(r.success).toBe(true)
+      }
+      const rows = testDb.select().from(schema.weekly_schedule).all()
+      expect(rows).toHaveLength(3)
     })
   })
 
@@ -265,6 +393,7 @@ describe('assignTemplate', () => {
         day_of_week: 1,
         template_id: tmpl.id,
         week_type: 'deload',
+        period: 'morning',
       })
       expect(result.success).toBe(true)
       if (result.success) {
@@ -280,6 +409,7 @@ describe('assignTemplate', () => {
         day_of_week: 1,
         template_id: tmpl.id,
         week_type: 'deload',
+        period: 'morning',
       })
       expect(result.success).toBe(false)
       if (!result.success) {
@@ -293,6 +423,7 @@ describe('assignTemplate', () => {
         mesocycle_id: meso.id,
         day_of_week: 1,
         week_type: 'deload',
+        period: 'morning',
       })
       expect(result.success).toBe(false)
       if (!result.success) {
@@ -308,12 +439,14 @@ describe('assignTemplate', () => {
         day_of_week: 0,
         template_id: tmpl.id,
         week_type: 'normal',
+        period: 'morning',
       })
       await assignTemplate({
         mesocycle_id: meso.id,
         day_of_week: 0,
         template_id: tmpl.id,
         week_type: 'deload',
+        period: 'morning',
       })
       const rows = testDb.select().from(schema.weekly_schedule).all()
       expect(rows).toHaveLength(2)
@@ -321,13 +454,13 @@ describe('assignTemplate', () => {
   })
 
   describe('replace existing assignment', () => {
-    it('replaces existing assignment on same day (no duplicate)', async () => {
+    it('replaces template on same day+period (upsert)', async () => {
       const meso = seedMesocycle()
       const tmpl1 = seedTemplate(meso.id, 'Push A')
       const tmpl2 = seedTemplate(meso.id, 'Pull A')
 
-      await assignTemplate({ mesocycle_id: meso.id, day_of_week: 0, template_id: tmpl1.id })
-      const result = await assignTemplate({ mesocycle_id: meso.id, day_of_week: 0, template_id: tmpl2.id })
+      await assignTemplate({ mesocycle_id: meso.id, day_of_week: 0, template_id: tmpl1.id, period: 'morning' })
+      const result = await assignTemplate({ mesocycle_id: meso.id, day_of_week: 0, template_id: tmpl2.id, period: 'morning' })
 
       expect(result.success).toBe(true)
       if (result.success) {
@@ -344,12 +477,30 @@ describe('assignTemplate', () => {
       const tmpl1 = seedTemplate(meso.id, 'Push A')
       const tmpl2 = seedTemplate(meso.id, 'Pull A')
 
-      await assignTemplate({ mesocycle_id: meso.id, day_of_week: 0, template_id: tmpl1.id })
-      await assignTemplate({ mesocycle_id: meso.id, day_of_week: 1, template_id: tmpl1.id })
-      await assignTemplate({ mesocycle_id: meso.id, day_of_week: 0, template_id: tmpl2.id })
+      await assignTemplate({ mesocycle_id: meso.id, day_of_week: 0, template_id: tmpl1.id, period: 'morning' })
+      await assignTemplate({ mesocycle_id: meso.id, day_of_week: 1, template_id: tmpl1.id, period: 'morning' })
+      await assignTemplate({ mesocycle_id: meso.id, day_of_week: 0, template_id: tmpl2.id, period: 'morning' })
 
       const rows = testDb.select().from(schema.weekly_schedule).all()
       expect(rows).toHaveLength(2)
+    })
+
+    it('updates time_slot on upsert', async () => {
+      const meso = seedMesocycle()
+      const tmpl = seedTemplate(meso.id)
+
+      await assignTemplate({
+        mesocycle_id: meso.id, day_of_week: 0, template_id: tmpl.id,
+        period: 'morning', time_slot: '06:00',
+      })
+      await assignTemplate({
+        mesocycle_id: meso.id, day_of_week: 0, template_id: tmpl.id,
+        period: 'morning', time_slot: '07:30',
+      })
+
+      const rows = testDb.select().from(schema.weekly_schedule).all()
+      expect(rows).toHaveLength(1)
+      expect(rows[0].time_slot).toBe('07:30')
     })
   })
 })
@@ -360,6 +511,7 @@ describe('removeAssignment', () => {
       const result = await removeAssignment({
         mesocycle_id: 999,
         day_of_week: 0,
+        period: 'morning',
       })
       expect(result.success).toBe(false)
       if (!result.success) expect(result.error).toMatch(/mesocycle/i)
@@ -370,6 +522,7 @@ describe('removeAssignment', () => {
       const result = await removeAssignment({
         mesocycle_id: meso.id,
         day_of_week: -1,
+        period: 'morning',
       })
       expect(result.success).toBe(false)
     })
@@ -379,6 +532,17 @@ describe('removeAssignment', () => {
       const result = await removeAssignment({
         mesocycle_id: meso.id,
         day_of_week: 7,
+        period: 'morning',
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects invalid period', async () => {
+      const meso = seedMesocycle()
+      const result = await removeAssignment({
+        mesocycle_id: meso.id,
+        day_of_week: 0,
+        period: 'midnight' as 'morning',
       })
       expect(result.success).toBe(false)
     })
@@ -390,6 +554,7 @@ describe('removeAssignment', () => {
       const result = await removeAssignment({
         mesocycle_id: meso.id,
         day_of_week: 0,
+        period: 'morning',
       })
       expect(result.success).toBe(false)
       if (!result.success) expect(result.error).toMatch(/completed/i)
@@ -397,25 +562,39 @@ describe('removeAssignment', () => {
   })
 
   describe('successful removal', () => {
-    it('deletes the assignment row', async () => {
+    it('deletes the specific period assignment', async () => {
       const meso = seedMesocycle()
       const tmpl = seedTemplate(meso.id)
-      await assignTemplate({ mesocycle_id: meso.id, day_of_week: 2, template_id: tmpl.id })
+      await assignTemplate({ mesocycle_id: meso.id, day_of_week: 2, template_id: tmpl.id, period: 'morning' })
 
-      const result = await removeAssignment({ mesocycle_id: meso.id, day_of_week: 2 })
+      const result = await removeAssignment({ mesocycle_id: meso.id, day_of_week: 2, period: 'morning' })
       expect(result.success).toBe(true)
 
       const rows = testDb.select().from(schema.weekly_schedule).all()
       expect(rows).toHaveLength(0)
     })
 
+    it('only removes the targeted period, keeps other periods on same day', async () => {
+      const meso = seedMesocycle()
+      const tmpl1 = seedTemplate(meso.id, 'Push A')
+      const tmpl2 = seedTemplate(meso.id, 'Cardio')
+      await assignTemplate({ mesocycle_id: meso.id, day_of_week: 0, template_id: tmpl1.id, period: 'morning' })
+      await assignTemplate({ mesocycle_id: meso.id, day_of_week: 0, template_id: tmpl2.id, period: 'evening' })
+
+      await removeAssignment({ mesocycle_id: meso.id, day_of_week: 0, period: 'morning' })
+
+      const rows = testDb.select().from(schema.weekly_schedule).all()
+      expect(rows).toHaveLength(1)
+      expect(rows[0].period).toBe('evening')
+    })
+
     it('only removes the targeted day', async () => {
       const meso = seedMesocycle()
       const tmpl = seedTemplate(meso.id)
-      await assignTemplate({ mesocycle_id: meso.id, day_of_week: 0, template_id: tmpl.id })
-      await assignTemplate({ mesocycle_id: meso.id, day_of_week: 1, template_id: tmpl.id })
+      await assignTemplate({ mesocycle_id: meso.id, day_of_week: 0, template_id: tmpl.id, period: 'morning' })
+      await assignTemplate({ mesocycle_id: meso.id, day_of_week: 1, template_id: tmpl.id, period: 'morning' })
 
-      await removeAssignment({ mesocycle_id: meso.id, day_of_week: 0 })
+      await removeAssignment({ mesocycle_id: meso.id, day_of_week: 0, period: 'morning' })
 
       const rows = testDb.select().from(schema.weekly_schedule).all()
       expect(rows).toHaveLength(1)
@@ -425,10 +604,10 @@ describe('removeAssignment', () => {
     it('removes deload assignment without affecting normal', async () => {
       const meso = seedMesocycle({ has_deload: 1 })
       const tmpl = seedTemplate(meso.id)
-      await assignTemplate({ mesocycle_id: meso.id, day_of_week: 0, template_id: tmpl.id, week_type: 'normal' })
-      await assignTemplate({ mesocycle_id: meso.id, day_of_week: 0, template_id: tmpl.id, week_type: 'deload' })
+      await assignTemplate({ mesocycle_id: meso.id, day_of_week: 0, template_id: tmpl.id, week_type: 'normal', period: 'morning' })
+      await assignTemplate({ mesocycle_id: meso.id, day_of_week: 0, template_id: tmpl.id, week_type: 'deload', period: 'morning' })
 
-      const result = await removeAssignment({ mesocycle_id: meso.id, day_of_week: 0, week_type: 'deload' })
+      const result = await removeAssignment({ mesocycle_id: meso.id, day_of_week: 0, week_type: 'deload', period: 'morning' })
       expect(result.success).toBe(true)
 
       const rows = testDb.select().from(schema.weekly_schedule).all()
@@ -438,7 +617,7 @@ describe('removeAssignment', () => {
 
     it('succeeds even if day has no assignment (idempotent)', async () => {
       const meso = seedMesocycle()
-      const result = await removeAssignment({ mesocycle_id: meso.id, day_of_week: 5 })
+      const result = await removeAssignment({ mesocycle_id: meso.id, day_of_week: 5, period: 'morning' })
       expect(result.success).toBe(true)
     })
   })
