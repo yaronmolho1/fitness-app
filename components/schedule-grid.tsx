@@ -37,11 +37,13 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
     setPickerDay(null)
 
     startTransition(async () => {
+      // TODO: period selection UI (T104+) — defaults to morning for now
       const result = await assignTemplate({
         mesocycle_id: mesocycleId,
         day_of_week: day,
         template_id: templateId,
         week_type: variant,
+        period: 'morning',
       })
 
       if (result.success) {
@@ -67,10 +69,12 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
   function handleRemove(day: number) {
     setError(null)
     startTransition(async () => {
+      // TODO: period-aware removal UI (T104+) — defaults to morning for now
       const result = await removeAssignment({
         mesocycle_id: mesocycleId,
         day_of_week: day,
         week_type: variant,
+        period: 'morning',
       })
 
       if (result.success) {

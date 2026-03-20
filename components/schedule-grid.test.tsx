@@ -168,6 +168,7 @@ describe('ScheduleGrid', () => {
         day_of_week: 0,
         template_id: 2,
         week_type: 'normal',
+        period: 'morning',
       })
     })
   })
@@ -199,6 +200,7 @@ describe('ScheduleGrid', () => {
         mesocycle_id: 1,
         day_of_week: 0,
         week_type: 'normal',
+        period: 'morning',
       })
     })
   })
