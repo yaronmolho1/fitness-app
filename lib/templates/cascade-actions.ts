@@ -30,12 +30,26 @@ export async function cascadeUpdateTemplates(
 
   // Validate updates aren't empty
   const trimmedName = updates.name?.trim()
-  const trimmedNotes = updates.notes?.trim()
+  const trimmedNotes = updates.notes !== undefined ? updates.notes.trim() : undefined
 
   const hasName = trimmedName !== undefined && trimmedName !== ''
   const hasNotes = trimmedNotes !== undefined
 
-  if (!hasName && !hasNotes) {
+  // Running fields
+  const hasRunType = updates.run_type !== undefined
+  const hasTargetPace = 'target_pace' in updates
+  const hasHrZone = 'hr_zone' in updates
+  const hasIntervalCount = 'interval_count' in updates
+  const hasIntervalRest = 'interval_rest' in updates
+  const hasCoachingCues = 'coaching_cues' in updates
+
+  // MMA fields
+  const hasPlannedDuration = 'planned_duration' in updates
+
+  const hasAnyField = hasName || hasNotes || hasRunType || hasTargetPace ||
+    hasHrZone || hasIntervalCount || hasIntervalRest || hasCoachingCues || hasPlannedDuration
+
+  if (!hasAnyField) {
     return { success: false, error: 'Nothing to update' }
   }
 
@@ -59,6 +73,13 @@ export async function cascadeUpdateTemplates(
   const setFields: Record<string, unknown> = {}
   if (hasName) setFields.name = trimmedName
   if (hasNotes) setFields.notes = trimmedNotes
+  if (hasRunType) setFields.run_type = updates.run_type
+  if (hasTargetPace) setFields.target_pace = updates.target_pace
+  if (hasHrZone) setFields.hr_zone = updates.hr_zone
+  if (hasIntervalCount) setFields.interval_count = updates.interval_count
+  if (hasIntervalRest) setFields.interval_rest = updates.interval_rest
+  if (hasCoachingCues) setFields.coaching_cues = updates.coaching_cues
+  if (hasPlannedDuration) setFields.planned_duration = updates.planned_duration
 
   // Execute in a single transaction
   const summary = db.transaction((tx) => {

@@ -37,7 +37,17 @@ export type TemplateOption = {
   id: number
   name: string
   canonical_name: string
-  modality: 'resistance' | 'running' | 'mma'
+  modality: 'resistance' | 'running' | 'mma' | 'mixed'
+  notes?: string | null
+  // Running-specific
+  run_type?: 'easy' | 'tempo' | 'interval' | 'long' | 'race' | null
+  target_pace?: string | null
+  hr_zone?: number | null
+  interval_count?: number | null
+  interval_rest?: number | null
+  coaching_cues?: string | null
+  // MMA-specific
+  planned_duration?: number | null
 }
 
 // Fetches templates belonging to a mesocycle (for the picker)
@@ -50,6 +60,14 @@ export async function getTemplatesForMesocycle(
       name: workout_templates.name,
       canonical_name: workout_templates.canonical_name,
       modality: workout_templates.modality,
+      notes: workout_templates.notes,
+      run_type: workout_templates.run_type,
+      target_pace: workout_templates.target_pace,
+      hr_zone: workout_templates.hr_zone,
+      interval_count: workout_templates.interval_count,
+      interval_rest: workout_templates.interval_rest,
+      coaching_cues: workout_templates.coaching_cues,
+      planned_duration: workout_templates.planned_duration,
     })
     .from(workout_templates)
     .where(eq(workout_templates.mesocycle_id, mesocycleId))
