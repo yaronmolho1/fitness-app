@@ -13,6 +13,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { FrequencyModeSelector } from '@/components/frequency-mode-selector'
+import type { FrequencyMode } from '@/components/frequency-mode-selector'
+import { AutoSuggestCombobox } from '@/components/ui/auto-suggest-combobox'
 
 const INPUT_FIELD_OPTIONS = [
   { value: 'weight', label: 'Weight (kg)' },
@@ -43,6 +46,8 @@ type RoutineItem = {
   has_sets: boolean
   has_reps: boolean
   frequency_target: number
+  frequency_mode: FrequencyMode
+  frequency_days: number[] | null
   scope: string
   mesocycle_id: number | null
   start_date: string | null
@@ -71,6 +76,7 @@ function itemToScopeType(item: RoutineItem): ScopeType {
 type EditRoutineItemFormProps = {
   item: RoutineItem
   mesocycles: Mesocycle[]
+  categories: string[]
   onCancel: () => void
   onSaved: () => void
 }
@@ -78,13 +84,16 @@ type EditRoutineItemFormProps = {
 export function EditRoutineItemForm({
   item,
   mesocycles,
+  categories,
   onCancel,
   onSaved,
 }: EditRoutineItemFormProps) {
   const [name, setName] = useState(item.name)
   const [category, setCategory] = useState(item.category ?? '')
   const [inputFields, setInputFields] = useState<InputField[]>(itemToInputFields(item))
-  const [frequencyTarget, setFrequencyTarget] = useState(String(item.frequency_target))
+  const [frequencyMode, setFrequencyMode] = useState<FrequencyMode>(item.frequency_mode)
+  const [weeklyTarget, setWeeklyTarget] = useState(item.frequency_target)
+  const [selectedDays, setSelectedDays] = useState<number[]>(item.frequency_days ?? [])
   const [scopeType, setScopeType] = useState<ScopeType>(itemToScopeType(item))
   const [mesocycleId, setMesocycleId] = useState(item.mesocycle_id ? String(item.mesocycle_id) : '')
   const [startDate, setStartDate] = useState(item.start_date ?? '')
@@ -98,6 +107,16 @@ export function EditRoutineItemForm({
     )
   }
 
+  function handleModeChange(mode: FrequencyMode) {
+    setFrequencyMode(mode)
+    // Clear irrelevant data on mode switch
+    if (mode === 'daily') {
+      setSelectedDays([])
+    } else if (mode === 'specific_days') {
+      setSelectedDays(selectedDays.length > 0 ? selectedDays : [1])
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
@@ -107,6 +126,16 @@ export function EditRoutineItemForm({
       return
     }
 
+    // Frequency mode validation
+    if (frequencyMode === 'specific_days' && selectedDays.length === 0) {
+      setError('At least one day must be selected')
+      return
+    }
+
+    const frequencyTarget =
+      frequencyMode === 'weekly_target' ? weeklyTarget :
+      frequencyMode === 'daily' ? 7 : selectedDays.length
+
     setSubmitting(true)
     try {
       const result = await updateRoutineItem({
@@ -114,7 +143,9 @@ export function EditRoutineItemForm({
         name,
         category: category || undefined,
         input_fields: inputFields,
-        frequency_target: Number(frequencyTarget),
+        frequency_target: frequencyTarget,
+        frequency_mode: frequencyMode,
+        frequency_days: frequencyMode === 'specific_days' ? selectedDays : undefined,
         scope_type: scopeType,
         mesocycle_id: scopeType === 'per_mesocycle' ? Number(mesocycleId) : undefined,
         start_date: scopeType === 'date_range' ? startDate : undefined,
@@ -149,15 +180,13 @@ export function EditRoutineItemForm({
         />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor={`edit-category-${item.id}`}>Category</Label>
-        <Input
-          id={`edit-category-${item.id}`}
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          placeholder="e.g. mobility, recovery"
-        />
-      </div>
+      <AutoSuggestCombobox
+        items={categories}
+        value={category}
+        onChange={setCategory}
+        label="Category"
+        placeholder="e.g. mobility, recovery"
+      />
 
       <div className="space-y-2">
         <Label>Input Fields</Label>
@@ -174,16 +203,14 @@ export function EditRoutineItemForm({
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor={`edit-freq-${item.id}`}>Frequency Target (per week)</Label>
-        <Input
-          id={`edit-freq-${item.id}`}
-          type="number"
-          min="1"
-          value={frequencyTarget}
-          onChange={(e) => setFrequencyTarget(e.target.value)}
-        />
-      </div>
+      <FrequencyModeSelector
+        mode={frequencyMode}
+        weeklyTarget={weeklyTarget}
+        selectedDays={selectedDays}
+        onModeChange={handleModeChange}
+        onWeeklyTargetChange={setWeeklyTarget}
+        onSelectedDaysChange={setSelectedDays}
+      />
 
       <div className="space-y-2">
         <Label>Scope</Label>

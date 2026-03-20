@@ -101,7 +101,7 @@ describe('Interactive feedback — transition classes', () => {
           mesocycle_name: null,
         },
       ]
-      render(<RoutineItemList items={items} mesocycles={[]} />)
+      render(<RoutineItemList items={items} mesocycles={[]} categories={[]} />)
       const row = screen.getByText('Stretching').closest('[class*="px-4 py-3"]')
       expect(row).not.toBeNull()
       expect(row!.className).toMatch(TRANSITION_PATTERN)

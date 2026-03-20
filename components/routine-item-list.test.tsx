@@ -53,13 +53,13 @@ describe('RoutineItemList', () => {
   })
 
   it('renders empty state when no items', () => {
-    render(<RoutineItemList items={[]} mesocycles={[]} />)
+    render(<RoutineItemList items={[]} mesocycles={[]} categories={[]} />)
     expect(screen.getByText(/no routine items yet/i)).toBeInTheDocument()
   })
 
   it('renders Edit button for each item', () => {
     const items = [makeItem(), makeItem({ id: 2, name: 'Body Weight' })]
-    render(<RoutineItemList items={items} mesocycles={[]} />)
+    render(<RoutineItemList items={items} mesocycles={[]} categories={[]} />)
 
     const editButtons = screen.getAllByRole('button', { name: /edit/i })
     expect(editButtons).toHaveLength(2)
@@ -67,7 +67,7 @@ describe('RoutineItemList', () => {
 
   it('renders Delete button for each item', () => {
     const items = [makeItem(), makeItem({ id: 2, name: 'Body Weight' })]
-    render(<RoutineItemList items={items} mesocycles={[]} />)
+    render(<RoutineItemList items={items} mesocycles={[]} categories={[]} />)
 
     const deleteButtons = screen.getAllByRole('button', { name: /delete/i })
     expect(deleteButtons).toHaveLength(2)
@@ -75,7 +75,7 @@ describe('RoutineItemList', () => {
 
   it('shows edit form when Edit button is clicked', async () => {
     const user = userEvent.setup()
-    render(<RoutineItemList items={[makeItem()]} mesocycles={[]} />)
+    render(<RoutineItemList items={[makeItem()]} mesocycles={[]} categories={[]} />)
 
     await user.click(screen.getByRole('button', { name: /edit/i }))
 
@@ -87,7 +87,7 @@ describe('RoutineItemList', () => {
 
   it('hides edit form when Cancel is clicked', async () => {
     const user = userEvent.setup()
-    render(<RoutineItemList items={[makeItem()]} mesocycles={[]} />)
+    render(<RoutineItemList items={[makeItem()]} mesocycles={[]} categories={[]} />)
 
     await user.click(screen.getByRole('button', { name: /edit/i }))
     await user.click(screen.getByRole('button', { name: /cancel/i }))
@@ -105,7 +105,7 @@ describe('RoutineItemList', () => {
     // Mock window.confirm
     vi.spyOn(window, 'confirm').mockReturnValue(true)
 
-    render(<RoutineItemList items={[makeItem()]} mesocycles={[]} />)
+    render(<RoutineItemList items={[makeItem()]} mesocycles={[]} categories={[]} />)
 
     await user.click(screen.getByRole('button', { name: /delete/i }))
 
@@ -128,7 +128,7 @@ describe('RoutineItemList', () => {
       },
     })
 
-    render(<RoutineItemList items={[makeItem()]} mesocycles={[]} />)
+    render(<RoutineItemList items={[makeItem()]} mesocycles={[]} categories={[]} />)
 
     await user.click(screen.getByRole('button', { name: /edit/i }))
     await user.click(screen.getByRole('button', { name: /save/i }))
@@ -146,7 +146,7 @@ describe('RoutineItemList', () => {
       error: 'Name is required',
     })
 
-    render(<RoutineItemList items={[makeItem()]} mesocycles={[]} />)
+    render(<RoutineItemList items={[makeItem()]} mesocycles={[]} categories={[]} />)
 
     await user.click(screen.getByRole('button', { name: /edit/i }))
     await user.click(screen.getByRole('button', { name: /save/i }))
@@ -160,7 +160,7 @@ describe('RoutineItemList', () => {
 
     vi.spyOn(window, 'confirm').mockReturnValue(false)
 
-    render(<RoutineItemList items={[makeItem()]} mesocycles={[]} />)
+    render(<RoutineItemList items={[makeItem()]} mesocycles={[]} categories={[]} />)
 
     await user.click(screen.getByRole('button', { name: /delete/i }))
 

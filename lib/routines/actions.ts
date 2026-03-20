@@ -10,6 +10,7 @@ const INPUT_FIELDS = ['weight', 'length', 'duration', 'sets', 'reps'] as const
 type InputField = (typeof INPUT_FIELDS)[number]
 
 const scopeTypeEnum = z.enum(['global', 'per_mesocycle', 'date_range', 'skip_on_deload'])
+const frequencyModeEnum = z.enum(['daily', 'specific_days', 'weekly_target'])
 
 const baseSchema = z.object({
   name: z
@@ -24,6 +25,8 @@ const baseSchema = z.object({
     .number()
     .int('Frequency target must be an integer')
     .min(1, 'Frequency target must be at least 1'),
+  frequency_mode: frequencyModeEnum.default('weekly_target'),
+  frequency_days: z.array(z.number().int().min(0).max(6)).optional(),
   scope_type: scopeTypeEnum,
   mesocycle_id: z.number().int().positive().optional(),
   start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format').optional(),
@@ -74,6 +77,8 @@ export type CreateRoutineItemInput = {
   category?: string
   input_fields: readonly InputField[]
   frequency_target: number
+  frequency_mode?: 'daily' | 'specific_days' | 'weekly_target'
+  frequency_days?: number[]
   scope_type: 'global' | 'per_mesocycle' | 'date_range' | 'skip_on_deload'
   mesocycle_id?: number
   start_date?: string
@@ -100,7 +105,7 @@ export async function createRoutineItem(
   const scopeError = validateScope(parsed.data)
   if (scopeError) return { success: false, error: scopeError }
 
-  const { name, category, input_fields, frequency_target, scope_type, mesocycle_id, start_date, end_date } = parsed.data
+  const { name, category, input_fields, frequency_target, frequency_mode, frequency_days, scope_type, mesocycle_id, start_date, end_date } = parsed.data
 
   // Verify mesocycle exists for per_mesocycle scope
   if (scope_type === 'per_mesocycle' && mesocycle_id) {
@@ -124,6 +129,8 @@ export async function createRoutineItem(
         category: category || null,
         ...columns,
         frequency_target,
+        frequency_mode,
+        frequency_days: frequency_mode === 'specific_days' ? (frequency_days ?? null) : null,
         scope,
         mesocycle_id: scope_type === 'per_mesocycle' ? mesocycle_id! : null,
         start_date: scope_type === 'date_range' ? start_date! : null,
@@ -160,7 +167,7 @@ export async function updateRoutineItem(
   const scopeError = validateScope(parsed.data)
   if (scopeError) return { success: false, error: scopeError }
 
-  const { name, category, input_fields, frequency_target, scope_type, mesocycle_id, start_date, end_date } = parsed.data
+  const { name, category, input_fields, frequency_target, frequency_mode, frequency_days, scope_type, mesocycle_id, start_date, end_date } = parsed.data
 
   // Verify mesocycle exists for per_mesocycle scope
   if (scope_type === 'per_mesocycle' && mesocycle_id) {
@@ -184,6 +191,8 @@ export async function updateRoutineItem(
         category: category || null,
         ...columns,
         frequency_target,
+        frequency_mode,
+        frequency_days: frequency_mode === 'specific_days' ? (frequency_days ?? null) : null,
         scope,
         mesocycle_id: scope_type === 'per_mesocycle' ? mesocycle_id! : null,
         start_date: scope_type === 'date_range' ? start_date! : null,
