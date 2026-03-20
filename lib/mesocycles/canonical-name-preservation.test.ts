@@ -33,6 +33,7 @@ function resetTables() {
   testDb.run(sql`DROP TABLE IF EXISTS logged_workouts`)
   testDb.run(sql`DROP TABLE IF EXISTS weekly_schedule`)
   testDb.run(sql`DROP TABLE IF EXISTS exercise_slots`)
+  testDb.run(sql`DROP TABLE IF EXISTS template_sections`)
   testDb.run(sql`DROP TABLE IF EXISTS workout_templates`)
   testDb.run(sql`DROP TABLE IF EXISTS mesocycles`)
   testDb.run(sql`DROP TABLE IF EXISTS exercises`)
@@ -71,11 +72,26 @@ function resetTables() {
     planned_duration INTEGER,
     created_at INTEGER
   )`)
+  testDb.run(sql`CREATE TABLE template_sections (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    template_id INTEGER NOT NULL REFERENCES workout_templates(id) ON DELETE CASCADE,
+    modality TEXT NOT NULL,
+    section_name TEXT NOT NULL,
+    "order" INTEGER NOT NULL,
+    run_type TEXT,
+    target_pace TEXT,
+    hr_zone INTEGER,
+    interval_count INTEGER,
+    interval_rest INTEGER,
+    coaching_cues TEXT,
+    planned_duration INTEGER,
+    created_at INTEGER
+  )`)
   testDb.run(sql`CREATE TABLE exercise_slots (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     template_id INTEGER NOT NULL REFERENCES workout_templates(id) ON DELETE CASCADE,
     exercise_id INTEGER NOT NULL REFERENCES exercises(id),
-    section_id INTEGER,
+    section_id INTEGER REFERENCES template_sections(id),
     sets INTEGER NOT NULL,
     reps TEXT NOT NULL,
     weight REAL,
