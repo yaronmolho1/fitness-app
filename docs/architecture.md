@@ -49,14 +49,16 @@ See ADR-001 (SQLite decision) and ADR-004 (hybrid API decision).
 
 ## Data Model
 
-Ten tables split into two layers. See `lib/db/schema.ts` for column definitions and `lib/db/relations.ts` for Drizzle v2 `defineRelations` config. See ADR-002 (mesocycle-scoped templates) and ADR-003 (deload as separate schedule) for the structural decisions behind this schema.
+Eleven tables split into two layers. See `lib/db/schema.ts` for column definitions and `lib/db/relations.ts` for Drizzle v2 `defineRelations` config. See ADR-002 (mesocycle-scoped templates) and ADR-003 (deload as separate schedule) for the structural decisions behind this schema.
 
 ```mermaid
 erDiagram
     mesocycles ||--o{ workout_templates : "contains"
     mesocycles ||--o{ weekly_schedule : "defines schedule for"
     mesocycles ||--o{ routine_items : "scopes (optional)"
+    workout_templates ||--o{ template_sections : "has sections (mixed)"
     workout_templates ||--o{ exercise_slots : "includes"
+    template_sections ||--o{ exercise_slots : "scopes (resistance sections)"
     exercises ||--o{ exercise_slots : "referenced by"
     weekly_schedule }o--|| workout_templates : "assigns template to day"
 
@@ -72,7 +74,8 @@ erDiagram
 | Table | Purpose |
 |-------|---------|
 | `exercises` | Global exercise library — reference data shared across all mesocycles and templates |
-| `exercise_slots` | Junction table placing an exercise into a template with set/rep/weight/RPE targets and ordering |
+| `exercise_slots` | Junction table placing an exercise into a template with set/rep/weight/RPE targets and ordering; optional `section_id` FK for mixed templates |
+| `template_sections` | Ordered sections within a mixed-modality template; each section has its own modality (resistance/running/mma) and modality-specific fields |
 | `workout_templates` | Named workout plans (e.g. Push A, Easy Run) scoped to a mesocycle; carry a `canonical_name` slug for cross-phase linking |
 | `mesocycles` | Training phases: N work weeks + optional deload week; status lifecycle (planned → active → completed) |
 | `weekly_schedule` | Day-to-template assignment grid; separate rows for normal vs deload week variants |
@@ -93,7 +96,7 @@ erDiagram
 
 **Cascade UX**: When a template is edited, the user selects a propagation scope: _this mesocycle only_, _this + all future unlogged_, or _all phases_. Cascade targets are found by querying `canonical_name` across active/planned mesocycles. Completed mesocycles and already-logged workouts are never modified. See ADR-002.
 
-**Template modalities**: `workout_templates` supports three modality types — resistance (sets/reps/weight, linked to `exercise_slots`), running (interval-based or continuous, interval data stored as JSON array on the log), and MMA/BJJ (occurrence + duration). Modality determines which fields are rendered in both the planning and logging UIs.
+**Template modalities**: `workout_templates` supports four modality types — resistance (sets/reps/weight, linked to `exercise_slots`), running (interval-based or continuous, interval data stored as JSON array on the log), MMA/BJJ (occurrence + duration), and mixed (ordered sections via `template_sections`, each with its own modality). Modality determines which fields are rendered in both the planning and logging UIs. Mixed templates render sections sequentially with modality-specific content per section.
 
 **Clone-on-create**: Creating a new mesocycle from an existing one copies all `workout_templates`, `exercise_slots`, and `weekly_schedule` rows atomically. Cloned templates retain the same `canonical_name` slugs with new IDs, preserving cross-phase linking for progression queries. This is a one-step operation (no separate "clone" action after create). See ADR-003 for deload schedule handling.
 
