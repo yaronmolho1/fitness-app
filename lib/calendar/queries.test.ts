@@ -410,4 +410,141 @@ describe('getCalendarProjection', () => {
     expect(mar8.template_name).toBe('Sun')
     expect(mar8.modality).toBe('mma')
   })
+
+  // T115: multi-workout per day + period/time_slot fields
+  describe('multi-workout per day (T115)', () => {
+    it('returns period and time_slot fields on each calendar day', async () => {
+      sqlite.exec(`
+        INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
+        VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
+        INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+        VALUES (1, 1, 'Push A', 'push-a', 'resistance');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+        VALUES (1, 0, 1, 'normal', 'morning', '08:00');
+      `)
+
+      const result = await getCalendarProjection(db, '2026-03')
+      const mar2 = result.days.find((d) => d.date === '2026-03-02')!
+      expect(mar2.period).toBe('morning')
+      expect(mar2.time_slot).toBe('08:00')
+    })
+
+    it('rest days have null period and time_slot', async () => {
+      const result = await getCalendarProjection(db, '2026-03')
+      const mar1 = result.days.find((d) => d.date === '2026-03-01')!
+      expect(mar1.period).toBeNull()
+      expect(mar1.time_slot).toBeNull()
+    })
+
+    it('returns multiple entries for the same day with different periods', async () => {
+      sqlite.exec(`
+        INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
+        VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
+        INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+        VALUES (1, 1, 'Push A', 'push-a', 'resistance');
+        INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+        VALUES (2, 1, '5K Run', '5k-run', 'running');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+        VALUES (1, 0, 1, 'normal', 'morning', '07:00');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+        VALUES (1, 0, 2, 'normal', 'evening', '18:00');
+      `)
+
+      const result = await getCalendarProjection(db, '2026-03')
+      // Mar 2 is Monday — should have two entries
+      const mar2Entries = result.days.filter((d) => d.date === '2026-03-02')
+      expect(mar2Entries).toHaveLength(2)
+      expect(mar2Entries[0].period).toBe('morning')
+      expect(mar2Entries[0].template_name).toBe('Push A')
+      expect(mar2Entries[1].period).toBe('evening')
+      expect(mar2Entries[1].template_name).toBe('5K Run')
+    })
+
+    it('orders multiple entries per day by period: morning → afternoon → evening', async () => {
+      sqlite.exec(`
+        INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
+        VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
+        INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+        VALUES (1, 1, 'Push A', 'push-a', 'resistance');
+        INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+        VALUES (2, 1, '5K Run', '5k-run', 'running');
+        INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+        VALUES (3, 1, 'BJJ', 'bjj', 'mma');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
+        VALUES (1, 0, 2, 'normal', 'evening');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
+        VALUES (1, 0, 1, 'normal', 'morning');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
+        VALUES (1, 0, 3, 'normal', 'afternoon');
+      `)
+
+      const result = await getCalendarProjection(db, '2026-03')
+      const mar2Entries = result.days.filter((d) => d.date === '2026-03-02')
+      expect(mar2Entries).toHaveLength(3)
+      expect(mar2Entries[0].period).toBe('morning')
+      expect(mar2Entries[1].period).toBe('afternoon')
+      expect(mar2Entries[2].period).toBe('evening')
+    })
+
+    it('days with single workout still get period field', async () => {
+      sqlite.exec(`
+        INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
+        VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
+        INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+        VALUES (1, 1, 'Push A', 'push-a', 'resistance');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
+        VALUES (1, 0, 1, 'normal', 'afternoon');
+      `)
+
+      const result = await getCalendarProjection(db, '2026-03')
+      const mar2Entries = result.days.filter((d) => d.date === '2026-03-02')
+      expect(mar2Entries).toHaveLength(1)
+      expect(mar2Entries[0].period).toBe('afternoon')
+    })
+
+    it('total days count includes duplicates for multi-workout days', async () => {
+      sqlite.exec(`
+        INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
+        VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
+        INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+        VALUES (1, 1, 'Push A', 'push-a', 'resistance');
+        INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+        VALUES (2, 1, '5K Run', '5k-run', 'running');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
+        VALUES (1, 0, 1, 'normal', 'morning');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
+        VALUES (1, 0, 2, 'normal', 'evening');
+      `)
+
+      const result = await getCalendarProjection(db, '2026-03')
+      // 31 days in March, but 4 Mondays get 2 entries each, so 31 + 4 = 35
+      // Mondays in March 2026: 2, 9, 16, 23 (all within meso range 2-29)
+      expect(result.days.length).toBe(35)
+    })
+
+    it('completed status is per-entry on multi-workout days', async () => {
+      sqlite.exec(`
+        INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
+        VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
+        INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+        VALUES (1, 1, 'Push A', 'push-a', 'resistance');
+        INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+        VALUES (2, 1, '5K Run', '5k-run', 'running');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
+        VALUES (1, 0, 1, 'normal', 'morning');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
+        VALUES (1, 0, 2, 'normal', 'evening');
+        INSERT INTO logged_workouts (template_id, canonical_name, log_date, logged_at, template_snapshot)
+        VALUES (1, 'push-a', '2026-03-02', 1740900000, '{"version":1}');
+      `)
+
+      const result = await getCalendarProjection(db, '2026-03')
+      const mar2Entries = result.days.filter((d) => d.date === '2026-03-02')
+      expect(mar2Entries).toHaveLength(2)
+      // Both show completed because logged_workouts just has date-level info
+      // (logged_workouts doesn't have period — date-level match)
+      expect(mar2Entries[0].status).toBe('completed')
+      expect(mar2Entries[1].status).toBe('completed')
+    })
+  })
 })
