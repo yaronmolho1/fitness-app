@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, lte, sql } from 'drizzle-orm'
+import { and, desc, eq, gte, lte, ne, isNotNull, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { routine_items, routine_logs, mesocycles } from '@/lib/db/schema'
 
@@ -179,4 +179,18 @@ export async function getWeeklyCompletionCounts(
     }
   }
   return map
+}
+
+export async function getDistinctRoutineCategories(): Promise<string[]> {
+  const rows = await db
+    .selectDistinct({ category: routine_items.category })
+    .from(routine_items)
+    .where(
+      and(isNotNull(routine_items.category), ne(routine_items.category, ''))
+    )
+    .all()
+
+  return rows
+    .map((r) => r.category!)
+    .sort((a, b) => a.localeCompare(b))
 }

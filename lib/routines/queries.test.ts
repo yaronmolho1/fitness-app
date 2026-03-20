@@ -4,6 +4,10 @@ const mockFrom = vi.fn()
 const mockSelect = vi.fn()
 const mockLeftJoin = vi.fn()
 const mockOrderBy = vi.fn()
+const mockDistinctFrom = vi.fn()
+const mockDistinctWhere = vi.fn()
+const mockDistinctAll = vi.fn()
+const mockSelectDistinct = vi.fn()
 
 vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
@@ -12,11 +16,12 @@ vi.mock('next/cache', () => ({
 vi.mock('@/lib/db', () => ({
   db: {
     select: (...args: unknown[]) => mockSelect(...args),
+    selectDistinct: (...args: unknown[]) => mockSelectDistinct(...args),
   },
   sqlite: {},
 }))
 
-import { getRoutineItems } from './queries'
+import { getRoutineItems, getDistinctRoutineCategories } from './queries'
 import { formatInputFields, formatScopeSummary } from './format'
 
 describe('getRoutineItems', () => {
@@ -126,5 +131,39 @@ describe('formatScopeSummary', () => {
     expect(
       formatScopeSummary('date_range', false, null, '2026-01-15', '2026-02-28')
     ).toBe('Jan 15 – Feb 28')
+  })
+})
+
+describe('getDistinctRoutineCategories', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    mockSelectDistinct.mockReturnValue({ from: mockDistinctFrom })
+    mockDistinctFrom.mockReturnValue({ where: mockDistinctWhere })
+    mockDistinctWhere.mockReturnValue({ all: mockDistinctAll })
+  })
+
+  it('returns sorted unique category values', async () => {
+    mockDistinctAll.mockResolvedValueOnce([
+      { category: 'stretching' },
+      { category: 'mobility' },
+      { category: 'cardio' },
+    ])
+
+    const result = await getDistinctRoutineCategories()
+    expect(result).toEqual(['cardio', 'mobility', 'stretching'])
+  })
+
+  it('returns empty array when no data', async () => {
+    mockDistinctAll.mockResolvedValueOnce([])
+
+    const result = await getDistinctRoutineCategories()
+    expect(result).toEqual([])
+  })
+
+  it('calls selectDistinct once', async () => {
+    mockDistinctAll.mockResolvedValueOnce([])
+
+    await getDistinctRoutineCategories()
+    expect(mockSelectDistinct).toHaveBeenCalledTimes(1)
   })
 })
