@@ -31,6 +31,7 @@ import { cloneMesocycle } from './clone-actions'
 function resetTables() {
   testDb.run(sql`DROP TABLE IF EXISTS weekly_schedule`)
   testDb.run(sql`DROP TABLE IF EXISTS exercise_slots`)
+  testDb.run(sql`DROP TABLE IF EXISTS template_sections`)
   testDb.run(sql`DROP TABLE IF EXISTS workout_templates`)
   testDb.run(sql`DROP TABLE IF EXISTS mesocycles`)
   testDb.run(sql`DROP TABLE IF EXISTS exercises`)
@@ -69,11 +70,26 @@ function resetTables() {
     planned_duration INTEGER,
     created_at INTEGER
   )`)
+  testDb.run(sql`CREATE TABLE IF NOT EXISTS template_sections (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    template_id INTEGER NOT NULL REFERENCES workout_templates(id) ON DELETE CASCADE,
+    modality TEXT NOT NULL,
+    section_name TEXT NOT NULL,
+    "order" INTEGER NOT NULL,
+    run_type TEXT,
+    target_pace TEXT,
+    hr_zone INTEGER,
+    interval_count INTEGER,
+    interval_rest INTEGER,
+    coaching_cues TEXT,
+    planned_duration INTEGER,
+    created_at INTEGER
+  )`)
   testDb.run(sql`CREATE TABLE IF NOT EXISTS exercise_slots (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     template_id INTEGER NOT NULL REFERENCES workout_templates(id) ON DELETE CASCADE,
     exercise_id INTEGER NOT NULL REFERENCES exercises(id),
-    section_id INTEGER,
+    section_id INTEGER REFERENCES template_sections(id),
     sets INTEGER NOT NULL,
     reps TEXT NOT NULL,
     weight REAL,
@@ -226,6 +242,248 @@ function seedSource(opts?: {
   }
 
   return { mesoId: meso.id, templateIds: [t1.id, t2.id] }
+}
+
+// Seed source with period + time_slot on schedule entries
+function seedSourceWithPeriods() {
+  const meso = testDb
+    .insert(schema.mesocycles)
+    .values({
+      name: 'Periods Meso',
+      start_date: '2026-01-05',
+      end_date: '2026-02-08',
+      work_weeks: 4,
+      has_deload: true,
+      status: 'completed',
+    })
+    .returning({ id: schema.mesocycles.id })
+    .get()
+
+  const t1 = testDb
+    .insert(schema.workout_templates)
+    .values({
+      mesocycle_id: meso.id,
+      name: 'Push A',
+      canonical_name: 'push-a',
+      modality: 'resistance',
+    })
+    .returning({ id: schema.workout_templates.id })
+    .get()
+
+  const t2 = testDb
+    .insert(schema.workout_templates)
+    .values({
+      mesocycle_id: meso.id,
+      name: 'Easy Run',
+      canonical_name: 'easy-run',
+      modality: 'running',
+    })
+    .returning({ id: schema.workout_templates.id })
+    .get()
+
+  // Mon morning with time_slot
+  testDb
+    .insert(schema.weekly_schedule)
+    .values({
+      mesocycle_id: meso.id,
+      day_of_week: 1,
+      template_id: t1.id,
+      week_type: 'normal',
+      period: 'morning',
+      time_slot: '07:00',
+    })
+    .run()
+
+  // Mon evening with time_slot
+  testDb
+    .insert(schema.weekly_schedule)
+    .values({
+      mesocycle_id: meso.id,
+      day_of_week: 1,
+      template_id: t2.id,
+      week_type: 'normal',
+      period: 'evening',
+      time_slot: '18:30',
+    })
+    .run()
+
+  // Wed afternoon, no time_slot
+  testDb
+    .insert(schema.weekly_schedule)
+    .values({
+      mesocycle_id: meso.id,
+      day_of_week: 3,
+      template_id: t1.id,
+      week_type: 'normal',
+      period: 'afternoon',
+    })
+    .run()
+
+  // Deload: Mon morning with time_slot
+  testDb
+    .insert(schema.weekly_schedule)
+    .values({
+      mesocycle_id: meso.id,
+      day_of_week: 1,
+      template_id: t2.id,
+      week_type: 'deload',
+      period: 'morning',
+      time_slot: '08:00',
+    })
+    .run()
+
+  return { mesoId: meso.id }
+}
+
+// Seed source with mixed template (resistance + running sections)
+function seedSourceWithMixedTemplate() {
+  const meso = testDb
+    .insert(schema.mesocycles)
+    .values({
+      name: 'Mixed Meso',
+      start_date: '2026-01-05',
+      end_date: '2026-02-01',
+      work_weeks: 4,
+      has_deload: false,
+      status: 'completed',
+    })
+    .returning({ id: schema.mesocycles.id })
+    .get()
+
+  // A regular resistance template (no sections)
+  testDb
+    .insert(schema.workout_templates)
+    .values({
+      mesocycle_id: meso.id,
+      name: 'Push A',
+      canonical_name: 'push-a',
+      modality: 'resistance',
+    })
+    .run()
+
+  // A mixed template with sections
+  const t2 = testDb
+    .insert(schema.workout_templates)
+    .values({
+      mesocycle_id: meso.id,
+      name: 'Strength + Cardio',
+      canonical_name: 'strength-cardio',
+      modality: 'mixed',
+    })
+    .returning({ id: schema.workout_templates.id })
+    .get()
+
+  // Resistance section
+  const s1 = testDb
+    .insert(schema.template_sections)
+    .values({
+      template_id: t2.id,
+      modality: 'resistance',
+      section_name: 'Main Lift',
+      order: 1,
+    })
+    .returning({ id: schema.template_sections.id })
+    .get()
+
+  // Running section with modality-specific fields
+  const s2 = testDb
+    .insert(schema.template_sections)
+    .values({
+      template_id: t2.id,
+      modality: 'running',
+      section_name: 'Cooldown Run',
+      order: 2,
+      run_type: 'easy',
+      target_pace: '6:00',
+      hr_zone: 2,
+    })
+    .returning({ id: schema.template_sections.id })
+    .get()
+
+  // Exercise for section slot
+  const ex = testDb
+    .insert(schema.exercises)
+    .values({ name: 'Bench Press', modality: 'resistance' })
+    .returning({ id: schema.exercises.id })
+    .get()
+
+  // Exercise slot associated with resistance section
+  testDb
+    .insert(schema.exercise_slots)
+    .values({
+      template_id: t2.id,
+      exercise_id: ex.id,
+      section_id: s1.id,
+      sets: 3,
+      reps: '10',
+      weight: 70,
+      order: 1,
+      is_main: true,
+    })
+    .run()
+
+  // Schedule
+  testDb
+    .insert(schema.weekly_schedule)
+    .values({
+      mesocycle_id: meso.id,
+      day_of_week: 1,
+      template_id: t2.id,
+      week_type: 'normal',
+    })
+    .run()
+
+  return { mesoId: meso.id, sectionIds: [s1.id, s2.id] }
+}
+
+// Seed source with mixed template that includes an MMA section
+function seedSourceWithMmaSection() {
+  const meso = testDb
+    .insert(schema.mesocycles)
+    .values({
+      name: 'MMA Mixed Meso',
+      start_date: '2026-01-05',
+      end_date: '2026-02-01',
+      work_weeks: 4,
+      has_deload: false,
+      status: 'completed',
+    })
+    .returning({ id: schema.mesocycles.id })
+    .get()
+
+  const t1 = testDb
+    .insert(schema.workout_templates)
+    .values({
+      mesocycle_id: meso.id,
+      name: 'Strength + MMA',
+      canonical_name: 'strength-mma',
+      modality: 'mixed',
+    })
+    .returning({ id: schema.workout_templates.id })
+    .get()
+
+  testDb
+    .insert(schema.template_sections)
+    .values({
+      template_id: t1.id,
+      modality: 'resistance',
+      section_name: 'Warm Up',
+      order: 1,
+    })
+    .run()
+
+  testDb
+    .insert(schema.template_sections)
+    .values({
+      template_id: t1.id,
+      modality: 'mma',
+      section_name: 'Rolling',
+      order: 2,
+      planned_duration: 45,
+    })
+    .run()
+
+  return { mesoId: meso.id }
 }
 
 describe('cloneMesocycle', () => {
@@ -784,6 +1042,262 @@ describe('cloneMesocycle', () => {
         .where(sql`id = ${result.id}`)
         .get()
       expect(newMeso!.name).toBe('New Phase')
+    })
+  })
+
+  describe('period + time_slot cloning (T120)', () => {
+    it('copies period and time_slot for schedule entries', async () => {
+      const { mesoId } = seedSourceWithPeriods()
+      const result = await cloneMesocycle({
+        source_id: mesoId,
+        name: 'Clone',
+        start_date: '2026-03-01',
+      })
+      expect(result.success).toBe(true)
+      if (!result.success) return
+
+      const clonedSchedule = testDb
+        .select()
+        .from(schema.weekly_schedule)
+        .where(sql`mesocycle_id = ${result.id}`)
+        .all()
+
+      // Mon morning + Mon evening + Wed afternoon = 3 normal entries
+      const monEntries = clonedSchedule.filter(
+        (s: { day_of_week: number; week_type: string }) =>
+          s.day_of_week === 1 && s.week_type === 'normal'
+      )
+      expect(monEntries).toHaveLength(2)
+
+      const morning = monEntries.find(
+        (s: { period: string }) => s.period === 'morning'
+      )
+      expect(morning).toBeDefined()
+      expect(morning!.time_slot).toBe('07:00')
+
+      const evening = monEntries.find(
+        (s: { period: string }) => s.period === 'evening'
+      )
+      expect(evening).toBeDefined()
+      expect(evening!.time_slot).toBe('18:30')
+
+      const wedEntry = clonedSchedule.find(
+        (s: { day_of_week: number; week_type: string }) =>
+          s.day_of_week === 3 && s.week_type === 'normal'
+      )
+      expect(wedEntry).toBeDefined()
+      expect(wedEntry!.period).toBe('afternoon')
+      expect(wedEntry!.time_slot).toBeNull()
+    })
+
+    it('preserves period on deload schedule entries', async () => {
+      const { mesoId } = seedSourceWithPeriods()
+      const result = await cloneMesocycle({
+        source_id: mesoId,
+        name: 'Clone',
+        start_date: '2026-03-01',
+      })
+      expect(result.success).toBe(true)
+      if (!result.success) return
+
+      const clonedSchedule = testDb
+        .select()
+        .from(schema.weekly_schedule)
+        .where(sql`mesocycle_id = ${result.id}`)
+        .all()
+
+      const deloadEntry = clonedSchedule.find(
+        (s: { week_type: string }) => s.week_type === 'deload'
+      )
+      expect(deloadEntry).toBeDefined()
+      expect(deloadEntry!.period).toBe('morning')
+      expect(deloadEntry!.time_slot).toBe('08:00')
+    })
+  })
+
+  describe('template_sections cloning (T120)', () => {
+    it('copies template_sections for mixed templates', async () => {
+      const { mesoId } = seedSourceWithMixedTemplate()
+      const result = await cloneMesocycle({
+        source_id: mesoId,
+        name: 'Clone',
+        start_date: '2026-03-01',
+      })
+      expect(result.success).toBe(true)
+      if (!result.success) return
+
+      const clonedTemplate = testDb
+        .select()
+        .from(schema.workout_templates)
+        .where(sql`mesocycle_id = ${result.id} AND modality = 'mixed'`)
+        .get()
+      expect(clonedTemplate).toBeDefined()
+
+      const clonedSections = testDb
+        .select()
+        .from(schema.template_sections)
+        .where(sql`template_id = ${clonedTemplate!.id}`)
+        .all()
+
+      expect(clonedSections).toHaveLength(2)
+
+      const sorted = [...clonedSections].sort(
+        (a: { order: number }, b: { order: number }) => a.order - b.order
+      )
+      expect(sorted[0].section_name).toBe('Main Lift')
+      expect(sorted[0].modality).toBe('resistance')
+      expect(sorted[0].order).toBe(1)
+
+      expect(sorted[1].section_name).toBe('Cooldown Run')
+      expect(sorted[1].modality).toBe('running')
+      expect(sorted[1].order).toBe(2)
+      expect(sorted[1].run_type).toBe('easy')
+      expect(sorted[1].target_pace).toBe('6:00')
+      expect(sorted[1].hr_zone).toBe(2)
+    })
+
+    it('cloned sections have new IDs (not source IDs)', async () => {
+      const { mesoId, sectionIds } = seedSourceWithMixedTemplate()
+      const result = await cloneMesocycle({
+        source_id: mesoId,
+        name: 'Clone',
+        start_date: '2026-03-01',
+      })
+      expect(result.success).toBe(true)
+      if (!result.success) return
+
+      const clonedTemplate = testDb
+        .select()
+        .from(schema.workout_templates)
+        .where(sql`mesocycle_id = ${result.id} AND modality = 'mixed'`)
+        .get()
+
+      const clonedSections = testDb
+        .select()
+        .from(schema.template_sections)
+        .where(sql`template_id = ${clonedTemplate!.id}`)
+        .all()
+
+      for (const section of clonedSections) {
+        expect(sectionIds).not.toContain(section.id)
+      }
+    })
+
+    it('maps section_id on exercise slots for mixed templates', async () => {
+      const { mesoId } = seedSourceWithMixedTemplate()
+      const result = await cloneMesocycle({
+        source_id: mesoId,
+        name: 'Clone',
+        start_date: '2026-03-01',
+      })
+      expect(result.success).toBe(true)
+      if (!result.success) return
+
+      const clonedTemplate = testDb
+        .select()
+        .from(schema.workout_templates)
+        .where(sql`mesocycle_id = ${result.id} AND modality = 'mixed'`)
+        .get()
+
+      const clonedSections = testDb
+        .select()
+        .from(schema.template_sections)
+        .where(sql`template_id = ${clonedTemplate!.id}`)
+        .all()
+
+      const resistanceSection = clonedSections.find(
+        (s: { modality: string }) => s.modality === 'resistance'
+      )
+
+      const clonedSlots = testDb
+        .select()
+        .from(schema.exercise_slots)
+        .where(sql`template_id = ${clonedTemplate!.id}`)
+        .all()
+
+      expect(clonedSlots).toHaveLength(1)
+      expect(clonedSlots[0].section_id).toBe(resistanceSection!.id)
+    })
+
+    it('does not create sections for non-mixed templates', async () => {
+      const { mesoId } = seedSourceWithMixedTemplate()
+      const result = await cloneMesocycle({
+        source_id: mesoId,
+        name: 'Clone',
+        start_date: '2026-03-01',
+      })
+      expect(result.success).toBe(true)
+      if (!result.success) return
+
+      const resistanceTemplate = testDb
+        .select()
+        .from(schema.workout_templates)
+        .where(sql`mesocycle_id = ${result.id} AND modality = 'resistance'`)
+        .get()
+
+      const sections = testDb
+        .select()
+        .from(schema.template_sections)
+        .where(sql`template_id = ${resistanceTemplate!.id}`)
+        .all()
+
+      expect(sections).toHaveLength(0)
+    })
+
+    it('preserves section MMA-specific fields', async () => {
+      const { mesoId } = seedSourceWithMmaSection()
+      const result = await cloneMesocycle({
+        source_id: mesoId,
+        name: 'Clone',
+        start_date: '2026-03-01',
+      })
+      expect(result.success).toBe(true)
+      if (!result.success) return
+
+      const clonedTemplate = testDb
+        .select()
+        .from(schema.workout_templates)
+        .where(sql`mesocycle_id = ${result.id} AND modality = 'mixed'`)
+        .get()
+
+      const clonedSections = testDb
+        .select()
+        .from(schema.template_sections)
+        .where(sql`template_id = ${clonedTemplate!.id}`)
+        .all()
+
+      const mmaSection = clonedSections.find(
+        (s: { modality: string }) => s.modality === 'mma'
+      )
+      expect(mmaSection).toBeDefined()
+      expect(mmaSection!.planned_duration).toBe(45)
+    })
+
+    it('exercise slots without section_id remain null after clone', async () => {
+      const { mesoId } = seedSource()
+      const result = await cloneMesocycle({
+        source_id: mesoId,
+        name: 'Clone',
+        start_date: '2026-03-01',
+      })
+      expect(result.success).toBe(true)
+      if (!result.success) return
+
+      const clonedPushA = testDb
+        .select()
+        .from(schema.workout_templates)
+        .where(sql`mesocycle_id = ${result.id} AND canonical_name = 'push-a'`)
+        .get()
+
+      const clonedSlots = testDb
+        .select()
+        .from(schema.exercise_slots)
+        .where(sql`template_id = ${clonedPushA!.id}`)
+        .all()
+
+      for (const slot of clonedSlots) {
+        expect(slot.section_id).toBeNull()
+      }
     })
   })
 })
