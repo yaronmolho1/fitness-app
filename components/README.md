@@ -20,7 +20,7 @@ Shared React components — app-level UI and navigation.
 - `running-template-form.tsx` — `RunningTemplateForm` create form for running templates with run type, pace, HR zone, interval fields
 - `mma-bjj-template-form.tsx` — `MmaBjjTemplateForm` create form for MMA/BJJ templates with planned duration
 - `schedule-tabs.tsx` — `ScheduleTabs` normal/deload tab switcher, renders `ScheduleGrid` per week type
-- `today-workout.tsx` — `TodayWorkout` fetches and displays today's resistance workout: mesocycle context, template name, exercise slots with sets/reps/weight/RPE/rest; "Log Workout" button transitions to logging form
+- `today-workout.tsx` — `TodayWorkout` fetches and displays today's workout: mesocycle context, template name, exercise slots with sets/reps/weight/RPE/rest; mixed template display via `MixedDisplay` with per-section renderers (`SectionResistanceContent`, `SectionRunningContent`, `SectionMmaContent`); "Log Workout" button transitions to logging form
 - `workout-logging-form.tsx` — `WorkoutLoggingForm` client component: pre-filled resistance logging form with per-set actual weight/reps/RPE inputs alongside read-only planned values, numeric mobile keyboards, submit via server action
 - `progression-chart.tsx` — `ProgressionChart` client component: exercise selector + weight/volume toggle, fetches progression data from API, renders planned vs actual line chart with phase-colored dots via Recharts
 - `routine-check-off.tsx` — `RoutineCheckOff` daily routine check-off list: per-item value inputs (weight/length/duration/sets/reps based on config), Done/Skip buttons, logged items shown with recorded values; `RoutineCheckOffCard` internal component
