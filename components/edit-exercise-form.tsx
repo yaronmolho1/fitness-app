@@ -5,6 +5,7 @@ import { editExercise } from '@/lib/exercises/actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { AutoSuggestCombobox } from '@/components/ui/auto-suggest-combobox'
 import {
   Select,
   SelectContent,
@@ -16,11 +17,13 @@ import type { Exercise } from '@/lib/exercises/filters'
 
 type EditExerciseFormProps = {
   exercise: Exercise
+  equipmentOptions: string[]
+  muscleGroupOptions: string[]
   onCancel: () => void
   onSaved: () => void
 }
 
-export function EditExerciseForm({ exercise, onCancel, onSaved }: EditExerciseFormProps) {
+export function EditExerciseForm({ exercise, equipmentOptions, muscleGroupOptions, onCancel, onSaved }: EditExerciseFormProps) {
   const [name, setName] = useState(exercise.name)
   const [modality, setModality] = useState(exercise.modality)
   const [muscleGroup, setMuscleGroup] = useState(exercise.muscle_group ?? '')
@@ -93,25 +96,21 @@ export function EditExerciseForm({ exercise, onCancel, onSaved }: EditExerciseFo
         </Select>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor={`edit-muscle-group-${exercise.id}`}>Muscle Group</Label>
-        <Input
-          id={`edit-muscle-group-${exercise.id}`}
-          value={muscleGroup}
-          onChange={(e) => setMuscleGroup(e.target.value)}
-          placeholder="e.g. Chest"
-        />
-      </div>
+      <AutoSuggestCombobox
+        items={muscleGroupOptions}
+        value={muscleGroup}
+        onChange={setMuscleGroup}
+        label="Muscle Group"
+        placeholder="e.g. Chest"
+      />
 
-      <div className="space-y-2">
-        <Label htmlFor={`edit-equipment-${exercise.id}`}>Equipment</Label>
-        <Input
-          id={`edit-equipment-${exercise.id}`}
-          value={equipment}
-          onChange={(e) => setEquipment(e.target.value)}
-          placeholder="e.g. Barbell"
-        />
-      </div>
+      <AutoSuggestCombobox
+        items={equipmentOptions}
+        value={equipment}
+        onChange={setEquipment}
+        label="Equipment"
+        placeholder="e.g. Barbell"
+      />
 
       <div className="flex gap-2">
         <Button type="submit" disabled={submitting}>

@@ -4,6 +4,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 
 vi.mock('@/lib/exercises/queries', () => ({
   getExercises: vi.fn(() => []),
+  getDistinctExerciseValues: vi.fn(() => ({ equipment: [], muscle_groups: [] })),
 }))
 
 vi.mock('@/lib/exercises/actions', () => ({
@@ -43,6 +44,7 @@ describe('ExercisesPage', () => {
     vi.resetModules()
     vi.doMock('@/lib/exercises/queries', () => ({
       getExercises: vi.fn(() => mockExercises),
+      getDistinctExerciseValues: vi.fn(() => ({ equipment: ['Barbell'], muscle_groups: ['Chest'] })),
     }))
     vi.doMock('@/lib/exercises/actions', () => ({
       createExercise: vi.fn(),
