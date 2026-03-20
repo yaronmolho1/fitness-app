@@ -6,6 +6,7 @@ import { getModalityAccentClass } from '@/lib/ui/modality-colors'
 import { saveRunningWorkout } from '@/lib/workouts/actions'
 import type { SaveRunningWorkoutInput, IntervalRepData } from '@/lib/workouts/actions'
 import type { MesocycleInfo, TemplateInfo } from '@/lib/today/queries'
+import { SectionHeading } from '@/components/layout/section-heading'
 
 export type RunningWorkoutData = {
   date: string
@@ -169,9 +170,9 @@ export function RunningLoggingForm({ data }: { data: RunningWorkoutData }) {
 
       {/* Planned reference (read-only) */}
       <div data-testid="planned-reference" className={cn('rounded-xl border border-l-4 bg-card p-4 space-y-3', getModalityAccentClass('running'))}>
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+        <SectionHeading className="mt-0 mb-0 text-sm uppercase tracking-wider text-muted-foreground">
           Planned
-        </h2>
+        </SectionHeading>
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {template.target_pace && (
@@ -228,9 +229,9 @@ export function RunningLoggingForm({ data }: { data: RunningWorkoutData }) {
 
       {/* Actual fields */}
       <div data-testid="actual-fields" className="rounded-xl border bg-card p-4 space-y-4">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+        <SectionHeading className="mt-0 mb-0 text-sm uppercase tracking-wider text-muted-foreground">
           Actual
-        </h2>
+        </SectionHeading>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="space-y-1.5">
@@ -294,9 +295,9 @@ export function RunningLoggingForm({ data }: { data: RunningWorkoutData }) {
       {/* Interval reps — only for interval runs */}
       {isInterval && intervalCount > 0 && (
         <div data-testid="interval-section" className="rounded-xl border bg-card p-4 space-y-3">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+          <SectionHeading className="mt-0 mb-0 text-sm uppercase tracking-wider text-muted-foreground">
             Intervals ({intervalCount})
-          </h2>
+          </SectionHeading>
 
           <div className="space-y-3">
             {intervalReps.map((rep, index) => (

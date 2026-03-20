@@ -6,6 +6,7 @@ import { getModalityAccentClass } from '@/lib/ui/modality-colors'
 import { saveMmaWorkout } from '@/lib/workouts/actions'
 import type { SaveMmaWorkoutInput } from '@/lib/workouts/actions'
 import type { MesocycleInfo, TemplateInfo } from '@/lib/today/queries'
+import { SectionHeading } from '@/components/layout/section-heading'
 
 export type MmaWorkoutData = {
   date: string
@@ -86,9 +87,9 @@ export function MmaLoggingForm({ data }: { data: MmaWorkoutData }) {
 
       {/* Planned reference (read-only) */}
       <div data-testid="planned-reference" className={cn('rounded-xl border border-l-4 bg-card p-4 space-y-3', getModalityAccentClass('mma'))}>
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+        <SectionHeading className="mt-0 mb-0 text-sm uppercase tracking-wider text-muted-foreground">
           Planned
-        </h2>
+        </SectionHeading>
 
         <div className="grid grid-cols-2 gap-3">
           {template.planned_duration !== null && (
@@ -110,9 +111,9 @@ export function MmaLoggingForm({ data }: { data: MmaWorkoutData }) {
 
       {/* Actual fields */}
       <div data-testid="actual-fields" className="rounded-xl border bg-card p-4 space-y-4">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+        <SectionHeading className="mt-0 mb-0 text-sm uppercase tracking-wider text-muted-foreground">
           Actual
-        </h2>
+        </SectionHeading>
 
         <div className="space-y-1.5">
           <label

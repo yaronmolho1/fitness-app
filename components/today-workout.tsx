@@ -14,6 +14,7 @@ import { getModalityBadgeClasses } from '@/lib/ui/modality-colors'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
 import { Pencil } from 'lucide-react'
+import { SectionHeading } from '@/components/layout/section-heading'
 
 type WorkoutResponse = {
   type: 'workout'
@@ -621,9 +622,9 @@ function SessionSection({
     return (
       <div data-testid="session-group">
         {showPeriodLabel && (
-          <h2 data-testid="period-label" className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          <SectionHeading data-testid="period-label" className="mt-0 mb-3 text-sm uppercase tracking-wider text-muted-foreground">
             {formatPeriodLabel(session.period, session.time_slot)}
-          </h2>
+          </SectionHeading>
         )}
         <AlreadyLoggedSummary data={session} />
       </div>
@@ -650,9 +651,9 @@ function SessionSection({
     return (
       <div data-testid="session-group">
         {showPeriodLabel && (
-          <h2 data-testid="period-label" className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          <SectionHeading data-testid="period-label" className="mt-0 mb-3 text-sm uppercase tracking-wider text-muted-foreground">
             {formatPeriodLabel(session.period, session.time_slot)}
-          </h2>
+          </SectionHeading>
         )}
         {session.template.modality === 'mixed' ? (
           <MixedDisplay data={session} onStartLogging={() => onStartLogging(key)} />
@@ -760,7 +761,7 @@ export function TodayWorkout() {
         </Card>
 
         <div>
-          <h2 className="mb-3 text-lg font-semibold tracking-tight">Daily Routines</h2>
+          <SectionHeading className="mt-0 mb-3">Daily Routines</SectionHeading>
           <RoutineCheckOff
             items={first.routines.items}
             logs={first.routines.logs}

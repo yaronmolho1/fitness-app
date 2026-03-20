@@ -46,6 +46,12 @@ const allPages = [
 const sectionHeadingComponents = [
   { path: 'components/template-section.tsx', title: 'TemplateSection' },
   { path: 'components/schedule-tabs.tsx', title: 'ScheduleTabs' },
+  { path: 'components/mixed-logging-form.tsx', title: 'MixedLoggingForm' },
+  { path: 'components/running-logging-form.tsx', title: 'RunningLoggingForm' },
+  { path: 'components/mma-logging-form.tsx', title: 'MmaLoggingForm' },
+  { path: 'components/workout-logging-form.tsx', title: 'WorkoutLoggingForm' },
+  { path: 'components/calendar-grid.tsx', title: 'CalendarGrid' },
+  { path: 'components/today-workout.tsx', title: 'TodayWorkout' },
 ]
 
 describe('Layout adoption: PageContainer', () => {

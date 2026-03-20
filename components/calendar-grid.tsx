@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { CalendarDay } from '@/lib/calendar/queries'
 import { DayDetailPanel } from '@/components/day-detail-panel'
+import { SectionHeading } from '@/components/layout/section-heading'
 import { getModalityClasses, getModalityBadgeClasses } from '@/lib/ui/modality-colors'
 
 const DAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -131,7 +132,7 @@ export function CalendarGrid({ initialMonth }: CalendarGridProps = {}) {
         <Button variant="outline" size="icon" onClick={goPrev} aria-label="Previous month">
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <h2 className="text-lg font-semibold tracking-tight">{monthLabel(year, month)}</h2>
+        <SectionHeading className="mt-0 mb-0">{monthLabel(year, month)}</SectionHeading>
         <Button variant="outline" size="icon" onClick={goNext} aria-label="Next month">
           <ChevronRight className="h-4 w-4" />
         </Button>

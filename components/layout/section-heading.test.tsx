@@ -12,9 +12,11 @@ describe('SectionHeading', () => {
     expect(heading).toHaveTextContent('Templates')
   })
 
-  it('applies text-lg font-semibold tracking-tight', () => {
+  it('applies default spacing and typography classes', () => {
     render(<SectionHeading>Templates</SectionHeading>)
     const heading = screen.getByRole('heading', { level: 2 })
+    expect(heading.className).toContain('mt-8')
+    expect(heading.className).toContain('mb-4')
     expect(heading.className).toContain('text-lg')
     expect(heading.className).toContain('font-semibold')
     expect(heading.className).toContain('tracking-tight')
