@@ -16,7 +16,13 @@ const MODALITIES: { value: Modality; label: string }[] = [
   { value: 'mma', label: 'MMA' },
 ]
 
-export function ExerciseListWithFilters({ exercises }: { exercises: Exercise[] }) {
+type ExerciseListWithFiltersProps = {
+  exercises: Exercise[]
+  equipmentOptions: string[]
+  muscleGroupOptions: string[]
+}
+
+export function ExerciseListWithFilters({ exercises, equipmentOptions, muscleGroupOptions }: ExerciseListWithFiltersProps) {
   const [search, setSearch] = useState('')
   const [modality, setModality] = useState<Modality>('all')
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -68,6 +74,8 @@ export function ExerciseListWithFilters({ exercises }: { exercises: Exercise[] }
               {editingId === exercise.id ? (
                 <EditExerciseForm
                   exercise={exercise}
+                  equipmentOptions={equipmentOptions}
+                  muscleGroupOptions={muscleGroupOptions}
                   onCancel={() => setEditingId(null)}
                   onSaved={() => {
                     setEditingId(null)

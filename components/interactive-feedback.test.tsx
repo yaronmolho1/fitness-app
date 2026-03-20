@@ -66,7 +66,7 @@ describe('Interactive feedback — transition classes', () => {
       const exercises = [
         { id: 1, name: 'Squat', modality: 'resistance' as const, muscle_group: 'Legs', equipment: 'Barbell', created_at: new Date('2026-01-01') },
       ]
-      render(<ExerciseListWithFilters exercises={exercises} />)
+      render(<ExerciseListWithFilters exercises={exercises} equipmentOptions={['Barbell']} muscleGroupOptions={['Legs']} />)
       // The row is the div wrapping the exercise content
       const row = screen.getByText('Squat').closest('[class*="px-4 py-3"]')
       expect(row).not.toBeNull()
