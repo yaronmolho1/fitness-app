@@ -92,6 +92,8 @@ export async function cascadeAddSlot(
         ? currentMax + 1
         : sourceSlot.order
 
+      // TODO: section_id is not propagated — sibling templates may have different
+      // section structures. Needs a section-matching strategy similar to slot matching.
       tx.insert(exercise_slots)
         .values({
           template_id: sibling.id,

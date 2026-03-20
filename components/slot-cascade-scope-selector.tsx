@@ -92,6 +92,13 @@ export function SlotCascadeScopeSelector(props: SlotCascadeProps) {
   function handleConfirm() {
     if (!selectedScope) return
 
+    // "this-only" for update-params: no cascade needed, local edit already applied
+    if (selectedScope === 'this-only' && props.operation === 'update-params') {
+      setSummary({ updated: 0, skipped: 0, skippedCompleted: 0, skippedNoMatch: 0 })
+      setStep('summary')
+      return
+    }
+
     startTransition(async () => {
       let result: { success: true; data: CascadeSummary } | { success: false; error: string }
 
@@ -140,6 +147,11 @@ export function SlotCascadeScopeSelector(props: SlotCascadeProps) {
           {summary.skipped > 0 && (
             <span className="text-amber-600 dark:text-amber-400">
               {summary.skipped} skipped
+            </span>
+          )}
+          {summary.skippedCompleted > 0 && (
+            <span className="text-amber-600 dark:text-amber-400">
+              {summary.skippedCompleted} skipped (completed)
             </span>
           )}
           {summary.skippedNoMatch > 0 && (
