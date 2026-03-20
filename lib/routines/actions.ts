@@ -25,13 +25,31 @@ const baseSchema = z.object({
     .number()
     .int('Frequency target must be an integer')
     .min(1, 'Frequency target must be at least 1'),
-  frequency_mode: frequencyModeEnum.optional().default('weekly_target'),
+  frequency_mode: frequencyModeEnum.default('weekly_target'),
   frequency_days: z.array(z.number().int().min(0).max(6)).optional(),
   scope_type: scopeTypeEnum,
   mesocycle_id: z.number().int().positive().optional(),
   start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format').optional(),
   end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format').optional(),
 })
+
+// Frequency-mode-specific validation applied after base parse
+function validateFrequency(data: z.infer<typeof baseSchema>): string | null {
+  switch (data.frequency_mode) {
+    case 'specific_days':
+      if (!data.frequency_days || data.frequency_days.length === 0) {
+        return 'frequency_days must be a non-empty array for specific_days mode'
+      }
+      break
+    case 'weekly_target':
+      if (!data.frequency_target || data.frequency_target < 1) {
+        return 'frequency_target must be a positive number for weekly_target mode'
+      }
+      break
+    // daily needs no extra fields
+  }
+  return null
+}
 
 // Scope-specific validation applied after base parse
 function validateScope(data: z.infer<typeof baseSchema>): string | null {
@@ -47,16 +65,6 @@ function validateScope(data: z.infer<typeof baseSchema>): string | null {
       }
       break
     // global and skip_on_deload need no extra fields
-  }
-  return null
-}
-
-// Frequency mode validation
-function validateFrequency(data: z.infer<typeof baseSchema>): string | null {
-  if (data.frequency_mode === 'specific_days') {
-    if (!data.frequency_days || data.frequency_days.length === 0) {
-      return 'At least one day must be selected for specific days mode'
-    }
   }
   return null
 }
@@ -122,11 +130,11 @@ export async function createRoutineItem(
     return { success: false, error: firstError.message }
   }
 
+  const frequencyError = validateFrequency(parsed.data)
+  if (frequencyError) return { success: false, error: frequencyError }
+
   const scopeError = validateScope(parsed.data)
   if (scopeError) return { success: false, error: scopeError }
-
-  const freqError = validateFrequency(parsed.data)
-  if (freqError) return { success: false, error: freqError }
 
   const { name, category, input_fields, scope_type, mesocycle_id, start_date, end_date } = parsed.data
 
@@ -186,11 +194,11 @@ export async function updateRoutineItem(
     return { success: false, error: firstError.message }
   }
 
+  const frequencyError = validateFrequency(parsed.data)
+  if (frequencyError) return { success: false, error: frequencyError }
+
   const scopeError = validateScope(parsed.data)
   if (scopeError) return { success: false, error: scopeError }
-
-  const freqError = validateFrequency(parsed.data)
-  if (freqError) return { success: false, error: freqError }
 
   const { name, category, input_fields, scope_type, mesocycle_id, start_date, end_date } = parsed.data
 

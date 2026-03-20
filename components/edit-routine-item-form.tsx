@@ -46,7 +46,7 @@ type RoutineItem = {
   has_sets: boolean
   has_reps: boolean
   frequency_target: number
-  frequency_mode: 'daily' | 'specific_days' | 'weekly_target'
+  frequency_mode: FrequencyMode
   frequency_days: number[] | null
   scope: string
   mesocycle_id: number | null
@@ -93,7 +93,7 @@ export function EditRoutineItemForm({
   const [inputFields, setInputFields] = useState<InputField[]>(itemToInputFields(item))
   const [frequencyMode, setFrequencyMode] = useState<FrequencyMode>(item.frequency_mode)
   const [weeklyTarget, setWeeklyTarget] = useState(item.frequency_target)
-  const [selectedDays, setSelectedDays] = useState<number[]>(item.frequency_days ?? [1])
+  const [selectedDays, setSelectedDays] = useState<number[]>(item.frequency_days ?? [])
   const [scopeType, setScopeType] = useState<ScopeType>(itemToScopeType(item))
   const [mesocycleId, setMesocycleId] = useState(item.mesocycle_id ? String(item.mesocycle_id) : '')
   const [startDate, setStartDate] = useState(item.start_date ?? '')
@@ -109,13 +109,11 @@ export function EditRoutineItemForm({
 
   function handleModeChange(mode: FrequencyMode) {
     setFrequencyMode(mode)
-    if (mode === 'weekly_target') {
-      setSelectedDays([1])
+    // Clear irrelevant data on mode switch
+    if (mode === 'daily') {
+      setSelectedDays([])
     } else if (mode === 'specific_days') {
-      setWeeklyTarget(3)
-    } else {
-      setSelectedDays([1])
-      setWeeklyTarget(3)
+      setSelectedDays(selectedDays.length > 0 ? selectedDays : [1])
     }
   }
 
@@ -128,6 +126,7 @@ export function EditRoutineItemForm({
       return
     }
 
+    // Frequency mode validation
     if (frequencyMode === 'specific_days' && selectedDays.length === 0) {
       setError('At least one day must be selected')
       return

@@ -304,6 +304,39 @@ describe('createRoutineItem', () => {
     const result = await createRoutineItem({ ...validGlobal, name: '  Morning Stretch  ' })
     expect(result.success).toBe(true)
   })
+
+  // --- Validation: frequency_mode ---
+  it('rejects specific_days with missing frequency_days', async () => {
+    const result = await createRoutineItem({
+      ...validGlobal,
+      frequency_mode: 'specific_days',
+      frequency_days: undefined,
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toMatch(/frequency_days/)
+  })
+
+  it('rejects specific_days with empty frequency_days', async () => {
+    const result = await createRoutineItem({
+      ...validGlobal,
+      frequency_mode: 'specific_days',
+      frequency_days: [],
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toMatch(/frequency_days/)
+  })
+
+  it('accepts specific_days with valid frequency_days', async () => {
+    const result = await createRoutineItem({
+      ...validGlobal,
+      frequency_mode: 'specific_days',
+      frequency_days: [1, 3, 5],
+    })
+    // Should pass validation (may fail at DB layer due to mock)
+    if (!result.success) {
+      expect(result.error).not.toMatch(/frequency_days/)
+    }
+  })
 })
 
 describe('updateRoutineItem', () => {
@@ -465,6 +498,17 @@ describe('updateRoutineItem', () => {
     })
     expect(result.success).toBe(false)
     if (!result.success) expect(result.error).toMatch(/mesocycle/i)
+  })
+
+  it('rejects specific_days with empty frequency_days on update', async () => {
+    const result = await updateRoutineItem({
+      id: 1,
+      ...validGlobal,
+      frequency_mode: 'specific_days',
+      frequency_days: [],
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toMatch(/frequency_days/)
   })
 })
 
