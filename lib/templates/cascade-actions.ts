@@ -91,7 +91,7 @@ export async function cascadeUpdateTemplates(
       updated++
     }
 
-    return { updated, skipped, skippedCompleted }
+    return { updated, skipped, skippedCompleted, skippedNoMatch: 0 }
   })
 
   revalidatePath('/mesocycles')

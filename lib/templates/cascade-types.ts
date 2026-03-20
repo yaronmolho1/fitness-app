@@ -11,6 +11,7 @@ export type CascadeSummary = {
   updated: number
   skipped: number
   skippedCompleted: number
+  skippedNoMatch: number
 }
 
 export type CascadePreviewTarget = {
