@@ -30,15 +30,16 @@ describe('Sidebar', () => {
     cleanup()
   })
 
-  it('renders all 5 nav links', () => {
+  it('renders all 6 nav links including Progression', () => {
     render(<Sidebar />)
     const links = screen.getAllByRole('link')
-    expect(links).toHaveLength(5)
+    expect(links).toHaveLength(6)
     expect(links[0]).toHaveAttribute('href', '/')
     expect(links[1]).toHaveAttribute('href', '/exercises')
     expect(links[2]).toHaveAttribute('href', '/mesocycles')
     expect(links[3]).toHaveAttribute('href', '/calendar')
-    expect(links[4]).toHaveAttribute('href', '/routines')
+    expect(links[4]).toHaveAttribute('href', '/progression')
+    expect(links[5]).toHaveAttribute('href', '/routines')
   })
 
   it('renders logout button', () => {
@@ -53,6 +54,14 @@ describe('Sidebar', () => {
     const exercisesLink = links[1]
     expect(exercisesLink.className).toContain('bg-accent text-accent-foreground')
     expect(links[0].className).not.toContain('bg-accent text-accent-foreground')
+  })
+
+  it('highlights progression route when active', () => {
+    vi.mocked(usePathname).mockReturnValue('/progression')
+    render(<Sidebar />)
+    const links = screen.getAllByRole('link')
+    expect(links[4]).toHaveAttribute('href', '/progression')
+    expect(links[4].className).toContain('bg-accent text-accent-foreground')
   })
 
   it('calls logout endpoint and redirects', async () => {
