@@ -465,4 +465,76 @@ describe('getDayDetail', () => {
     if (result.type !== 'projected') return
     expect(result.is_deload).toBe(false)
   })
+
+  // ============================================================================
+  // T124: Quick links — mesocycle_id and mesocycle_status in results
+  // ============================================================================
+
+  it('projected result includes mesocycle_id and mesocycle_status', async () => {
+    sqlite.exec(`
+      INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
+      VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
+      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+      VALUES (1, 1, 'Push A', 'push-a', 'resistance');
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type)
+      VALUES (1, 0, 1, 'normal');
+    `)
+
+    const result = await getDayDetail(db, '2026-03-02')
+    expect(result.type).toBe('projected')
+    if (result.type !== 'projected') return
+    expect(result.mesocycle_id).toBe(1)
+    expect(result.mesocycle_status).toBe('active')
+  })
+
+  it('completed result includes mesocycle_id and mesocycle_status', async () => {
+    const snapshot = JSON.stringify({
+      version: 1,
+      name: 'Push A',
+      modality: 'resistance',
+    })
+
+    sqlite.exec(`
+      INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
+      VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'completed');
+      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+      VALUES (1, 1, 'Push A', 'push-a', 'resistance');
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type)
+      VALUES (1, 0, 1, 'normal');
+      INSERT INTO logged_workouts (id, template_id, canonical_name, log_date, logged_at, template_snapshot)
+      VALUES (1, 1, 'push-a', '2026-03-02', 1740900000, '${snapshot}');
+    `)
+
+    const result = await getDayDetail(db, '2026-03-02')
+    expect(result.type).toBe('completed')
+    if (result.type !== 'completed') return
+    expect(result.mesocycle_id).toBe(1)
+    expect(result.mesocycle_status).toBe('completed')
+  })
+
+  it('rest day within mesocycle includes mesocycle_id and mesocycle_status', async () => {
+    sqlite.exec(`
+      INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
+      VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
+      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+      VALUES (1, 1, 'Push A', 'push-a', 'resistance');
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type)
+      VALUES (1, 0, 1, 'normal');
+    `)
+
+    // 2026-03-03 is Tuesday, no schedule entry
+    const result = await getDayDetail(db, '2026-03-03')
+    expect(result.type).toBe('rest')
+    if (result.type !== 'rest') return
+    expect(result.mesocycle_id).toBe(1)
+    expect(result.mesocycle_status).toBe('active')
+  })
+
+  it('rest day outside any mesocycle has no mesocycle_id', async () => {
+    const result = await getDayDetail(db, '2026-03-10')
+    expect(result.type).toBe('rest')
+    if (result.type !== 'rest') return
+    expect(result.mesocycle_id).toBeUndefined()
+    expect(result.mesocycle_status).toBeUndefined()
+  })
 })
