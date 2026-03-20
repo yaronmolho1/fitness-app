@@ -10,7 +10,7 @@ import type { CascadeScope, CascadeSummary } from './cascade-types'
 
 type SlotParamUpdates = {
   sets?: number
-  reps?: number
+  reps?: number | string
   weight?: number | null
   rpe?: number | null
   rest_seconds?: number | null
