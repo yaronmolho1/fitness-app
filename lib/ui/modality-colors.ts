@@ -23,6 +23,11 @@ export const MODALITY_COLORS: Record<string, ModalityColorConfig> = {
     badge: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200',
     accent: 'border-l-amber-500',
   },
+  mixed: {
+    cell: 'bg-violet-100 border-violet-300 text-violet-900 dark:bg-violet-900/30 dark:border-violet-700 dark:text-violet-200 modality-mixed',
+    badge: 'bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-200',
+    accent: 'border-l-violet-500',
+  },
 }
 
 const FALLBACK: ModalityColorConfig = {

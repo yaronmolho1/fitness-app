@@ -98,3 +98,42 @@ describe('MODALITY_COLORS', () => {
     }
   })
 })
+
+// T123: mixed modality colors
+describe('mixed modality (T123)', () => {
+  it('returns distinct cell classes for mixed modality', () => {
+    const classes = getModalityClasses('mixed')
+    expect(classes).toContain('modality-mixed')
+    expect(classes).not.toContain('modality-unknown')
+  })
+
+  it('returns distinct badge classes for mixed modality', () => {
+    const classes = getModalityBadgeClasses('mixed')
+    expect(classes).not.toContain('bg-gray-100')
+  })
+
+  it('returns distinct accent class for mixed modality', () => {
+    const accent = getModalityAccentClass('mixed')
+    expect(accent).not.toContain('gray')
+  })
+
+  it('MODALITY_COLORS includes mixed entry', () => {
+    expect(MODALITY_COLORS).toHaveProperty('mixed')
+  })
+
+  it('mixed modality has dark mode variants', () => {
+    const config = MODALITY_COLORS['mixed']
+    expect(config.cell).toContain('dark:')
+    expect(config.badge).toContain('dark:')
+  })
+
+  it('mixed color is distinct from resistance, running, and mma', () => {
+    const mixed = getModalityClasses('mixed')
+    const resistance = getModalityClasses('resistance')
+    const running = getModalityClasses('running')
+    const mma = getModalityClasses('mma')
+    expect(mixed).not.toBe(resistance)
+    expect(mixed).not.toBe(running)
+    expect(mixed).not.toBe(mma)
+  })
+})

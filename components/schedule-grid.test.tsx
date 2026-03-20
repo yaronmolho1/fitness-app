@@ -18,6 +18,7 @@ const mockTemplates = [
   { id: 1, name: 'Push A', canonical_name: 'push-a', modality: 'resistance' as const },
   { id: 2, name: 'Pull A', canonical_name: 'pull-a', modality: 'resistance' as const },
   { id: 3, name: 'Legs A', canonical_name: 'legs-a', modality: 'resistance' as const },
+  { id: 4, name: 'Strength + Cardio', canonical_name: 'strength-cardio', modality: 'mixed' as const },
 ]
 
 function buildSchedule(
@@ -490,6 +491,90 @@ describe('ScheduleGrid', () => {
       await waitFor(() => {
         expect(within(mondayCell).getByText('Push A')).toBeInTheDocument()
         expect(within(mondayCell).getByText('Pull A')).toBeInTheDocument()
+      })
+    })
+
+    // T123: mixed template in schedule grid
+    it('renders mixed template name in schedule entry', () => {
+      const schedule = buildSchedule([
+        { day_of_week: 0, template_id: 4, template_name: 'Strength + Cardio', period: 'morning' },
+      ])
+
+      render(
+        <ScheduleGrid
+          mesocycleId={1}
+          templates={mockTemplates}
+          schedule={schedule}
+          isCompleted={false}
+          variant="normal"
+        />
+      )
+
+      const mondayCell = screen.getByTestId('day-cell-0')
+      expect(within(mondayCell).getByText('Strength + Cardio')).toBeInTheDocument()
+    })
+
+    it('mixed template appears in picker alongside other modalities', async () => {
+      const user = userEvent.setup()
+      render(
+        <ScheduleGrid
+          mesocycleId={1}
+          templates={mockTemplates}
+          schedule={[]}
+          isCompleted={false}
+          variant="normal"
+        />
+      )
+
+      const mondayCell = screen.getByTestId('day-cell-0')
+      const addBtn = within(mondayCell).getByRole('button', { name: /add morning/i })
+      await user.click(addBtn)
+
+      // Picker should show the mixed template
+      expect(screen.getByText('Strength + Cardio')).toBeInTheDocument()
+    })
+
+    it('assigns mixed template via picker', async () => {
+      const user = userEvent.setup()
+      vi.mocked(assignTemplate).mockResolvedValue({
+        success: true,
+        data: {
+          id: 1,
+          mesocycle_id: 1,
+          day_of_week: 0,
+          template_id: 4,
+          week_type: 'normal',
+          period: 'morning',
+          time_slot: null,
+          created_at: new Date(),
+        },
+      })
+
+      render(
+        <ScheduleGrid
+          mesocycleId={1}
+          templates={mockTemplates}
+          schedule={[]}
+          isCompleted={false}
+          variant="normal"
+        />
+      )
+
+      const mondayCell = screen.getByTestId('day-cell-0')
+      const addBtn = within(mondayCell).getByRole('button', { name: /add morning/i })
+      await user.click(addBtn)
+
+      const templateOption = screen.getByText('Strength + Cardio')
+      await user.click(templateOption)
+
+      await waitFor(() => {
+        expect(assignTemplate).toHaveBeenCalledWith({
+          mesocycle_id: 1,
+          day_of_week: 0,
+          template_id: 4,
+          week_type: 'normal',
+          period: 'morning',
+        })
       })
     })
 
