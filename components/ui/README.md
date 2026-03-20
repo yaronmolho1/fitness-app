@@ -21,3 +21,5 @@ shadcn/ui primitives and shared low-level components.
 - `skeleton.tsx` — `Skeleton` loading placeholder
 - `tabs.tsx` — `Tabs`, `TabsList`, `TabsTrigger`, `TabsContent`
 - `textarea.tsx` — `Textarea` multi-line input
+- `calendar.tsx` — `Calendar` date picker calendar built on react-day-picker with day/month/year navigation views
+- `date-picker.tsx` — `DatePicker` popover date input: stores YYYY-MM-DD, displays dd/mm/yyyy, uses Calendar + Popover

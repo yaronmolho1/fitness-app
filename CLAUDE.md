@@ -55,6 +55,7 @@ docker compose up -d   # containerized run
 - **Hybrid API** (ADR-004): Server Actions for mutations, Route Handlers for computed reads
 - **Drizzle v2**: use `defineRelations` — NOT old `relations()` from expense-tracker
 - **Date storage**: `text` YYYY-MM-DD for calendar dates, `integer({ mode: 'timestamp' })` for events
+- **Date display**: dd/mm/yyyy everywhere in UI. Shared `lib/date-format.ts` — never use `toLocaleDateString` directly
 - **JSON columns**: `text({ mode: 'json' }).$type<T>()` with `version` field — never `blob`
 - **IDs**: auto-increment integers, no UUIDs
 - **Middleware**: NO `better-sqlite3` imports (Edge runtime). JWT via `jose` only.

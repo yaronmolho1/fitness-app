@@ -8,7 +8,7 @@ Shared React components — app-level UI and navigation.
 - `login-form.tsx` — `LoginForm` card with username/password, calls `/api/auth/login`
 - `exercise-form.tsx` — `ExerciseForm` create form with name, modality, muscle group, equipment fields
 - `exercise-picker.tsx` — `ExercisePicker` searchable exercise selector, resistance-only filter, onSelect callback
-- `mesocycle-form.tsx` — `MesocycleForm` create form with name, start date, work weeks, deload toggle, live end date preview
+- `mesocycle-form.tsx` — `MesocycleForm` create/edit form with name, start date (DatePicker), work weeks, deload toggle, live end date preview; supports `mode` prop for create vs edit
 - `schedule-grid.tsx` — `ScheduleGrid` 7-day weekly schedule grid; assign/replace/remove template per day slot via `assignTemplate`/`removeAssignment` actions; read-only when mesocycle is completed
 - `status-badge.tsx` — `StatusBadge` colored pill for mesocycle status (planned/active/completed)
 - `slot-list.tsx` — `SlotList` renders exercise slots for a template with drag-reorder (desktop drag-and-drop + mobile long-press), inline edit (sets/reps/weight/RPE/rest/guidelines), remove confirmation, and add-exercise picker; triggers `SlotCascadeScopeSelector` after add/edit/remove to cascade changes; `SlotRow` internal component
@@ -34,6 +34,9 @@ Shared React components — app-level UI and navigation.
 - `mma-logging-form.tsx` — `MmaLoggingForm` post-workout logging form for MMA/BJJ templates (duration, feeling, notes)
 - `empty-state.tsx` — `EmptyState` shared empty state with optional icon, message, description, and action button
 - `mixed-template-form.tsx` — `MixedTemplateForm` creation form for mixed-modality templates: name input, dynamic section editor (add/remove/reorder), per-section modality-specific fields, 2+ sections with 2+ modalities validation
+- `mixed-logging-form.tsx` — `MixedLoggingForm` post-workout logging form for mixed-modality templates with per-section resistance/running/MMA inputs
+- `frequency-mode-selector.tsx` — `FrequencyModeSelector` radio group for routine frequency (daily, weekly target, specific days) with day picker
+- `create-routine-item-form.tsx` — `CreateRoutineItemForm` form for adding routine items with name, category, input fields, frequency mode, scope
 
 ## Subdirectories
 - `layout/` — app shell and page layout primitives: desktop sidebar, mobile header + drawer, page container, page header, section heading ([README](./layout/README.md))
