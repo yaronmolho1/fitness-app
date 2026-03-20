@@ -10,7 +10,7 @@ import {
 export type CalendarDay = {
   date: string
   template_name: string | null
-  modality: 'resistance' | 'running' | 'mma' | null
+  modality: 'resistance' | 'running' | 'mma' | 'mixed' | null
   mesocycle_id: number | null
   is_deload: boolean
   status: 'completed' | 'projected' | 'rest'
