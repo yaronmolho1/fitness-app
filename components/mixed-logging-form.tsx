@@ -490,8 +490,8 @@ export function MixedLoggingForm({ data }: { data: MixedWorkoutData }) {
             order: slot.order,
             rpe: state.rpe[slotIndex],
             sets: (state.sets[slotIndex] ?? []).map((s) => ({
-              reps: s.reps === '' ? null : parseInt(s.reps, 10),
-              weight: s.weight === '' ? null : parseFloat(s.weight),
+              reps: s.reps === '' || isNaN(parseInt(s.reps, 10)) ? null : parseInt(s.reps, 10),
+              weight: s.weight === '' || isNaN(parseFloat(s.weight)) ? null : parseFloat(s.weight),
             })),
           })),
         }
@@ -503,9 +503,9 @@ export function MixedLoggingForm({ data }: { data: MixedWorkoutData }) {
         return {
           sectionId: section.id,
           modality: 'running' as const,
-          actualDistance: s.distance === '' ? null : parseFloat(s.distance),
+          actualDistance: s.distance === '' || isNaN(parseFloat(s.distance)) ? null : parseFloat(s.distance),
           actualAvgPace: s.pace === '' ? null : s.pace,
-          actualAvgHr: s.hr === '' ? null : parseInt(s.hr, 10),
+          actualAvgHr: s.hr === '' || isNaN(parseInt(s.hr, 10)) ? null : parseInt(s.hr, 10),
         }
       }
 
@@ -515,7 +515,7 @@ export function MixedLoggingForm({ data }: { data: MixedWorkoutData }) {
       return {
         sectionId: section.id,
         modality: 'mma' as const,
-        actualDurationMinutes: s.duration === '' ? null : parseInt(s.duration, 10),
+        actualDurationMinutes: s.duration === '' || isNaN(parseInt(s.duration, 10)) ? null : parseInt(s.duration, 10),
         feeling: s.feeling,
       }
     })
