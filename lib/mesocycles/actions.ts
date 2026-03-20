@@ -63,6 +63,74 @@ export async function createMesocycle(formData: FormData): Promise<CreateResult>
   return { success: true, id: result.id }
 }
 
+type UpdateResult =
+  | { success: true; id: number }
+  | { success: false; errors: Record<string, string> }
+
+export async function updateMesocycle(id: number, formData: FormData): Promise<UpdateResult> {
+  if (!Number.isInteger(id) || id < 1) {
+    return { success: false, errors: { server: 'Invalid mesocycle ID' } }
+  }
+
+  const meso = db
+    .select({ id: mesocycles.id, status: mesocycles.status })
+    .from(mesocycles)
+    .where(eq(mesocycles.id, id))
+    .get()
+
+  if (!meso) {
+    return { success: false, errors: { server: 'Mesocycle not found' } }
+  }
+
+  if (meso.status === 'completed') {
+    return { success: false, errors: { server: 'Cannot edit a completed mesocycle' } }
+  }
+
+  const errors: Record<string, string> = {}
+
+  const rawName = formData.get('name')
+  const rawStartDate = formData.get('start_date')
+  const rawWorkWeeks = formData.get('work_weeks')
+  const rawHasDeload = formData.get('has_deload')
+
+  const name = typeof rawName === 'string' ? rawName.trim() : ''
+  if (!name) {
+    errors.name = 'Name is required'
+  }
+
+  const startDate = typeof rawStartDate === 'string' ? rawStartDate : ''
+  if (!startDate || !DATE_REGEX.test(startDate)) {
+    errors.start_date = 'Valid start date (YYYY-MM-DD) is required'
+  }
+
+  const workWeeksStr = typeof rawWorkWeeks === 'string' ? rawWorkWeeks : ''
+  const workWeeks = Number(workWeeksStr)
+  if (!workWeeksStr || !Number.isInteger(workWeeks) || workWeeks < 1) {
+    errors.work_weeks = 'Work weeks must be a positive integer'
+  }
+
+  if (Object.keys(errors).length > 0) {
+    return { success: false, errors }
+  }
+
+  const hasDeload = rawHasDeload === 'true'
+  const endDate = calculateEndDate(startDate, workWeeks, hasDeload)
+
+  db.update(mesocycles)
+    .set({
+      name,
+      start_date: startDate,
+      end_date: endDate,
+      work_weeks: workWeeks,
+      has_deload: hasDeload,
+    })
+    .where(eq(mesocycles.id, id))
+    .run()
+
+  revalidatePath('/mesocycles')
+  return { success: true, id }
+}
+
 type StatusResult =
   | { success: true }
   | { success: false; error: string }
