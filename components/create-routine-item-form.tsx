@@ -70,15 +70,11 @@ export function CreateRoutineItemForm({
 
   function handleModeChange(mode: FrequencyMode) {
     setFrequencyMode(mode)
-    // Reset mode-specific data when switching
-    if (mode === 'weekly_target') {
-      setSelectedDays([1])
+    // Clear irrelevant data on mode switch
+    if (mode === 'daily') {
+      setSelectedDays([])
     } else if (mode === 'specific_days') {
-      setWeeklyTarget(3)
-    } else {
-      // daily
-      setSelectedDays([1])
-      setWeeklyTarget(3)
+      setSelectedDays([1]) // Default to Monday
     }
   }
 
@@ -91,10 +87,15 @@ export function CreateRoutineItemForm({
       return
     }
 
+    // Frequency mode validation
     if (frequencyMode === 'specific_days' && selectedDays.length === 0) {
       setError('At least one day must be selected')
       return
     }
+
+    const frequencyTarget =
+      frequencyMode === 'weekly_target' ? weeklyTarget :
+      frequencyMode === 'daily' ? 7 : selectedDays.length
 
     setSubmitting(true)
     try {
