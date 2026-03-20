@@ -482,6 +482,82 @@ describe('CalendarGrid – deload week distinction', () => {
   })
 })
 
+// T123: mixed modality badge in calendar
+describe('CalendarGrid – mixed modality (T123)', () => {
+  const MIXED_DAYS: CalendarDay[] = Array.from({ length: 31 }, (_, i) => {
+    const day = i + 1
+    const date = `2026-03-${String(day).padStart(2, '0')}`
+    if (day === 2) return { date, template_name: 'Strength + Cardio', modality: 'mixed' as const, mesocycle_id: 1, is_deload: false, status: 'projected' as const, period: 'morning' as const, time_slot: null }
+    if (day === 4) return { date, template_name: 'Push A', modality: 'resistance' as const, mesocycle_id: 1, is_deload: false, status: 'projected' as const, period: 'morning' as const, time_slot: null }
+    return { date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest' as const, period: null, time_slot: null }
+  })
+
+  afterEach(() => {
+    cleanup()
+    vi.restoreAllMocks()
+  })
+
+  beforeEach(() => {
+    mockFetch({ '2026-03': MIXED_DAYS })
+  })
+
+  it('applies mixed modality color class to calendar cell', async () => {
+    render(<CalendarGrid initialMonth="2026-03" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('calendar-day-2026-03-02')).toBeInTheDocument()
+    })
+
+    expect(screen.getByTestId('calendar-day-2026-03-02').className).toMatch(/mixed/)
+  })
+
+  it('mixed modality class is distinct from resistance', async () => {
+    render(<CalendarGrid initialMonth="2026-03" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('calendar-day-2026-03-02')).toBeInTheDocument()
+    })
+
+    const mixedClass = screen.getByTestId('calendar-day-2026-03-02').className
+    const resistanceClass = screen.getByTestId('calendar-day-2026-03-04').className
+    expect(mixedClass).not.toBe(resistanceClass)
+  })
+
+  it('displays template name for mixed modality day', async () => {
+    render(<CalendarGrid initialMonth="2026-03" />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Strength + Cardio')).toBeInTheDocument()
+    })
+  })
+
+  it('mixed template in multi-workout pill has combined badge styling', async () => {
+    // Two workouts on same day: mixed + running
+    const multiMixedDays: CalendarDay[] = Array.from({ length: 31 }, (_, i) => {
+      const day = i + 1
+      const date = `2026-03-${String(day).padStart(2, '0')}`
+      if (day === 2) return [
+        { date, template_name: 'Strength + Cardio', modality: 'mixed' as const, mesocycle_id: 1, is_deload: false, status: 'projected' as const, period: 'morning' as const, time_slot: null },
+        { date, template_name: '5K Run', modality: 'running' as const, mesocycle_id: 1, is_deload: false, status: 'projected' as const, period: 'evening' as const, time_slot: null },
+      ]
+      return [{ date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest' as const, period: null, time_slot: null }]
+    }).flat()
+
+    mockFetch({ '2026-03': multiMixedDays })
+    render(<CalendarGrid initialMonth="2026-03" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('calendar-day-2026-03-02')).toBeInTheDocument()
+    })
+
+    const dayCell = screen.getByTestId('calendar-day-2026-03-02')
+    const pills = dayCell.querySelectorAll('[data-testid="workout-pill"]')
+    expect(pills).toHaveLength(2)
+    // First pill (mixed) should not use gray fallback
+    expect(pills[0].className).not.toMatch(/gray/)
+  })
+})
+
 // T115: multi-workout per day pills
 describe('CalendarGrid – multi-workout pills (T115)', () => {
   // Day 2 (Monday): two workouts — morning resistance + evening running

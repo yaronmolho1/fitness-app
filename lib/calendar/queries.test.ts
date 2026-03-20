@@ -411,6 +411,80 @@ describe('getCalendarProjection', () => {
     expect(mar8.modality).toBe('mma')
   })
 
+  // T123: mixed modality templates in calendar
+  describe('mixed modality templates (T123)', () => {
+    it('calendar projection shows modality=mixed for mixed template', async () => {
+      sqlite.exec(`
+        INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
+        VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
+        INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+        VALUES (1, 1, 'Strength + Cardio', 'strength-cardio', 'mixed');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type)
+        VALUES (1, 0, 1, 'normal');
+      `)
+
+      const result = await getCalendarProjection(db, '2026-03')
+      const mar2 = result.days.find((d) => d.date === '2026-03-02')!
+      expect(mar2.template_name).toBe('Strength + Cardio')
+      expect(mar2.modality).toBe('mixed')
+      expect(mar2.mesocycle_id).toBe(1)
+      expect(mar2.status).toBe('projected')
+    })
+
+    it('mixed template canonical name cascade works in calendar context', async () => {
+      // Two mesocycles with same canonical_name mixed template
+      sqlite.exec(`
+        INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
+        VALUES (1, 'Block A', '2026-03-02', '2026-03-15', 2, 0, 'active');
+        INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
+        VALUES (2, 'Block B', '2026-03-16', '2026-03-29', 2, 0, 'planned');
+        INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+        VALUES (1, 1, 'Strength + Cardio', 'strength-cardio', 'mixed');
+        INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+        VALUES (2, 2, 'Strength + Cardio v2', 'strength-cardio', 'mixed');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type)
+        VALUES (1, 0, 1, 'normal');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type)
+        VALUES (2, 0, 2, 'normal');
+      `)
+
+      const result = await getCalendarProjection(db, '2026-03')
+
+      // Mar 9 Mon -> Block A
+      const mar9 = result.days.find((d) => d.date === '2026-03-09')!
+      expect(mar9.modality).toBe('mixed')
+      expect(mar9.template_name).toBe('Strength + Cardio')
+
+      // Mar 16 Mon -> Block B (same canonical_name, different template)
+      const mar16 = result.days.find((d) => d.date === '2026-03-16')!
+      expect(mar16.modality).toBe('mixed')
+      expect(mar16.template_name).toBe('Strength + Cardio v2')
+    })
+
+    it('mixed template coexists with single-modality on same day', async () => {
+      sqlite.exec(`
+        INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
+        VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
+        INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+        VALUES (1, 1, 'Strength + Cardio', 'strength-cardio', 'mixed');
+        INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+        VALUES (2, 1, '5K Run', '5k-run', 'running');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
+        VALUES (1, 0, 1, 'normal', 'morning');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
+        VALUES (1, 0, 2, 'normal', 'evening');
+      `)
+
+      const result = await getCalendarProjection(db, '2026-03')
+      const mar2Entries = result.days.filter((d) => d.date === '2026-03-02')
+      expect(mar2Entries).toHaveLength(2)
+      expect(mar2Entries[0].modality).toBe('mixed')
+      expect(mar2Entries[0].template_name).toBe('Strength + Cardio')
+      expect(mar2Entries[1].modality).toBe('running')
+      expect(mar2Entries[1].template_name).toBe('5K Run')
+    })
+  })
+
   // T115: multi-workout per day + period/time_slot fields
   describe('multi-workout per day (T115)', () => {
     it('returns period and time_slot fields on each calendar day', async () => {
