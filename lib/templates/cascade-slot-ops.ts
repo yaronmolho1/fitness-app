@@ -26,7 +26,7 @@ export async function cascadeAddSlot(
 
   // "this-only" means the slot was already added locally — no cascade needed
   if (scope === 'this-only') {
-    return { success: true, data: { updated: 0, skipped: 0, skippedCompleted: 0 } }
+    return { success: true, data: { updated: 0, skipped: 0, skippedCompleted: 0, skippedNoMatch: 0 } }
   }
 
   // Look up source slot
@@ -111,7 +111,7 @@ export async function cascadeAddSlot(
       updated++
     }
 
-    return { updated, skipped, skippedCompleted }
+    return { updated, skipped, skippedCompleted, skippedNoMatch: 0 }
   })
 
   revalidatePath('/mesocycles')
@@ -134,7 +134,7 @@ export async function cascadeRemoveSlot(
 
   // "this-only" means the slot was already removed locally — no cascade needed
   if (scope === 'this-only') {
-    return { success: true, data: { updated: 0, skipped: 0, skippedCompleted: 0 } }
+    return { success: true, data: { updated: 0, skipped: 0, skippedCompleted: 0, skippedNoMatch: 0 } }
   }
 
   // Get cascade targets (sibling templates)
@@ -173,6 +173,7 @@ export async function cascadeRemoveSlot(
 
     let updated = 0
     let skipped = 0
+    let skippedNoMatch = 0
 
     for (const sibling of siblings) {
       if (loggedSet.has(sibling.id)) {
@@ -196,7 +197,8 @@ export async function cascadeRemoveSlot(
       const match = matchResult.matches.get(sourceIdentifier.id)
 
       if (!match) {
-        // No matching slot — skip silently (not counted as "skipped")
+        // No matching slot in diverged template
+        skippedNoMatch++
         continue
       }
 
@@ -223,7 +225,7 @@ export async function cascadeRemoveSlot(
       updated++
     }
 
-    return { updated, skipped, skippedCompleted }
+    return { updated, skipped, skippedCompleted, skippedNoMatch }
   })
 
   revalidatePath('/mesocycles')

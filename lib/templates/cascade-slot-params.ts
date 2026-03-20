@@ -95,6 +95,7 @@ export async function cascadeSlotParams(
 
     let updated = 0
     let skipped = 0
+    let skippedNoMatch = 0
 
     for (const target of targets) {
       if (loggedSet.has(target.id)) {
@@ -118,7 +119,8 @@ export async function cascadeSlotParams(
       const match = matchResult.matches.get(sourceSlot.id)
 
       if (!match) {
-        // No matching slot in this template — not counted as "skipped"
+        // No matching slot in diverged template
+        skippedNoMatch++
         continue
       }
 
@@ -131,7 +133,7 @@ export async function cascadeSlotParams(
       updated++
     }
 
-    return { updated, skipped, skippedCompleted }
+    return { updated, skipped, skippedCompleted, skippedNoMatch }
   })
 
   revalidatePath('/mesocycles')

@@ -679,7 +679,8 @@ describe('cascadeRemoveSlot', () => {
       expect(result.success).toBe(true)
       if (result.success) {
         expect(result.data.updated).toBe(0)
-        expect(result.data.skipped).toBe(0) // no match = not counted as skipped
+        expect(result.data.skipped).toBe(0)
+        expect(result.data.skippedNoMatch).toBe(1) // t2 diverged, no matching slot
       }
 
       // t2 should be untouched

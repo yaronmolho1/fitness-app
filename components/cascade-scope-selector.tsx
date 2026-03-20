@@ -106,6 +106,11 @@ export function CascadeScopeSelector({ templateId, updates, onComplete, onCancel
               {summary.skipped} skipped
             </span>
           )}
+          {summary.skippedNoMatch > 0 && (
+            <span className="text-muted-foreground">
+              {summary.skippedNoMatch} no match
+            </span>
+          )}
         </div>
 
         <Button size="sm" variant="ghost" onClick={onComplete} aria-label="Done">
