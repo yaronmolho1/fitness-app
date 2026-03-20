@@ -33,6 +33,24 @@ const baseSchema = z.object({
   end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format').optional(),
 })
 
+// Frequency-mode-specific validation applied after base parse
+function validateFrequency(data: z.infer<typeof baseSchema>): string | null {
+  switch (data.frequency_mode) {
+    case 'specific_days':
+      if (!data.frequency_days || data.frequency_days.length === 0) {
+        return 'frequency_days must be a non-empty array for specific_days mode'
+      }
+      break
+    case 'weekly_target':
+      if (!data.frequency_target || data.frequency_target < 1) {
+        return 'frequency_target must be a positive number for weekly_target mode'
+      }
+      break
+    // daily needs no extra fields
+  }
+  return null
+}
+
 // Scope-specific validation applied after base parse
 function validateScope(data: z.infer<typeof baseSchema>): string | null {
   switch (data.scope_type) {
@@ -122,6 +140,9 @@ export async function createRoutineItem(
     return { success: false, error: firstError.message }
   }
 
+  const frequencyError = validateFrequency(parsed.data)
+  if (frequencyError) return { success: false, error: frequencyError }
+
   const scopeError = validateScope(parsed.data)
   if (scopeError) return { success: false, error: scopeError }
 
@@ -184,6 +205,9 @@ export async function updateRoutineItem(
     const firstError = parsed.error.issues[0]
     return { success: false, error: firstError.message }
   }
+
+  const frequencyError = validateFrequency(parsed.data)
+  if (frequencyError) return { success: false, error: frequencyError }
 
   const scopeError = validateScope(parsed.data)
   if (scopeError) return { success: false, error: scopeError }
