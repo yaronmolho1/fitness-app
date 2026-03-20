@@ -8,4 +8,5 @@ App shell and page layout primitives — navigation, containers, headers.
 - `sidebar-nav.tsx` — `SidebarNav` mobile slide-out Sheet drawer, renders same nav items + logout
 - `top-header.tsx` — `TopHeader` fixed mobile header bar with hamburger menu trigger and logout button
 - `page-container.tsx` — `PageContainer` wrapper with adaptive max-width (`narrow` / `wide` variant) and responsive padding
-- `page-header.tsx` — `PageHeader` consistent page header with title, optional description, and responsive actions slot
+- `page-header.tsx` — `PageHeader` consistent page header with title, optional description, breadcrumb, and responsive actions slot
+- `section-heading.tsx` — `SectionHeading` standardized `h2` heading for content sections within a page

@@ -36,6 +36,6 @@ Shared React components — app-level UI and navigation.
 - `mixed-template-form.tsx` — `MixedTemplateForm` creation form for mixed-modality templates: name input, dynamic section editor (add/remove/reorder), per-section modality-specific fields, 2+ sections with 2+ modalities validation
 
 ## Subdirectories
-- `layout/` — app shell navigation: desktop sidebar, mobile header + drawer ([README](./layout/README.md))
+- `layout/` — app shell and page layout primitives: desktop sidebar, mobile header + drawer, page container, page header, section heading ([README](./layout/README.md))
 - `schedule/` — schedule assignment UI: period selector, time slot picker ([README](./schedule/README.md))
 - `ui/` — shadcn/ui primitives ([README](./ui/README.md))
