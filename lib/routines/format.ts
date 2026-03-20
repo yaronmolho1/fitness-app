@@ -35,8 +35,8 @@ export function formatScopeSummary(
 
   if (scope === 'date_range' && startDate && endDate) {
     const fmt = (d: string) => {
-      const date = new Date(d + 'T00:00:00')
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      const [, month, day] = d.split('-')
+      return `${day}/${month}`
     }
     return `${fmt(startDate)} – ${fmt(endDate)}`
   }

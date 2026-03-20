@@ -7,6 +7,7 @@ import { saveMmaWorkout } from '@/lib/workouts/actions'
 import type { SaveMmaWorkoutInput } from '@/lib/workouts/actions'
 import type { MesocycleInfo, TemplateInfo } from '@/lib/today/queries'
 import { SectionHeading } from '@/components/layout/section-heading'
+import { formatDateWithWeekday } from '@/lib/date-format'
 
 export type MmaWorkoutData = {
   date: string
@@ -15,12 +16,7 @@ export type MmaWorkoutData = {
 }
 
 function formatDate(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00')
-  return date.toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  })
+  return formatDateWithWeekday(dateStr)
 }
 
 export function MmaLoggingForm({ data }: { data: MmaWorkoutData }) {

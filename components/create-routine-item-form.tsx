@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createRoutineItem } from '@/lib/routines/actions'
 import { Button } from '@/components/ui/button'
+import { DatePicker } from '@/components/ui/date-picker'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -208,22 +209,12 @@ export function CreateRoutineItemForm({
       {scopeType === 'date_range' && (
         <div className="flex gap-4">
           <div className="flex-1 space-y-2">
-            <Label htmlFor="create-start">Start Date</Label>
-            <Input
-              id="create-start"
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
+            <Label>Start Date</Label>
+            <DatePicker value={startDate} onChange={setStartDate} />
           </div>
           <div className="flex-1 space-y-2">
-            <Label htmlFor="create-end">End Date</Label>
-            <Input
-              id="create-end"
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
+            <Label>End Date</Label>
+            <DatePicker value={endDate} onChange={setEndDate} />
           </div>
         </div>
       )}
