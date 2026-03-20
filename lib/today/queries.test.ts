@@ -387,14 +387,15 @@ describe('getTodayWorkout', () => {
   it('returns no_active_mesocycle when no mesocycle is active', async () => {
     seedMesocycle({ status: 'planned' })
 
-    const result = await getTodayWorkout('2026-03-10')
+    const results = await getTodayWorkout('2026-03-10')
+    const result = results[0]
     expect(result.type).toBe('no_active_mesocycle')
     expect(result.date).toBe('2026-03-10')
   })
 
   it('returns no_active_mesocycle when DB is empty', async () => {
-    const result = await getTodayWorkout('2026-03-10')
-    expect(result.type).toBe('no_active_mesocycle')
+    const results = await getTodayWorkout('2026-03-10')
+    expect(results[0].type).toBe('no_active_mesocycle')
   })
 
   it('returns rest_day when no schedule entry for today', async () => {
@@ -403,7 +404,8 @@ describe('getTodayWorkout', () => {
     seedSchedule(meso.id, 1, tmpl.id) // Monday only
 
     // 2026-03-10 is a Tuesday (day 2)
-    const result = await getTodayWorkout('2026-03-10')
+    const results = await getTodayWorkout('2026-03-10')
+    const result = results[0]
     expect(result.type).toBe('rest_day')
     expect(result.date).toBe('2026-03-10')
   })
@@ -414,7 +416,8 @@ describe('getTodayWorkout', () => {
     seedSchedule(meso.id, 2, tmpl.id) // Tuesday
 
     // 2026-03-10 is Tuesday
-    const result = await getTodayWorkout('2026-03-10')
+    const results = await getTodayWorkout('2026-03-10')
+    const result = results[0]
     expect(result.type).toBe('workout')
     expect(result.date).toBe('2026-03-10')
     if (result.type === 'workout') {
@@ -432,7 +435,8 @@ describe('getTodayWorkout', () => {
     seedSlot(tmpl.id, ex2.id, 2, { sets: 3, reps: '10-12', rest_seconds: 90, guidelines: 'Slow eccentric' })
     seedSchedule(meso.id, 2, tmpl.id)
 
-    const result = await getTodayWorkout('2026-03-10')
+    const results = await getTodayWorkout('2026-03-10')
+    const result = results[0]
     expect(result.type).toBe('workout')
     if (result.type === 'workout') {
       expect(result.slots).toHaveLength(2)
@@ -462,7 +466,8 @@ describe('getTodayWorkout', () => {
     seedSlot(tmpl.id, ex1.id, 1)
     seedSchedule(meso.id, 2, tmpl.id)
 
-    const result = await getTodayWorkout('2026-03-10')
+    const results = await getTodayWorkout('2026-03-10')
+    const result = results[0]
     if (result.type === 'workout') {
       expect(result.slots[0].exercise_name).toBe('Bench Press')
       expect(result.slots[1].exercise_name).toBe('OHP')
@@ -483,7 +488,8 @@ describe('getTodayWorkout', () => {
     seedSchedule(meso.id, 2, tmplDeload.id, 'deload')
 
     // 2026-03-10 is Tuesday, week 2 (not deload)
-    const result = await getTodayWorkout('2026-03-10')
+    const results = await getTodayWorkout('2026-03-10')
+    const result = results[0]
     expect(result.type).toBe('workout')
     if (result.type === 'workout') {
       expect(result.template.name).toBe('Push Normal')
@@ -504,7 +510,8 @@ describe('getTodayWorkout', () => {
     seedSchedule(meso.id, 2, tmplDeload.id, 'deload')
 
     // 2026-03-31 is Tuesday in deload week
-    const result = await getTodayWorkout('2026-03-31')
+    const results = await getTodayWorkout('2026-03-31')
+    const result = results[0]
     expect(result.type).toBe('workout')
     if (result.type === 'workout') {
       expect(result.template.name).toBe('Push Deload')
@@ -523,7 +530,8 @@ describe('getTodayWorkout', () => {
     seedSchedule(meso.id, 2, tmpl.id, 'normal')
 
     // 2026-03-24 is Tuesday in week 4
-    const result = await getTodayWorkout('2026-03-24')
+    const results = await getTodayWorkout('2026-03-24')
+    const result = results[0]
     expect(result.type).toBe('workout')
     if (result.type === 'workout') {
       expect(result.template.name).toBe('Push A')
@@ -539,7 +547,8 @@ describe('getTodayWorkout', () => {
     const tmpl = seedTemplate(meso.id, 'Push A')
     seedSchedule(meso.id, 2, tmpl.id)
 
-    const result = await getTodayWorkout('2026-03-10')
+    const results = await getTodayWorkout('2026-03-10')
+    const result = results[0]
     if (result.type === 'workout' || result.type === 'rest_day') {
       expect(result.mesocycle.name).toBe('Hypertrophy Block')
       expect(result.mesocycle.id).toBe(meso.id)
@@ -555,11 +564,10 @@ describe('getTodayWorkout', () => {
     const tmpl = seedTemplate(meso.id, 'Push A')
     seedSchedule(meso.id, 2, tmpl.id) // Tuesday
 
-    // Log a workout for this template on 2026-03-10 (Tuesday)
     seedLoggedWorkout(tmpl.id, '2026-03-10', 'push-a')
 
-    const result = await getTodayWorkout('2026-03-10')
-    expect(result.type).toBe('already_logged')
+    const results = await getTodayWorkout('2026-03-10')
+    expect(results[0].type).toBe('already_logged')
   })
 
   it('returns workout when no log exists for today', async () => {
@@ -567,8 +575,8 @@ describe('getTodayWorkout', () => {
     const tmpl = seedTemplate(meso.id, 'Push A')
     seedSchedule(meso.id, 2, tmpl.id)
 
-    const result = await getTodayWorkout('2026-03-10')
-    expect(result.type).toBe('workout')
+    const results = await getTodayWorkout('2026-03-10')
+    expect(results[0].type).toBe('workout')
   })
 
   it('detection uses calendar date not timestamp (midnight boundary)', async () => {
@@ -576,11 +584,10 @@ describe('getTodayWorkout', () => {
     const tmpl = seedTemplate(meso.id, 'Push A')
     seedSchedule(meso.id, 2, tmpl.id) // Tuesday
 
-    // Logged yesterday (2026-03-09) at 23:59 — should NOT match today (2026-03-10)
     seedLoggedWorkout(tmpl.id, '2026-03-09', 'push-a')
 
-    const result = await getTodayWorkout('2026-03-10')
-    expect(result.type).toBe('workout')
+    const results = await getTodayWorkout('2026-03-10')
+    expect(results[0].type).toBe('workout')
   })
 
   it('log for different mesocycle does not trigger already_logged', async () => {
@@ -591,11 +598,10 @@ describe('getTodayWorkout', () => {
     const activeTmpl = seedTemplate(activeMeso.id, 'Push A')
     seedSchedule(activeMeso.id, 2, activeTmpl.id)
 
-    // Logged workout for the OLD mesocycle's template on today's date
     seedLoggedWorkout(oldTmpl.id, '2026-03-10', 'old-push')
 
-    const result = await getTodayWorkout('2026-03-10')
-    expect(result.type).toBe('workout')
+    const results = await getTodayWorkout('2026-03-10')
+    expect(results[0].type).toBe('workout')
   })
 
   it('already_logged response includes logged workout id and date', async () => {
@@ -605,7 +611,8 @@ describe('getTodayWorkout', () => {
 
     seedLoggedWorkout(tmpl.id, '2026-03-10', 'push-a')
 
-    const result = await getTodayWorkout('2026-03-10')
+    const results = await getTodayWorkout('2026-03-10')
+    const result = results[0]
     expect(result.type).toBe('already_logged')
     if (result.type === 'already_logged') {
       expect(result.date).toBe('2026-03-10')
@@ -623,7 +630,8 @@ describe('getTodayWorkout', () => {
 
     seedLoggedWorkout(tmpl.id, '2026-03-10', 'push-a', { rating: 4, notes: 'Great session' })
 
-    const result = await getTodayWorkout('2026-03-10')
+    const results = await getTodayWorkout('2026-03-10')
+    const result = results[0]
     if (result.type === 'already_logged') {
       expect(result.loggedWorkout.rating).toBe(4)
       expect(result.loggedWorkout.notes).toBe('Great session')
@@ -637,7 +645,8 @@ describe('getTodayWorkout', () => {
 
     seedLoggedWorkout(tmpl.id, '2026-03-10', 'push-a')
 
-    const result = await getTodayWorkout('2026-03-10')
+    const results = await getTodayWorkout('2026-03-10')
+    const result = results[0]
     if (result.type === 'already_logged') {
       expect(result.loggedWorkout.template_snapshot).toBeDefined()
       expect(result.loggedWorkout.template_snapshot.version).toBe(1)
@@ -649,12 +658,10 @@ describe('getTodayWorkout', () => {
     const tmpl = seedTemplate(meso.id, 'Push A')
     seedSchedule(meso.id, 1, tmpl.id) // Monday only
 
-    // Even if a log exists for a template on this date, rest day is rest day
     seedLoggedWorkout(tmpl.id, '2026-03-10', 'push-a')
 
-    // 2026-03-10 is Tuesday — no schedule = rest day
-    const result = await getTodayWorkout('2026-03-10')
-    expect(result.type).toBe('rest_day')
+    const results = await getTodayWorkout('2026-03-10')
+    expect(results[0].type).toBe('rest_day')
   })
 
   // ==========================================================================
@@ -666,11 +673,10 @@ describe('getTodayWorkout', () => {
     const tmpl = seedTemplate(meso.id, 'Push A')
     seedSchedule(meso.id, 1, tmpl.id) // Monday only
 
-    // Seed a global routine item
     seedRoutineItem({ name: 'Body Weight', scope: 'global' })
 
-    // 2026-03-10 is Tuesday — rest day
-    const result = await getTodayWorkout('2026-03-10')
+    const results = await getTodayWorkout('2026-03-10')
+    const result = results[0]
     expect(result.type).toBe('rest_day')
     if (result.type === 'rest_day') {
       expect(result.routines).toBeDefined()
@@ -685,12 +691,11 @@ describe('getTodayWorkout', () => {
     const tmpl = seedTemplate(meso.id, 'Push A')
     seedSchedule(meso.id, 1, tmpl.id)
 
-    // Global routine — active
     seedRoutineItem({ name: 'Body Weight', scope: 'global' })
-    // Date range routine outside range — inactive
     seedRoutineItem({ name: 'Old Routine', scope: 'date_range', start_date: '2025-01-01', end_date: '2025-12-31' })
 
-    const result = await getTodayWorkout('2026-03-10')
+    const results = await getTodayWorkout('2026-03-10')
+    const result = results[0]
     if (result.type === 'rest_day') {
       expect(result.routines.items).toHaveLength(1)
       expect(result.routines.items[0].name).toBe('Body Weight')
@@ -705,7 +710,8 @@ describe('getTodayWorkout', () => {
     const item = seedRoutineItem({ name: 'Body Weight', scope: 'global', has_weight: true })
     seedRoutineLog(item.id, '2026-03-10', 'done', { value_weight: 72.5 })
 
-    const result = await getTodayWorkout('2026-03-10')
+    const results = await getTodayWorkout('2026-03-10')
+    const result = results[0]
     if (result.type === 'rest_day') {
       expect(result.routines.logs).toHaveLength(1)
       expect(result.routines.logs[0].status).toBe('done')
@@ -718,7 +724,8 @@ describe('getTodayWorkout', () => {
     const tmpl = seedTemplate(meso.id, 'Push A')
     seedSchedule(meso.id, 1, tmpl.id)
 
-    const result = await getTodayWorkout('2026-03-10')
+    const results = await getTodayWorkout('2026-03-10')
+    const result = results[0]
     expect(result.type).toBe('rest_day')
     if (result.type === 'rest_day') {
       expect(result.routines.items).toHaveLength(0)
@@ -735,13 +742,13 @@ describe('getTodayWorkout', () => {
       has_deload: true,
     })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 1, tmpl.id, 'normal') // Monday normal only
+    seedSchedule(meso.id, 1, tmpl.id, 'normal')
 
     seedRoutineItem({ name: 'Heavy Mobility', scope: 'global', skip_on_deload: true })
     seedRoutineItem({ name: 'Body Weight', scope: 'global', skip_on_deload: false })
 
-    // 2026-03-31 is Tuesday in deload week — no deload schedule = rest day
-    const result = await getTodayWorkout('2026-03-31')
+    const results = await getTodayWorkout('2026-03-31')
+    const result = results[0]
     expect(result.type).toBe('rest_day')
     if (result.type === 'rest_day') {
       expect(result.routines.items).toHaveLength(1)

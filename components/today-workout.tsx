@@ -8,7 +8,7 @@ import { MmaLoggingForm } from '@/components/mma-logging-form'
 import { RoutineCheckOff } from '@/components/routine-check-off'
 import { cn } from '@/lib/utils'
 import { getModalityAccentClass } from '@/lib/ui/modality-colors'
-import type { SlotData, MesocycleInfo, TemplateInfo, RoutineItemInfo, RoutineLogInfo, LoggedExerciseData } from '@/lib/today/queries'
+import type { SlotData, MesocycleInfo, TemplateInfo, RoutineItemInfo, RoutineLogInfo, LoggedExerciseData, Period } from '@/lib/today/queries'
 import { Badge } from '@/components/ui/badge'
 
 type WorkoutResponse = {
@@ -17,6 +17,8 @@ type WorkoutResponse = {
   mesocycle: MesocycleInfo
   template: TemplateInfo
   slots: SlotData[]
+  period: Period
+  time_slot: string | null
 }
 
 type RestDayResponse = {
@@ -48,9 +50,22 @@ type AlreadyLoggedResponse = {
     template_snapshot: { version: number; name?: string; modality?: string; [key: string]: unknown }
     exercises: LoggedExerciseData[]
   }
+  period: Period
+  time_slot: string | null
 }
 
 type TodayResponse = WorkoutResponse | RestDayResponse | NoMesoResponse | AlreadyLoggedResponse
+
+const PERIOD_LABELS: Record<Period, string> = {
+  morning: 'Morning',
+  afternoon: 'Afternoon',
+  evening: 'Evening',
+}
+
+function formatPeriodLabel(period: Period, timeSlot: string | null): string {
+  if (timeSlot) return timeSlot
+  return PERIOD_LABELS[period]
+}
 
 function formatRest(seconds: number): string {
   if (seconds >= 60) {
@@ -81,7 +96,6 @@ function ExerciseSlot({ slot }: { slot: SlotData }) {
           : 'border-l-4 border-l-muted bg-card'
       )}
     >
-      {/* Exercise header */}
       <div className="flex items-start justify-between gap-3">
         <h3 className="text-base font-semibold leading-tight">
           {slot.exercise_name}
@@ -98,7 +112,6 @@ function ExerciseSlot({ slot }: { slot: SlotData }) {
         </span>
       </div>
 
-      {/* Targets grid — large, scannable numbers */}
       <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4">
         <TargetCell label="Sets" value={String(slot.sets)} />
         <TargetCell label="Reps" value={slot.reps} />
@@ -113,7 +126,6 @@ function ExerciseSlot({ slot }: { slot: SlotData }) {
         )}
       </div>
 
-      {/* Guidelines */}
       {slot.guidelines && (
         <p className="mt-3 text-sm italic text-muted-foreground">
           {slot.guidelines}
@@ -145,7 +157,6 @@ function ResistanceDisplay({
     <div data-testid="workout-display" className="space-y-4">
       <WorkoutHeader data={data} />
 
-      {/* Exercise slots */}
       {data.slots.length > 0 ? (
         <div className="space-y-3">
           {data.slots.map((slot) => (
@@ -162,7 +173,6 @@ function ResistanceDisplay({
         </Card>
       )}
 
-      {/* Log workout action */}
       {data.template.modality === 'resistance' && (
         <button
           type="button"
@@ -235,10 +245,8 @@ function RunningDisplay({
     <div data-testid="running-display" className="space-y-4">
       <WorkoutHeader data={data} />
 
-      {/* Run details card */}
       <Card className={cn('border-l-4', getModalityAccentClass('running'))}>
         <CardContent className="pt-6">
-          {/* Run type badge */}
           {config && (
             <div className="mb-4">
               <span
@@ -250,7 +258,6 @@ function RunningDisplay({
             </div>
           )}
 
-          {/* Targets grid */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {template.target_pace && (
               <TargetCell label="Pace" value={template.target_pace} />
@@ -266,7 +273,6 @@ function RunningDisplay({
             )}
           </div>
 
-          {/* Coaching cues */}
           {template.coaching_cues && (
             <div className="mt-4 rounded-md bg-green-500/5 p-3">
               <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -303,7 +309,6 @@ function MmaDisplay({
     <div data-testid="mma-display" className="space-y-4">
       <WorkoutHeader data={data} />
 
-      {/* Session details card */}
       <Card className={cn('border-l-4', getModalityAccentClass('mma'))}>
         <CardContent className="pt-6">
           {template.planned_duration !== null && (
@@ -403,7 +408,6 @@ function AlreadyLoggedSummary({ data }: { data: AlreadyLoggedResponse }) {
 
   return (
     <div data-testid="already-logged-summary" className="space-y-4">
-      {/* Header with completion badge */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
@@ -423,7 +427,6 @@ function AlreadyLoggedSummary({ data }: { data: AlreadyLoggedResponse }) {
         </CardHeader>
       </Card>
 
-      {/* Modality-specific actuals */}
       {modality === 'resistance' && (
         <ResistanceSummary exercises={loggedWorkout.exercises} />
       )}
@@ -434,7 +437,6 @@ function AlreadyLoggedSummary({ data }: { data: AlreadyLoggedResponse }) {
         <MmaSummary snapshot={snapshot} />
       )}
 
-      {/* Rating */}
       {loggedWorkout.rating !== null && (
         <div data-testid="workout-rating" className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">Rating:</span>
@@ -442,7 +444,6 @@ function AlreadyLoggedSummary({ data }: { data: AlreadyLoggedResponse }) {
         </div>
       )}
 
-      {/* Notes */}
       {loggedWorkout.notes && (
         <Card>
           <CardContent className="pt-4">
@@ -457,12 +458,70 @@ function AlreadyLoggedSummary({ data }: { data: AlreadyLoggedResponse }) {
   )
 }
 
+// Renders a single session within the multi-session layout
+function SessionSection({
+  session,
+  showPeriodLabel,
+  loggingState,
+  onStartLogging,
+}: {
+  session: TodayResponse
+  showPeriodLabel: boolean
+  loggingState: Record<string, boolean>
+  onStartLogging: (key: string) => void
+}) {
+  if (session.type === 'already_logged') {
+    return (
+      <div data-testid="session-group">
+        {showPeriodLabel && (
+          <h2 data-testid="period-label" className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            {formatPeriodLabel(session.period, session.time_slot)}
+          </h2>
+        )}
+        <AlreadyLoggedSummary data={session} />
+      </div>
+    )
+  }
+
+  if (session.type === 'workout') {
+    const key = `${session.period}-${session.template.id}`
+    const isLogging = loggingState[key] ?? false
+
+    if (isLogging) {
+      if (session.template.modality === 'running') {
+        return <RunningLoggingForm data={session} />
+      }
+      if (session.template.modality === 'mma') {
+        return <MmaLoggingForm data={session} />
+      }
+      return <WorkoutLoggingForm data={session} />
+    }
+
+    return (
+      <div data-testid="session-group">
+        {showPeriodLabel && (
+          <h2 data-testid="period-label" className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            {formatPeriodLabel(session.period, session.time_slot)}
+          </h2>
+        )}
+        {session.template.modality === 'running' ? (
+          <RunningDisplay data={session} onStartLogging={() => onStartLogging(key)} />
+        ) : session.template.modality === 'mma' ? (
+          <MmaDisplay data={session} onStartLogging={() => onStartLogging(key)} />
+        ) : (
+          <ResistanceDisplay data={session} onStartLogging={() => onStartLogging(key)} />
+        )}
+      </div>
+    )
+  }
+
+  return null
+}
+
 export function TodayWorkout() {
-  const [data, setData] = useState<TodayResponse | null>(null)
+  const [sessions, setSessions] = useState<TodayResponse[] | null>(null)
   const [error, setError] = useState(false)
-  const [isLogging, setIsLogging] = useState(false)
-  const [isLoggingRun, setIsLoggingRun] = useState(false)
-  const [isLoggingMma, setIsLoggingMma] = useState(false)
+  const [loggingState, setLoggingState] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     fetch('/api/today')
@@ -470,12 +529,16 @@ export function TodayWorkout() {
         if (!res.ok) throw new Error('Failed to fetch')
         return res.json()
       })
-      .then((json: TodayResponse) => setData(json))
+      .then((json: TodayResponse[]) => setSessions(json))
       .catch(() => setError(true))
   }, [])
 
+  function startLogging(key: string) {
+    setLoggingState((prev) => ({ ...prev, [key]: true }))
+  }
+
   // Loading
-  if (!data && !error) {
+  if (!sessions && !error) {
     return (
       <div data-testid="today-loading" className="space-y-4">
         <div className="h-32 animate-pulse rounded-lg bg-muted" />
@@ -501,8 +564,12 @@ export function TodayWorkout() {
     )
   }
 
-  // No active mesocycle
-  if (data?.type === 'no_active_mesocycle') {
+  if (!sessions || sessions.length === 0) return null
+
+  // Single-item responses for non-session types
+  const first = sessions[0]
+
+  if (first.type === 'no_active_mesocycle') {
     return (
       <Card data-testid="no-active-mesocycle">
         <CardContent className="py-12 text-center">
@@ -518,8 +585,7 @@ export function TodayWorkout() {
     )
   }
 
-  // Rest day
-  if (data?.type === 'rest_day') {
+  if (first.type === 'rest_day') {
     return (
       <div data-testid="rest-day" className="space-y-6">
         <Card>
@@ -534,55 +600,71 @@ export function TodayWorkout() {
           </CardContent>
         </Card>
 
-        {/* Daily routines */}
         <div>
           <h2 className="mb-3 text-lg font-semibold">Daily Routines</h2>
           <RoutineCheckOff
-            items={data.routines.items}
-            logs={data.routines.logs}
-            logDate={data.date}
+            items={first.routines.items}
+            logs={first.routines.logs}
+            logDate={first.date}
           />
         </div>
       </div>
     )
   }
 
-  // Already logged — read-only summary
-  if (data?.type === 'already_logged') {
-    return <AlreadyLoggedSummary data={data} />
-  }
+  // Multi-session: workout and/or already_logged items
+  const showPeriodLabels = sessions.length > 1
 
-  // Workout — route by modality
-  if (data?.type === 'workout') {
-    if (data.template.modality === 'running') {
-      if (isLoggingRun) {
-        return <RunningLoggingForm data={data} />
+  // Single session — no period label, backward-compatible rendering
+  if (sessions.length === 1) {
+    const session = sessions[0]
+
+    if (session.type === 'already_logged') {
+      return <AlreadyLoggedSummary data={session} />
+    }
+
+    if (session.type === 'workout') {
+      const key = `${session.period}-${session.template.id}`
+      const isLogging = loggingState[key] ?? false
+
+      if (isLogging) {
+        if (session.template.modality === 'running') {
+          return <RunningLoggingForm data={session} />
+        }
+        if (session.template.modality === 'mma') {
+          return <MmaLoggingForm data={session} />
+        }
+        return <WorkoutLoggingForm data={session} />
+      }
+
+      if (session.template.modality === 'running') {
+        return (
+          <RunningDisplay data={session} onStartLogging={() => startLogging(key)} />
+        )
+      }
+      if (session.template.modality === 'mma') {
+        return (
+          <MmaDisplay data={session} onStartLogging={() => startLogging(key)} />
+        )
       }
       return (
-        <RunningDisplay
-          data={data}
-          onStartLogging={() => setIsLoggingRun(true)}
-        />
+        <ResistanceDisplay data={session} onStartLogging={() => startLogging(key)} />
       )
     }
-    if (data.template.modality === 'mma') {
-      if (isLoggingMma) {
-        return <MmaLoggingForm data={data} />
-      }
-      return (
-        <MmaDisplay
-          data={data}
-          onStartLogging={() => setIsLoggingMma(true)}
-        />
-      )
-    }
-    if (isLogging && data.template.modality === 'resistance') {
-      return <WorkoutLoggingForm data={data} />
-    }
-    return (
-      <ResistanceDisplay data={data} onStartLogging={() => setIsLogging(true)} />
-    )
   }
 
-  return null
+  // Multiple sessions — render grouped by period
+  return (
+    <div data-testid="multi-session-view" className="space-y-8">
+      {sessions.map((session, i) => (
+        <SessionSection
+          key={i}
+          session={session}
+          showPeriodLabel={showPeriodLabels}
+          loggingState={loggingState}
+          onStartLogging={startLogging}
+        />
+      ))}
+    </div>
+  )
 }

@@ -1,4 +1,5 @@
 // Characterization test — captures current behavior for safe refactoring
+// Updated for T114: getTodayWorkout now returns TodayResult[]
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockGetTodayWorkout = vi.fn()
@@ -15,21 +16,20 @@ describe('GET /api/today — characterize gaps', () => {
   })
 
   it('passes today date string in YYYY-MM-DD format to getTodayWorkout', async () => {
-    mockGetTodayWorkout.mockResolvedValue({
+    mockGetTodayWorkout.mockResolvedValue([{
       type: 'no_active_mesocycle',
       date: '2026-03-20',
-    })
+    }])
 
     await GET()
 
     expect(mockGetTodayWorkout).toHaveBeenCalledTimes(1)
     const dateArg = mockGetTodayWorkout.mock.calls[0][0]
-    // Must match YYYY-MM-DD pattern
     expect(dateArg).toMatch(/^\d{4}-\d{2}-\d{2}$/)
   })
 
-  it('returns already_logged response as JSON', async () => {
-    const alreadyLoggedData = {
+  it('returns already_logged response array as JSON', async () => {
+    const alreadyLoggedData = [{
       type: 'already_logged',
       date: '2026-03-20',
       mesocycle: {
@@ -60,31 +60,33 @@ describe('GET /api/today — characterize gaps', () => {
           },
         ],
       },
-    }
+      period: 'morning',
+      time_slot: null,
+    }]
     mockGetTodayWorkout.mockResolvedValue(alreadyLoggedData)
 
     const res = await GET()
     expect(res.status).toBe(200)
 
     const data = await res.json()
-    expect(data.type).toBe('already_logged')
-    expect(data.loggedWorkout.id).toBe(5)
-    expect(data.loggedWorkout.exercises).toHaveLength(1)
-    expect(data.loggedWorkout.exercises[0].sets).toHaveLength(2)
+    expect(Array.isArray(data)).toBe(true)
+    expect(data[0].type).toBe('already_logged')
+    expect(data[0].loggedWorkout.id).toBe(5)
+    expect(data[0].loggedWorkout.exercises).toHaveLength(1)
+    expect(data[0].loggedWorkout.exercises[0].sets).toHaveLength(2)
   })
 
   it('returns 200 for all known result types', async () => {
     const types = [
-      { type: 'workout', date: '2026-03-20', mesocycle: {}, template: {}, slots: [] },
-      { type: 'rest_day', date: '2026-03-20', mesocycle: {}, routines: { items: [], logs: [] } },
-      { type: 'no_active_mesocycle', date: '2026-03-20' },
-      { type: 'already_logged', date: '2026-03-20', mesocycle: {}, loggedWorkout: {} },
+      [{ type: 'workout', date: '2026-03-20', mesocycle: {}, template: {}, slots: [], period: 'morning', time_slot: null }],
+      [{ type: 'rest_day', date: '2026-03-20', mesocycle: {}, routines: { items: [], logs: [] } }],
+      [{ type: 'no_active_mesocycle', date: '2026-03-20' }],
+      [{ type: 'already_logged', date: '2026-03-20', mesocycle: {}, loggedWorkout: {}, period: 'morning', time_slot: null }],
     ]
 
     for (const data of types) {
       mockGetTodayWorkout.mockResolvedValue(data)
       const res = await GET()
-      // NOTE: all result types return 200 — no per-type status differentiation
       expect(res.status).toBe(200)
     }
   })
