@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Dumbbell,
   CalendarDays,
+  TrendingUp,
   ListChecks,
   Activity,
 } from 'lucide-react'
@@ -16,6 +17,7 @@ const navItems = [
   { href: '/exercises', label: 'Exercises', icon: Dumbbell },
   { href: '/mesocycles', label: 'Mesocycles', icon: Activity },
   { href: '/calendar', label: 'Calendar', icon: CalendarDays },
+  { href: '/progression', label: 'Progression', icon: TrendingUp },
   { href: '/routines', label: 'Routines', icon: ListChecks },
 ] as const
 
