@@ -160,6 +160,8 @@ export async function saveWorkoutCore(
       target_weight: slot.weight,
       target_rpe: slot.rpe,
       rest_seconds: slot.rest_seconds,
+      group_id: slot.group_id ?? null,
+      group_rest_seconds: slot.group_rest_seconds ?? null,
       guidelines: slot.guidelines,
       sort_order: slot.order,
       is_main: slot.is_main,

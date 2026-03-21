@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils'
 import { formatDateLong } from '@/lib/date-format'
 import { getModalityAccentClass } from '@/lib/ui/modality-colors'
 import type { SlotData, SectionData, MesocycleInfo, TemplateInfo, RoutineItemInfo, RoutineLogInfo, LoggedExerciseData, Period } from '@/lib/today/queries'
+import { groupSlotsByGroupId, getGroupLabel } from '@/lib/ui/superset-grouping'
 import { getModalityBadgeClasses } from '@/lib/ui/modality-colors'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
@@ -133,6 +134,48 @@ function ExerciseSlot({ slot }: { slot: SlotData }) {
   )
 }
 
+function SupersetGroupDisplay({ slots, groupRestSeconds }: { slots: SlotData[]; groupRestSeconds: number }) {
+  const label = getGroupLabel(slots.length)
+  return (
+    <div data-testid="superset-group" className="rounded-xl border-l-4 border-l-primary border border-border pl-3 py-2 pr-2 space-y-2">
+      <div className="flex items-center gap-2 px-1">
+        <span className="text-xs font-semibold text-primary">{label}</span>
+      </div>
+      <div className="space-y-3">
+        {slots.map((slot) => (
+          <ExerciseSlot key={slot.id} slot={slot} />
+        ))}
+      </div>
+      {groupRestSeconds > 0 && (
+        <div className="flex items-center gap-1.5 px-1 pt-1 text-xs text-muted-foreground">
+          <span>Group rest:</span>
+          <span className="font-semibold tabular-nums">{formatRest(groupRestSeconds)}</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function RenderGroupedSlots({ slots }: { slots: SlotData[] }) {
+  const grouped = groupSlotsByGroupId(slots)
+  return (
+    <div className="space-y-3">
+      {grouped.map((item) => {
+        if (item.type === 'group') {
+          return (
+            <SupersetGroupDisplay
+              key={`group-${item.groupId}`}
+              slots={item.slots}
+              groupRestSeconds={item.groupRestSeconds}
+            />
+          )
+        }
+        return <ExerciseSlot key={item.slot.id} slot={item.slot} />
+      })}
+    </div>
+  )
+}
+
 function TargetCell({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-md bg-muted/50 px-3 py-2 text-center">
@@ -156,11 +199,7 @@ function ResistanceDisplay({
       <WorkoutHeader data={data} />
 
       {data.slots.length > 0 ? (
-        <div className="space-y-3">
-          {data.slots.map((slot) => (
-            <ExerciseSlot key={slot.id} slot={slot} />
-          ))}
-        </div>
+        <RenderGroupedSlots slots={data.slots} />
       ) : (
         <Card>
           <CardContent className="py-8 text-center">
@@ -421,13 +460,7 @@ function SectionResistanceContent({ section }: { section: SectionData }) {
   const slots = section.slots ?? []
   if (slots.length === 0) return null
 
-  return (
-    <div className="space-y-3">
-      {slots.map((slot) => (
-        <ExerciseSlot key={slot.id} slot={slot} />
-      ))}
-    </div>
-  )
+  return <RenderGroupedSlots slots={slots} />
 }
 
 function MixedDisplay({
