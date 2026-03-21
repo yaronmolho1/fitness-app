@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
 import { ExercisePicker } from '@/components/exercise-picker'
 import { SlotCascadeScopeSelector } from '@/components/slot-cascade-scope-selector'
 import { updateExerciseSlot, removeExerciseSlot, addExerciseSlot, reorderExerciseSlots } from '@/lib/templates/slot-actions'
+import { createSuperset, breakSuperset, updateGroupRest } from '@/lib/templates/superset-actions'
 import type { SlotWithExercise } from '@/lib/templates/slot-queries'
 import type { Exercise } from '@/lib/exercises/filters'
 
@@ -17,6 +19,52 @@ type SlotListProps = {
   templateId: number
   exercises: Exercise[]
   isCompleted: boolean
+}
+
+function getGroupLabel(count: number): string {
+  if (count === 2) return 'Superset'
+  if (count === 3) return 'Tri-set'
+  return 'Giant set'
+}
+
+function formatRest(seconds: number): string {
+  if (seconds >= 60) {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return secs > 0 ? `${mins}m${secs}s` : `${mins}m`
+  }
+  return `${seconds}s`
+}
+
+type GroupedItem =
+  | { type: 'slot'; slot: SlotWithExercise }
+  | { type: 'group'; groupId: number; slots: SlotWithExercise[]; groupRestSeconds: number }
+
+// Groups contiguous slots by group_id, preserving order
+function groupSlots(slots: SlotWithExercise[]): GroupedItem[] {
+  const items: GroupedItem[] = []
+  let i = 0
+  while (i < slots.length) {
+    const slot = slots[i]
+    if (slot.group_id !== null) {
+      const groupId = slot.group_id
+      const groupSlots: SlotWithExercise[] = []
+      while (i < slots.length && slots[i].group_id === groupId) {
+        groupSlots.push(slots[i])
+        i++
+      }
+      items.push({
+        type: 'group',
+        groupId,
+        slots: groupSlots,
+        groupRestSeconds: groupSlots[0].group_rest_seconds ?? 0,
+      })
+    } else {
+      items.push({ type: 'slot', slot })
+      i++
+    }
+  }
+  return items
 }
 
 export function SlotList({ slots, templateId, exercises, isCompleted }: SlotListProps) {
@@ -31,6 +79,13 @@ export function SlotList({ slots, templateId, exercises, isCompleted }: SlotList
   // Cascade state for add-slot operation
   const [addCascadeSlotId, setAddCascadeSlotId] = useState<number | null>(null)
 
+  // Selection mode for superset creation
+  const [selectionMode, setSelectionMode] = useState(false)
+  const [selectedSlotIds, setSelectedSlotIds] = useState<Set<number>>(new Set())
+  const [showGroupRestPrompt, setShowGroupRestPrompt] = useState(false)
+  const [groupRestInput, setGroupRestInput] = useState<number | ''>(60)
+  const [supersetError, setSupersetError] = useState('')
+
   // Touch drag state
   const touchDragIndex = useRef<number | null>(null)
   const touchHoldTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -41,7 +96,11 @@ export function SlotList({ slots, templateId, exercises, isCompleted }: SlotList
     setOrderedSlots(slots)
   }, [slots])
 
-  const canDrag = !isCompleted && orderedSlots.length > 1 && !isReordering
+  const canDrag = !isCompleted && orderedSlots.length > 1 && !isReordering && !selectionMode
+
+  // Count ungrouped slots for showing the Group button
+  const ungroupedSlots = orderedSlots.filter(s => s.group_id === null)
+  const showGroupButton = !isCompleted && ungroupedSlots.length >= 2 && !selectionMode
 
   const persistReorder = useCallback((newSlots: SlotWithExercise[]) => {
     const newIds = newSlots.map(s => s.id)
@@ -87,9 +146,8 @@ export function SlotList({ slots, templateId, exercises, isCompleted }: SlotList
   }
 
   // Touch drag handlers
-  function handleTouchStart(e: React.TouchEvent, index: number) {
+  function handleTouchStart(_e: React.TouchEvent, index: number) {
     if (!canDrag) return
-    // Deliberate hold before initiating drag
     touchHoldTimer.current = setTimeout(() => {
       touchDragIndex.current = index
       setDragIndex(index)
@@ -98,7 +156,6 @@ export function SlotList({ slots, templateId, exercises, isCompleted }: SlotList
 
   function handleTouchMove(e: React.TouchEvent) {
     if (touchDragIndex.current === null) {
-      // Cancel hold if moved before timer
       if (touchHoldTimer.current) {
         clearTimeout(touchHoldTimer.current)
         touchHoldTimer.current = null
@@ -154,6 +211,59 @@ export function SlotList({ slots, templateId, exercises, isCompleted }: SlotList
     })
   }
 
+  function toggleSlotSelection(slotId: number) {
+    setSelectedSlotIds(prev => {
+      const next = new Set(prev)
+      if (next.has(slotId)) {
+        next.delete(slotId)
+      } else {
+        next.add(slotId)
+      }
+      return next
+    })
+  }
+
+  function exitSelectionMode() {
+    setSelectionMode(false)
+    setSelectedSlotIds(new Set())
+    setShowGroupRestPrompt(false)
+    setGroupRestInput(60)
+    setSupersetError('')
+  }
+
+  function handleCreateSupersetClick() {
+    setShowGroupRestPrompt(true)
+    setSupersetError('')
+  }
+
+  function handleConfirmSuperset() {
+    const restValue = groupRestInput === '' ? 0 : groupRestInput
+    startTransition(async () => {
+      const result = await createSuperset({
+        slot_ids: Array.from(selectedSlotIds),
+        group_rest_seconds: restValue,
+      })
+      if (result.success) {
+        exitSelectionMode()
+        router.refresh()
+      } else {
+        setSupersetError(result.error)
+      }
+    })
+  }
+
+  async function handleBreakSuperset(groupId: number) {
+    startTransition(async () => {
+      const result = await breakSuperset({
+        group_id: groupId,
+        template_id: templateId,
+      })
+      if (result.success) {
+        router.refresh()
+      }
+    })
+  }
+
   // Empty state (not shown during cascade)
   if (orderedSlots.length === 0 && !showPicker && addCascadeSlotId === null) {
     return (
@@ -176,36 +286,137 @@ export function SlotList({ slots, templateId, exercises, isCompleted }: SlotList
     )
   }
 
+  const grouped = groupSlots(orderedSlots)
+
   return (
     <div className="space-y-2" ref={listRef}>
-      {orderedSlots.map((slot, index) => (
-        <SlotRow
-          key={slot.id}
-          slot={slot}
-          templateId={templateId}
-          isCompleted={isCompleted}
-          onUpdated={() => router.refresh()}
-          showDragHandle={canDrag}
-          isDragging={dragIndex === index}
-          isDropTarget={dropIndex === index}
-          onDragStart={() => handleDragStart(index)}
-          onDragOver={(e: React.DragEvent) => handleDragOver(e, index)}
-          onDragEnd={handleDragEnd}
-          onTouchStart={(e: React.TouchEvent) => handleTouchStart(e, index)}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-        />
-      ))}
+      {/* Selection mode toolbar */}
+      {selectionMode && (
+        <div className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2">
+          <span className="text-xs font-medium text-muted-foreground">
+            {selectedSlotIds.size} selected
+          </span>
+          <div className="ml-auto flex gap-2">
+            {selectedSlotIds.size >= 2 && !showGroupRestPrompt && (
+              <Button size="sm" variant="default" onClick={handleCreateSupersetClick}>
+                Create Superset
+              </Button>
+            )}
+            <Button size="sm" variant="ghost" onClick={exitSelectionMode}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
 
-      {!isCompleted && !showPicker && (
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full"
-          onClick={() => setShowPicker(true)}
-        >
-          Add Exercise
-        </Button>
+      {/* Group rest prompt */}
+      {showGroupRestPrompt && (
+        <div className="rounded-lg border p-3 space-y-2">
+          <div className="space-y-1">
+            <Label htmlFor="group-rest-input">Group rest (seconds)</Label>
+            <Input
+              id="group-rest-input"
+              type="number"
+              min={0}
+              value={groupRestInput}
+              onChange={(e) => setGroupRestInput(e.target.value === '' ? '' : Number(e.target.value))}
+            />
+          </div>
+          {supersetError && (
+            <p className="text-sm text-destructive" role="alert">{supersetError}</p>
+          )}
+          <div className="flex gap-2">
+            <Button size="sm" onClick={handleConfirmSuperset} disabled={isPending}>
+              {isPending ? 'Creating...' : 'Confirm'}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setShowGroupRestPrompt(false)}>
+              Back
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Slot list with grouping */}
+      {grouped.map((item) => {
+        if (item.type === 'group') {
+          return (
+            <SupersetGroup
+              key={`group-${item.groupId}`}
+              groupId={item.groupId}
+              slots={item.slots}
+              groupRestSeconds={item.groupRestSeconds}
+              templateId={templateId}
+              isCompleted={isCompleted}
+              onUpdated={() => router.refresh()}
+              onBreak={() => handleBreakSuperset(item.groupId)}
+              canDrag={canDrag}
+              dragIndex={dragIndex}
+              dropIndex={dropIndex}
+              allSlots={orderedSlots}
+              onDragStart={handleDragStart}
+              onDragOver={handleDragOver}
+              onDragEnd={handleDragEnd}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            />
+          )
+        }
+        const slot = item.slot
+        const flatIndex = orderedSlots.indexOf(slot)
+        return (
+          <div key={slot.id} className="flex items-start gap-2">
+            {selectionMode && slot.group_id === null && (
+              <div className="flex items-center pt-3.5">
+                <Checkbox
+                  checked={selectedSlotIds.has(slot.id)}
+                  onCheckedChange={() => toggleSlotSelection(slot.id)}
+                  aria-label={`Select ${slot.exercise_name}`}
+                />
+              </div>
+            )}
+            <div className="flex-1">
+              <SlotRow
+                slot={slot}
+                templateId={templateId}
+                isCompleted={isCompleted}
+                onUpdated={() => router.refresh()}
+                showDragHandle={canDrag}
+                isDragging={dragIndex === flatIndex}
+                isDropTarget={dropIndex === flatIndex}
+                onDragStart={() => handleDragStart(flatIndex)}
+                onDragOver={(e: React.DragEvent) => handleDragOver(e, flatIndex)}
+                onDragEnd={handleDragEnd}
+                onTouchStart={(e: React.TouchEvent) => handleTouchStart(e, flatIndex)}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+              />
+            </div>
+          </div>
+        )
+      })}
+
+      {/* Action buttons */}
+      {!isCompleted && !showPicker && !selectionMode && (
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            onClick={() => setShowPicker(true)}
+          >
+            Add Exercise
+          </Button>
+          {showGroupButton && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectionMode(true)}
+            >
+              Group
+            </Button>
+          )}
+        </div>
       )}
 
       {showPicker && (
@@ -237,6 +448,143 @@ export function SlotList({ slots, templateId, exercises, isCompleted }: SlotList
           onComplete={() => { setAddCascadeSlotId(null); router.refresh() }}
           onCancel={() => { setAddCascadeSlotId(null); router.refresh() }}
         />
+      )}
+    </div>
+  )
+}
+
+// ============================================================================
+// Superset group container
+// ============================================================================
+
+type SupersetGroupProps = {
+  groupId: number
+  slots: SlotWithExercise[]
+  groupRestSeconds: number
+  templateId: number
+  isCompleted: boolean
+  onUpdated: () => void
+  onBreak: () => void
+  canDrag: boolean
+  dragIndex: number | null
+  dropIndex: number | null
+  allSlots: SlotWithExercise[]
+  onDragStart: (index: number) => void
+  onDragOver: (e: React.DragEvent, index: number) => void
+  onDragEnd: () => void
+  onTouchStart: (e: React.TouchEvent, index: number) => void
+  onTouchMove: (e: React.TouchEvent) => void
+  onTouchEnd: () => void
+}
+
+function SupersetGroup({
+  groupId, slots, groupRestSeconds, templateId, isCompleted,
+  onUpdated, onBreak, canDrag, dragIndex, dropIndex, allSlots,
+  onDragStart, onDragOver, onDragEnd, onTouchStart, onTouchMove, onTouchEnd,
+}: SupersetGroupProps) {
+  const [editingRest, setEditingRest] = useState(false)
+  const [restInput, setRestInput] = useState(groupRestSeconds)
+  const [isPending, startTransition] = useTransition()
+  const router = useRouter()
+
+  const label = getGroupLabel(slots.length)
+
+  function handleSaveRest() {
+    startTransition(async () => {
+      const result = await updateGroupRest({
+        group_id: groupId,
+        template_id: templateId,
+        group_rest_seconds: restInput,
+      })
+      if (result.success) {
+        setEditingRest(false)
+        router.refresh()
+      }
+    })
+  }
+
+  return (
+    <div
+      data-testid={`superset-group-${groupId}`}
+      className="rounded-xl border-l-4 border-l-primary border border-border pl-3 py-2 pr-2 space-y-1"
+    >
+      {/* Group header */}
+      <div className="flex items-center justify-between px-1 pb-1">
+        <span className="text-xs font-semibold text-primary">{label}</span>
+        {!isCompleted && (
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs"
+              onClick={() => { setRestInput(groupRestSeconds); setEditingRest(true) }}
+            >
+              Edit rest
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs text-destructive hover:text-destructive"
+              onClick={onBreak}
+            >
+              Break
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Edit group rest inline */}
+      {editingRest && (
+        <div className="rounded-lg border bg-muted/30 p-2 space-y-2">
+          <div className="space-y-1">
+            <Label htmlFor={`group-rest-${groupId}`}>Group rest (seconds)</Label>
+            <Input
+              id={`group-rest-${groupId}`}
+              type="number"
+              min={0}
+              value={restInput}
+              onChange={(e) => setRestInput(Number(e.target.value))}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={handleSaveRest} disabled={isPending}>
+              {isPending ? 'Saving...' : 'Save'}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setEditingRest(false)}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Grouped slot rows */}
+      {slots.map((slot) => {
+        const flatIndex = allSlots.indexOf(slot)
+        return (
+          <SlotRow
+            key={slot.id}
+            slot={slot}
+            templateId={templateId}
+            isCompleted={isCompleted}
+            onUpdated={onUpdated}
+            showDragHandle={canDrag}
+            isDragging={dragIndex === flatIndex}
+            isDropTarget={dropIndex === flatIndex}
+            onDragStart={() => onDragStart(flatIndex)}
+            onDragOver={(e: React.DragEvent) => onDragOver(e, flatIndex)}
+            onDragEnd={onDragEnd}
+            onTouchStart={(e: React.TouchEvent) => onTouchStart(e, flatIndex)}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+          />
+        )
+      })}
+
+      {/* Group rest display */}
+      {groupRestSeconds > 0 && !editingRest && (
+        <div className="px-1 pt-1 text-xs text-muted-foreground">
+          <span className="font-medium">Group rest:</span> {formatRest(groupRestSeconds)}
+        </div>
       )}
     </div>
   )
@@ -302,7 +650,6 @@ function SlotRow({
   }
 
   function handleSave() {
-    // Compute diff of changed params for cascade
     const diff: Record<string, unknown> = {}
     if (sets !== slot.sets) diff.sets = sets
     if (reps !== Number(slot.reps)) diff.reps = reps
@@ -350,15 +697,6 @@ function SlotRow({
         setMode('display')
       }
     })
-  }
-
-  function formatRest(seconds: number): string {
-    if (seconds >= 60) {
-      const mins = Math.floor(seconds / 60)
-      const secs = seconds % 60
-      return secs > 0 ? `${mins}m${secs}s` : `${mins}m`
-    }
-    return `${seconds}s`
   }
 
   // Cascade mode for param edits
