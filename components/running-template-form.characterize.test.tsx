@@ -126,6 +126,8 @@ describe('RunningTemplateForm — characterization', () => {
       interval_count: null,
       interval_rest: null,
       coaching_cues: undefined,
+      target_distance: null,
+      target_duration: null,
     })
     expect(onSuccess).toHaveBeenCalled()
   })
