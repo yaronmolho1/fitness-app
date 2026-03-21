@@ -46,36 +46,37 @@ export default async function MesocycleDetailPage({
   return (
     <PageContainer variant="wide">
       <div className="space-y-6">
-        <PageHeader
-          title={meso.name}
-          className="mb-0"
-          breadcrumb={
-            <Link href="/mesocycles" className="text-sm text-muted-foreground transition-colors hover:text-foreground hover:underline">
-              Mesocycles
-            </Link>
-          }
-          actions={
-            <div className="flex items-center gap-2">
-              {meso.status !== 'completed' && (
-                <Button variant="outline" asChild>
-                  <Link href={`/mesocycles/${meso.id}/edit`}>Edit</Link>
+        <div className="space-y-3">
+          <PageHeader
+            title={meso.name}
+            breadcrumb={
+              <Link href="/mesocycles" className="text-sm text-muted-foreground transition-colors hover:text-foreground hover:underline">
+                Mesocycles
+              </Link>
+            }
+            actions={
+              <div className="flex flex-wrap items-center gap-2">
+                {meso.status !== 'completed' && (
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={`/mesocycles/${meso.id}/edit`}>Edit</Link>
+                  </Button>
+                )}
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={`/mesocycles/${meso.id}/clone`}>Clone</Link>
                 </Button>
-              )}
-              <Button variant="outline" asChild>
-                <Link href={`/mesocycles/${meso.id}/clone`}>Clone</Link>
-              </Button>
-              <StatusTransitionButton mesocycleId={meso.id} status={meso.status} />
-            </div>
-          }
-        />
-        <div className="-mt-4 flex flex-wrap items-center gap-3">
-          <StatusBadge status={meso.status} />
-          <span className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-            <span>{formatDateDisplay(meso.start_date)}</span>
-            <span>{formatDateDisplay(meso.end_date)}</span>
-            <span>{meso.work_weeks} weeks</span>
-            {meso.has_deload && <span>+ deload</span>}
-          </span>
+                <StatusTransitionButton mesocycleId={meso.id} status={meso.status} />
+              </div>
+            }
+          />
+          <div className="flex flex-wrap items-center gap-3">
+            <StatusBadge status={meso.status} />
+            <span className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+              <span>{formatDateDisplay(meso.start_date)}</span>
+              <span>{formatDateDisplay(meso.end_date)}</span>
+              <span>{meso.work_weeks} weeks</span>
+              {meso.has_deload && <span>+ deload</span>}
+            </span>
+          </div>
         </div>
 
         <TemplateSection

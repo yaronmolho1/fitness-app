@@ -8,7 +8,7 @@ export default function CalendarPage() {
   return (
     <PageContainer variant="wide">
       <div className="space-y-6">
-        <PageHeader title="Calendar" className="mb-0" />
+        <PageHeader title="Calendar" />
         <CalendarGrid />
       </div>
     </PageContainer>

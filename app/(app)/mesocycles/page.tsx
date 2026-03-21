@@ -19,7 +19,6 @@ export default async function MesocyclesPage() {
       <div className="space-y-6">
         <PageHeader
           title="Mesocycles"
-          className="mb-0"
           actions={
             <Button asChild>
               <Link href="/mesocycles/new">New Mesocycle</Link>
@@ -38,9 +37,9 @@ export default async function MesocyclesPage() {
           <ul className="space-y-4">
             {allMesocycles.map((meso) => (
               <li key={meso.id} className="rounded-xl border bg-card p-4 shadow-sm transition-colors duration-150 hover:bg-muted/50">
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Link
                         href={`/mesocycles/${meso.id}`}
                         className="text-lg font-semibold transition-colors duration-150 hover:text-primary hover:underline"
@@ -49,7 +48,7 @@ export default async function MesocyclesPage() {
                       </Link>
                       <StatusBadge status={meso.status} />
                     </div>
-                    <div className="mt-2 flex flex-wrap gap-4 text-sm text-muted-foreground">
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                       <span>{formatDateDisplay(meso.start_date)}</span>
                       <span>{formatDateDisplay(meso.end_date)}</span>
                       <span>{meso.work_weeks} weeks</span>

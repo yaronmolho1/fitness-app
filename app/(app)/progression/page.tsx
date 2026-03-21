@@ -11,7 +11,7 @@ export default async function ProgressionPage() {
   return (
     <PageContainer variant="wide">
       <div className="space-y-6">
-        <PageHeader title="Progression" className="mb-0" />
+        <PageHeader title="Progression" />
         <ProgressionChart exercises={exercises} />
       </div>
     </PageContainer>

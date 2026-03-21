@@ -16,9 +16,9 @@ export function PageHeader({
   className,
 }: PageHeaderProps) {
   return (
-    <div className={cn('mb-6', className)}>
+    <div className={cn(className)}>
       {breadcrumb && (
-        <div data-slot="breadcrumb" className="mb-1">
+        <div data-slot="breadcrumb" className="mb-2">
           {breadcrumb}
         </div>
       )}
@@ -26,13 +26,13 @@ export function PageHeader({
         data-slot="header-row"
         className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
       >
-        <div data-slot="title-block" className="space-y-1.5">
+        <div data-slot="title-block" className="min-w-0 space-y-1.5">
           <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
           {description && (
             <p className="text-sm text-muted-foreground">{description}</p>
           )}
         </div>
-        {actions && <div data-slot="actions">{actions}</div>}
+        {actions && <div data-slot="actions" className="shrink-0">{actions}</div>}
       </div>
     </div>
   )

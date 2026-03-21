@@ -6,7 +6,7 @@ export default function TodayPage() {
   return (
     <PageContainer variant="narrow">
       <div className="space-y-6">
-        <PageHeader title="Today" className="mb-0" />
+        <PageHeader title="Today" />
         <TodayWorkout />
       </div>
     </PageContainer>

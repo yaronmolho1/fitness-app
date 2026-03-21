@@ -15,7 +15,7 @@ export default async function ExercisesPage() {
   return (
     <PageContainer variant="wide">
       <div className="space-y-6">
-        <PageHeader title="Exercises" className="mb-0" />
+        <PageHeader title="Exercises" />
         <ExerciseForm
           equipmentOptions={distinctValues.equipment}
           muscleGroupOptions={distinctValues.muscle_groups}

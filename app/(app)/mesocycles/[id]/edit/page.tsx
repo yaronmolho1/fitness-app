@@ -25,24 +25,26 @@ export default async function EditMesocyclePage({
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Edit Mesocycle"
-        breadcrumb={
-          <Link href={`/mesocycles/${meso.id}`} className="text-sm text-muted-foreground transition-colors hover:text-foreground hover:underline">
-            {meso.name}
-          </Link>
-        }
-      />
-      <MesocycleForm
-        mode="edit"
-        initialData={{
-          id: meso.id,
-          name: meso.name,
-          start_date: meso.start_date,
-          work_weeks: meso.work_weeks,
-          has_deload: meso.has_deload,
-        }}
-      />
+      <div className="space-y-6">
+        <PageHeader
+          title="Edit Mesocycle"
+          breadcrumb={
+            <Link href={`/mesocycles/${meso.id}`} className="text-sm text-muted-foreground transition-colors hover:text-foreground hover:underline">
+              {meso.name}
+            </Link>
+          }
+        />
+        <MesocycleForm
+          mode="edit"
+          initialData={{
+            id: meso.id,
+            name: meso.name,
+            start_date: meso.start_date,
+            work_weeks: meso.work_weeks,
+            has_deload: meso.has_deload,
+          }}
+        />
+      </div>
     </PageContainer>
   )
 }

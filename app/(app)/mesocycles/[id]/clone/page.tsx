@@ -24,7 +24,6 @@ export default async function CloneMesocyclePage({
       <div className="space-y-6">
         <PageHeader
           title="Clone Mesocycle"
-          className="mb-0"
           breadcrumb={
             <Link href={`/mesocycles/${meso.id}`} className="text-sm text-muted-foreground transition-colors hover:text-foreground hover:underline">
               {meso.name}
