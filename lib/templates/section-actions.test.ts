@@ -341,6 +341,31 @@ describe('createMixedTemplate', () => {
       }
     })
 
+    it('creates running section with distance/duration', async () => {
+      const meso = seedMesocycle()
+      const result = await createMixedTemplate({
+        name: 'Strength + Run',
+        mesocycle_id: meso.id,
+        sections: [
+          { section_name: 'Main Lift', modality: 'resistance', order: 1 },
+          {
+            section_name: '5K Run',
+            modality: 'running',
+            order: 2,
+            run_type: 'easy',
+            target_distance: 5.0,
+            target_duration: 30,
+          },
+        ],
+      })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        const runSection = result.data.sections.find((s) => s.modality === 'running')
+        expect(runSection?.target_distance).toBe(5.0)
+        expect(runSection?.target_duration).toBe(30)
+      }
+    })
+
     it('allows on active mesocycle', async () => {
       const meso = seedMesocycle({ status: 'active' })
       const result = await createMixedTemplate({
@@ -456,6 +481,68 @@ describe('addSection', () => {
     })
     expect(result.success).toBe(false)
     if (!result.success) expect(result.error).toMatch(/completed/i)
+  })
+
+  it('stores distance/duration on running section', async () => {
+    const meso = seedMesocycle()
+    const tmpl = seedMixedTemplate(meso.id)
+    const result = await addSection({
+      template_id: tmpl.id,
+      section_name: 'Easy Run',
+      modality: 'running',
+      run_type: 'easy',
+      target_distance: 5.0,
+      target_duration: 30,
+    })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.target_distance).toBe(5.0)
+      expect(result.data.target_duration).toBe(30)
+    }
+  })
+
+  it('defaults distance/duration to null on section', async () => {
+    const meso = seedMesocycle()
+    const tmpl = seedMixedTemplate(meso.id)
+    const result = await addSection({
+      template_id: tmpl.id,
+      section_name: 'Basic Run',
+      modality: 'running',
+      run_type: 'easy',
+    })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.target_distance).toBeNull()
+      expect(result.data.target_duration).toBeNull()
+    }
+  })
+
+  it('rejects negative distance on section', async () => {
+    const meso = seedMesocycle()
+    const tmpl = seedMixedTemplate(meso.id)
+    const result = await addSection({
+      template_id: tmpl.id,
+      section_name: 'Bad Run',
+      modality: 'running',
+      run_type: 'easy',
+      target_distance: -1,
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toMatch(/distance.*positive/i)
+  })
+
+  it('rejects zero duration on section', async () => {
+    const meso = seedMesocycle()
+    const tmpl = seedMixedTemplate(meso.id)
+    const result = await addSection({
+      template_id: tmpl.id,
+      section_name: 'Bad Run',
+      modality: 'running',
+      run_type: 'easy',
+      target_duration: 0,
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toMatch(/duration.*positive/i)
   })
 
   it('stores running fields on section', async () => {

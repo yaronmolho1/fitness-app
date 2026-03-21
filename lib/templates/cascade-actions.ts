@@ -42,12 +42,15 @@ export async function cascadeUpdateTemplates(
   const hasIntervalCount = 'interval_count' in updates
   const hasIntervalRest = 'interval_rest' in updates
   const hasCoachingCues = 'coaching_cues' in updates
+  const hasTargetDistance = 'target_distance' in updates
+  const hasTargetDuration = 'target_duration' in updates
 
   // MMA fields
   const hasPlannedDuration = 'planned_duration' in updates
 
   const hasAnyField = hasName || hasNotes || hasRunType || hasTargetPace ||
-    hasHrZone || hasIntervalCount || hasIntervalRest || hasCoachingCues || hasPlannedDuration
+    hasHrZone || hasIntervalCount || hasIntervalRest || hasCoachingCues ||
+    hasTargetDistance || hasTargetDuration || hasPlannedDuration
 
   if (!hasAnyField) {
     return { success: false, error: 'Nothing to update' }
@@ -79,6 +82,8 @@ export async function cascadeUpdateTemplates(
   if (hasIntervalCount) setFields.interval_count = updates.interval_count
   if (hasIntervalRest) setFields.interval_rest = updates.interval_rest
   if (hasCoachingCues) setFields.coaching_cues = updates.coaching_cues
+  if (hasTargetDistance) setFields.target_distance = updates.target_distance
+  if (hasTargetDuration) setFields.target_duration = updates.target_duration
   if (hasPlannedDuration) setFields.planned_duration = updates.planned_duration
 
   // Execute in a single transaction

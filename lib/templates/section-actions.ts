@@ -59,6 +59,8 @@ const sectionInputSchema = z.object({
   interval_count: z.number().int().positive().nullable().optional().transform((v) => v ?? null),
   interval_rest: z.number().int().min(0).nullable().optional().transform((v) => v ?? null),
   coaching_cues: z.string().optional().transform((v) => v || null),
+  target_distance: z.number().positive('Distance must be positive').nullable().optional().transform((v) => v ?? null),
+  target_duration: z.number().int().positive('Duration must be positive').nullable().optional().transform((v) => v ?? null),
   // MMA fields
   planned_duration: z.number().int().positive().nullable().optional().transform((v) => v ?? null),
 })
@@ -82,6 +84,8 @@ type SectionInput = {
   interval_count?: number | null
   interval_rest?: number | null
   coaching_cues?: string
+  target_distance?: number | null
+  target_duration?: number | null
   planned_duration?: number | null
 }
 
@@ -184,6 +188,8 @@ export async function createMixedTemplate(
           interval_count: section.interval_count,
           interval_rest: section.interval_rest,
           coaching_cues: section.coaching_cues,
+          target_distance: section.target_distance,
+          target_duration: section.target_duration,
           planned_duration: section.planned_duration,
           created_at: new Date(),
         })
@@ -216,6 +222,8 @@ const addSectionSchema = z.object({
   interval_count: z.number().int().positive().nullable().optional().transform((v) => v ?? null),
   interval_rest: z.number().int().min(0).nullable().optional().transform((v) => v ?? null),
   coaching_cues: z.string().optional().transform((v) => v || null),
+  target_distance: z.number().positive('Distance must be positive').nullable().optional().transform((v) => v ?? null),
+  target_duration: z.number().int().positive('Duration must be positive').nullable().optional().transform((v) => v ?? null),
   planned_duration: z.number().int().positive().nullable().optional().transform((v) => v ?? null),
 })
 
@@ -229,6 +237,8 @@ export type AddSectionInput = {
   interval_count?: number | null
   interval_rest?: number | null
   coaching_cues?: string
+  target_distance?: number | null
+  target_duration?: number | null
   planned_duration?: number | null
 }
 
@@ -254,6 +264,8 @@ export async function addSection(
     interval_count,
     interval_rest,
     coaching_cues,
+    target_distance,
+    target_duration,
     planned_duration,
   } = parsed.data
 
@@ -300,6 +312,8 @@ export async function addSection(
       interval_count,
       interval_rest,
       coaching_cues,
+      target_distance,
+      target_duration,
       planned_duration,
       created_at: new Date(),
     })
