@@ -1071,6 +1071,136 @@ describe('TodayWorkout — characterization', () => {
   })
 
   // ================================================================
+  // RunningDisplay — no distance/duration displayed currently
+  // ================================================================
+
+  it('does not display target_distance in running display (not yet implemented)', async () => {
+    mockFetchResponse([{
+      type: 'workout',
+      date: '2026-03-15',
+      mesocycle: makeMesocycle(),
+      template: makeTemplate({
+        modality: 'running',
+        run_type: 'easy',
+        target_distance: 10,
+        target_duration: null,
+      }),
+      slots: [],
+      period: 'morning',
+      time_slot: null,
+    }])
+    render(<TodayWorkout />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('running-display')).toBeInTheDocument()
+    })
+    expect(screen.queryByText('10km')).not.toBeInTheDocument()
+    expect(screen.queryByText('Target Distance')).not.toBeInTheDocument()
+    expect(screen.queryByText('Distance')).not.toBeInTheDocument()
+  })
+
+  it('does not display target_duration in running display (not yet implemented)', async () => {
+    mockFetchResponse([{
+      type: 'workout',
+      date: '2026-03-15',
+      mesocycle: makeMesocycle(),
+      template: makeTemplate({
+        modality: 'running',
+        run_type: 'tempo',
+        target_distance: null,
+        target_duration: 30,
+      }),
+      slots: [],
+      period: 'morning',
+      time_slot: null,
+    }])
+    render(<TodayWorkout />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('running-display')).toBeInTheDocument()
+    })
+    expect(screen.queryByText('30min')).not.toBeInTheDocument()
+    expect(screen.queryByText('30 min')).not.toBeInTheDocument()
+    expect(screen.queryByText('Target Duration')).not.toBeInTheDocument()
+  })
+
+  it('does not display target_distance in mixed section running content (not yet implemented)', async () => {
+    mockFetchResponse([{
+      type: 'workout',
+      date: '2026-03-15',
+      mesocycle: makeMesocycle(),
+      template: makeTemplate({ modality: 'mixed' }),
+      slots: [],
+      sections: [
+        {
+          id: 1,
+          section_name: 'Run Segment',
+          modality: 'running',
+          order: 1,
+          run_type: 'easy',
+          target_pace: null,
+          hr_zone: null,
+          interval_count: null,
+          interval_rest: null,
+          coaching_cues: null,
+          planned_duration: null,
+          target_distance: 5,
+          target_duration: null,
+          slots: [],
+        },
+      ],
+      period: 'morning',
+      time_slot: null,
+    }])
+    render(<TodayWorkout />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('mixed-display')).toBeInTheDocument()
+    })
+    expect(screen.queryByText('5km')).not.toBeInTheDocument()
+    expect(screen.queryByText('Target Distance')).not.toBeInTheDocument()
+    expect(screen.queryByText('Distance')).not.toBeInTheDocument()
+  })
+
+  it('does not display target_duration in mixed section running content (not yet implemented)', async () => {
+    mockFetchResponse([{
+      type: 'workout',
+      date: '2026-03-15',
+      mesocycle: makeMesocycle(),
+      template: makeTemplate({ modality: 'mixed' }),
+      slots: [],
+      sections: [
+        {
+          id: 1,
+          section_name: 'Run Segment',
+          modality: 'running',
+          order: 1,
+          run_type: 'tempo',
+          target_pace: null,
+          hr_zone: null,
+          interval_count: null,
+          interval_rest: null,
+          coaching_cues: null,
+          planned_duration: null,
+          target_distance: null,
+          target_duration: 45,
+          slots: [],
+        },
+      ],
+      period: 'morning',
+      time_slot: null,
+    }])
+    render(<TodayWorkout />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('mixed-display')).toBeInTheDocument()
+    })
+    expect(screen.queryByText('45min')).not.toBeInTheDocument()
+    expect(screen.queryByText('45 min')).not.toBeInTheDocument()
+    expect(screen.queryByText('Target Duration')).not.toBeInTheDocument()
+  })
+
+  // ================================================================
   // Run type badge variants
   // ================================================================
 
