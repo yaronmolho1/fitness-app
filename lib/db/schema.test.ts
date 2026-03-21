@@ -28,6 +28,7 @@ const CREATE_SQL = `
     modality TEXT NOT NULL CHECK(modality IN ('resistance', 'running', 'mma', 'mixed')),
     notes TEXT, run_type TEXT, target_pace TEXT, hr_zone INTEGER,
     interval_count INTEGER, interval_rest INTEGER, coaching_cues TEXT,
+    target_distance REAL, target_duration INTEGER,
     planned_duration INTEGER, created_at INTEGER
   );
   CREATE TABLE template_sections (
@@ -42,6 +43,8 @@ const CREATE_SQL = `
     interval_count INTEGER,
     interval_rest INTEGER,
     coaching_cues TEXT,
+    target_distance REAL,
+    target_duration INTEGER,
     planned_duration INTEGER,
     created_at INTEGER
   );
@@ -51,7 +54,8 @@ const CREATE_SQL = `
     exercise_id INTEGER NOT NULL REFERENCES exercises(id),
     section_id INTEGER REFERENCES template_sections(id),
     sets INTEGER NOT NULL, reps TEXT NOT NULL, weight REAL, rpe REAL,
-    rest_seconds INTEGER, guidelines TEXT, "order" INTEGER NOT NULL,
+    rest_seconds INTEGER, group_id INTEGER, group_rest_seconds INTEGER,
+    guidelines TEXT, "order" INTEGER NOT NULL,
     is_main INTEGER NOT NULL DEFAULT 0, created_at INTEGER
   );
   CREATE TABLE weekly_schedule (
@@ -401,6 +405,249 @@ describe('T096: template_sections schema', () => {
 
     it('exercise_slots has section_id column', () => {
       expect(schema.exercise_slots.section_id).toBeDefined()
+    })
+  })
+})
+
+describe('T126: distance/duration + superset schema', () => {
+  beforeEach(() => {
+    sqlite = new Database(':memory:')
+    sqlite.pragma('foreign_keys = ON')
+    db = drizzle(sqlite, { schema: { ...schema, ...relationsModule } }) as AppDb
+    sqlite.exec(CREATE_SQL)
+    sqlite.exec(SEED_SQL)
+
+    // Shared setup: template + section for reuse
+    sqlite.exec(`
+      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+      VALUES (1, 1, 'Morning Run', 'morning-run', 'running');
+      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+      VALUES (2, 1, 'Push Day', 'push-day', 'resistance');
+    `)
+  })
+
+  afterEach(() => {
+    sqlite?.close()
+  })
+
+  describe('workout_templates: target_distance and target_duration columns', () => {
+    it('columns exist with correct types', () => {
+      const cols = sqlite
+        .prepare("PRAGMA table_info('workout_templates')")
+        .all() as Array<{ name: string; type: string; notnull: number }>
+      const colMap = new Map(cols.map((c) => [c.name, c]))
+
+      expect(colMap.has('target_distance')).toBe(true)
+      expect(colMap.get('target_distance')!.type).toBe('REAL')
+      expect(colMap.get('target_distance')!.notnull).toBe(0)
+
+      expect(colMap.has('target_duration')).toBe(true)
+      expect(colMap.get('target_duration')!.type).toBe('INTEGER')
+      expect(colMap.get('target_duration')!.notnull).toBe(0)
+    })
+
+    it('stores target_distance via Drizzle ORM', () => {
+      const result = db
+        .insert(schema.workout_templates)
+        .values({
+          mesocycle_id: 1,
+          name: 'Long Run',
+          canonical_name: 'long-run',
+          modality: 'running',
+          run_type: 'long',
+          target_distance: 10.5,
+        })
+        .returning()
+        .get()
+
+      expect(result.target_distance).toBe(10.5)
+      expect(result.target_duration).toBeNull()
+    })
+
+    it('stores target_duration via Drizzle ORM', () => {
+      const result = db
+        .insert(schema.workout_templates)
+        .values({
+          mesocycle_id: 1,
+          name: 'Tempo Run',
+          canonical_name: 'tempo-run',
+          modality: 'running',
+          run_type: 'tempo',
+          target_duration: 30,
+        })
+        .returning()
+        .get()
+
+      expect(result.target_duration).toBe(30)
+      expect(result.target_distance).toBeNull()
+    })
+
+    it('stores both fields together', () => {
+      const result = db
+        .insert(schema.workout_templates)
+        .values({
+          mesocycle_id: 1,
+          name: 'Race',
+          canonical_name: 'race',
+          modality: 'running',
+          run_type: 'race',
+          target_distance: 5.0,
+          target_duration: 25,
+        })
+        .returning()
+        .get()
+
+      expect(result.target_distance).toBe(5.0)
+      expect(result.target_duration).toBe(25)
+    })
+
+    it('defaults to null when omitted', () => {
+      const result = db
+        .select()
+        .from(schema.workout_templates)
+        .all()
+        .find((t) => t.id === 1)!
+
+      expect(result.target_distance).toBeNull()
+      expect(result.target_duration).toBeNull()
+    })
+  })
+
+  describe('template_sections: target_distance and target_duration columns', () => {
+    it('columns exist with correct types', () => {
+      const cols = sqlite
+        .prepare("PRAGMA table_info('template_sections')")
+        .all() as Array<{ name: string; type: string; notnull: number }>
+      const colMap = new Map(cols.map((c) => [c.name, c]))
+
+      expect(colMap.has('target_distance')).toBe(true)
+      expect(colMap.get('target_distance')!.type).toBe('REAL')
+      expect(colMap.get('target_distance')!.notnull).toBe(0)
+
+      expect(colMap.has('target_duration')).toBe(true)
+      expect(colMap.get('target_duration')!.type).toBe('INTEGER')
+      expect(colMap.get('target_duration')!.notnull).toBe(0)
+    })
+
+    it('stores distance/duration on running section', () => {
+      sqlite.exec(`
+        INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+        VALUES (3, 1, 'Mixed', 'mixed', 'mixed');
+      `)
+
+      const result = db
+        .insert(schema.template_sections)
+        .values({
+          template_id: 3,
+          modality: 'running',
+          section_name: 'Warmup Run',
+          order: 1,
+          run_type: 'easy',
+          target_distance: 2.0,
+          target_duration: 15,
+        })
+        .returning()
+        .get()
+
+      expect(result.target_distance).toBe(2.0)
+      expect(result.target_duration).toBe(15)
+    })
+  })
+
+  describe('exercise_slots: group_id and group_rest_seconds columns', () => {
+    it('columns exist with correct types', () => {
+      const cols = sqlite
+        .prepare("PRAGMA table_info('exercise_slots')")
+        .all() as Array<{ name: string; type: string; notnull: number }>
+      const colMap = new Map(cols.map((c) => [c.name, c]))
+
+      expect(colMap.has('group_id')).toBe(true)
+      expect(colMap.get('group_id')!.type).toBe('INTEGER')
+      expect(colMap.get('group_id')!.notnull).toBe(0)
+
+      expect(colMap.has('group_rest_seconds')).toBe(true)
+      expect(colMap.get('group_rest_seconds')!.type).toBe('INTEGER')
+      expect(colMap.get('group_rest_seconds')!.notnull).toBe(0)
+    })
+
+    it('stores superset group via Drizzle ORM', () => {
+      const slot1 = db
+        .insert(schema.exercise_slots)
+        .values({
+          template_id: 2,
+          exercise_id: 10,
+          sets: 3,
+          reps: '10',
+          order: 1,
+          group_id: 1,
+          group_rest_seconds: 90,
+        })
+        .returning()
+        .get()
+
+      expect(slot1.group_id).toBe(1)
+      expect(slot1.group_rest_seconds).toBe(90)
+    })
+
+    it('defaults to null when omitted (backward compat)', () => {
+      const slot = db
+        .insert(schema.exercise_slots)
+        .values({
+          template_id: 2,
+          exercise_id: 10,
+          sets: 3,
+          reps: '8',
+          order: 1,
+        })
+        .returning()
+        .get()
+
+      expect(slot.group_id).toBeNull()
+      expect(slot.group_rest_seconds).toBeNull()
+    })
+
+    it('group_rest_seconds=0 is valid', () => {
+      const slot = db
+        .insert(schema.exercise_slots)
+        .values({
+          template_id: 2,
+          exercise_id: 10,
+          sets: 3,
+          reps: '8',
+          order: 1,
+          group_id: 1,
+          group_rest_seconds: 0,
+        })
+        .returning()
+        .get()
+
+      expect(slot.group_rest_seconds).toBe(0)
+    })
+  })
+
+  describe('Drizzle schema exports for T126', () => {
+    it('workout_templates has target_distance column', () => {
+      expect(schema.workout_templates.target_distance).toBeDefined()
+    })
+
+    it('workout_templates has target_duration column', () => {
+      expect(schema.workout_templates.target_duration).toBeDefined()
+    })
+
+    it('template_sections has target_distance column', () => {
+      expect(schema.template_sections.target_distance).toBeDefined()
+    })
+
+    it('template_sections has target_duration column', () => {
+      expect(schema.template_sections.target_duration).toBeDefined()
+    })
+
+    it('exercise_slots has group_id column', () => {
+      expect(schema.exercise_slots.group_id).toBeDefined()
+    })
+
+    it('exercise_slots has group_rest_seconds column', () => {
+      expect(schema.exercise_slots.group_rest_seconds).toBeDefined()
     })
   })
 })

@@ -44,6 +44,8 @@ const makeSlot = (overrides: Partial<SlotWithExercise> = {}): SlotWithExercise =
   weight: 80,
   rpe: 8,
   rest_seconds: 120,
+  group_id: null,
+  group_rest_seconds: null,
   guidelines: 'Slow eccentric',
   order: 1,
   is_main: false,

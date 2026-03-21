@@ -58,6 +58,8 @@ export const workout_templates = sqliteTable('workout_templates', {
   interval_count: integer('interval_count'),
   interval_rest: integer('interval_rest'),
   coaching_cues: text('coaching_cues'),
+  target_distance: real('target_distance'), // km, nullable
+  target_duration: integer('target_duration'), // minutes, nullable
   // MMA/BJJ-specific (null for non-mma templates)
   planned_duration: integer('planned_duration'),
   created_at: integer('created_at', { mode: 'timestamp' }),
@@ -82,6 +84,8 @@ export const template_sections = sqliteTable('template_sections', {
   interval_count: integer('interval_count'),
   interval_rest: integer('interval_rest'),
   coaching_cues: text('coaching_cues'),
+  target_distance: real('target_distance'), // km, nullable
+  target_duration: integer('target_duration'), // minutes, nullable
   // MMA-specific
   planned_duration: integer('planned_duration'),
   created_at: integer('created_at', { mode: 'timestamp' }),
@@ -101,6 +105,8 @@ export const exercise_slots = sqliteTable('exercise_slots', {
   weight: real('weight'),
   rpe: real('rpe'),
   rest_seconds: integer('rest_seconds'),
+  group_id: integer('group_id'), // superset grouping, nullable
+  group_rest_seconds: integer('group_rest_seconds'), // rest after full superset round, nullable
   guidelines: text('guidelines'),
   order: integer('order').notNull(),
   is_main: integer('is_main', { mode: 'boolean' })

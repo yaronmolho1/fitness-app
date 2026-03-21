@@ -85,6 +85,7 @@ beforeEach(() => {
       interval_count INTEGER,
       interval_rest INTEGER,
       coaching_cues TEXT,
+    target_distance REAL, target_duration INTEGER,
       planned_duration INTEGER,
       created_at INTEGER
     )
