@@ -47,11 +47,11 @@ describe('PageHeader', () => {
     expect(actionsDiv).toBeNull()
   })
 
-  // AC10: consistent vertical spacing (mb-6 bottom margin)
-  it('applies mb-6 bottom margin for spacing from content', () => {
+  // AC10: no default bottom margin — parent layout controls spacing via space-y-*
+  it('has no default bottom margin', () => {
     const { container } = render(<PageHeader title="Exercises" />)
     const header = container.firstElementChild
-    expect(header?.className).toContain('mb-6')
+    expect(header?.className).not.toContain('mb-6')
   })
 
   // Spacing between title and description (space-y-1.5)
