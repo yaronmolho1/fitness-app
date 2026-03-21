@@ -6,6 +6,7 @@ import * as relationsModule from '@/lib/db/relations'
 import type { AppDb } from '@/lib/db'
 import type { SaveWorkoutInput } from './save-workout'
 import { saveWorkoutCore } from './save-workout'
+import { saveMixedWorkoutCore, type SaveMixedWorkoutInput } from './save-mixed-workout'
 
 let sqlite: Database.Database
 let db: AppDb
@@ -183,5 +184,181 @@ describe('AC14 — template_snapshot includes group fields', () => {
     // Slot 3 (Lateral Raise) — ungrouped
     expect(snapshot.slots[2].group_id).toBeNull()
     expect(snapshot.slots[2].group_rest_seconds).toBeNull()
+  })
+})
+
+// --- Mixed workout snapshot group fields ---
+
+const MIXED_CREATE_SQL = `
+  CREATE TABLE exercises (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE, modality TEXT NOT NULL,
+    muscle_group TEXT, equipment TEXT, created_at INTEGER
+  );
+  CREATE TABLE mesocycles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL, start_date TEXT NOT NULL, end_date TEXT NOT NULL,
+    work_weeks INTEGER NOT NULL, has_deload INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'planned', created_at INTEGER
+  );
+  CREATE TABLE workout_templates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    mesocycle_id INTEGER NOT NULL REFERENCES mesocycles(id) ON DELETE CASCADE,
+    name TEXT NOT NULL, canonical_name TEXT NOT NULL, modality TEXT NOT NULL,
+    notes TEXT, run_type TEXT, target_pace TEXT, hr_zone INTEGER,
+    interval_count INTEGER, interval_rest INTEGER, coaching_cues TEXT,
+    target_distance REAL, target_duration INTEGER,
+    planned_duration INTEGER, created_at INTEGER
+  );
+  CREATE TABLE template_sections (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    template_id INTEGER NOT NULL REFERENCES workout_templates(id) ON DELETE CASCADE,
+    modality TEXT NOT NULL, section_name TEXT NOT NULL,
+    "order" INTEGER NOT NULL,
+    run_type TEXT, target_pace TEXT, hr_zone INTEGER,
+    interval_count INTEGER, interval_rest INTEGER, coaching_cues TEXT,
+    target_distance REAL, target_duration INTEGER,
+    planned_duration INTEGER, created_at INTEGER
+  );
+  CREATE TABLE exercise_slots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    template_id INTEGER NOT NULL REFERENCES workout_templates(id) ON DELETE CASCADE,
+    exercise_id INTEGER NOT NULL REFERENCES exercises(id),
+    section_id INTEGER REFERENCES template_sections(id),
+    sets INTEGER NOT NULL, reps TEXT NOT NULL, weight REAL, rpe REAL,
+    rest_seconds INTEGER, group_id INTEGER, group_rest_seconds INTEGER,
+    guidelines TEXT, "order" INTEGER NOT NULL,
+    is_main INTEGER NOT NULL DEFAULT 0, created_at INTEGER
+  );
+  CREATE TABLE logged_workouts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    template_id INTEGER, canonical_name TEXT, log_date TEXT NOT NULL,
+    logged_at INTEGER NOT NULL, rating INTEGER, notes TEXT,
+    template_snapshot TEXT NOT NULL, created_at INTEGER
+  );
+  CREATE TABLE logged_exercises (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    logged_workout_id INTEGER NOT NULL REFERENCES logged_workouts(id) ON DELETE CASCADE,
+    exercise_id INTEGER, exercise_name TEXT NOT NULL,
+    "order" INTEGER NOT NULL, actual_rpe REAL, created_at INTEGER
+  );
+  CREATE TABLE logged_sets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    logged_exercise_id INTEGER NOT NULL REFERENCES logged_exercises(id) ON DELETE CASCADE,
+    set_number INTEGER NOT NULL, actual_reps INTEGER,
+    actual_weight REAL, created_at INTEGER
+  );
+`
+
+const MIXED_SEED_SQL = `
+  INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, status)
+  VALUES (1, 'Block A', '2026-03-01', '2026-04-01', 4, 'active');
+
+  INSERT INTO exercises (id, name, modality, muscle_group, equipment) VALUES
+    (10, 'Bench Press', 'resistance', 'Chest', 'Barbell'),
+    (20, 'Cable Fly', 'resistance', 'Chest', 'Cable'),
+    (30, 'Lateral Raise', 'resistance', 'Shoulders', 'Dumbbell');
+
+  INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+  VALUES (1, 1, 'Push + Run', 'push-run', 'mixed');
+
+  INSERT INTO template_sections (id, template_id, modality, section_name, "order")
+  VALUES (1, 1, 'resistance', 'Strength', 1);
+
+  INSERT INTO template_sections (id, template_id, modality, section_name, "order", run_type, target_pace, hr_zone)
+  VALUES (2, 1, 'running', 'Cooldown', 2, 'easy', '6:00/km', 2);
+
+  INSERT INTO exercise_slots (id, template_id, exercise_id, section_id, sets, reps, weight, rpe, rest_seconds, group_id, group_rest_seconds, guidelines, "order", is_main)
+  VALUES
+    (100, 1, 10, 1, 3, '8', 80.0, 8.0, 30, 1, 90, 'Pause at bottom', 1, 1),
+    (101, 1, 20, 1, 3, '12', 15.0, NULL, 30, 1, 90, NULL, 2, 0),
+    (102, 1, 30, 1, 3, '15', 10.0, NULL, 60, NULL, NULL, NULL, 3, 0);
+`
+
+function buildMixedInput(): SaveMixedWorkoutInput {
+  return {
+    templateId: 1,
+    logDate: '2026-03-15',
+    sections: [
+      {
+        sectionId: 1,
+        modality: 'resistance',
+        exercises: [
+          {
+            slotId: 100, exerciseId: 10, exerciseName: 'Bench Press',
+            order: 1, rpe: 8,
+            sets: [{ reps: 8, weight: 80 }, { reps: 8, weight: 80 }, { reps: 7, weight: 80 }],
+          },
+          {
+            slotId: 101, exerciseId: 20, exerciseName: 'Cable Fly',
+            order: 2, rpe: null,
+            sets: [{ reps: 12, weight: 15 }, { reps: 12, weight: 15 }, { reps: 10, weight: 15 }],
+          },
+          {
+            slotId: 102, exerciseId: 30, exerciseName: 'Lateral Raise',
+            order: 3, rpe: null,
+            sets: [{ reps: 15, weight: 10 }, { reps: 15, weight: 10 }, { reps: 12, weight: 10 }],
+          },
+        ],
+      },
+      {
+        sectionId: 2,
+        modality: 'running',
+        actualDistance: 3.0,
+        actualAvgPace: '6:05/km',
+        actualAvgHr: 140,
+      },
+    ],
+    rating: 4,
+    notes: null,
+  }
+}
+
+describe('AC14 — mixed workout snapshot includes group fields', () => {
+  let mixedSqlite: Database.Database
+  let mixedDb: AppDb
+
+  beforeEach(() => {
+    mixedSqlite = new Database(':memory:')
+    mixedSqlite.pragma('foreign_keys = ON')
+    mixedDb = drizzle(mixedSqlite, { schema: { ...schema, ...relationsModule } }) as AppDb
+    mixedSqlite.exec(MIXED_CREATE_SQL)
+    mixedSqlite.exec(MIXED_SEED_SQL)
+  })
+
+  afterEach(() => {
+    mixedSqlite?.close()
+  })
+
+  it('v2 snapshot resistance section slots include group_id and group_rest_seconds', async () => {
+    await saveMixedWorkoutCore(mixedDb, buildMixedInput())
+    const [workout] = mixedDb.select().from(schema.logged_workouts).all()
+    const snapshot = workout.template_snapshot as {
+      version: number
+      sections: Array<{
+        modality: string
+        slots?: Array<{
+          exercise_name: string
+          group_id: number | null
+          group_rest_seconds: number | null
+          [key: string]: unknown
+        }>
+        [key: string]: unknown
+      }>
+    }
+
+    expect(snapshot.version).toBe(2)
+    const resistanceSection = snapshot.sections.find(s => s.modality === 'resistance')!
+    const slots = resistanceSection.slots!
+
+    // Slots 1-2 (Bench + Cable Fly) — grouped as superset
+    expect(slots[0].group_id).toBe(1)
+    expect(slots[0].group_rest_seconds).toBe(90)
+    expect(slots[1].group_id).toBe(1)
+    expect(slots[1].group_rest_seconds).toBe(90)
+
+    // Slot 3 (Lateral Raise) — ungrouped
+    expect(slots[2].group_id).toBeNull()
+    expect(slots[2].group_rest_seconds).toBeNull()
   })
 })
