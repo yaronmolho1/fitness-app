@@ -139,6 +139,19 @@ const createRunningTemplateSchema = z
       .transform((s) => s.trim())
       .optional()
       .transform((v) => v || null),
+    target_distance: z
+      .number()
+      .positive('Distance must be positive')
+      .nullable()
+      .optional()
+      .transform((v) => v ?? null),
+    target_duration: z
+      .number()
+      .int()
+      .positive('Duration must be positive')
+      .nullable()
+      .optional()
+      .transform((v) => v ?? null),
   })
   .transform((data) => ({
     ...data,
@@ -155,6 +168,8 @@ export type CreateRunningTemplateInput = {
   interval_count?: number | null
   interval_rest?: number | null
   coaching_cues?: string
+  target_distance?: number | null
+  target_duration?: number | null
 }
 
 type CreateRunningTemplateResult =
@@ -288,6 +303,8 @@ export async function createRunningTemplate(
     interval_count,
     interval_rest,
     coaching_cues,
+    target_distance,
+    target_duration,
   } = parsed.data
 
   const canonicalName = generateCanonicalName(name)
@@ -347,6 +364,8 @@ export async function createRunningTemplate(
         interval_count,
         interval_rest,
         coaching_cues,
+        target_distance,
+        target_duration,
         created_at: new Date(),
       })
       .returning()

@@ -714,6 +714,128 @@ describe('cascadeUpdateTemplates', () => {
     })
   })
 
+  describe('distance/duration cascade', () => {
+    it('cascades target_distance update across phases', async () => {
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
+
+      const t1 = seedTemplate(meso1.id, {
+        name: 'Easy Run', canonical_name: 'easy-run', modality: 'running',
+      })
+      const t2 = seedTemplate(meso2.id, {
+        name: 'Easy Run', canonical_name: 'easy-run', modality: 'running',
+      })
+
+      const result = await cascadeUpdateTemplates({
+        templateId: t1.id,
+        scope: 'all-phases',
+        updates: { target_distance: 5.0 },
+      })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.updated).toBe(2)
+      }
+      expect(getTemplate(t1.id)?.target_distance).toBe(5.0)
+      expect(getTemplate(t2.id)?.target_distance).toBe(5.0)
+    })
+
+    it('cascades target_duration update across phases', async () => {
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
+
+      const t1 = seedTemplate(meso1.id, {
+        name: 'Tempo Run', canonical_name: 'tempo-run', modality: 'running',
+      })
+      const t2 = seedTemplate(meso2.id, {
+        name: 'Tempo Run', canonical_name: 'tempo-run', modality: 'running',
+      })
+
+      const result = await cascadeUpdateTemplates({
+        templateId: t1.id,
+        scope: 'all-phases',
+        updates: { target_duration: 30 },
+      })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.updated).toBe(2)
+      }
+      expect(getTemplate(t1.id)?.target_duration).toBe(30)
+      expect(getTemplate(t2.id)?.target_duration).toBe(30)
+    })
+
+    it('cascades both distance and duration together', async () => {
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
+
+      const t1 = seedTemplate(meso1.id, {
+        name: 'Race', canonical_name: 'race', modality: 'running',
+      })
+      const t2 = seedTemplate(meso2.id, {
+        name: 'Race', canonical_name: 'race', modality: 'running',
+      })
+
+      const result = await cascadeUpdateTemplates({
+        templateId: t1.id,
+        scope: 'all-phases',
+        updates: { target_distance: 10.0, target_duration: 50 },
+      })
+
+      expect(result.success).toBe(true)
+      expect(getTemplate(t1.id)?.target_distance).toBe(10.0)
+      expect(getTemplate(t1.id)?.target_duration).toBe(50)
+      expect(getTemplate(t2.id)?.target_distance).toBe(10.0)
+      expect(getTemplate(t2.id)?.target_duration).toBe(50)
+    })
+
+    it('clears distance/duration with null', async () => {
+      const meso = seedMesocycle({ status: 'active' })
+      const t1 = seedTemplate(meso.id, {
+        name: 'Run', canonical_name: 'run', modality: 'running',
+      })
+      testDb.run(sql`UPDATE workout_templates SET target_distance = 5.0, target_duration = 30 WHERE id = ${t1.id}`)
+
+      const result = await cascadeUpdateTemplates({
+        templateId: t1.id,
+        scope: 'this-only',
+        updates: { target_distance: null, target_duration: null },
+      })
+
+      expect(result.success).toBe(true)
+      expect(getTemplate(t1.id)?.target_distance).toBeNull()
+      expect(getTemplate(t1.id)?.target_duration).toBeNull()
+    })
+
+    it('skips logged templates when cascading distance/duration', async () => {
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
+
+      const t1 = seedTemplate(meso1.id, {
+        name: 'Easy Run', canonical_name: 'easy-run', modality: 'running',
+      })
+      const t2 = seedTemplate(meso2.id, {
+        name: 'Easy Run', canonical_name: 'easy-run', modality: 'running',
+      })
+
+      seedLoggedWorkout(t2.id)
+
+      const result = await cascadeUpdateTemplates({
+        templateId: t1.id,
+        scope: 'all-phases',
+        updates: { target_distance: 8.0 },
+      })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.updated).toBe(1)
+        expect(result.data.skipped).toBe(1)
+      }
+      expect(getTemplate(t1.id)?.target_distance).toBe(8.0)
+      expect(getTemplate(t2.id)?.target_distance).toBeNull()
+    })
+  })
+
   describe('mixed field updates', () => {
     it('cascades running fields + name together', async () => {
       const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })

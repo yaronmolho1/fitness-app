@@ -513,6 +513,128 @@ describe('createRunningTemplate', () => {
       expect(revalidatePath).toHaveBeenCalledWith('/mesocycles')
     })
   })
+
+  describe('distance/duration fields', () => {
+    it('stores target_distance on creation', async () => {
+      const meso = seedMesocycle()
+      const result = await createRunningTemplate({
+        name: '5K Easy',
+        mesocycle_id: meso.id,
+        run_type: 'easy',
+        target_distance: 5.0,
+      })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.target_distance).toBe(5.0)
+      }
+    })
+
+    it('stores target_duration on creation', async () => {
+      const meso = seedMesocycle()
+      const result = await createRunningTemplate({
+        name: '30min Tempo',
+        mesocycle_id: meso.id,
+        run_type: 'tempo',
+        target_duration: 30,
+      })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.target_duration).toBe(30)
+      }
+    })
+
+    it('stores both distance and duration together', async () => {
+      const meso = seedMesocycle()
+      const result = await createRunningTemplate({
+        name: '10K Race',
+        mesocycle_id: meso.id,
+        run_type: 'race',
+        target_distance: 10.0,
+        target_duration: 50,
+      })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.target_distance).toBe(10.0)
+        expect(result.data.target_duration).toBe(50)
+      }
+    })
+
+    it('defaults both to null when not provided', async () => {
+      const meso = seedMesocycle()
+      const result = await createRunningTemplate({
+        name: 'Minimal Run',
+        mesocycle_id: meso.id,
+        run_type: 'easy',
+      })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.target_distance).toBeNull()
+        expect(result.data.target_duration).toBeNull()
+      }
+    })
+
+    it('rejects negative target_distance', async () => {
+      const meso = seedMesocycle()
+      const result = await createRunningTemplate({
+        name: 'Bad Distance',
+        mesocycle_id: meso.id,
+        run_type: 'easy',
+        target_distance: -1,
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toMatch(/distance.*positive/i)
+    })
+
+    it('rejects zero target_distance', async () => {
+      const meso = seedMesocycle()
+      const result = await createRunningTemplate({
+        name: 'Zero Distance',
+        mesocycle_id: meso.id,
+        run_type: 'easy',
+        target_distance: 0,
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toMatch(/distance.*positive/i)
+    })
+
+    it('rejects negative target_duration', async () => {
+      const meso = seedMesocycle()
+      const result = await createRunningTemplate({
+        name: 'Bad Duration',
+        mesocycle_id: meso.id,
+        run_type: 'easy',
+        target_duration: -5,
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toMatch(/duration.*positive/i)
+    })
+
+    it('rejects zero target_duration', async () => {
+      const meso = seedMesocycle()
+      const result = await createRunningTemplate({
+        name: 'Zero Duration',
+        mesocycle_id: meso.id,
+        run_type: 'easy',
+        target_duration: 0,
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error).toMatch(/duration.*positive/i)
+    })
+
+    it('accepts fractional target_distance', async () => {
+      const meso = seedMesocycle()
+      const result = await createRunningTemplate({
+        name: 'Half Marathon',
+        mesocycle_id: meso.id,
+        run_type: 'long',
+        target_distance: 21.1,
+      })
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.target_distance).toBeCloseTo(21.1)
+      }
+    })
+  })
 })
 
 describe('createMmaBjjTemplate', () => {
