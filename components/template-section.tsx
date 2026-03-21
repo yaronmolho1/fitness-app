@@ -243,6 +243,8 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated }: Tem
   const [hrZone, setHrZone] = useState(template.hr_zone?.toString() ?? '')
   const [intervalCount, setIntervalCount] = useState(template.interval_count?.toString() ?? '')
   const [intervalRest, setIntervalRest] = useState(template.interval_rest?.toString() ?? '')
+  const [targetDistance, setTargetDistance] = useState(template.target_distance?.toString() ?? '')
+  const [targetDuration, setTargetDuration] = useState(template.target_duration?.toString() ?? '')
   const [coachingCues, setCoachingCues] = useState(template.coaching_cues ?? '')
   // MMA fields
   const [plannedDuration, setPlannedDuration] = useState(template.planned_duration?.toString() ?? '')
@@ -273,6 +275,10 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated }: Tem
       if (newIntervalRest !== template.interval_rest) updates.interval_rest = newIntervalRest
       const newCues = coachingCues || null
       if (newCues !== template.coaching_cues) updates.coaching_cues = newCues
+      const newDistance = targetDistance ? Number(targetDistance) : null
+      if (newDistance !== (template.target_distance ?? null)) updates.target_distance = newDistance
+      const newDuration = targetDuration ? Number(targetDuration) : null
+      if (newDuration !== (template.target_duration ?? null)) updates.target_duration = newDuration
     }
 
     if (isMma) {
@@ -315,6 +321,8 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated }: Tem
     setHrZone(template.hr_zone?.toString() ?? '')
     setIntervalCount(template.interval_count?.toString() ?? '')
     setIntervalRest(template.interval_rest?.toString() ?? '')
+    setTargetDistance(template.target_distance?.toString() ?? '')
+    setTargetDuration(template.target_duration?.toString() ?? '')
     setCoachingCues(template.coaching_cues ?? '')
     setPlannedDuration(template.planned_duration?.toString() ?? '')
     setError('')
@@ -415,6 +423,35 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated }: Tem
                     <option key={z} value={z}>Zone {z}</option>
                   ))}
                 </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor={`distance-${template.id}`}>
+                  {isInterval ? 'Target Distance (km, per rep)' : 'Target Distance (km)'}
+                </Label>
+                <Input
+                  id={`distance-${template.id}`}
+                  type="text"
+                  inputMode="decimal"
+                  value={targetDistance}
+                  onChange={(e) => setTargetDistance(e.target.value)}
+                  placeholder="e.g. 5"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={`duration-edit-${template.id}`}>
+                  {isInterval ? 'Target Duration (min, per rep)' : 'Target Duration (min)'}
+                </Label>
+                <Input
+                  id={`duration-edit-${template.id}`}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={targetDuration}
+                  onChange={(e) => setTargetDuration(e.target.value)}
+                  placeholder="e.g. 30"
+                />
               </div>
             </div>
             {isInterval && (
@@ -540,6 +577,8 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated }: Tem
           {isRunning && template.run_type && (
             <span className="ml-2 text-xs text-muted-foreground">
               {template.run_type}
+              {template.target_distance && ` · ${template.target_distance}km`}
+              {template.target_duration && ` · ${template.target_duration}min`}
               {template.target_pace && ` · ${template.target_pace}`}
               {template.hr_zone && ` · Z${template.hr_zone}`}
             </span>
