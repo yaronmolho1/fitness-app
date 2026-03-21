@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useTransition } from 'react'
+import { useState, useEffect, useRef, useTransition, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { getCascadePreview, cascadeUpdateTemplates } from '@/lib/templates/cascade-actions'
@@ -40,6 +40,23 @@ export function CascadeScopeSelector({ templateId, updates, onComplete, onCancel
   const [summary, setSummary] = useState<CascadeSummary | null>(null)
   const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
+  const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Auto-dismiss summary after 2s
+  useEffect(() => {
+    if (step !== 'summary' || !summary) return
+    dismissTimer.current = setTimeout(() => {
+      onComplete()
+    }, 2000)
+    return () => {
+      if (dismissTimer.current) clearTimeout(dismissTimer.current)
+    }
+  }, [step, summary, onComplete])
+
+  const handleDone = useCallback(() => {
+    if (dismissTimer.current) clearTimeout(dismissTimer.current)
+    onComplete()
+  }, [onComplete])
 
   // Fetch preview for all-phases on mount to show target counts
   useEffect(() => {
@@ -113,7 +130,7 @@ export function CascadeScopeSelector({ templateId, updates, onComplete, onCancel
           )}
         </div>
 
-        <Button size="sm" variant="ghost" onClick={onComplete} aria-label="Done">
+        <Button size="sm" variant="ghost" onClick={handleDone} aria-label="Done">
           Done
         </Button>
       </div>
