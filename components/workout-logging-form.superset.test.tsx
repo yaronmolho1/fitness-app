@@ -44,7 +44,7 @@ function makeSlot(overrides: Record<string, unknown> = {}) {
   }
 }
 
-describe('WorkoutLoggingForm — superset display (AC15)', () => {
+describe('WorkoutLoggingForm — superset display (AC13)', () => {
   afterEach(() => {
     cleanup()
   })
