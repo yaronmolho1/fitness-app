@@ -27,6 +27,8 @@ export type SlotData = {
   weight: number | null
   rpe: number | null
   rest_seconds: number | null
+  group_id: number | null
+  group_rest_seconds: number | null
   guidelines: string | null
   order: number
   is_main: boolean
@@ -53,6 +55,9 @@ export type TemplateInfo = {
   interval_count: number | null
   interval_rest: number | null
   coaching_cues: string | null
+  // Distance/duration
+  target_distance: number | null
+  target_duration: number | null
   // MMA-specific
   planned_duration: number | null
 }
@@ -69,6 +74,9 @@ export type SectionData = {
   interval_count: number | null
   interval_rest: number | null
   coaching_cues: string | null
+  // Distance/duration
+  target_distance: number | null
+  target_duration: number | null
   // MMA-specific
   planned_duration: number | null
   // Resistance sections carry their exercise slots
@@ -415,6 +423,8 @@ export async function getTodayWorkout(today: string): Promise<TodayResult[]> {
         weight: exercise_slots.weight,
         rpe: exercise_slots.rpe,
         rest_seconds: exercise_slots.rest_seconds,
+        group_id: exercise_slots.group_id,
+        group_rest_seconds: exercise_slots.group_rest_seconds,
         guidelines: exercise_slots.guidelines,
         order: exercise_slots.order,
         is_main: exercise_slots.is_main,
@@ -440,6 +450,8 @@ export async function getTodayWorkout(today: string): Promise<TodayResult[]> {
           interval_count: template_sections.interval_count,
           interval_rest: template_sections.interval_rest,
           coaching_cues: template_sections.coaching_cues,
+          target_distance: template_sections.target_distance,
+          target_duration: template_sections.target_duration,
           planned_duration: template_sections.planned_duration,
         })
         .from(template_sections)
@@ -460,6 +472,8 @@ export async function getTodayWorkout(today: string): Promise<TodayResult[]> {
                 weight: exercise_slots.weight,
                 rpe: exercise_slots.rpe,
                 rest_seconds: exercise_slots.rest_seconds,
+                group_id: exercise_slots.group_id,
+                group_rest_seconds: exercise_slots.group_rest_seconds,
                 guidelines: exercise_slots.guidelines,
                 order: exercise_slots.order,
                 is_main: exercise_slots.is_main,
@@ -498,6 +512,8 @@ export async function getTodayWorkout(today: string): Promise<TodayResult[]> {
         interval_count: template.interval_count,
         interval_rest: template.interval_rest,
         coaching_cues: template.coaching_cues,
+        target_distance: template.target_distance,
+        target_duration: template.target_duration,
         planned_duration: template.planned_duration,
       },
       slots: slots as SlotData[],

@@ -21,6 +21,8 @@ function makeSlot(overrides: Partial<SlotData> = {}): SlotData {
     weight: 80,
     rpe: 8,
     rest_seconds: 180,
+    group_id: null,
+    group_rest_seconds: null,
     guidelines: null,
     order: 1,
     is_main: true,
@@ -36,6 +38,8 @@ function makeSection(overrides: Partial<SectionData> & { id: number; section_nam
     interval_count: null,
     interval_rest: null,
     coaching_cues: null,
+    target_distance: null,
+    target_duration: null,
     planned_duration: null,
     ...overrides,
   }
@@ -63,6 +67,8 @@ function makeData(overrides: Record<string, unknown> = {}) {
       interval_count: null,
       interval_rest: null,
       coaching_cues: null,
+      target_distance: null,
+      target_duration: null,
       planned_duration: null,
     },
     sections: [

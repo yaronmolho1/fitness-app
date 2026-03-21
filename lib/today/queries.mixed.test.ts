@@ -463,6 +463,80 @@ describe('getTodayWorkout — mixed template sections', () => {
     }
   })
 
+  it('running sections include target_distance and target_duration', async () => {
+    const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
+    const tmpl = seedTemplate(meso.id, 'Run + Lift', { modality: 'mixed' })
+    seedSection(tmpl.id, 'Easy Run', 'running', 1, {
+      run_type: 'easy',
+      target_pace: '5:30',
+    })
+    // Also insert target_distance/target_duration directly
+    testDb.run(sql`
+      UPDATE template_sections
+      SET target_distance = 5.0, target_duration = 30
+      WHERE section_name = 'Easy Run'
+    `)
+    seedSection(tmpl.id, 'Lifts', 'resistance', 2)
+    seedSchedule(meso.id, 2, tmpl.id)
+
+    const results = await getTodayWorkout('2026-03-10')
+    const result = results[0]
+    if (result.type === 'workout') {
+      const runSection = result.sections![0]
+      expect(runSection.target_distance).toBe(5.0)
+      expect(runSection.target_duration).toBe(30)
+    }
+  })
+
+  it('resistance section slots include group_id and group_rest_seconds', async () => {
+    const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
+    const tmpl = seedTemplate(meso.id, 'Mixed Supersets', { modality: 'mixed' })
+    const sec = seedSection(tmpl.id, 'Strength', 'resistance', 1)
+    const ex1 = seedExercise('Bench Press')
+    const ex2 = seedExercise('Row')
+
+    testDb
+      .insert(schema.exercise_slots)
+      .values({
+        template_id: tmpl.id,
+        exercise_id: ex1.id,
+        section_id: sec.id,
+        sets: 3,
+        reps: '10',
+        order: 1,
+        is_main: false,
+        group_id: 1,
+        group_rest_seconds: 90,
+        created_at: new Date(),
+      })
+      .run()
+    testDb
+      .insert(schema.exercise_slots)
+      .values({
+        template_id: tmpl.id,
+        exercise_id: ex2.id,
+        section_id: sec.id,
+        sets: 3,
+        reps: '10',
+        order: 2,
+        is_main: false,
+        group_id: 1,
+        group_rest_seconds: 90,
+        created_at: new Date(),
+      })
+      .run()
+    seedSchedule(meso.id, 2, tmpl.id)
+
+    const results = await getTodayWorkout('2026-03-10')
+    const result = results[0]
+    if (result.type === 'workout') {
+      const resistanceSection = result.sections![0]
+      expect(resistanceSection.slots).toHaveLength(2)
+      expect(resistanceSection.slots![0].group_id).toBe(1)
+      expect(resistanceSection.slots![0].group_rest_seconds).toBe(90)
+    }
+  })
+
   it('non-mixed templates do not include sections', async () => {
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
     const tmpl = seedTemplate(meso.id, 'Push A', { modality: 'resistance' })
