@@ -37,6 +37,8 @@ function makeSlot(overrides: Partial<SlotData> = {}): SlotData {
     weight: 80,
     rpe: 8,
     rest_seconds: 180,
+    group_id: null,
+    group_rest_seconds: null,
     guidelines: null,
     order: 1,
     is_main: true,

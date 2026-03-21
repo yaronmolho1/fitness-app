@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { cn } from '@/lib/utils'
 import { SectionHeading } from '@/components/layout/section-heading'
+import { groupSlotsByGroupId, getGroupLabel, formatRest as formatRestSeconds } from '@/lib/ui/superset-grouping'
 import { formatDateWithWeekday } from '@/lib/date-format'
 import { saveWorkout } from '@/lib/workouts/actions'
 import type { SaveWorkoutInput } from '@/lib/workouts/actions'
@@ -16,6 +17,8 @@ export type SlotData = {
   weight: number | null
   rpe: number | null
   rest_seconds: number | null
+  group_id: number | null
+  group_rest_seconds: number | null
   guidelines: string | null
   order: number
   is_main: boolean
@@ -151,158 +154,189 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
 
       {/* Exercise sections */}
       {sortedSlots.length > 0 ? (
-        sortedSlots.map((slot, slotIndex) => (
-          <div
-            key={slot.id}
-            data-testid="exercise-section"
-            className={cn(
-              'rounded-xl border bg-card overflow-hidden',
-              slot.is_main
-                ? 'border-l-4 border-l-primary'
-                : 'border-l-4 border-l-muted'
-            )}
-          >
-            {/* Exercise header */}
-            <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-2">
-              <SectionHeading className="mt-0 mb-0 text-base leading-tight">
-                {slot.exercise_name}
-              </SectionHeading>
-              <span
+        (() => {
+          // Build slot-id to index map for state lookups
+          const slotIndexMap = new Map(sortedSlots.map((s, i) => [s.id, i]))
+          const grouped = groupSlotsByGroupId(sortedSlots)
+
+          function renderExerciseSection(slot: SlotData) {
+            const slotIndex = slotIndexMap.get(slot.id)!
+            return (
+              <div
+                key={slot.id}
+                data-testid="exercise-section"
                 className={cn(
-                  'shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium',
+                  'rounded-xl border bg-card overflow-hidden',
                   slot.is_main
-                    ? 'bg-primary/15 text-primary'
-                    : 'bg-muted text-muted-foreground'
+                    ? 'border-l-4 border-l-primary'
+                    : 'border-l-4 border-l-muted'
                 )}
               >
-                {slot.is_main ? 'Main' : 'Complementary'}
-              </span>
-            </div>
-
-            {/* Column headers */}
-            <div className="grid grid-cols-[2rem_1fr_1fr_2.75rem] gap-2 px-4 pb-1">
-              <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider text-center">
-                Set
-              </div>
-              <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider text-center">
-                Weight
-              </div>
-              <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider text-center">
-                Reps
-              </div>
-              <div />
-            </div>
-
-            {/* Set rows */}
-            <div className="space-y-1.5 px-4 pb-2">
-              {sets[slotIndex]?.map((setData, setIndex) => (
-                <div
-                  key={setIndex}
-                  data-testid="set-row"
-                  className="grid grid-cols-[2rem_1fr_1fr_2.75rem] gap-2 items-center"
-                >
-                  {/* Set number label */}
-                  <div
-                    data-testid="set-number-label"
-                    className="flex min-h-[44px] items-center justify-center text-sm font-bold tabular-nums text-muted-foreground"
+                {/* Exercise header */}
+                <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-2">
+                  <SectionHeading className="mt-0 mb-0 text-base leading-tight">
+                    {slot.exercise_name}
+                  </SectionHeading>
+                  <span
+                    className={cn(
+                      'shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium',
+                      slot.is_main
+                        ? 'bg-primary/15 text-primary'
+                        : 'bg-muted text-muted-foreground'
+                    )}
                   >
-                    {setIndex + 1}
+                    {slot.is_main ? 'Main' : 'Complementary'}
+                  </span>
+                </div>
+
+                {/* Column headers */}
+                <div className="grid grid-cols-[2rem_1fr_1fr_2.75rem] gap-2 px-4 pb-1">
+                  <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider text-center">
+                    Set
                   </div>
+                  <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider text-center">
+                    Weight
+                  </div>
+                  <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider text-center">
+                    Reps
+                  </div>
+                  <div />
+                </div>
 
-                  {/* Weight input */}
-                  <input
-                    data-testid={`weight-input-${slotIndex}-${setIndex}`}
-                    aria-label={`Actual weight for set ${setIndex + 1}`}
-                    type="text"
-                    inputMode="decimal"
-                    placeholder={slot.weight !== null ? String(slot.weight) : '\u2014'}
-                    value={setData.weight}
-                    onChange={(e) =>
-                      updateSet(slotIndex, setIndex, 'weight', e.target.value)
-                    }
-                    className="min-h-[44px] w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  />
+                {/* Set rows */}
+                <div className="space-y-1.5 px-4 pb-2">
+                  {sets[slotIndex]?.map((setData, setIndex) => (
+                    <div
+                      key={setIndex}
+                      data-testid="set-row"
+                      className="grid grid-cols-[2rem_1fr_1fr_2.75rem] gap-2 items-center"
+                    >
+                      <div
+                        data-testid="set-number-label"
+                        className="flex min-h-[44px] items-center justify-center text-sm font-bold tabular-nums text-muted-foreground"
+                      >
+                        {setIndex + 1}
+                      </div>
 
-                  {/* Reps input */}
-                  <input
-                    data-testid={`reps-input-${slotIndex}-${setIndex}`}
-                    aria-label={`Actual reps for set ${setIndex + 1}`}
-                    type="text"
-                    inputMode="numeric"
-                    placeholder={slot.reps || '\u2014'}
-                    value={setData.reps}
-                    onChange={(e) =>
-                      updateSet(slotIndex, setIndex, 'reps', e.target.value)
-                    }
-                    className="min-h-[44px] w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  />
+                      <input
+                        data-testid={`weight-input-${slotIndex}-${setIndex}`}
+                        aria-label={`Actual weight for set ${setIndex + 1}`}
+                        type="text"
+                        inputMode="decimal"
+                        placeholder={slot.weight !== null ? String(slot.weight) : '\u2014'}
+                        value={setData.weight}
+                        onChange={(e) =>
+                          updateSet(slotIndex, setIndex, 'weight', e.target.value)
+                        }
+                        className="min-h-[44px] w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      />
 
-                  {/* Remove set */}
+                      <input
+                        data-testid={`reps-input-${slotIndex}-${setIndex}`}
+                        aria-label={`Actual reps for set ${setIndex + 1}`}
+                        type="text"
+                        inputMode="numeric"
+                        placeholder={slot.reps || '\u2014'}
+                        value={setData.reps}
+                        onChange={(e) =>
+                          updateSet(slotIndex, setIndex, 'reps', e.target.value)
+                        }
+                        className="min-h-[44px] w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      />
+
+                      <button
+                        type="button"
+                        aria-label={`Remove set ${setIndex + 1}`}
+                        disabled={sets[slotIndex].length <= 1}
+                        onClick={() => removeSet(slotIndex, setIndex)}
+                        className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add set */}
+                <div className="px-4 pb-3">
                   <button
                     type="button"
-                    aria-label={`Remove set ${setIndex + 1}`}
-                    disabled={sets[slotIndex].length <= 1}
-                    onClick={() => removeSet(slotIndex, setIndex)}
-                    className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                    onClick={() => addSet(slotIndex)}
+                    className="w-full min-h-[44px] rounded-lg border border-dashed border-muted-foreground/30 py-2 text-sm font-medium text-muted-foreground hover:border-primary hover:text-primary transition-colors active:scale-[0.98]"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    + Add Set
                   </button>
                 </div>
-              ))}
-            </div>
 
-            {/* Add set */}
-            <div className="px-4 pb-3">
-              <button
-                type="button"
-                onClick={() => addSet(slotIndex)}
-                className="w-full min-h-[44px] rounded-lg border border-dashed border-muted-foreground/30 py-2 text-sm font-medium text-muted-foreground hover:border-primary hover:text-primary transition-colors active:scale-[0.98]"
-              >
-                + Add Set
-              </button>
-            </div>
+                {/* Per-exercise RPE selector */}
+                <div className="border-t px-4 py-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      RPE {slot.rpe !== null && <span className="text-[10px]">(plan: {slot.rpe})</span>}
+                    </span>
+                  </div>
+                  <div
+                    data-testid={`rpe-selector-${slotIndex}`}
+                    className="flex flex-wrap gap-1.5"
+                  >
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map((value) => {
+                      const isSelected = exerciseRpe[slotIndex] === value
+                      return (
+                        <button
+                          key={value}
+                          type="button"
+                          aria-label={`RPE ${value}`}
+                          aria-pressed={isSelected}
+                          onClick={() => {
+                            setExerciseRpe((prev) => {
+                              const next = [...prev]
+                              next[slotIndex] = isSelected ? null : value
+                              return next
+                            })
+                          }}
+                          className={cn(
+                            'min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border text-sm font-semibold tabular-nums transition-colors active:scale-95',
+                            isSelected
+                              ? 'border-primary bg-primary text-primary-foreground'
+                              : 'border-input bg-background text-muted-foreground hover:border-primary hover:text-primary'
+                          )}
+                        >
+                          {value}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            )
+          }
 
-            {/* Per-exercise RPE selector */}
-            <div className="border-t px-4 py-3">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-xs font-medium text-muted-foreground">
-                  RPE {slot.rpe !== null && <span className="text-[10px]">(plan: {slot.rpe})</span>}
-                </span>
-              </div>
-              <div
-                data-testid={`rpe-selector-${slotIndex}`}
-                className="flex flex-wrap gap-1.5"
-              >
-                {Array.from({ length: 10 }, (_, i) => i + 1).map((value) => {
-                  const isSelected = exerciseRpe[slotIndex] === value
-                  return (
-                    <button
-                      key={value}
-                      type="button"
-                      aria-label={`RPE ${value}`}
-                      aria-pressed={isSelected}
-                      onClick={() => {
-                        setExerciseRpe((prev) => {
-                          const next = [...prev]
-                          next[slotIndex] = isSelected ? null : value
-                          return next
-                        })
-                      }}
-                      className={cn(
-                        'min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border text-sm font-semibold tabular-nums transition-colors active:scale-95',
-                        isSelected
-                          ? 'border-primary bg-primary text-primary-foreground'
-                          : 'border-input bg-background text-muted-foreground hover:border-primary hover:text-primary'
-                      )}
-                    >
-                      {value}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-        ))
+          return grouped.map((item) => {
+            if (item.type === 'group') {
+              return (
+                <div
+                  key={`group-${item.groupId}`}
+                  data-testid="superset-group"
+                  className="rounded-xl border-l-4 border-l-primary border border-border pl-3 py-2 pr-2 space-y-2"
+                >
+                  <div className="flex items-center gap-2 px-1">
+                    <span className="text-xs font-semibold text-primary">{getGroupLabel(item.slots.length)}</span>
+                  </div>
+                  <div className="space-y-3">
+                    {item.slots.map((slot) => renderExerciseSection(slot))}
+                  </div>
+                  {item.groupRestSeconds > 0 && (
+                    <div className="flex items-center gap-1.5 px-1 pt-1 text-xs text-muted-foreground">
+                      <span>Group rest:</span>
+                      <span className="font-semibold tabular-nums">{formatRestSeconds(item.groupRestSeconds)}</span>
+                    </div>
+                  )}
+                </div>
+              )
+            }
+            return renderExerciseSection(item.slot)
+          })
+        })()
       ) : (
         <div className="rounded-xl border bg-card p-8 text-center">
           <p className="text-sm text-muted-foreground">
