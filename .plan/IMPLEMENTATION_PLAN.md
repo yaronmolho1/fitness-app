@@ -573,3 +573,66 @@ Alternative path: T101 → T105 → T116 (M + L + M = ~12-16h)
 - **T105/T106 (cascade slot edits)**: Complex matching logic across diverged templates. Edge cases with reordered/added/removed exercises. Needs comprehensive test coverage.
 - **T122 (mixed logging)**: Composite form saving multiple modalities atomically. Snapshot v2 format change. Must not break existing snapshot v1 reads.
 - **T095 (time slots schema)**: Adding NOT NULL column with default to existing rows. Migration must handle existing schedule data correctly.
+
+---
+
+## Wave F5: Run Distance/Duration + Supersets + Cascade UX
+
+> Three new features: running template distance/duration, exercise supersets, cascade auto-dismiss.
+> **Parallelism**: tasks within each sub-wave can run concurrently in separate worktrees.
+
+### Sub-wave F5.1 (no deps — parallel)
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T125 | Cascade auto-dismiss (2s timeout + Done fallback) | small | UX Polish | — | cascade-auto-dismiss |
+| T126 | Schema: target_distance/target_duration on templates + group_id/group_rest_seconds on slots + migrate | small | Foundation | — | run-distance-duration, supersets |
+
+### Sub-wave F5.2
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T127 | Types/queries: update TemplateOption, SlotWithExercise, TemplateInfo, SectionData, SlotData + test fixtures | small | Foundation | T126 | run-distance-duration, supersets |
+
+### Sub-wave F5.3 (parallel — 4 independent branches)
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T128 | SA: running template create/edit + cascade with distance/duration | medium | Running Templates | T127 | run-distance-duration |
+| T130 | UI: distance/duration display on today page + logging form reference | small | Running Templates | T127 | run-distance-duration |
+| T131 | Snapshot: include target_distance/target_duration in running + mixed workout snapshots | small | Running Templates | T127 | run-distance-duration |
+| T132 | SA: createSuperset, breakSuperset, updateGroupRest | medium | Workout Templates | T127 | supersets |
+
+### Sub-wave F5.4 (parallel — 2 branches)
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T129 | UI: distance/duration inputs on running-template-form, mixed-template-form, template-section inline edit | medium | Running Templates | T128 | run-distance-duration |
+| T133 | UI: slot-list visual grouping, selection mode, group CRUD, reorder awareness | large | Workout Templates | T132 | supersets |
+
+### Sub-wave F5.5
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T134 | UI: superset display in logging form + today page + resistance workout snapshot | medium | Workout Templates | T133 | supersets |
+
+## Wave F5 Dependency Graph
+
+```
+T125 (cascade auto-dismiss) ── standalone
+T126 (schema)
+└── T127 (types/queries)
+    ├── T128 (running SA) → T129 (running UI)
+    ├── T130 (today + logging display)
+    ├── T131 (running snapshot)
+    └── T132 (superset SA) → T133 (superset UI) → T134 (superset display + snapshot)
+```
+
+## Wave F5 Critical Path
+
+T126 → T127 → T132 → T133 → T134 (estimated: S + S + M + L + M = ~16-24h)
+
+## Wave F5 Risk Areas
+
+- **T133 (superset UI)**: Largest task. Drag-reorder with group awareness is complex. May need to simplify: move groups as unit, auto-ungroup on solo drag.
+- **T127 (types/queries)**: Many files touched. Test fixtures need updating for required fields. Low risk but tedious.

@@ -132,3 +132,13 @@
 | T122 | Mixed template logging form + composite save SA | F4 | [ ] | | | | |
 | T123 | Calendar + schedule integration for mixed templates | F4 | [ ] | | | | |
 | T124 | Calendar day detail quick links to template editing | F4 | [ ] | | | | |
+| T125 | Cascade auto-dismiss | F5.1 | [ ] | | | | |
+| T126 | Schema: distance/duration + group columns + migrate | F5.1 | [ ] | | | | |
+| T127 | Types/queries: update all types + query selects + test fixtures | F5.2 | [ ] | | | | |
+| T128 | SA: running template create/edit + cascade with distance/duration | F5.3 | [ ] | | | | |
+| T129 | UI: distance/duration inputs on running + mixed forms + inline edit | F5.4 | [ ] | | | | |
+| T130 | UI: distance/duration on today page + logging reference | F5.3 | [ ] | | | | |
+| T131 | Snapshot: distance/duration in running + mixed workout snapshots | F5.3 | [ ] | | | | |
+| T132 | SA: createSuperset, breakSuperset, updateGroupRest | F5.3 | [ ] | | | | |
+| T133 | UI: slot-list visual grouping + group CRUD + reorder | F5.4 | [ ] | | | | |
+| T134 | UI: superset display in logging + today + snapshot | F5.5 | [ ] | | | | |
