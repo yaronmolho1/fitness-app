@@ -87,8 +87,8 @@ const SEED_SQL = `
   INSERT INTO template_sections (id, template_id, modality, section_name, "order", run_type, target_pace, hr_zone)
   VALUES (1, 100, 'resistance', 'Main Lift', 1, null, null, null);
 
-  INSERT INTO template_sections (id, template_id, modality, section_name, "order", run_type, target_pace, hr_zone, coaching_cues)
-  VALUES (2, 100, 'running', 'Cooldown Run', 2, 'easy', '6:00/km', 2, 'Stay relaxed');
+  INSERT INTO template_sections (id, template_id, modality, section_name, "order", run_type, target_pace, hr_zone, coaching_cues, target_distance, target_duration)
+  VALUES (2, 100, 'running', 'Cooldown Run', 2, 'easy', '6:00/km', 2, 'Stay relaxed', 3.0, 20);
 
   INSERT INTO exercise_slots (id, template_id, exercise_id, section_id, sets, reps, weight, rpe, "order", is_main)
   VALUES (1, 100, 1, 1, 4, '8', 80, 8, 1, 1);
@@ -103,8 +103,8 @@ const SEED_SQL = `
   INSERT INTO template_sections (id, template_id, modality, section_name, "order")
   VALUES (3, 101, 'resistance', 'Strength', 1);
 
-  INSERT INTO template_sections (id, template_id, modality, section_name, "order", run_type, target_pace)
-  VALUES (4, 101, 'running', 'Cardio', 2, 'tempo', '5:00/km');
+  INSERT INTO template_sections (id, template_id, modality, section_name, "order", run_type, target_pace, target_distance)
+  VALUES (4, 101, 'running', 'Cardio', 2, 'tempo', '5:00/km', 5.0);
 
   INSERT INTO template_sections (id, template_id, modality, section_name, "order", planned_duration)
   VALUES (5, 101, 'mma', 'Sparring', 3, 30);
@@ -367,6 +367,28 @@ describe('saveMixedWorkoutCore', () => {
     expect(runningSection.actual_distance).toBe(3.0)
     expect(runningSection.actual_avg_pace).toBe('6:05/km')
     expect(runningSection.actual_avg_hr).toBe(140)
+  })
+
+  it('template_snapshot running section includes target_distance and target_duration', async () => {
+    await saveMixedWorkoutCore(db, buildValidInput())
+    const [workout] = db.select().from(schema.logged_workouts).all()
+    const snapshot = workout.template_snapshot as Record<string, unknown>
+    const sections = snapshot.sections as Array<Record<string, unknown>>
+
+    const runningSection = sections[1]
+    expect(runningSection.target_distance).toBe(3.0)
+    expect(runningSection.target_duration).toBe(20)
+  })
+
+  it('template_snapshot running section includes target_distance with null target_duration', async () => {
+    await saveMixedWorkoutCore(db, build3SectionInput())
+    const [workout] = db.select().from(schema.logged_workouts).all()
+    const snapshot = workout.template_snapshot as Record<string, unknown>
+    const sections = snapshot.sections as Array<Record<string, unknown>>
+
+    const runningSection = sections[1]
+    expect(runningSection.target_distance).toBe(5.0)
+    expect(runningSection.target_duration).toBeNull()
   })
 
   // --- 3-section mixed template (resistance + running + mma) ---

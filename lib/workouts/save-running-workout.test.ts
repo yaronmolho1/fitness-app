@@ -66,11 +66,11 @@ const SEED_SQL = `
   INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, status)
   VALUES (1, 'Block A', '2026-03-01', '2026-04-01', 4, 'active');
 
-  INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality, run_type, target_pace, hr_zone, coaching_cues)
-  VALUES (10, 1, 'Tuesday Tempo', 'tuesday-tempo', 'running', 'tempo', '5:30/km', 3, 'Stay relaxed');
+  INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality, run_type, target_pace, hr_zone, coaching_cues, target_distance, target_duration)
+  VALUES (10, 1, 'Tuesday Tempo', 'tuesday-tempo', 'running', 'tempo', '5:30/km', 3, 'Stay relaxed', 8.0, 45);
 
-  INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality, run_type, target_pace, hr_zone, interval_count, interval_rest, coaching_cues)
-  VALUES (11, 1, 'Thursday Intervals', 'thursday-intervals', 'running', 'interval', '4:00/km', 4, 6, 90, 'Hard effort on reps');
+  INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality, run_type, target_pace, hr_zone, interval_count, interval_rest, coaching_cues, target_distance, target_duration)
+  VALUES (11, 1, 'Thursday Intervals', 'thursday-intervals', 'running', 'interval', '4:00/km', 4, 6, 90, 'Hard effort on reps', 6.0, null);
 
   INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality, run_type, coaching_cues)
   VALUES (12, 1, 'Sunday Long', 'sunday-long', 'running', 'long', null);
@@ -196,6 +196,33 @@ describe('saveRunningWorkoutCore', () => {
     expect(snapshot.coaching_cues).toBe('Stay relaxed')
     expect(snapshot.interval_count).toBeNull()
     expect(snapshot.interval_rest).toBeNull()
+  })
+
+  it('template_snapshot includes target_distance and target_duration', async () => {
+    await saveRunningWorkoutCore(db, buildValidInput())
+    const [workout] = db.select().from(schema.logged_workouts).all()
+    const snapshot = workout.template_snapshot as Record<string, unknown>
+
+    expect(snapshot.target_distance).toBe(8.0)
+    expect(snapshot.target_duration).toBe(45)
+  })
+
+  it('template_snapshot includes target_distance with null target_duration for interval run', async () => {
+    await saveRunningWorkoutCore(db, buildValidInput({ templateId: 11 }))
+    const [workout] = db.select().from(schema.logged_workouts).all()
+    const snapshot = workout.template_snapshot as Record<string, unknown>
+
+    expect(snapshot.target_distance).toBe(6.0)
+    expect(snapshot.target_duration).toBeNull()
+  })
+
+  it('template_snapshot includes null target_distance and target_duration when not set', async () => {
+    await saveRunningWorkoutCore(db, buildValidInput({ templateId: 12 }))
+    const [workout] = db.select().from(schema.logged_workouts).all()
+    const snapshot = workout.template_snapshot as Record<string, unknown>
+
+    expect(snapshot.target_distance).toBeNull()
+    expect(snapshot.target_duration).toBeNull()
   })
 
   it('template_snapshot includes interval fields for interval run', async () => {

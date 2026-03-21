@@ -213,6 +213,8 @@ export async function saveMixedWorkoutCore(
         interval_count: sec.interval_count,
         interval_rest: sec.interval_rest,
         coaching_cues: sec.coaching_cues,
+        target_distance: sec.target_distance,
+        target_duration: sec.target_duration,
         actual_distance: runningSec?.actualDistance ?? null,
         actual_avg_pace: runningSec?.actualAvgPace ?? null,
         actual_avg_hr: runningSec?.actualAvgHr ?? null,

@@ -108,6 +108,8 @@ export async function saveRunningWorkoutCore(
     interval_count: template.interval_count,
     interval_rest: template.interval_rest,
     coaching_cues: template.coaching_cues,
+    target_distance: template.target_distance,
+    target_duration: template.target_duration,
     notes: template.notes,
     actual_distance: input.actualDistance,
     actual_avg_pace: input.actualAvgPace,
