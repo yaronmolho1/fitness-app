@@ -13,5 +13,4 @@ Workout template server actions for all modalities (resistance, running, MMA/BJJ
 - `section-actions.ts` — `createMixedTemplate()`, `addSection()`, `removeSection()`, `reorderSections()` Server Actions for mixed-modality templates and template_sections management
 - `slot-matching.ts` — `findMatchingSlots()` matches exercise slots between source and target templates by exercise ID, order, and role; exports `SlotIdentifier`, `MatchType`, `SlotMatch`, `SkipReason`, `SlotMatchResult`
 - `cascade-slot-ops.ts` — `cascadeAddSlot()`, `cascadeRemoveSlot()` Server Actions for atomic cascade add/remove of exercise slots across sibling templates, skips templates with logged workouts
-- `cascade-slot-ops.test.ts` — integration tests for cascade add/remove slot operations (this-only no-op, add across siblings, remove with re-ordering, logged-workout skipping)
-- `slot-matching.test.ts` — 12 test cases for slot matching (exact, reordered, partial, role filtering, skip reasons)
+- `superset-actions.ts` — `createSuperset()`, `breakSuperset()`, `updateGroupRest()` Server Actions for grouping/ungrouping exercise slots into supersets and updating inter-set rest
