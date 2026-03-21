@@ -13,6 +13,20 @@ import { createMixedTemplate } from '@/lib/templates/section-actions'
 
 const mockedCreate = vi.mocked(createMixedTemplate)
 
+const mockTemplateRow = {
+  id: 1, mesocycle_id: 3, name: 'Strength + Cardio', canonical_name: 'strength-cardio',
+  modality: 'mixed' as const, notes: null, run_type: null, target_pace: null,
+  hr_zone: null, interval_count: null, interval_rest: null, coaching_cues: null,
+  target_distance: null, target_duration: null, planned_duration: null, created_at: null,
+}
+
+const mockSectionRow = {
+  id: 1, template_id: 1, modality: 'resistance' as const, section_name: 'Weights',
+  order: 1, run_type: null, target_pace: null, hr_zone: null, interval_count: null,
+  interval_rest: null, coaching_cues: null, target_distance: null, target_duration: null,
+  planned_duration: null, created_at: null,
+}
+
 describe('MixedTemplateForm — characterization', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -207,7 +221,7 @@ describe('MixedTemplateForm — characterization', () => {
   it('calls createMixedTemplate on valid submit', async () => {
     const user = userEvent.setup()
     const onSuccess = vi.fn()
-    mockedCreate.mockResolvedValueOnce({ success: true, id: 1 })
+    mockedCreate.mockResolvedValueOnce({ success: true, data: { template: mockTemplateRow, sections: [mockSectionRow] } })
 
     render(<MixedTemplateForm mesocycleId={3} onSuccess={onSuccess} />)
 

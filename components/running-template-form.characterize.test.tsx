@@ -13,6 +13,17 @@ import { createRunningTemplate } from '@/lib/templates/actions'
 
 const mockedCreate = vi.mocked(createRunningTemplate)
 
+const mockSuccessResult = {
+  success: true as const,
+  data: {
+    id: 1, mesocycle_id: 5, name: 'Tuesday Tempo', canonical_name: 'tuesday-tempo',
+    modality: 'running' as const, notes: null, run_type: 'tempo' as const,
+    target_pace: null, hr_zone: null, interval_count: null, interval_rest: null,
+    coaching_cues: null, target_distance: null, target_duration: null,
+    planned_duration: null, created_at: null,
+  },
+}
+
 describe('RunningTemplateForm — characterization', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -97,7 +108,7 @@ describe('RunningTemplateForm — characterization', () => {
   it('calls createRunningTemplate on valid submit', async () => {
     const user = userEvent.setup()
     const onSuccess = vi.fn()
-    mockedCreate.mockResolvedValueOnce({ success: true, id: 1 })
+    mockedCreate.mockResolvedValueOnce(mockSuccessResult)
 
     render(<RunningTemplateForm mesocycleId={5} onSuccess={onSuccess} />)
 

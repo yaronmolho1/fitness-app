@@ -11,17 +11,17 @@ vi.mock('next/navigation', () => ({
 
 // Mock child components
 vi.mock('@/components/running-template-form', () => ({
-  RunningTemplateForm: (props: { mesocycleId: number }) => (
+  RunningTemplateForm: (_props: { mesocycleId: number }) => (
     <div data-testid="mock-running-template-form">RunningTemplateForm</div>
   ),
 }))
 vi.mock('@/components/mma-bjj-template-form', () => ({
-  MmaBjjTemplateForm: (props: { mesocycleId: number }) => (
+  MmaBjjTemplateForm: (_props: { mesocycleId: number }) => (
     <div data-testid="mock-mma-template-form">MmaBjjTemplateForm</div>
   ),
 }))
 vi.mock('@/components/mixed-template-form', () => ({
-  MixedTemplateForm: (props: { mesocycleId: number }) => (
+  MixedTemplateForm: (_props: { mesocycleId: number }) => (
     <div data-testid="mock-mixed-template-form">MixedTemplateForm</div>
   ),
 }))
