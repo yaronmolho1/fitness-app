@@ -167,6 +167,26 @@ export function RunningLoggingForm({ data }: { data: RunningWorkoutData }) {
         </SectionHeading>
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {template.target_distance !== null && (
+            <div className="rounded-md bg-muted/50 px-3 py-2 text-center">
+              <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                Distance
+              </div>
+              <div className="mt-0.5 text-lg font-bold tabular-nums">
+                {template.target_distance}km
+              </div>
+            </div>
+          )}
+          {template.target_duration !== null && (
+            <div className="rounded-md bg-muted/50 px-3 py-2 text-center">
+              <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                Duration
+              </div>
+              <div className="mt-0.5 text-lg font-bold tabular-nums">
+                {template.target_duration}min
+              </div>
+            </div>
+          )}
           {template.target_pace && (
             <div className="rounded-md bg-muted/50 px-3 py-2 text-center">
               <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
