@@ -69,6 +69,7 @@ function resetTables() {
     interval_count INTEGER,
     interval_rest INTEGER,
     coaching_cues TEXT,
+    target_distance REAL, target_duration INTEGER,
     planned_duration INTEGER,
     created_at INTEGER
   )`)
@@ -84,6 +85,7 @@ function resetTables() {
     interval_count INTEGER,
     interval_rest INTEGER,
     coaching_cues TEXT,
+    target_distance REAL, target_duration INTEGER,
     planned_duration INTEGER,
     created_at INTEGER
   )`)
@@ -96,7 +98,7 @@ function resetTables() {
     reps TEXT NOT NULL,
     weight REAL,
     rpe REAL,
-    rest_seconds INTEGER,
+    rest_seconds INTEGER, group_id INTEGER, group_rest_seconds INTEGER,
     guidelines TEXT,
     "order" INTEGER NOT NULL,
     is_main INTEGER NOT NULL DEFAULT 0,

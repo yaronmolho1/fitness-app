@@ -43,6 +43,7 @@ const CREATE_SQL = `
     interval_count INTEGER,
     interval_rest INTEGER,
     coaching_cues TEXT,
+    target_distance REAL, target_duration INTEGER,
     planned_duration INTEGER,
     created_at INTEGER
   );
@@ -55,7 +56,7 @@ const CREATE_SQL = `
     reps TEXT NOT NULL,
     weight REAL,
     rpe REAL,
-    rest_seconds INTEGER,
+    rest_seconds INTEGER, group_id INTEGER, group_rest_seconds INTEGER,
     guidelines TEXT,
     "order" INTEGER NOT NULL,
     is_main INTEGER NOT NULL DEFAULT 0,
@@ -625,6 +626,7 @@ describe('saveWorkoutCore', () => {
         name TEXT NOT NULL, canonical_name TEXT NOT NULL, modality TEXT NOT NULL,
         notes TEXT, run_type TEXT, target_pace TEXT, hr_zone INTEGER,
         interval_count INTEGER, interval_rest INTEGER, coaching_cues TEXT,
+    target_distance REAL, target_duration INTEGER,
         planned_duration INTEGER, created_at INTEGER
       );
       CREATE TABLE exercise_slots (
@@ -633,7 +635,7 @@ describe('saveWorkoutCore', () => {
         exercise_id INTEGER NOT NULL REFERENCES exercises(id),
     section_id INTEGER,
         sets INTEGER NOT NULL, reps TEXT NOT NULL, weight REAL, rpe REAL,
-        rest_seconds INTEGER, guidelines TEXT, "order" INTEGER NOT NULL,
+        rest_seconds INTEGER, group_id INTEGER, group_rest_seconds INTEGER, guidelines TEXT, "order" INTEGER NOT NULL,
         is_main INTEGER NOT NULL DEFAULT 0, created_at INTEGER
       );
       CREATE TABLE logged_workouts (
