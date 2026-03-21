@@ -296,6 +296,76 @@ describe('SlotCascadeScopeSelector', () => {
     })
   })
 
+  // --- Auto-dismiss tests ---
+
+  describe('auto-dismiss', () => {
+    const DISMISS_MS = 2000
+
+    beforeEach(() => {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+      vi.mocked(cascadeSlotParams).mockResolvedValue({
+        success: true,
+        data: { updated: 2, skipped: 0, skippedCompleted: 0, skippedNoMatch: 0 },
+      })
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    const paramProps = {
+      templateId: 10,
+      operation: 'update-params' as const,
+      slotId: 5,
+      paramUpdates: { sets: 4 },
+      onComplete: vi.fn(),
+      onCancel: vi.fn(),
+    }
+
+    async function reachSummary(props = paramProps) {
+      const user = userEvent.setup({
+        advanceTimers: vi.advanceTimersByTime,
+      })
+      render(<SlotCascadeScopeSelector {...props} />)
+
+      // Use "This only" + update-params to skip async cascade call
+      await user.click(await screen.findByText('This only'))
+      await user.click(await screen.findByRole('button', { name: /confirm/i }))
+
+      await screen.findByText(/cascade complete/i)
+      return user
+    }
+
+    it('auto-dismisses summary after 2 seconds', async () => {
+      await reachSummary()
+
+      expect(paramProps.onComplete).not.toHaveBeenCalled()
+
+      await vi.advanceTimersByTimeAsync(DISMISS_MS)
+
+      expect(paramProps.onComplete).toHaveBeenCalledTimes(1)
+    })
+
+    it('dismisses immediately on Done click and cancels timer', async () => {
+      const user = await reachSummary()
+
+      await user.click(screen.getByRole('button', { name: /done/i }))
+      expect(paramProps.onComplete).toHaveBeenCalledTimes(1)
+
+      await vi.advanceTimersByTimeAsync(DISMISS_MS)
+      expect(paramProps.onComplete).toHaveBeenCalledTimes(1)
+    })
+
+    it('cleans up timeout on unmount', async () => {
+      await reachSummary()
+
+      cleanup()
+
+      await vi.advanceTimersByTimeAsync(DISMISS_MS)
+      expect(paramProps.onComplete).not.toHaveBeenCalled()
+    })
+  })
+
   // --- Error handling ---
 
   describe('error handling', () => {
