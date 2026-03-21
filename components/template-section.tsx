@@ -290,6 +290,20 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated }: Tem
   }
 
   function handleSave() {
+    if (isRunning) {
+      const distanceNum = targetDistance ? Number(targetDistance) : null
+      if (distanceNum !== null && distanceNum <= 0) {
+        setError('Distance must be positive')
+        return
+      }
+      const durationNum = targetDuration ? Number(targetDuration) : null
+      if (durationNum !== null && durationNum <= 0) {
+        setError('Duration must be positive')
+        return
+      }
+    }
+
+    setError('')
     const updates = buildUpdates()
     if (Object.keys(updates).length === 0 && !canonicalChanged) {
       setEditing(false)

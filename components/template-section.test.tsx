@@ -184,6 +184,51 @@ describe('TemplateSection — distance/duration inline edit (T129)', () => {
     expect(updates.target_duration).toBe(45)
   })
 
+  // Validation: inline edit rejects negative/zero values
+  it('shows error for negative distance in inline edit', async () => {
+    const user = userEvent.setup()
+    const templates = [
+      makeTemplate({
+        id: 1,
+        name: 'Easy Run',
+        modality: 'running',
+        run_type: 'easy',
+        target_distance: null,
+        target_duration: null,
+      }),
+    ]
+    render(<TemplateSection {...defaultProps} templates={templates} />)
+
+    await user.click(screen.getByRole('button', { name: 'Edit' }))
+    await user.type(screen.getByLabelText('Target Distance (km)'), '-5')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Distance must be positive')
+    expect(screen.queryByTestId('mock-cascade')).not.toBeInTheDocument()
+  })
+
+  it('shows error for zero duration in inline edit', async () => {
+    const user = userEvent.setup()
+    const templates = [
+      makeTemplate({
+        id: 1,
+        name: 'Easy Run',
+        modality: 'running',
+        run_type: 'easy',
+        target_distance: null,
+        target_duration: null,
+      }),
+    ]
+    render(<TemplateSection {...defaultProps} templates={templates} />)
+
+    await user.click(screen.getByRole('button', { name: 'Edit' }))
+    await user.type(screen.getByLabelText('Target Duration (min)'), '0')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Duration must be positive')
+    expect(screen.queryByTestId('mock-cascade')).not.toBeInTheDocument()
+  })
+
   // Display: distance/duration shown inline
   it('shows distance inline in default view', () => {
     const templates = [
