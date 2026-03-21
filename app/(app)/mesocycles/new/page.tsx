@@ -9,7 +9,6 @@ export default function NewMesocyclePage() {
       <div className="space-y-6">
         <PageHeader
           title="New Mesocycle"
-          className="mb-0"
           breadcrumb={
             <Link href="/mesocycles" className="text-sm text-muted-foreground transition-colors hover:text-foreground hover:underline">
               Mesocycles

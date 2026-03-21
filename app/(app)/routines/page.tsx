@@ -18,7 +18,7 @@ export default async function RoutinesPage() {
   return (
     <PageContainer variant="narrow">
       <div className="space-y-6">
-        <PageHeader title="Routines" className="mb-0" />
+        <PageHeader title="Routines" />
         <RoutineItemList items={items} mesocycles={mesocycles} categories={categories} />
       </div>
     </PageContainer>
