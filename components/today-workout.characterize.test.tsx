@@ -1074,7 +1074,7 @@ describe('TodayWorkout — characterization', () => {
   // RunningDisplay — no distance/duration displayed currently
   // ================================================================
 
-  it('does not display target_distance in running display (not yet implemented)', async () => {
+  it('displays target_distance in running display', async () => {
     mockFetchResponse([{
       type: 'workout',
       date: '2026-03-15',
@@ -1094,12 +1094,11 @@ describe('TodayWorkout — characterization', () => {
     await waitFor(() => {
       expect(screen.getByTestId('running-display')).toBeInTheDocument()
     })
-    expect(screen.queryByText('10km')).not.toBeInTheDocument()
-    expect(screen.queryByText('Target Distance')).not.toBeInTheDocument()
-    expect(screen.queryByText('Distance')).not.toBeInTheDocument()
+    expect(screen.getByText('10km')).toBeInTheDocument()
+    expect(screen.getByText('Distance')).toBeInTheDocument()
   })
 
-  it('does not display target_duration in running display (not yet implemented)', async () => {
+  it('displays target_duration in running display', async () => {
     mockFetchResponse([{
       type: 'workout',
       date: '2026-03-15',
@@ -1119,12 +1118,11 @@ describe('TodayWorkout — characterization', () => {
     await waitFor(() => {
       expect(screen.getByTestId('running-display')).toBeInTheDocument()
     })
-    expect(screen.queryByText('30min')).not.toBeInTheDocument()
-    expect(screen.queryByText('30 min')).not.toBeInTheDocument()
-    expect(screen.queryByText('Target Duration')).not.toBeInTheDocument()
+    expect(screen.getByText('30min')).toBeInTheDocument()
+    expect(screen.getByText('Duration')).toBeInTheDocument()
   })
 
-  it('does not display target_distance in mixed section running content (not yet implemented)', async () => {
+  it('displays target_distance in mixed section running content', async () => {
     mockFetchResponse([{
       type: 'workout',
       date: '2026-03-15',
@@ -1157,12 +1155,11 @@ describe('TodayWorkout — characterization', () => {
     await waitFor(() => {
       expect(screen.getByTestId('mixed-display')).toBeInTheDocument()
     })
-    expect(screen.queryByText('5km')).not.toBeInTheDocument()
-    expect(screen.queryByText('Target Distance')).not.toBeInTheDocument()
-    expect(screen.queryByText('Distance')).not.toBeInTheDocument()
+    expect(screen.getByText('5km')).toBeInTheDocument()
+    expect(screen.getByText('Distance')).toBeInTheDocument()
   })
 
-  it('does not display target_duration in mixed section running content (not yet implemented)', async () => {
+  it('displays target_duration in mixed section running content', async () => {
     mockFetchResponse([{
       type: 'workout',
       date: '2026-03-15',
@@ -1195,9 +1192,8 @@ describe('TodayWorkout — characterization', () => {
     await waitFor(() => {
       expect(screen.getByTestId('mixed-display')).toBeInTheDocument()
     })
-    expect(screen.queryByText('45min')).not.toBeInTheDocument()
-    expect(screen.queryByText('45 min')).not.toBeInTheDocument()
-    expect(screen.queryByText('Target Duration')).not.toBeInTheDocument()
+    expect(screen.getByText('45min')).toBeInTheDocument()
+    expect(screen.getByText('Duration')).toBeInTheDocument()
   })
 
   // ================================================================

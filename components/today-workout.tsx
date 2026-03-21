@@ -269,6 +269,12 @@ function RunningDisplay({
           )}
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {template.target_distance !== null && (
+              <TargetCell label="Distance" value={`${template.target_distance}km`} />
+            )}
+            {template.target_duration !== null && (
+              <TargetCell label="Duration" value={`${template.target_duration}min`} />
+            )}
             {template.target_pace && (
               <TargetCell label="Pace" value={template.target_pace} />
             )}
@@ -366,6 +372,12 @@ function SectionRunningContent({ section }: { section: SectionData }) {
         )}
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {section.target_distance !== null && (
+            <TargetCell label="Distance" value={`${section.target_distance}km`} />
+          )}
+          {section.target_duration !== null && (
+            <TargetCell label="Duration" value={`${section.target_duration}min`} />
+          )}
           {section.target_pace && (
             <TargetCell label="Pace" value={section.target_pace} />
           )}
