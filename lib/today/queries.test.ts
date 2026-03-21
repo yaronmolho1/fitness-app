@@ -734,6 +734,87 @@ describe('getTodayWorkout', () => {
     }
   })
 
+  // ==========================================================================
+  // T127: New fields — target_distance, target_duration, group_id, group_rest_seconds
+  // ==========================================================================
+
+  it('workout template info includes target_distance and target_duration', async () => {
+    const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
+    // Insert running template with distance/duration
+    testDb
+      .insert(schema.workout_templates)
+      .values({
+        mesocycle_id: meso.id,
+        name: 'Easy Run',
+        canonical_name: 'easy-run',
+        modality: 'running',
+        run_type: 'easy',
+        target_distance: 10.0,
+        target_duration: 45,
+        created_at: new Date(),
+      })
+      .run()
+    const tmpl = testDb.select({ id: schema.workout_templates.id }).from(schema.workout_templates).get()!
+    seedSchedule(meso.id, 2, tmpl.id)
+
+    const results = await getTodayWorkout('2026-03-10')
+    const result = results[0]
+    expect(result.type).toBe('workout')
+    if (result.type === 'workout') {
+      expect(result.template.target_distance).toBe(10.0)
+      expect(result.template.target_duration).toBe(45)
+    }
+  })
+
+  it('workout slots include group_id and group_rest_seconds', async () => {
+    const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
+    const tmpl = seedTemplate(meso.id, 'Push A')
+    const ex1 = seedExercise('Bench Press')
+    const ex2 = seedExercise('Incline DB Press')
+
+    // Insert slots with superset grouping
+    testDb
+      .insert(schema.exercise_slots)
+      .values({
+        template_id: tmpl.id,
+        exercise_id: ex1.id,
+        sets: 3,
+        reps: '10',
+        order: 1,
+        is_main: false,
+        group_id: 1,
+        group_rest_seconds: 120,
+        created_at: new Date(),
+      })
+      .run()
+    testDb
+      .insert(schema.exercise_slots)
+      .values({
+        template_id: tmpl.id,
+        exercise_id: ex2.id,
+        sets: 3,
+        reps: '12',
+        order: 2,
+        is_main: false,
+        group_id: 1,
+        group_rest_seconds: 120,
+        created_at: new Date(),
+      })
+      .run()
+    seedSchedule(meso.id, 2, tmpl.id)
+
+    const results = await getTodayWorkout('2026-03-10')
+    const result = results[0]
+    expect(result.type).toBe('workout')
+    if (result.type === 'workout') {
+      expect(result.slots).toHaveLength(2)
+      expect(result.slots[0].group_id).toBe(1)
+      expect(result.slots[0].group_rest_seconds).toBe(120)
+      expect(result.slots[1].group_id).toBe(1)
+      expect(result.slots[1].group_rest_seconds).toBe(120)
+    }
+  })
+
   it('rest_day skips skip_on_deload routines during deload week', async () => {
     const meso = seedMesocycle({
       status: 'active',

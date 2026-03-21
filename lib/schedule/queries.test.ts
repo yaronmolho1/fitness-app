@@ -211,4 +211,35 @@ describe('getTemplatesForMesocycle', () => {
     expect(result).toHaveLength(1)
     expect(result[0].name).toBe('Push A')
   })
+
+  it('includes target_distance and target_duration fields', async () => {
+    const meso = seedMesocycle()
+    testDb
+      .insert(schema.workout_templates)
+      .values({
+        mesocycle_id: meso.id,
+        name: 'Easy Run',
+        canonical_name: 'easy-run',
+        modality: 'running',
+        run_type: 'easy',
+        target_distance: 5.0,
+        target_duration: 30,
+        created_at: new Date(),
+      })
+      .run()
+
+    const result = await getTemplatesForMesocycle(meso.id)
+    expect(result).toHaveLength(1)
+    expect(result[0].target_distance).toBe(5.0)
+    expect(result[0].target_duration).toBe(30)
+  })
+
+  it('returns null for target_distance and target_duration when not set', async () => {
+    const meso = seedMesocycle()
+    seedTemplate(meso.id, 'Push A')
+
+    const result = await getTemplatesForMesocycle(meso.id)
+    expect(result[0].target_distance).toBeNull()
+    expect(result[0].target_duration).toBeNull()
+  })
 })

@@ -50,6 +50,9 @@ export type TemplateOption = {
   interval_count?: number | null
   interval_rest?: number | null
   coaching_cues?: string | null
+  // Distance/duration
+  target_distance?: number | null
+  target_duration?: number | null
   // MMA-specific
   planned_duration?: number | null
 }
@@ -71,6 +74,8 @@ export async function getTemplatesForMesocycle(
       interval_count: workout_templates.interval_count,
       interval_rest: workout_templates.interval_rest,
       coaching_cues: workout_templates.coaching_cues,
+      target_distance: workout_templates.target_distance,
+      target_duration: workout_templates.target_duration,
       planned_duration: workout_templates.planned_duration,
     })
     .from(workout_templates)
