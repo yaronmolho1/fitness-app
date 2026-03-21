@@ -31,6 +31,8 @@ type SectionDraft = {
   interval_count: string
   interval_rest: string
   coaching_cues: string
+  target_distance: string
+  target_duration: string
   // MMA fields
   planned_duration: string
 }
@@ -46,6 +48,8 @@ function createEmptySection(): SectionDraft {
     interval_count: '',
     interval_rest: '',
     coaching_cues: '',
+    target_distance: '',
+    target_duration: '',
     planned_duration: '',
   }
 }
@@ -141,6 +145,8 @@ export function MixedTemplateForm({ mesocycleId, onSuccess, onCancel }: Props) {
               interval_count: s.interval_count ? Number(s.interval_count) : null,
               interval_rest: s.interval_rest ? Number(s.interval_rest) : null,
               coaching_cues: s.coaching_cues || undefined,
+              target_distance: s.target_distance ? Number(s.target_distance) : null,
+              target_duration: s.target_duration ? Number(s.target_duration) : null,
             }
           : {}),
         ...(s.modality === 'mma'
@@ -353,6 +359,36 @@ function SectionEditor({
                   </option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor={`target-distance-${section.id}`}>
+                {isInterval ? 'Target Distance (km, per rep)' : 'Target Distance (km)'}
+              </Label>
+              <Input
+                id={`target-distance-${section.id}`}
+                type="text"
+                inputMode="decimal"
+                value={section.target_distance}
+                onChange={(e) => onChange({ target_distance: e.target.value })}
+                placeholder="e.g. 5"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor={`target-duration-${section.id}`}>
+                {isInterval ? 'Target Duration (min, per rep)' : 'Target Duration (min)'}
+              </Label>
+              <Input
+                id={`target-duration-${section.id}`}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={section.target_duration}
+                onChange={(e) => onChange({ target_duration: e.target.value })}
+                placeholder="e.g. 30"
+              />
             </div>
           </div>
 

@@ -30,6 +30,8 @@ export function RunningTemplateForm({ mesocycleId, onSuccess }: Props) {
   const [hrZone, setHrZone] = useState('')
   const [intervalCount, setIntervalCount] = useState('')
   const [intervalRest, setIntervalRest] = useState('')
+  const [targetDistance, setTargetDistance] = useState('')
+  const [targetDuration, setTargetDuration] = useState('')
   const [coachingCues, setCoachingCues] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -67,6 +69,18 @@ export function RunningTemplateForm({ mesocycleId, onSuccess }: Props) {
       return
     }
 
+    const distanceNum = targetDistance ? Number(targetDistance) : null
+    if (distanceNum !== null && distanceNum <= 0) {
+      setError('Distance must be positive')
+      return
+    }
+
+    const durationNum = targetDuration ? Number(targetDuration) : null
+    if (durationNum !== null && durationNum <= 0) {
+      setError('Duration must be positive')
+      return
+    }
+
     setSubmitting(true)
     try {
       const result = await createRunningTemplate({
@@ -78,6 +92,8 @@ export function RunningTemplateForm({ mesocycleId, onSuccess }: Props) {
         interval_count: isInterval ? intervalCountNum : null,
         interval_rest: isInterval ? intervalRestNum : null,
         coaching_cues: coachingCues || undefined,
+        target_distance: distanceNum,
+        target_duration: durationNum,
       })
 
       if (result.success) {
@@ -87,6 +103,8 @@ export function RunningTemplateForm({ mesocycleId, onSuccess }: Props) {
         setHrZone('')
         setIntervalCount('')
         setIntervalRest('')
+        setTargetDistance('')
+        setTargetDuration('')
         setCoachingCues('')
         onSuccess?.()
       } else {
@@ -159,6 +177,39 @@ export function RunningTemplateForm({ mesocycleId, onSuccess }: Props) {
               </option>
             ))}
           </select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="running-target-distance">
+            {isInterval ? 'Target Distance (km, per rep)' : 'Target Distance (km)'}
+          </Label>
+          <Input
+            id="running-target-distance"
+            type="text"
+            inputMode="decimal"
+            value={targetDistance}
+            onChange={(e) => setTargetDistance(e.target.value)}
+            placeholder="e.g. 5"
+            className="h-12 md:h-10"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="running-target-duration">
+            {isInterval ? 'Target Duration (min, per rep)' : 'Target Duration (min)'}
+          </Label>
+          <Input
+            id="running-target-duration"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={targetDuration}
+            onChange={(e) => setTargetDuration(e.target.value)}
+            placeholder="e.g. 30"
+            className="h-12 md:h-10"
+          />
         </div>
       </div>
 
