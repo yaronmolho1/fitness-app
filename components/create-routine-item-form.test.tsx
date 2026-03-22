@@ -30,7 +30,7 @@ describe('CreateRoutineItemForm', () => {
 
     it('defaults to weekly_target mode with value 3', () => {
       render(<CreateRoutineItemForm {...defaultProps} />)
-      expect(screen.getByLabelText(/times per week/i)).toHaveValue(3)
+      expect(screen.getByLabelText(/times per week/i)).toHaveValue("3")
     })
 
     it('shows day pills when specific_days mode is selected', async () => {

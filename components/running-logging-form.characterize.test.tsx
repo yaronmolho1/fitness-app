@@ -551,16 +551,14 @@ describe('RunningLoggingForm — characterization', () => {
     expect(screen.getByText('Already logged today')).toBeInTheDocument()
   })
 
-  it('shows client-side validation error for negative distance', async () => {
+  it('sanitizes negative sign from distance input (NumericInput prevents negative values)', async () => {
     const user = userEvent.setup()
     render(<RunningLoggingForm data={makeData()} />)
 
-    await user.type(screen.getByTestId('actual-distance'), '-5')
-    await user.click(screen.getByTestId('save-running-btn'))
-
-    expect(screen.getByTestId('save-error')).toBeInTheDocument()
-    expect(screen.getByText('Distance must be a non-negative number')).toBeInTheDocument()
-    // NOTE: possible bug — saveRunningWorkout is called despite validation error (startTransition fires before client validation blocks)
+    const input = screen.getByTestId('actual-distance') as HTMLInputElement
+    await user.type(input, '-5')
+    // NumericInput strips non-numeric chars; "-" is removed, leaving "5"
+    expect(input.value).toBe('5')
   })
 
   it('shows client-side validation error for invalid HR', async () => {

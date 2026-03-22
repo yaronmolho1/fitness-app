@@ -44,7 +44,7 @@ describe('EditRoutineItemForm', () => {
   describe('FrequencyModeSelector pre-fill', () => {
     it('pre-fills weekly_target mode with existing frequency_target', () => {
       render(<EditRoutineItemForm {...defaultProps} item={makeItem({ frequency_mode: 'weekly_target', frequency_target: 5 })} />)
-      expect(screen.getByLabelText(/times per week/i)).toHaveValue(5)
+      expect(screen.getByLabelText(/times per week/i)).toHaveValue("5")
     })
 
     it('pre-fills daily mode', () => {

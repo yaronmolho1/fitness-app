@@ -131,11 +131,11 @@ describe('SlotList', () => {
       render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
 
       await user.click(screen.getByRole('button', { name: /edit/i }))
-      expect(screen.getByLabelText(/sets/i)).toHaveValue(4)
-      expect(screen.getByLabelText(/reps/i)).toHaveValue(8)
-      expect(screen.getByLabelText(/weight/i)).toHaveValue(100)
-      expect(screen.getByLabelText(/rpe/i)).toHaveValue(9)
-      expect(screen.getByLabelText(/rest/i)).toHaveValue(90)
+      expect(screen.getByLabelText(/sets/i)).toHaveValue("4")
+      expect(screen.getByLabelText(/reps/i)).toHaveValue("8")
+      expect(screen.getByLabelText(/weight/i)).toHaveValue("100")
+      expect(screen.getByLabelText(/rpe/i)).toHaveValue("9")
+      expect(screen.getByLabelText(/rest/i)).toHaveValue("90")
       expect(screen.getByLabelText(/guidelines/i)).toHaveValue('Go slow')
     })
 
