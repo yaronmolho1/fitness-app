@@ -1,9 +1,10 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { getMesocycleById } from '@/lib/mesocycles/queries'
+import { getMesocycleById, getMesocycleCascadeSummary } from '@/lib/mesocycles/queries'
 import { getScheduleForMesocycle, getTemplatesForMesocycle } from '@/lib/schedule/queries'
 import { getExercises } from '@/lib/exercises/queries'
 import { getSlotsByTemplate } from '@/lib/templates/slot-queries'
+import { DeleteMesocycleButton } from '@/components/delete-mesocycle-button'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
 import { ScheduleTabs } from '@/components/schedule-tabs'
@@ -30,11 +31,12 @@ export default async function MesocycleDetailPage({
     notFound()
   }
 
-  const [normalSchedule, deloadSchedule, templates, exercises] = await Promise.all([
+  const [normalSchedule, deloadSchedule, templates, exercises, cascadeSummary] = await Promise.all([
     getScheduleForMesocycle(numericId, 'normal'),
     meso.has_deload ? getScheduleForMesocycle(numericId, 'deload') : Promise.resolve([]),
     getTemplatesForMesocycle(numericId),
     getExercises(),
+    getMesocycleCascadeSummary(numericId),
   ])
 
   // Fetch slots for each template
@@ -65,6 +67,12 @@ export default async function MesocycleDetailPage({
                   <Link href={`/mesocycles/${meso.id}/clone`}>Clone</Link>
                 </Button>
                 <StatusTransitionButton mesocycleId={meso.id} status={meso.status} />
+                <DeleteMesocycleButton
+                  mesocycleId={meso.id}
+                  mesocycleName={meso.name}
+                  status={meso.status}
+                  cascadeSummary={cascadeSummary}
+                />
               </div>
             }
           />

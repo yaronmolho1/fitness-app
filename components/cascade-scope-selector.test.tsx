@@ -69,7 +69,7 @@ describe('CascadeScopeSelector', () => {
     expect(defaultProps.onCancel).toHaveBeenCalledTimes(1)
   })
 
-  it('calls cascadeUpdateTemplates with this-only scope and shows summary', async () => {
+  it('calls cascadeUpdateTemplates with this-only scope and fires toast', async () => {
     vi.mocked(getCascadePreview).mockResolvedValue({
       success: true,
       data: {
@@ -102,8 +102,10 @@ describe('CascadeScopeSelector', () => {
       })
     })
 
-    // Summary shown
-    expect(await screen.findByText(/1 updated/i)).toBeDefined()
+    // onComplete called immediately (toast replaces summary panel)
+    await waitFor(() => {
+      expect(defaultProps.onComplete).toHaveBeenCalledTimes(1)
+    })
   })
 
   it('calls cascadeUpdateTemplates with all-phases scope', async () => {
@@ -142,7 +144,7 @@ describe('CascadeScopeSelector', () => {
     })
   })
 
-  it('shows skipped count in summary when templates have logged workouts', async () => {
+  it('calls onComplete immediately when templates have logged workouts (skips shown in toast)', async () => {
     vi.mocked(getCascadePreview).mockResolvedValue({
       success: true,
       data: {
@@ -169,10 +171,10 @@ describe('CascadeScopeSelector', () => {
     const confirmBtn = await screen.findByRole('button', { name: /confirm/i })
     await user.click(confirmBtn)
 
+    // onComplete called immediately (no summary panel)
     await waitFor(() => {
-      expect(screen.getByText(/2 updated/i)).toBeDefined()
+      expect(defaultProps.onComplete).toHaveBeenCalledTimes(1)
     })
-    expect(screen.getByText(/1 skipped/i)).toBeDefined()
   })
 
   it('shows error message when cascade fails', async () => {
@@ -203,7 +205,7 @@ describe('CascadeScopeSelector', () => {
     expect(await screen.findByText('Something went wrong')).toBeDefined()
   })
 
-  it('calls onComplete after dismissing summary', async () => {
+  it('calls onComplete immediately on cascade success', async () => {
     vi.mocked(getCascadePreview).mockResolvedValue({
       success: true,
       data: {
@@ -228,10 +230,10 @@ describe('CascadeScopeSelector', () => {
     const confirmBtn = await screen.findByRole('button', { name: /confirm/i })
     await user.click(confirmBtn)
 
-    const doneBtn = await screen.findByRole('button', { name: /done/i })
-    await user.click(doneBtn)
-
-    expect(defaultProps.onComplete).toHaveBeenCalledTimes(1)
+    // onComplete fires immediately — no summary panel or Done button
+    await waitFor(() => {
+      expect(defaultProps.onComplete).toHaveBeenCalledTimes(1)
+    })
   })
 
   it('shows preview of affected templates when a scope is selected', async () => {
@@ -256,75 +258,6 @@ describe('CascadeScopeSelector', () => {
     // Preview shows affected mesocycle names
     expect(await screen.findByText(/Phase 1/)).toBeDefined()
     expect(screen.getByText(/Phase 2/)).toBeDefined()
-  })
-
-  // --- Auto-dismiss tests ---
-
-  describe('auto-dismiss', () => {
-    const DISMISS_MS = 2000
-
-    beforeEach(() => {
-      vi.useFakeTimers({ shouldAdvanceTime: true })
-      vi.mocked(getCascadePreview).mockResolvedValue({
-        success: true,
-        data: {
-          totalTargets: 1,
-          skippedCount: 0,
-          targets: [
-            { id: 1, mesocycleId: 1, mesocycleName: 'Phase 1', hasLoggedWorkouts: false },
-          ],
-        },
-      })
-      vi.mocked(cascadeUpdateTemplates).mockResolvedValue({
-        success: true,
-        data: { updated: 1, skipped: 0, skippedCompleted: 0, skippedNoMatch: 0 },
-      })
-    })
-
-    afterEach(() => {
-      vi.useRealTimers()
-    })
-
-    async function reachSummary() {
-      const user = userEvent.setup({
-        advanceTimers: vi.advanceTimersByTime,
-      })
-      render(<CascadeScopeSelector {...defaultProps} />)
-
-      await user.click(await screen.findByText('This only'))
-      await user.click(await screen.findByRole('button', { name: /confirm/i }))
-      await screen.findByText(/cascade complete/i)
-      return user
-    }
-
-    it('auto-dismisses summary after 2 seconds', async () => {
-      await reachSummary()
-
-      expect(defaultProps.onComplete).not.toHaveBeenCalled()
-
-      await vi.advanceTimersByTimeAsync(DISMISS_MS)
-
-      expect(defaultProps.onComplete).toHaveBeenCalledTimes(1)
-    })
-
-    it('dismisses immediately on Done click and cancels timer', async () => {
-      const user = await reachSummary()
-
-      await user.click(screen.getByRole('button', { name: /done/i }))
-      expect(defaultProps.onComplete).toHaveBeenCalledTimes(1)
-
-      await vi.advanceTimersByTimeAsync(DISMISS_MS)
-      expect(defaultProps.onComplete).toHaveBeenCalledTimes(1)
-    })
-
-    it('cleans up timeout on unmount', async () => {
-      await reachSummary()
-
-      cleanup()
-
-      await vi.advanceTimersByTimeAsync(DISMISS_MS)
-      expect(defaultProps.onComplete).not.toHaveBeenCalled()
-    })
   })
 
   it('fetches previews for all three scopes on mount', async () => {

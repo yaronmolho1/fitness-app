@@ -4,6 +4,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 
 vi.mock('@/lib/mesocycles/queries', () => ({
   getMesocycleById: vi.fn(),
+  getMesocycleCascadeSummary: vi.fn().mockResolvedValue({ templates: 0, schedules: 0, routineItems: 0 }),
 }))
 
 vi.mock('@/lib/mesocycles/actions', () => ({

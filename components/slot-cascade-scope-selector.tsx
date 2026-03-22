@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect, useRef, useTransition, useCallback } from 'react'
+import { useState, useEffect, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { getCascadePreview } from '@/lib/templates/cascade-actions'
 import { cascadeSlotParams } from '@/lib/templates/cascade-slot-params'
 import { cascadeAddSlot, cascadeRemoveSlot } from '@/lib/templates/cascade-slot-ops'
+import { fireCascadeToast } from '@/components/cascade-toast'
 import type { CascadeScope, CascadePreviewData, CascadeSummary } from '@/lib/templates/cascade-types'
 
 type BaseProps = {
@@ -33,7 +34,7 @@ type RemoveSlotOp = BaseProps & {
 
 export type SlotCascadeProps = UpdateParamsOp | AddSlotOp | RemoveSlotOp
 
-type Step = 'scope-select' | 'confirm' | 'summary'
+type Step = 'scope-select' | 'confirm'
 
 const SCOPE_OPTIONS: { value: CascadeScope; label: string; description: string }[] = [
   {
@@ -58,26 +59,8 @@ export function SlotCascadeScopeSelector(props: SlotCascadeProps) {
   const [step, setStep] = useState<Step>('scope-select')
   const [selectedScope, setSelectedScope] = useState<CascadeScope | null>(null)
   const [preview, setPreview] = useState<CascadePreviewData | null>(null)
-  const [summary, setSummary] = useState<CascadeSummary | null>(null)
   const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
-  const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  // Auto-dismiss summary after 2s
-  useEffect(() => {
-    if (step !== 'summary' || !summary) return
-    dismissTimer.current = setTimeout(() => {
-      onComplete()
-    }, 2000)
-    return () => {
-      if (dismissTimer.current) clearTimeout(dismissTimer.current)
-    }
-  }, [step, summary, onComplete])
-
-  const handleDone = useCallback(() => {
-    if (dismissTimer.current) clearTimeout(dismissTimer.current)
-    onComplete()
-  }, [onComplete])
 
   // Fetch preview on mount
   useEffect(() => {
@@ -111,8 +94,8 @@ export function SlotCascadeScopeSelector(props: SlotCascadeProps) {
 
     // "this-only" for update-params: no cascade needed, local edit already applied
     if (selectedScope === 'this-only' && props.operation === 'update-params') {
-      setSummary({ updated: 0, skipped: 0, skippedCompleted: 0, skippedNoMatch: 0 })
-      setStep('summary')
+      fireCascadeToast('this-only', { updated: 0, skipped: 0, skippedCompleted: 0, skippedNoMatch: 0 })
+      onComplete()
       return
     }
 
@@ -140,49 +123,12 @@ export function SlotCascadeScopeSelector(props: SlotCascadeProps) {
       }
 
       if (result.success) {
-        setSummary(result.data)
-        setStep('summary')
+        fireCascadeToast(selectedScope, result.data)
+        onComplete()
       } else {
         setError(result.error)
       }
     })
-  }
-
-  // Summary step
-  if (step === 'summary' && summary) {
-    return (
-      <div className="space-y-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4">
-        <div className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-emerald-500" />
-          <p className="text-sm font-semibold tracking-tight">Cascade complete</p>
-        </div>
-
-        <div className="flex gap-4 text-sm">
-          <span className="text-emerald-600 dark:text-emerald-400">
-            {summary.updated} updated
-          </span>
-          {summary.skipped > 0 && (
-            <span className="text-amber-600 dark:text-amber-400">
-              {summary.skipped} skipped
-            </span>
-          )}
-          {summary.skippedCompleted > 0 && (
-            <span className="text-amber-600 dark:text-amber-400">
-              {summary.skippedCompleted} skipped (completed)
-            </span>
-          )}
-          {summary.skippedNoMatch > 0 && (
-            <span className="text-muted-foreground">
-              {summary.skippedNoMatch} no match
-            </span>
-          )}
-        </div>
-
-        <Button size="sm" variant="ghost" onClick={handleDone} aria-label="Done">
-          Done
-        </Button>
-      </div>
-    )
   }
 
   // Confirm step — show preview of affected templates

@@ -142,8 +142,10 @@ describe('SlotList cascade integration', () => {
         expect(cascadeSlotParams).toHaveBeenCalled()
       })
 
-      // Summary
-      expect(await screen.findByText(/2 updated/)).toBeDefined()
+      // Cascade selector closes immediately (toast fires outside component tree)
+      await waitFor(() => {
+        expect(screen.queryByText('This + future')).toBeNull()
+      })
     })
   })
 
