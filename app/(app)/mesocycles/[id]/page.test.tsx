@@ -31,6 +31,10 @@ vi.mock('@/lib/templates/slot-queries', () => ({
   getSlotsByTemplate: vi.fn().mockReturnValue([]),
 }))
 
+vi.mock('@/lib/templates/browse-queries', () => ({
+  getBrowseTemplates: vi.fn().mockResolvedValue([]),
+}))
+
 vi.mock('next/navigation', () => ({
   usePathname: vi.fn(() => '/mesocycles/1'),
   useRouter: vi.fn(() => ({ push: vi.fn(), refresh: vi.fn() })),
