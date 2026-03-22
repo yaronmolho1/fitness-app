@@ -102,43 +102,48 @@
 | T092 | Card normalization pass | R3 | [x] | feat/task-092-card-normalization | | 2026-03-18 | merged via PR #194 |
 | T093 | Empty state component | R3 | [x] | feat/task-093-empty-state | | 2026-03-18 | merged via PR #195 |
 | T094 | Progressive padding + interactive feedback | R3 | [x] | feat/task-094-progressive-padding | | 2026-03-18 | merged via PR #196 |
-| T095 | Time slots schema: period + time_slot on weekly_schedule | F1 | [ ] | | | | |
-| T096 | Mixed modality schema: template_sections + section_id + mixed enum | F1 | [ ] | | | | |
-| T097 | Routines frequency schema: frequency_mode + frequency_days | F1 | [ ] | | | | |
-| T098 | Shared auto-suggest combobox component | F1 | [ ] | | | | |
-| T099 | Distinct values queries (exercise + routine) | F1 | [ ] | | | | |
-| T100 | Add Progression to main nav | F1 | [ ] | | | | |
-| T101 | Slot matching utility for cross-template cascade | F1 | [ ] | | | | |
-| T102 | Period pill selector + optional time picker component | F2 | [ ] | | | | |
-| T103 | Schedule assignment SA: period + time_slot | F2 | [ ] | | | | |
-| T104 | Running/MMA template fields editable post-creation + cascade | F2 | [ ] | | | | |
-| T105 | Cascade slot parameter changes SA (3 scopes) | F2 | [ ] | | | | |
-| T106 | Cascade add/remove exercise slot SA | F2 | [ ] | | | | |
-| T107 | Mixed template creation + section management SAs | F2 | [ ] | | | | |
-| T108 | Collapsible exercise form + comboboxes | F2 | [ ] | | | | |
-| T109 | Edit exercise form comboboxes | F2 | [ ] | | | | |
-| T110 | Frequency mode selector + day picker component | F2 | [ ] | | | | |
-| T111 | Routine create/edit forms: frequency mode + category combobox | F2 | [ ] | | | | |
-| T112 | Today page quick links to template editing | F2 | [ ] | | | | |
-| T113 | Schedule grid multi-entry per day | F3 | [ ] | | | | |
-| T114 | Today API array response + multi-session display | F3 | [ ] | | | | |
-| T115 | Calendar multi-workout per day + period labels | F3 | [ ] | | | | |
-| T116 | Cascade scope selector UI on all edit operations | F3 | [ ] | | | | |
-| T117 | Mixed template creation form UI | F3 | [ ] | | | | |
-| T118 | Routine scope filtering for frequency modes | F3 | [ ] | | | | |
-| T119 | Header/padding audit + standardization pass | F3 | [ ] | | | | |
-| T120 | Clone mesocycle: copy period, time_slot, template_sections | F3 | [ ] | | | | |
-| T121 | Mixed template display on Today page | F4 | [ ] | | | | |
-| T122 | Mixed template logging form + composite save SA | F4 | [ ] | | | | |
-| T123 | Calendar + schedule integration for mixed templates | F4 | [ ] | | | | |
-| T124 | Calendar day detail quick links to template editing | F4 | [ ] | | | | |
-| T125 | Cascade auto-dismiss | F5.1 | [ ] | | | | |
-| T126 | Schema: distance/duration + group columns + migrate | F5.1 | [ ] | | | | |
-| T127 | Types/queries: update all types + query selects + test fixtures | F5.2 | [ ] | | | | |
-| T128 | SA: running template create/edit + cascade with distance/duration | F5.3 | [ ] | | | | |
-| T129 | UI: distance/duration inputs on running + mixed forms + inline edit | F5.4 | [ ] | | | | |
-| T130 | UI: distance/duration on today page + logging reference | F5.3 | [ ] | | | | |
-| T131 | Snapshot: distance/duration in running + mixed workout snapshots | F5.3 | [ ] | | | | |
-| T132 | SA: createSuperset, breakSuperset, updateGroupRest | F5.3 | [ ] | | | | |
-| T133 | UI: slot-list visual grouping + group CRUD + reorder | F5.4 | [ ] | | | | |
-| T134 | UI: superset display in logging + today + snapshot | F5.5 | [ ] | | | | |
+| T095 | Time slots schema: period + time_slot on weekly_schedule | F1 | [x] | feat/task-95-time-slot-schema | | 2026-03-19 | merged via PR #234 |
+| T096 | Mixed modality schema: template_sections + section_id + mixed enum | F1 | [x] | feat/task-96-mixed-modality-schema | | 2026-03-19 | merged via PR #235 |
+| T097 | Routines frequency schema: frequency_mode + frequency_days | F1 | [x] | feat/task-97-routines-frequency-schema | | 2026-03-19 | merged via PR #236 |
+| T098 | Shared auto-suggest combobox component | F1 | [x] | feat/task-098-combobox | | 2026-03-19 | merged via PR #240 |
+| T099 | Distinct values queries (exercise + routine) | F1 | [x] | feat/task-99-distinct-values | | 2026-03-20 | merged via PR #237 |
+| T100 | Add Progression to main nav | F1 | [x] | feat/task-100-progression-nav | | 2026-03-20 | merged via PR #243 |
+| T101 | Slot matching utility for cross-template cascade | F1 | [x] | feat/task-101-slot-matching | | 2026-03-19 | merged via PR #239 |
+| T102 | Period pill selector + optional time picker component | F2 | [x] | feat/task-102-period-selector | | 2026-03-19 | merged via PR #242 |
+| T103 | Schedule assignment SA: period + time_slot | F2 | [x] | feat/task-103-schedule-assignment-sa | | 2026-03-20 | merged via PR #248 |
+| T104 | Running/MMA template fields editable post-creation + cascade | F2 | [x] | feat/task-104-running-mma-field-edits | | 2026-03-20 | merged via PR #250 |
+| T105 | Cascade slot parameter changes SA (3 scopes) | F2 | [x] | feat/task-105-cascade-slot-params | | 2026-03-20 | merged via PR #244 |
+| T106 | Cascade add/remove exercise slot SA | F2 | [x] | feat/task-106-cascade-add-remove-slot | | 2026-03-20 | merged via PR #246 |
+| T107 | Mixed template creation + section management SAs | F2 | [x] | feat/task-107-mixed-template-sa | | 2026-03-19 | merged via PR #238 |
+| T108 | Collapsible exercise form + comboboxes | F2 | [x] | feat/task-108-collapsible-exercise-form | | 2026-03-20 | merged via PR #253 |
+| T109 | Edit exercise form comboboxes | F2 | [x] | feat/task-109-edit-exercise-comboboxes | | 2026-03-20 | merged via PR #251 |
+| T110 | Frequency mode selector + day picker component | F2 | [x] | feat/task-110-frequency-mode-selector | | 2026-03-20 | merged via PR #252 |
+| T111 | Routine create/edit forms: frequency mode + category combobox | F2 | [x] | feat/task-111-routine-forms | | 2026-03-20 | merged via PR #256, #260 |
+| T112 | Today page quick links to template editing | F2 | [x] | feat/task-112-today-quick-links | | 2026-03-20 | merged via PR #254 |
+| T113 | Schedule grid multi-entry per day | F3 | [x] | feat/task-113-schedule-grid-multi | | 2026-03-20 | merged via PR #257 |
+| T114 | Today API array response + multi-session display | F3 | [x] | feat/task-114-today-multi-session | | 2026-03-20 | merged via PR #245 |
+| T115 | Calendar multi-workout per day + period labels | F3 | [x] | feat/task-115-calendar-multi-workout | | 2026-03-20 | merged via PR #258 |
+| T116 | Cascade scope selector UI on all edit operations | F3 | [x] | feat/task-116-cascade-scope-selector-ui | | 2026-03-20 | merged via PR #263 |
+| T117 | Mixed template creation form UI | F3 | [x] | feat/task-117-mixed-template-form | | 2026-03-19 | merged via PR #241 |
+| T118 | Routine scope filtering for frequency modes | F3 | [x] | feat/task-118-routine-scope-filtering | | 2026-03-20 | merged via PR #259 |
+| T119 | Header/padding audit + standardization pass | F3 | [x] | feat/task-119-header-padding-audit | | 2026-03-20 | merged via PR #261 |
+| T120 | Clone mesocycle: copy period, time_slot, template_sections | F3 | [x] | feat/task-120-clone-meso-copy-periods | | 2026-03-20 | merged via PR #262 |
+| T121 | Mixed template display on Today page | F4 | [x] | feat/task-121-mixed-today-display | | 2026-03-20 | merged via PR #247 |
+| T122 | Mixed template logging form + composite save SA | F4 | [x] | feat/task-122-mixed-logging | | 2026-03-20 | merged via PR #249 |
+| T123 | Calendar + schedule integration for mixed templates | F4 | [x] | feat/task-123-calendar-schedule-mixed | | 2026-03-20 | merged via PR #264 |
+| T124 | Calendar day detail quick links to template editing | F4 | [x] | feat/task-124-calendar-day-quick-links | | 2026-03-20 | merged via PR #265 |
+| T125 | Cascade auto-dismiss | F5.1 | [x] | feat/task-125-cascade-auto-dismiss | | 2026-03-21 | |
+| T126 | Schema: distance/duration + group_id/group_rest | F5.1 | [x] | feat/task-126-schema | | 2026-03-21 | |
+| T127 | Types/queries update for distance/duration + supersets | F5.2 | [x] | feat/task-127-types-queries | | 2026-03-21 | |
+| T128 | Running template SA: distance/duration + cascade | F5.3 | [x] | feat/task-128-running-sa | | 2026-03-21 | |
+| T129 | Running distance/duration UI inputs | F5.4 | [x] | feat/task-129-running-ui | | 2026-03-21 | |
+| T130 | Distance/duration display on today + logging | F5.3 | [x] | feat/task-130-today-display | | 2026-03-21 | |
+| T131 | Running snapshot: distance/duration | F5.3 | [x] | feat/task-131-snapshot | | 2026-03-21 | |
+| T132 | Superset SA: create/break/updateGroupRest | F5.3 | [x] | feat/task-132-superset-sa | | 2026-03-21 | |
+| T133 | Superset UI: grouping, selection, CRUD | F5.4 | [x] | feat/task-133-superset-ui | | 2026-03-21 | |
+| T134 | Superset display in logging + today + snapshot | F5.5 | [x] | feat/task-134-superset-display | | 2026-03-21 | |
+| T135 | Number input zero fix | P1 | [ ] | | | | |
+| T136 | Cascade toast notification | P1 | [ ] | | | | |
+| T137 | Template copy server action | P1 | [ ] | | | | |
+| T138 | Template add picker + copy browse UI | P2 | [ ] | | | | |
+| T139 | Batch cascade scope (SA + UI) | P2 | [ ] | | | | |
