@@ -6,12 +6,9 @@ import { cn } from '@/lib/utils'
 import { getCascadePreview } from '@/lib/templates/cascade-actions'
 import { batchCascadeSlotEdits } from '@/lib/templates/cascade-batch'
 import { fireBatchCascadeToast } from '@/components/cascade-toast'
+import type { SlotEdit } from '@/lib/templates/cascade-batch'
+import { SCOPE_OPTIONS } from '@/lib/templates/cascade-types'
 import type { CascadeScope, CascadePreviewData } from '@/lib/templates/cascade-types'
-
-type SlotEdit = {
-  slotId: number
-  updates: Record<string, unknown>
-}
 
 type Props = {
   templateId: number
@@ -22,24 +19,6 @@ type Props = {
 }
 
 type Step = 'scope-select' | 'confirm'
-
-const SCOPE_OPTIONS: { value: CascadeScope; label: string; description: string }[] = [
-  {
-    value: 'this-only',
-    label: 'This only',
-    description: 'Applied to this template only',
-  },
-  {
-    value: 'this-and-future',
-    label: 'This + future',
-    description: 'Also apply to future mesocycles',
-  },
-  {
-    value: 'all-phases',
-    label: 'All phases',
-    description: 'Apply across all active/planned mesocycles',
-  },
-]
 
 export function BatchCascadeScopeSelector({ templateId, edits, exerciseCount, onComplete, onCancel }: Props) {
   const [step, setStep] = useState<Step>('scope-select')
@@ -77,13 +56,6 @@ export function BatchCascadeScopeSelector({ templateId, edits, exerciseCount, on
 
   function handleConfirm() {
     if (!selectedScope) return
-
-    // "this-only" for batch: local edits already applied
-    if (selectedScope === 'this-only') {
-      fireBatchCascadeToast('this-only', { updated: 0, skipped: 0, skippedCompleted: 0, skippedNoMatch: 0 }, exerciseCount)
-      onComplete()
-      return
-    }
 
     startTransition(async () => {
       const result = await batchCascadeSlotEdits({

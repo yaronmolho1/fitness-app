@@ -424,6 +424,7 @@ export function SlotList({ slots, templateId, exercises, isCompleted }: SlotList
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
               isEdited={pending.isEdited}
+              getPendingDiff={(slotId: number) => pending.pendingEdits.get(slotId)?.diff}
               onDeferredSave={handleDeferredSave}
             />
           )
@@ -457,6 +458,7 @@ export function SlotList({ slots, templateId, exercises, isCompleted }: SlotList
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
                 hasPendingEdit={pending.isEdited(slot.id)}
+                pendingDiff={pending.pendingEdits.get(slot.id)?.diff}
                 onDeferredSave={handleDeferredSave}
               />
             </div>
@@ -544,6 +546,7 @@ type SupersetGroupProps = {
   onTouchMove: (e: React.TouchEvent) => void
   onTouchEnd: () => void
   isEdited: (slotId: number) => boolean
+  getPendingDiff: (slotId: number) => Record<string, unknown> | undefined
   onDeferredSave: (slot: SlotWithExercise, diff: Record<string, unknown>) => void
 }
 
@@ -551,7 +554,7 @@ function SupersetGroup({
   groupId, slots, groupRestSeconds, templateId, isCompleted,
   onUpdated, onBreak, canDrag, dragIndex, dropIndex, allSlots,
   onDragStart, onDragOver, onDragEnd, onTouchStart, onTouchMove, onTouchEnd,
-  isEdited, onDeferredSave,
+  isEdited, getPendingDiff, onDeferredSave,
 }: SupersetGroupProps) {
   const [editingRest, setEditingRest] = useState(false)
   const [restInput, setRestInput] = useState(String(groupRestSeconds))
@@ -647,6 +650,7 @@ function SupersetGroup({
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
             hasPendingEdit={isEdited(slot.id)}
+            pendingDiff={getPendingDiff(slot.id)}
             onDeferredSave={onDeferredSave}
           />
         )
@@ -681,6 +685,7 @@ type SlotRowProps = {
   onTouchMove?: (e: React.TouchEvent) => void
   onTouchEnd?: () => void
   hasPendingEdit?: boolean
+  pendingDiff?: Record<string, unknown>
   onDeferredSave?: (slot: SlotWithExercise, diff: Record<string, unknown>) => void
 }
 
@@ -689,7 +694,7 @@ function SlotRow({
   showDragHandle, isDragging, isDropTarget,
   onDragStart, onDragOver, onDragEnd,
   onTouchStart, onTouchMove, onTouchEnd,
-  hasPendingEdit, onDeferredSave,
+  hasPendingEdit, pendingDiff, onDeferredSave,
 }: SlotRowProps) {
   const [mode, setMode] = useState<'display' | 'edit' | 'confirm-remove' | 'cascade-params' | 'cascade-remove'>('display')
   const [error, setError] = useState('')
@@ -772,32 +777,17 @@ function SlotRow({
   }
 
   function handleSaveForLater() {
-    const { diff, setsNum, repsNum, weightNum, rpeNum, restNum, guidelinesVal } = computeDiff()
+    const { diff } = computeDiff()
 
     if (Object.keys(diff).length === 0) {
       setMode('display')
       return
     }
 
-    startTransition(async () => {
-      const result = await updateExerciseSlot({
-        id: slot.id,
-        sets: setsNum,
-        reps: repsNum,
-        weight: weightNum,
-        rpe: rpeNum,
-        rest_seconds: restNum,
-        guidelines: guidelinesVal,
-      })
-      if (result.success) {
-        setError('')
-        onDeferredSave?.(slot, diff)
-        setMode('display')
-        onUpdated()
-      } else {
-        setError(result.error)
-      }
-    })
+    // Client-only: no DB write. Pending state tracks the diff until "Apply Changes".
+    setError('')
+    onDeferredSave?.(slot, diff)
+    setMode('display')
   }
 
   function handleRemove() {
@@ -995,13 +985,13 @@ function SlotRow({
       <div className="min-w-0 flex-1">
         <span className="text-sm font-medium">{slot.exercise_name}</span>
         <div className="mt-0.5 flex flex-wrap gap-2 text-xs text-muted-foreground">
-          <span>{slot.sets}&times;{slot.reps}</span>
-          {slot.weight !== null && <span>{slot.weight}kg</span>}
-          {slot.rpe !== null && <span>RPE {slot.rpe}</span>}
-          {slot.rest_seconds !== null && <span>{formatRest(slot.rest_seconds)}</span>}
+          <span>{String(pendingDiff?.sets ?? slot.sets)}&times;{String(pendingDiff?.reps ?? slot.reps)}</span>
+          {(pendingDiff?.weight ?? slot.weight) != null && <span>{String(pendingDiff?.weight ?? slot.weight)}kg</span>}
+          {(pendingDiff?.rpe ?? slot.rpe) != null && <span>RPE {String(pendingDiff?.rpe ?? slot.rpe)}</span>}
+          {(pendingDiff?.rest_seconds ?? slot.rest_seconds) != null && <span>{formatRest(Number(pendingDiff?.rest_seconds ?? slot.rest_seconds))}</span>}
         </div>
-        {slot.guidelines && (
-          <p className="mt-1 text-xs text-muted-foreground italic">{slot.guidelines}</p>
+        {(pendingDiff?.guidelines ?? slot.guidelines) && (
+          <p className="mt-1 text-xs text-muted-foreground italic">{String(pendingDiff?.guidelines ?? slot.guidelines)}</p>
         )}
       </div>
       {!isCompleted && (

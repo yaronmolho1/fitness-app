@@ -73,6 +73,16 @@ const exercises = [
   { id: 3, name: 'Row', modality: 'resistance' as const, muscle_group: 'Back', equipment: 'Barbell', created_at: new Date() },
 ]
 
+// Helper: defer-save a slot edit (client-only, no DB write)
+async function deferSaveSlot(user: ReturnType<typeof userEvent.setup>, rowIndex: number, field: RegExp, value: string) {
+  const rows = screen.getAllByTestId('slot-row')
+  await user.click(within(rows[rowIndex]).getByRole('button', { name: /edit/i }))
+  const input = screen.getByLabelText(field)
+  await user.clear(input)
+  await user.type(input, value)
+  await user.click(screen.getByRole('button', { name: /save for later/i }))
+}
+
 describe('SlotList batch cascade', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -127,11 +137,6 @@ describe('SlotList batch cascade', () => {
 
   describe('AC6: pending edit visual indicators', () => {
     it('shows visual indicator on slots with pending edits', async () => {
-      vi.mocked(updateExerciseSlot).mockResolvedValue({
-        success: true,
-        data: makeSlot({ id: 1, sets: 5 }),
-      })
-
       const user = userEvent.setup()
       const slots = [
         makeSlot({ id: 1, order: 1, exercise_name: 'Bench Press' }),
@@ -139,21 +144,11 @@ describe('SlotList batch cascade', () => {
       ]
       render(<SlotList slots={slots} templateId={10} exercises={exercises} isCompleted={false} />)
 
-      // Edit first slot, save with "defer cascade" (batch mode)
-      const rows = screen.getAllByTestId('slot-row')
-      const editBtns = within(rows[0]).getByRole('button', { name: /edit/i })
-      await user.click(editBtns)
+      // "Save for later" is now client-only — no DB write
+      await deferSaveSlot(user, 0, /sets/i, '5')
 
-      const setsInput = screen.getByLabelText(/sets/i)
-      await user.clear(setsInput)
-      await user.type(setsInput, '5')
-
-      // Click "Save for batch" / deferred save button
-      await user.click(screen.getByRole('button', { name: /save for later/i }))
-
-      await waitFor(() => {
-        expect(updateExerciseSlot).toHaveBeenCalled()
-      })
+      // updateExerciseSlot should NOT be called
+      expect(updateExerciseSlot).not.toHaveBeenCalled()
 
       // First slot should have pending edit indicator
       const updatedRows = screen.getAllByTestId('slot-row')
@@ -161,14 +156,26 @@ describe('SlotList batch cascade', () => {
       // Second slot should NOT have indicator
       expect(within(updatedRows[1]).queryByTestId('pending-edit-indicator')).not.toBeInTheDocument()
     })
+
+    it('displays pending values in slot display', async () => {
+      const user = userEvent.setup()
+      const slots = [
+        makeSlot({ id: 1, order: 1, sets: 3, reps: '10', exercise_name: 'Bench Press' }),
+      ]
+      render(<SlotList slots={slots} templateId={10} exercises={exercises} isCompleted={false} />)
+
+      await deferSaveSlot(user, 0, /sets/i, '5')
+
+      // Should display pending value (5) not original (3)
+      const row = screen.getByTestId('slot-row')
+      expect(row).toHaveTextContent('5')
+    })
   })
 
   // ---- AC2: "Apply Changes" button appears when multiple slots have pending edits ----
 
   describe('AC2: Apply Changes button', () => {
-    it('shows "Apply Changes" when multiple slots have pending edits', async () => {
-      vi.mocked(updateExerciseSlot).mockResolvedValue({ success: true, data: makeSlot() })
-
+    it('shows "Apply Changes" when slot has pending edits', async () => {
       const user = userEvent.setup()
       const slots = [
         makeSlot({ id: 1, order: 1, exercise_name: 'Bench Press' }),
@@ -179,26 +186,16 @@ describe('SlotList batch cascade', () => {
       // No Apply Changes button initially
       expect(screen.queryByRole('button', { name: /apply changes/i })).not.toBeInTheDocument()
 
-      // Edit first slot with deferred save
-      const rows = screen.getAllByTestId('slot-row')
-      await user.click(within(rows[0]).getByRole('button', { name: /edit/i }))
-      const setsInput = screen.getByLabelText(/sets/i)
-      await user.clear(setsInput)
-      await user.type(setsInput, '5')
-      await user.click(screen.getByRole('button', { name: /save for later/i }))
-      await waitFor(() => { expect(updateExerciseSlot).toHaveBeenCalled() })
+      // Defer-save first slot (client-only)
+      await deferSaveSlot(user, 0, /sets/i, '5')
 
-      // Edit second slot with deferred save
-      vi.mocked(updateExerciseSlot).mockResolvedValue({ success: true, data: makeSlot({ id: 2 }) })
-      const rows2 = screen.getAllByTestId('slot-row')
-      await user.click(within(rows2[1]).getByRole('button', { name: /edit/i }))
-      const repsInput = screen.getByLabelText(/reps/i)
-      await user.clear(repsInput)
-      await user.type(repsInput, '12')
-      await user.click(screen.getByRole('button', { name: /save for later/i }))
-      await waitFor(() => { expect(updateExerciseSlot).toHaveBeenCalledTimes(2) })
+      // Apply Changes button should be visible after one edit
+      expect(screen.getByRole('button', { name: /apply changes/i })).toBeInTheDocument()
 
-      // Apply Changes button should now be visible
+      // Defer-save second slot
+      await deferSaveSlot(user, 1, /reps/i, '12')
+
+      // Still visible
       expect(screen.getByRole('button', { name: /apply changes/i })).toBeInTheDocument()
     })
 
@@ -217,8 +214,6 @@ describe('SlotList batch cascade', () => {
 
   describe('AC3: batch cascade scope selector', () => {
     it('clicking "Apply Changes" opens cascade scope selector for all pending edits', async () => {
-      vi.mocked(updateExerciseSlot).mockResolvedValue({ success: true, data: makeSlot() })
-
       const user = userEvent.setup()
       const slots = [
         makeSlot({ id: 1, order: 1, exercise_name: 'Bench Press' }),
@@ -226,21 +221,8 @@ describe('SlotList batch cascade', () => {
       ]
       render(<SlotList slots={slots} templateId={10} exercises={exercises} isCompleted={false} />)
 
-      // Defer-save two edits
-      const rows = screen.getAllByTestId('slot-row')
-      await user.click(within(rows[0]).getByRole('button', { name: /edit/i }))
-      await user.clear(screen.getByLabelText(/sets/i))
-      await user.type(screen.getByLabelText(/sets/i), '5')
-      await user.click(screen.getByRole('button', { name: /save for later/i }))
-      await waitFor(() => { expect(updateExerciseSlot).toHaveBeenCalled() })
-
-      vi.mocked(updateExerciseSlot).mockResolvedValue({ success: true, data: makeSlot({ id: 2 }) })
-      const rows2 = screen.getAllByTestId('slot-row')
-      await user.click(within(rows2[1]).getByRole('button', { name: /edit/i }))
-      await user.clear(screen.getByLabelText(/reps/i))
-      await user.type(screen.getByLabelText(/reps/i), '12')
-      await user.click(screen.getByRole('button', { name: /save for later/i }))
-      await waitFor(() => { expect(updateExerciseSlot).toHaveBeenCalledTimes(2) })
+      await deferSaveSlot(user, 0, /sets/i, '5')
+      await deferSaveSlot(user, 1, /reps/i, '12')
 
       // Click Apply Changes
       await user.click(screen.getByRole('button', { name: /apply changes/i }))
@@ -256,7 +238,6 @@ describe('SlotList batch cascade', () => {
 
   describe('AC4+AC5: batch cascade applies atomically', () => {
     it('calls batchCascadeSlotEdits with all pending edits and chosen scope', async () => {
-      vi.mocked(updateExerciseSlot).mockResolvedValue({ success: true, data: makeSlot() })
       vi.mocked(batchCascadeSlotEdits).mockResolvedValue({
         success: true,
         data: { updated: 2, skipped: 0, skippedCompleted: 0, skippedNoMatch: 0 },
@@ -269,21 +250,8 @@ describe('SlotList batch cascade', () => {
       ]
       render(<SlotList slots={slots} templateId={10} exercises={exercises} isCompleted={false} />)
 
-      // Defer-save two edits
-      const rows = screen.getAllByTestId('slot-row')
-      await user.click(within(rows[0]).getByRole('button', { name: /edit/i }))
-      await user.clear(screen.getByLabelText(/sets/i))
-      await user.type(screen.getByLabelText(/sets/i), '5')
-      await user.click(screen.getByRole('button', { name: /save for later/i }))
-      await waitFor(() => { expect(updateExerciseSlot).toHaveBeenCalled() })
-
-      vi.mocked(updateExerciseSlot).mockResolvedValue({ success: true, data: makeSlot({ id: 2 }) })
-      const rows2 = screen.getAllByTestId('slot-row')
-      await user.click(within(rows2[1]).getByRole('button', { name: /edit/i }))
-      await user.clear(screen.getByLabelText(/reps/i))
-      await user.type(screen.getByLabelText(/reps/i), '12')
-      await user.click(screen.getByRole('button', { name: /save for later/i }))
-      await waitFor(() => { expect(updateExerciseSlot).toHaveBeenCalledTimes(2) })
+      await deferSaveSlot(user, 0, /sets/i, '5')
+      await deferSaveSlot(user, 1, /reps/i, '12')
 
       // Apply Changes -> Select scope -> Confirm
       await user.click(screen.getByRole('button', { name: /apply changes/i }))
@@ -303,14 +271,22 @@ describe('SlotList batch cascade', () => {
         )
       })
     })
+
+    it('does not call updateExerciseSlot on "Save for later" — DB write deferred to batch', async () => {
+      const user = userEvent.setup()
+      const slots = [makeSlot({ id: 1, order: 1 })]
+      render(<SlotList slots={slots} templateId={10} exercises={exercises} isCompleted={false} />)
+
+      await deferSaveSlot(user, 0, /sets/i, '5')
+
+      expect(updateExerciseSlot).not.toHaveBeenCalled()
+    })
   })
 
   // ---- AC8: "Discard Changes" reverts all pending edits ----
 
   describe('AC8: Discard Changes', () => {
     it('shows "Discard Changes" alongside "Apply Changes" when edits pending', async () => {
-      vi.mocked(updateExerciseSlot).mockResolvedValue({ success: true, data: makeSlot() })
-
       const user = userEvent.setup()
       const slots = [
         makeSlot({ id: 1, order: 1, exercise_name: 'Bench Press' }),
@@ -318,20 +294,12 @@ describe('SlotList batch cascade', () => {
       ]
       render(<SlotList slots={slots} templateId={10} exercises={exercises} isCompleted={false} />)
 
-      // Defer-save an edit
-      const rows = screen.getAllByTestId('slot-row')
-      await user.click(within(rows[0]).getByRole('button', { name: /edit/i }))
-      await user.clear(screen.getByLabelText(/sets/i))
-      await user.type(screen.getByLabelText(/sets/i), '5')
-      await user.click(screen.getByRole('button', { name: /save for later/i }))
-      await waitFor(() => { expect(updateExerciseSlot).toHaveBeenCalled() })
+      await deferSaveSlot(user, 0, /sets/i, '5')
 
       expect(screen.getByRole('button', { name: /discard changes/i })).toBeInTheDocument()
     })
 
     it('clicking "Discard Changes" clears all pending edits and indicators', async () => {
-      vi.mocked(updateExerciseSlot).mockResolvedValue({ success: true, data: makeSlot() })
-
       const user = userEvent.setup()
       const slots = [
         makeSlot({ id: 1, order: 1, exercise_name: 'Bench Press' }),
@@ -339,13 +307,7 @@ describe('SlotList batch cascade', () => {
       ]
       render(<SlotList slots={slots} templateId={10} exercises={exercises} isCompleted={false} />)
 
-      // Defer-save an edit
-      const rows = screen.getAllByTestId('slot-row')
-      await user.click(within(rows[0]).getByRole('button', { name: /edit/i }))
-      await user.clear(screen.getByLabelText(/sets/i))
-      await user.type(screen.getByLabelText(/sets/i), '5')
-      await user.click(screen.getByRole('button', { name: /save for later/i }))
-      await waitFor(() => { expect(updateExerciseSlot).toHaveBeenCalled() })
+      await deferSaveSlot(user, 0, /sets/i, '5')
 
       // Click Discard
       await user.click(screen.getByRole('button', { name: /discard changes/i }))
@@ -356,26 +318,40 @@ describe('SlotList batch cascade', () => {
       expect(screen.queryByRole('button', { name: /apply changes/i })).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: /discard changes/i })).not.toBeInTheDocument()
     })
+
+    it('"Discard Changes" reverts displayed values to original (no DB was written)', async () => {
+      const user = userEvent.setup()
+      const slots = [
+        makeSlot({ id: 1, order: 1, sets: 3, reps: '10', exercise_name: 'Bench Press' }),
+      ]
+      render(<SlotList slots={slots} templateId={10} exercises={exercises} isCompleted={false} />)
+
+      await deferSaveSlot(user, 0, /sets/i, '5')
+
+      // Pending value should show
+      expect(screen.getByTestId('slot-row')).toHaveTextContent('5')
+
+      // Discard
+      await user.click(screen.getByRole('button', { name: /discard changes/i }))
+
+      // Should revert to original value
+      expect(screen.getByTestId('slot-row')).toHaveTextContent('3')
+      // No DB writes happened at all
+      expect(updateExerciseSlot).not.toHaveBeenCalled()
+    })
   })
 
   // ---- AC7: Navigate-away warning ----
 
   describe('AC7: navigate-away warning', () => {
     it('registers beforeunload handler when edits are pending', async () => {
-      vi.mocked(updateExerciseSlot).mockResolvedValue({ success: true, data: makeSlot() })
       const addEventSpy = vi.spyOn(window, 'addEventListener')
 
       const user = userEvent.setup()
       const slots = [makeSlot({ id: 1, order: 1 })]
       render(<SlotList slots={slots} templateId={10} exercises={exercises} isCompleted={false} />)
 
-      // Defer-save an edit
-      const rows = screen.getAllByTestId('slot-row')
-      await user.click(within(rows[0]).getByRole('button', { name: /edit/i }))
-      await user.clear(screen.getByLabelText(/sets/i))
-      await user.type(screen.getByLabelText(/sets/i), '5')
-      await user.click(screen.getByRole('button', { name: /save for later/i }))
-      await waitFor(() => { expect(updateExerciseSlot).toHaveBeenCalled() })
+      await deferSaveSlot(user, 0, /sets/i, '5')
 
       expect(addEventSpy).toHaveBeenCalledWith('beforeunload', expect.any(Function))
       addEventSpy.mockRestore()
@@ -386,7 +362,6 @@ describe('SlotList batch cascade', () => {
 
   describe('AC9: aggregate toast', () => {
     it('fires aggregate toast after batch cascade completes', async () => {
-      vi.mocked(updateExerciseSlot).mockResolvedValue({ success: true, data: makeSlot() })
       vi.mocked(batchCascadeSlotEdits).mockResolvedValue({
         success: true,
         data: { updated: 4, skipped: 1, skippedCompleted: 0, skippedNoMatch: 1 },
@@ -399,21 +374,8 @@ describe('SlotList batch cascade', () => {
       ]
       render(<SlotList slots={slots} templateId={10} exercises={exercises} isCompleted={false} />)
 
-      // Defer-save two edits
-      const rows = screen.getAllByTestId('slot-row')
-      await user.click(within(rows[0]).getByRole('button', { name: /edit/i }))
-      await user.clear(screen.getByLabelText(/sets/i))
-      await user.type(screen.getByLabelText(/sets/i), '5')
-      await user.click(screen.getByRole('button', { name: /save for later/i }))
-      await waitFor(() => { expect(updateExerciseSlot).toHaveBeenCalled() })
-
-      vi.mocked(updateExerciseSlot).mockResolvedValue({ success: true, data: makeSlot({ id: 2 }) })
-      const rows2 = screen.getAllByTestId('slot-row')
-      await user.click(within(rows2[1]).getByRole('button', { name: /edit/i }))
-      await user.clear(screen.getByLabelText(/reps/i))
-      await user.type(screen.getByLabelText(/reps/i), '12')
-      await user.click(screen.getByRole('button', { name: /save for later/i }))
-      await waitFor(() => { expect(updateExerciseSlot).toHaveBeenCalledTimes(2) })
+      await deferSaveSlot(user, 0, /sets/i, '5')
+      await deferSaveSlot(user, 1, /reps/i, '12')
 
       // Apply Changes -> Select scope -> Confirm
       await user.click(screen.getByRole('button', { name: /apply changes/i }))

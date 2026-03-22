@@ -8,7 +8,10 @@ import { getCascadeTargets } from './cascade-queries'
 import { findMatchingSlots } from './slot-matching'
 import type { CascadeScope, CascadeSummary } from './cascade-types'
 
-type SlotEdit = {
+// Allowed slot fields — reject unknown keys from client input
+const ALLOWED_SLOT_FIELDS = new Set(['sets', 'reps', 'weight', 'rpe', 'rest_seconds', 'guidelines'])
+
+export type SlotEdit = {
   slotId: number
   updates: Record<string, unknown>
 }
@@ -32,13 +35,20 @@ export async function batchCascadeSlotEdits(
     return { success: false, error: 'Nothing to update' }
   }
 
-  // "this-only" — local edits already applied, no cascade needed
-  if (scope === 'this-only') {
-    return { success: true, data: { updated: 0, skipped: 0, skippedCompleted: 0, skippedNoMatch: 0 } }
+  // Filter updates to allowed fields only (P2 security)
+  const sanitizedEdits = edits.map(e => ({
+    slotId: e.slotId,
+    updates: Object.fromEntries(
+      Object.entries(e.updates).filter(([key]) => ALLOWED_SLOT_FIELDS.has(key))
+    ),
+  })).filter(e => Object.keys(e.updates).length > 0)
+
+  if (sanitizedEdits.length === 0) {
+    return { success: false, error: 'No valid fields to update' }
   }
 
   // Build source slot identifiers from the edit list
-  const sourceSlotIds = edits.map(e => e.slotId)
+  const sourceSlotIds = sanitizedEdits.map(e => e.slotId)
   const sourceSlots = db
     .select({
       id: exercise_slots.id,
@@ -54,7 +64,35 @@ export async function batchCascadeSlotEdits(
   }
 
   // Map slotId -> updates for quick lookup
-  const editsBySlotId = new Map(edits.map(e => [e.slotId, e.updates]))
+  const editsBySlotId = new Map(sanitizedEdits.map(e => [e.slotId, e.updates]))
+
+  // Helper: build SQL set fields from an updates object
+  function buildSetFields(updates: Record<string, unknown>): Record<string, unknown> {
+    const setFields: Record<string, unknown> = {}
+    for (const [key, val] of Object.entries(updates)) {
+      if (key === 'reps') {
+        setFields.reps = String(val)
+      } else {
+        setFields[key] = val
+      }
+    }
+    return setFields
+  }
+
+  // "this-only" — write source slots, no cascade to siblings
+  if (scope === 'this-only') {
+    db.transaction((tx) => {
+      for (const edit of sanitizedEdits) {
+        const setFields = buildSetFields(edit.updates)
+        tx.update(exercise_slots)
+          .set(setFields)
+          .where(eq(exercise_slots.id, edit.slotId))
+          .run()
+      }
+    })
+    revalidatePath('/mesocycles')
+    return { success: true, data: { updated: 0, skipped: 0, skippedCompleted: 0, skippedNoMatch: 0 } }
+  }
 
   // Get cascade targets (sibling templates)
   const targetsResult = await getCascadeTargets(templateId, scope, { includeLogged: true })
@@ -67,6 +105,15 @@ export async function batchCascadeSlotEdits(
 
   // Execute in a single transaction for atomicity (AC5)
   const summary = db.transaction((tx) => {
+    // Write source slots first
+    for (const edit of sanitizedEdits) {
+      const setFields = buildSetFields(edit.updates)
+      tx.update(exercise_slots)
+        .set(setFields)
+        .where(eq(exercise_slots.id, edit.slotId))
+        .run()
+    }
+
     const targetIds = targets.map(t => t.id)
     const loggedTemplateIds = targetIds.length > 0
       ? tx
@@ -117,16 +164,7 @@ export async function batchCascadeSlotEdits(
           continue
         }
 
-        // Build SQL set fields
-        const setFields: Record<string, unknown> = {}
-        for (const [key, val] of Object.entries(slotUpdates)) {
-          if (key === 'reps') {
-            setFields.reps = String(val)
-          } else {
-            setFields[key] = val
-          }
-        }
-
+        const setFields = buildSetFields(slotUpdates)
         tx.update(exercise_slots)
           .set(setFields)
           .where(eq(exercise_slots.id, match.targetSlotId))

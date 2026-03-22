@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { getCascadePreview, cascadeUpdateTemplates } from '@/lib/templates/cascade-actions'
 import { fireCascadeToast } from '@/components/cascade-toast'
+import { SCOPE_OPTIONS } from '@/lib/templates/cascade-types'
 import type { CascadeScope, CascadePreviewData, CascadeUpdates } from '@/lib/templates/cascade-types'
 
 type Props = {
@@ -15,24 +16,6 @@ type Props = {
 }
 
 type Step = 'scope-select' | 'confirm'
-
-const SCOPE_OPTIONS: { value: CascadeScope; label: string; description: string }[] = [
-  {
-    value: 'this-only',
-    label: 'This only',
-    description: 'Update this template in the current mesocycle',
-  },
-  {
-    value: 'this-and-future',
-    label: 'This + future',
-    description: 'Update this and all future mesocycles',
-  },
-  {
-    value: 'all-phases',
-    label: 'All phases',
-    description: 'Update every active/planned mesocycle',
-  },
-]
 
 export function CascadeScopeSelector({ templateId, updates, onComplete, onCancel }: Props) {
   const [step, setStep] = useState<Step>('scope-select')

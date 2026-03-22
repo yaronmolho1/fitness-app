@@ -7,6 +7,7 @@ import { getCascadePreview } from '@/lib/templates/cascade-actions'
 import { cascadeSlotParams } from '@/lib/templates/cascade-slot-params'
 import { cascadeAddSlot, cascadeRemoveSlot } from '@/lib/templates/cascade-slot-ops'
 import { fireCascadeToast } from '@/components/cascade-toast'
+import { SCOPE_OPTIONS } from '@/lib/templates/cascade-types'
 import type { CascadeScope, CascadePreviewData, CascadeSummary } from '@/lib/templates/cascade-types'
 
 type BaseProps = {
@@ -35,24 +36,6 @@ type RemoveSlotOp = BaseProps & {
 export type SlotCascadeProps = UpdateParamsOp | AddSlotOp | RemoveSlotOp
 
 type Step = 'scope-select' | 'confirm'
-
-const SCOPE_OPTIONS: { value: CascadeScope; label: string; description: string }[] = [
-  {
-    value: 'this-only',
-    label: 'This only',
-    description: 'Applied to this template only',
-  },
-  {
-    value: 'this-and-future',
-    label: 'This + future',
-    description: 'Also apply to future mesocycles',
-  },
-  {
-    value: 'all-phases',
-    label: 'All phases',
-    description: 'Apply across all active/planned mesocycles',
-  },
-]
 
 export function SlotCascadeScopeSelector(props: SlotCascadeProps) {
   const { templateId, onComplete, onCancel } = props

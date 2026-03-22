@@ -45,3 +45,27 @@ export type CascadePreviewResult =
 export type CascadeUpdateResult =
   | { success: true; data: CascadeSummary }
   | { success: false; error: string }
+
+export type CascadeScopeOption = {
+  value: CascadeScope
+  label: string
+  description: string
+}
+
+export const SCOPE_OPTIONS: CascadeScopeOption[] = [
+  {
+    value: 'this-only',
+    label: 'This only',
+    description: 'Applied to this template only',
+  },
+  {
+    value: 'this-and-future',
+    label: 'This + future',
+    description: 'Also apply to future mesocycles',
+  },
+  {
+    value: 'all-phases',
+    label: 'All phases',
+    description: 'Apply across all active/planned mesocycles',
+  },
+]
