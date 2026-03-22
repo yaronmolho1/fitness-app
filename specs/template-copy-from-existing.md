@@ -1,6 +1,6 @@
 # Template Copy from Existing
 
-**Status:** ready
+**Status:** partial
 **Epic:** Template UX
 **Depends:** specs/create-resistance-templates.md, specs/template-add-picker.md
 

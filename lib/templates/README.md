@@ -14,3 +14,4 @@ Workout template server actions for all modalities (resistance, running, MMA/BJJ
 - `slot-matching.ts` — `findMatchingSlots()` matches exercise slots between source and target templates by exercise ID, order, and role; exports `SlotIdentifier`, `MatchType`, `SlotMatch`, `SkipReason`, `SlotMatchResult`
 - `cascade-slot-ops.ts` — `cascadeAddSlot()`, `cascadeRemoveSlot()` Server Actions for atomic cascade add/remove of exercise slots across sibling templates, skips templates with logged workouts
 - `superset-actions.ts` — `createSuperset()`, `breakSuperset()`, `updateGroupRest()` Server Actions for grouping/ungrouping exercise slots into supersets and updating inter-set rest
+- `copy-actions.ts` — `copyTemplateToMesocycle()` Server Action: deep-copies a template (with sections, slots, superset groups) to another mesocycle, enforcing canonical_name uniqueness and completed-meso guard
