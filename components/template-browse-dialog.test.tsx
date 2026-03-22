@@ -152,4 +152,25 @@ describe('TemplateBrowseDialog', () => {
     render(<TemplateBrowseDialog {...defaultProps} open={false} />)
     expect(screen.queryByText('Copy from Existing')).not.toBeInTheDocument()
   })
+
+  it('displays error message when copy fails', () => {
+    const templates = [
+      makeBrowseTemplate({ id: 1, name: 'Push A' }),
+    ]
+    render(
+      <TemplateBrowseDialog
+        {...defaultProps}
+        templates={templates}
+        error="Template already exists in this mesocycle"
+      />
+    )
+
+    const alert = screen.getByRole('alert')
+    expect(alert).toHaveTextContent('Template already exists in this mesocycle')
+  })
+
+  it('does not display error alert when error is empty', () => {
+    render(<TemplateBrowseDialog {...defaultProps} error="" />)
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
 })

@@ -1,4 +1,4 @@
-import { ne, sql } from 'drizzle-orm'
+import { eq, ne, sql } from 'drizzle-orm'
 import { db } from '@/lib/db/index'
 import { workout_templates, mesocycles, exercise_slots } from '@/lib/db/schema'
 
@@ -30,7 +30,7 @@ export async function getBrowseTemplates(
       mesocycle_name: mesocycles.name,
     })
     .from(workout_templates)
-    .innerJoin(mesocycles, sql`${mesocycles.id} = ${workout_templates.mesocycle_id}`)
+    .innerJoin(mesocycles, eq(mesocycles.id, workout_templates.mesocycle_id))
     .where(ne(workout_templates.mesocycle_id, excludeMesocycleId))
     .all()
 

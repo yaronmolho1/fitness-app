@@ -19,9 +19,10 @@ type Props = {
   onCopy: (templateId: number) => void
   templates: BrowseTemplate[]
   isPending: boolean
+  error?: string
 }
 
-export function TemplateBrowseDialog({ open, onOpenChange, onCopy, templates, isPending }: Props) {
+export function TemplateBrowseDialog({ open, onOpenChange, onCopy, templates, isPending, error }: Props) {
   const [search, setSearch] = useState('')
 
   const filtered = useMemo(() => {
@@ -60,6 +61,10 @@ export function TemplateBrowseDialog({ open, onOpenChange, onCopy, templates, is
           onChange={(e) => setSearch(e.target.value)}
           className="mb-3"
         />
+
+        {error && (
+          <p className="mb-3 text-sm text-destructive" role="alert">{error}</p>
+        )}
 
         {templates.length === 0 && (
           <p className="text-sm text-muted-foreground py-4 text-center">

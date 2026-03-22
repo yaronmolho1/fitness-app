@@ -103,6 +103,7 @@ export function TemplateSection({ mesocycleId, templates, exercises, slotsByTemp
         onCopy={handleCopy}
         templates={browseTemplates}
         isPending={copyPending}
+        error={browseOpen ? error : ''}
       />
 
       {templates.length === 0 && formType === null && (
