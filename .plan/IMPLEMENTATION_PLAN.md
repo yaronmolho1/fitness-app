@@ -636,3 +636,63 @@ T126 → T127 → T132 → T133 → T134 (estimated: S + S + M + L + M = ~16-24h
 
 - **T133 (superset UI)**: Largest task. Drag-reorder with group awareness is complex. May need to simplify: move groups as unit, auto-ungroup on solo drag.
 - **T127 (types/queries)**: Many files touched. Test fixtures need updating for required fields. Low risk but tedious.
+
+---
+
+## Wave P1: Template UX — Quick Fixes
+
+> No new dependencies. All tasks parallel. Can run concurrently in separate worktrees.
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T135 | Number input zero fix: replace `type="number"` inputs with controlled text inputs + numeric validation. Backspace to empty shows blank (not "0"), typing after clear gives clean value (not "05"). `inputMode="numeric"` for integers, `inputMode="decimal"` for weight/RPE. Normalize on blur. Affects: slot-list.tsx (sets/reps/weight/RPE/rest), template forms (duration, intervals, pace), logging forms. | small | UX Polish | — | number-input-zero-fix |
+| T136 | Cascade toast notification: remove the inline "Cascade complete" summary panel + "Done" button from both cascade-scope-selector.tsx and slot-cascade-scope-selector.tsx. On cascade success, fire `toast.success()` (Sonner) with summary counts ("3 updated, 1 skipped"), close selector immediately, return row to display mode. Supersedes T125 auto-dismiss approach — summary step eliminated entirely, not just auto-dismissed. | small | UX Polish | — | cascade-toast-notification |
+| T137 | Template copy server action: `copyTemplateToMesocycle(sourceTemplateId, targetMesocycleId)`. Copies template row + all exercise_slots (with new IDs), template_sections (for mixed), superset groups. Preserves canonical_name. Rejects if target meso already has same canonical_name. Single transaction. Supports all modalities (resistance, running, MMA, mixed). | small | Template UX | — | template-copy-from-existing |
+
+## Wave P2: Template UX — Feature UI
+
+> Depends on Wave P1. Two parallel tracks.
+
+### Track A: Template Add Picker + Copy Browse
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T138 | Template add picker + copy browse UI: replace 4 inline type buttons in template-section.tsx with single "Add Template" button. Mobile (< 640px): opens bottom sheet (shadcn Sheet). Desktop: opens dropdown popover. Options: Resistance, Running, MMA/BJJ, Mixed, "From Existing". Selecting a type opens existing creation form. "From Existing" opens browse dialog: templates grouped by mesocycle, search/filter by name, modality badge + exercise count, confirm copies via T137 SA. | medium | Template UX | T137 | template-add-picker, template-copy-from-existing |
+
+### Track B: Batch Cascade Scope
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T139 | Batch cascade scope: add pending-edit state tracking to slot-list. Edited slots get visual indicator (dot/highlight). Template-level "Apply Changes" button appears when edits pending. Clicking triggers single cascade scope selector for all pending changes. Batch SA applies all edits atomically with chosen scope. "Discard Changes" reverts all. Unsaved-changes warning on navigate-away. Per-slot cascade still available (opt-in batch, not forced). Result via Sonner toast (aggregate summary). | medium | Template Cascade | T136 | batch-cascade-scope |
+
+## Wave P1-P2 Dependency Graph
+
+```
+T135 (number input fix) ── standalone
+T136 (cascade toast) ── T139 (batch cascade)
+T137 (template copy SA) ── T138 (add picker + browse UI)
+```
+
+## Wave P1-P2 Critical Path
+
+T137 → T138 (estimated: S + M = ~6-10h)
+T136 → T139 (estimated: S + M = ~6-10h)
+
+## Wave P1-P2 Gap Analysis
+
+1. **cascade-toast-notification** supersedes **cascade-auto-dismiss** (T125). T125 implemented auto-dismiss with 2s timer + "Done" button. T136 eliminates the summary step entirely, replacing with a Sonner toast. No conflict — T136 is a further simplification.
+2. **batch-cascade-scope**: Pending-edit state is client-only (React state). No schema changes needed. Batch SA reuses existing cascade slot parameter/add/remove SAs internally, wrapping them in a single transaction.
+3. **template-copy-from-existing**: Superset group_id references must be remapped during copy (new group IDs in target meso). T133 (supersets) must be complete first — it is (confirmed by user).
+
+## Wave P1-P2 Risk Areas
+
+- **T138 (add picker + browse UI)**: Largest UI task. Browse dialog needs to query all templates across all mesocycles — could be slow if many mesos exist. Mitigated: single-user app, likely <50 mesos.
+- **T139 (batch cascade)**: Pending-edit state management adds complexity to slot-list (already the largest component). Risk of stale state if page revalidates mid-edit. Mitigated: client-only state, no server roundtrip until "Apply Changes".
+
+## Wave P1-P2 Scope Summary
+
+| Scope | Count | Est. Hours Each | Total |
+|-------|-------|-----------------|-------|
+| Small | 3 | 1-3h | ~6h |
+| Medium | 2 | 4-8h | ~12h |
+| **Total** | **5** | | **~18h** |
