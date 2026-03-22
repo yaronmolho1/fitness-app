@@ -40,6 +40,9 @@ vi.mock('@/lib/templates/actions', () => ({
 vi.mock('@/lib/templates/copy-actions', () => ({
   copyTemplateToMesocycle: vi.fn(),
 }))
+vi.mock('@/lib/templates/section-actions', () => ({
+  updateSection: vi.fn().mockResolvedValue({ success: true }),
+}))
 
 import { TemplateSection } from './template-section'
 import type { TemplateOption } from '@/lib/schedule/queries'
@@ -225,14 +228,14 @@ describe('TemplateSection — expand-to-edit', () => {
     expect(updates.planned_duration).toBe(60)
   })
 
-  // Mixed expand — read-only section summary
-  it('expands mixed template to show section summary on click', async () => {
+  // Mixed expand — section rows shown
+  it('expands mixed template to show section rows on click', async () => {
     const user = userEvent.setup()
     const templates = [makeTemplate({ id: 1, name: 'Full Body', modality: 'mixed' })]
     const sectionsByTemplate = {
       1: [
-        { id: 1, section_name: 'Strength', modality: 'resistance' as const, order: 1, run_type: null, target_pace: null, hr_zone: null, target_distance: null, target_duration: null, planned_duration: null },
-        { id: 2, section_name: 'Cardio', modality: 'running' as const, order: 2, run_type: 'easy', target_pace: null, hr_zone: null, target_distance: 3, target_duration: null, planned_duration: null },
+        { id: 1, section_name: 'Strength', modality: 'resistance' as const, order: 1, run_type: null, target_pace: null, hr_zone: null, interval_count: null, interval_rest: null, coaching_cues: null, target_distance: null, target_duration: null, planned_duration: null },
+        { id: 2, section_name: 'Cardio', modality: 'running' as const, order: 2, run_type: 'easy', target_pace: null, hr_zone: null, interval_count: null, interval_rest: null, coaching_cues: null, target_distance: 3, target_duration: null, planned_duration: null },
       ],
     }
     render(<TemplateSection {...defaultProps} templates={templates} sectionsByTemplate={sectionsByTemplate} />)
@@ -243,17 +246,41 @@ describe('TemplateSection — expand-to-edit', () => {
     expect(screen.getByText('Cardio')).toBeInTheDocument()
   })
 
-  // No save for mixed expanded (read-only)
-  it('does not show Save in expanded mixed panel', async () => {
+  // Resistance section expands to show SlotList
+  it('expands resistance section in mixed template to show SlotList', async () => {
     const user = userEvent.setup()
     const templates = [makeTemplate({ id: 1, name: 'Full Body', modality: 'mixed' })]
     const sectionsByTemplate = {
-      1: [{ id: 1, section_name: 'Strength', modality: 'resistance' as const, order: 1, run_type: null, target_pace: null, hr_zone: null, target_distance: null, target_duration: null, planned_duration: null }],
+      1: [
+        { id: 10, section_name: 'Strength', modality: 'resistance' as const, order: 1, run_type: null, target_pace: null, hr_zone: null, interval_count: null, interval_rest: null, coaching_cues: null, target_distance: null, target_duration: null, planned_duration: null },
+      ],
+    }
+    render(<TemplateSection {...defaultProps} templates={templates} sectionsByTemplate={sectionsByTemplate} slotsByTemplate={{ 1: [{ id: 1, section_id: 10 } as never] }} />)
+
+    // Expand mixed template
+    await user.click(screen.getByText('Full Body'))
+    // Expand resistance section
+    await user.click(screen.getByText('Strength'))
+
+    expect(screen.getByTestId('mock-slot-list')).toBeInTheDocument()
+  })
+
+  // Running section in mixed expands to show editable fields
+  it('expands running section in mixed template to show fields', async () => {
+    const user = userEvent.setup()
+    const templates = [makeTemplate({ id: 1, name: 'Full Body', modality: 'mixed' })]
+    const sectionsByTemplate = {
+      1: [
+        { id: 10, section_name: 'Cardio', modality: 'running' as const, order: 1, run_type: 'easy', target_pace: '5:30/km', hr_zone: 2, interval_count: null, interval_rest: null, coaching_cues: null, target_distance: 5, target_duration: 30, planned_duration: null },
+      ],
     }
     render(<TemplateSection {...defaultProps} templates={templates} sectionsByTemplate={sectionsByTemplate} />)
 
     await user.click(screen.getByText('Full Body'))
+    await user.click(screen.getByText('Cardio'))
 
-    expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Run Type')).toBeInTheDocument()
+    expect(screen.getByLabelText('Target Distance (km)')).toHaveValue('5')
+    expect(screen.getByLabelText('Target Duration (min)')).toHaveValue('30')
   })
 })

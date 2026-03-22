@@ -479,3 +479,58 @@ export async function reorderSections(
   revalidatePath('/mesocycles')
   return { success: true }
 }
+
+// ============================================================================
+// updateSection
+// ============================================================================
+
+const updateSectionSchema = z.object({
+  section_name: z.string().min(1).optional(),
+  run_type: z.enum(RUN_TYPES).nullable().optional(),
+  target_pace: z.string().nullable().optional(),
+  hr_zone: z.number().int().min(1).max(5).nullable().optional(),
+  target_distance: z.number().positive().nullable().optional(),
+  target_duration: z.number().int().positive().nullable().optional(),
+  interval_count: z.number().int().positive().nullable().optional(),
+  interval_rest: z.number().int().positive().nullable().optional(),
+  coaching_cues: z.string().nullable().optional(),
+  planned_duration: z.number().int().positive().nullable().optional(),
+})
+
+export async function updateSection(
+  sectionId: number,
+  input: z.infer<typeof updateSectionSchema>,
+): Promise<{ success: true } | { success: false; error: string }> {
+  const parsed = updateSectionSchema.safeParse(input)
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' }
+  }
+
+  const section = db
+    .select()
+    .from(template_sections)
+    .where(eq(template_sections.id, sectionId))
+    .get()
+
+  if (!section) {
+    return { success: false, error: 'Section not found' }
+  }
+
+  const completedError = checkCompletedMesocycle(section.template_id)
+  if (completedError) {
+    return { success: false, error: completedError }
+  }
+
+  const updates = parsed.data
+  if (Object.keys(updates).length === 0) {
+    return { success: true }
+  }
+
+  db.update(template_sections)
+    .set(updates)
+    .where(eq(template_sections.id, sectionId))
+    .run()
+
+  revalidatePath('/mesocycles')
+  return { success: true }
+}

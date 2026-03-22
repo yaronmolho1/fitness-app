@@ -16,6 +16,7 @@ import { TemplateAddPicker, type PickerSelection } from '@/components/template-a
 import { TemplateBrowseDialog } from '@/components/template-browse-dialog'
 import { createResistanceTemplate, deleteTemplate } from '@/lib/templates/actions'
 import { copyTemplateToMesocycle } from '@/lib/templates/copy-actions'
+import { updateSection } from '@/lib/templates/section-actions'
 import type { TemplateOption } from '@/lib/schedule/queries'
 import type { SlotWithExercise } from '@/lib/templates/slot-queries'
 import type { Exercise } from '@/lib/exercises/filters'
@@ -811,32 +812,320 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated, secti
       )}
 
       {isMixed && expanded && sections.length > 0 && (
-        <div className="border-t px-4 py-3 space-y-2">
+        <div className="border-t px-4 py-3 space-y-1">
           {sections.map((sec) => (
-            <div key={sec.id} className="flex items-center gap-2 text-sm">
-              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                {sec.modality}
-              </span>
-              <span className="font-medium">{sec.section_name}</span>
-              {sec.modality === 'resistance' && (
-                <span className="text-xs text-muted-foreground">
-                  {slots.filter((s) => s.section_id === sec.id).length} exercises
-                </span>
-              )}
-              {sec.modality === 'running' && sec.run_type && (
-                <span className="text-xs text-muted-foreground">
-                  {sec.run_type}
-                  {sec.target_distance && ` · ${sec.target_distance}km`}
-                  {sec.target_duration && ` · ${sec.target_duration}min`}
-                </span>
-              )}
-              {sec.modality === 'mma' && sec.planned_duration && (
-                <span className="text-xs text-muted-foreground">
-                  {sec.planned_duration} min
-                </span>
-              )}
-            </div>
+            <MixedSectionRow
+              key={sec.id}
+              section={sec}
+              slots={slots.filter((s) => s.section_id === sec.id)}
+              exercises={exercises}
+              templateId={template.id}
+              isCompleted={isCompleted}
+              onUpdated={onUpdated}
+            />
           ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ============================================================================
+// Mixed template section row with expandable editing
+// ============================================================================
+
+type MixedSectionRowProps = {
+  section: TemplateSectionRow
+  slots: SlotWithExercise[]
+  exercises: Exercise[]
+  templateId: number
+  isCompleted: boolean
+  onUpdated: () => void
+}
+
+function MixedSectionRow({ section, slots, exercises, templateId, isCompleted, onUpdated }: MixedSectionRowProps) {
+  const [expanded, setExpanded] = useState(false)
+  const [error, setError] = useState('')
+  const [isPending, startTransition] = useTransition()
+  // Running fields
+  const [runType, setRunType] = useState<RunType | ''>(section.run_type as RunType ?? '')
+  const [targetPace, setTargetPace] = useState(section.target_pace ?? '')
+  const [hrZone, setHrZone] = useState(section.hr_zone?.toString() ?? '')
+  const [targetDistance, setTargetDistance] = useState(section.target_distance?.toString() ?? '')
+  const [targetDuration, setTargetDuration] = useState(section.target_duration?.toString() ?? '')
+  const [intervalCount, setIntervalCount] = useState(section.interval_count?.toString() ?? '')
+  const [intervalRest, setIntervalRest] = useState(section.interval_rest?.toString() ?? '')
+  const [coachingCues, setCoachingCues] = useState(section.coaching_cues ?? '')
+  // MMA fields
+  const [plannedDuration, setPlannedDuration] = useState(section.planned_duration?.toString() ?? '')
+
+  const isInterval = runType === 'interval'
+  const sectionSlotCount = slots.length
+
+  function resetSectionFields() {
+    setRunType(section.run_type as RunType ?? '')
+    setTargetPace(section.target_pace ?? '')
+    setHrZone(section.hr_zone?.toString() ?? '')
+    setTargetDistance(section.target_distance?.toString() ?? '')
+    setTargetDuration(section.target_duration?.toString() ?? '')
+    setIntervalCount(section.interval_count?.toString() ?? '')
+    setIntervalRest(section.interval_rest?.toString() ?? '')
+    setCoachingCues(section.coaching_cues ?? '')
+    setPlannedDuration(section.planned_duration?.toString() ?? '')
+    setError('')
+  }
+
+  function handleSectionSave() {
+    if (section.modality === 'running') {
+      const distanceNum = targetDistance ? Number(targetDistance) : null
+      if (distanceNum !== null && distanceNum <= 0) {
+        setError('Distance must be positive')
+        return
+      }
+      const durationNum = targetDuration ? Number(targetDuration) : null
+      if (durationNum !== null && durationNum <= 0) {
+        setError('Duration must be positive')
+        return
+      }
+    }
+    if (section.modality === 'mma') {
+      const durationNum = plannedDuration ? Number(plannedDuration) : null
+      if (durationNum !== null && durationNum <= 0) {
+        setError('Duration must be positive')
+        return
+      }
+    }
+
+    setError('')
+    const updates: Record<string, unknown> = {}
+
+    if (section.modality === 'running') {
+      if (runType && runType !== section.run_type) updates.run_type = runType
+      const newPace = targetPace || null
+      if (newPace !== section.target_pace) updates.target_pace = newPace
+      const newHrZone = hrZone ? Number(hrZone) : null
+      if (newHrZone !== section.hr_zone) updates.hr_zone = newHrZone
+      const newDistance = targetDistance ? Number(targetDistance) : null
+      if (newDistance !== (section.target_distance ?? null)) updates.target_distance = newDistance
+      const newDuration = targetDuration ? Number(targetDuration) : null
+      if (newDuration !== (section.target_duration ?? null)) updates.target_duration = newDuration
+      const newIntervalCount = (runType === 'interval' && intervalCount) ? Number(intervalCount) : null
+      if (newIntervalCount !== (section.interval_count ?? null)) updates.interval_count = newIntervalCount
+      const newIntervalRest = (runType === 'interval' && intervalRest) ? Number(intervalRest) : null
+      if (newIntervalRest !== (section.interval_rest ?? null)) updates.interval_rest = newIntervalRest
+      const newCues = coachingCues || null
+      if (newCues !== section.coaching_cues) updates.coaching_cues = newCues
+    }
+
+    if (section.modality === 'mma') {
+      const newDuration = plannedDuration ? Number(plannedDuration) : null
+      if (newDuration !== section.planned_duration) updates.planned_duration = newDuration
+    }
+
+    if (Object.keys(updates).length === 0) {
+      setExpanded(false)
+      return
+    }
+
+    startTransition(async () => {
+      const result = await updateSection(section.id, updates)
+      if (result.success) {
+        setExpanded(false)
+        onUpdated()
+      } else {
+        setError(result.error)
+      }
+    })
+  }
+
+  return (
+    <div className="rounded-lg border">
+      <div
+        className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-muted/50"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <span className="inline-flex shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+          {section.modality}
+        </span>
+        <span className="font-medium">{section.section_name}</span>
+        {section.modality === 'resistance' && (
+          <span className="text-xs text-muted-foreground">
+            {sectionSlotCount} exercise{sectionSlotCount !== 1 ? 's' : ''}
+          </span>
+        )}
+        {section.modality === 'running' && section.run_type && (
+          <span className="text-xs text-muted-foreground">
+            {section.run_type}
+            {section.target_distance && ` · ${section.target_distance}km`}
+            {section.target_duration && ` · ${section.target_duration}min`}
+          </span>
+        )}
+        {section.modality === 'mma' && section.planned_duration && (
+          <span className="text-xs text-muted-foreground">
+            {section.planned_duration} min
+          </span>
+        )}
+      </div>
+
+      {expanded && section.modality === 'resistance' && (
+        <div className="border-t px-3 py-2">
+          <SlotList
+            slots={slots}
+            templateId={templateId}
+            exercises={exercises}
+            isCompleted={isCompleted}
+          />
+        </div>
+      )}
+
+      {expanded && section.modality === 'running' && (
+        <div className="border-t px-3 py-2 space-y-3">
+          {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
+          <div className="space-y-2">
+            <Label htmlFor={`sec-run-type-${section.id}`}>Run Type</Label>
+            <select
+              id={`sec-run-type-${section.id}`}
+              value={runType}
+              onChange={(e) => setRunType(e.target.value as RunType | '')}
+              disabled={isCompleted}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
+            >
+              <option value="">Select run type</option>
+              {RUN_TYPES.map((rt) => (
+                <option key={rt.value} value={rt.value}>{rt.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor={`sec-pace-${section.id}`}>Target Pace</Label>
+              <Input
+                id={`sec-pace-${section.id}`}
+                value={targetPace}
+                onChange={(e) => setTargetPace(e.target.value)}
+                placeholder="5:30/km"
+                disabled={isCompleted}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`sec-hr-zone-${section.id}`}>HR Zone</Label>
+              <select
+                id={`sec-hr-zone-${section.id}`}
+                value={hrZone}
+                onChange={(e) => setHrZone(e.target.value)}
+                disabled={isCompleted}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
+              >
+                <option value="">—</option>
+                {HR_ZONES.map((z) => (
+                  <option key={z} value={z}>Zone {z}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor={`sec-distance-${section.id}`}>
+                {isInterval ? 'Target Distance (km, per rep)' : 'Target Distance (km)'}
+              </Label>
+              <NumericInput
+                id={`sec-distance-${section.id}`}
+                mode="decimal"
+                value={targetDistance}
+                onValueChange={setTargetDistance}
+                placeholder="e.g. 5"
+                disabled={isCompleted}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`sec-duration-${section.id}`}>
+                {isInterval ? 'Target Duration (min, per rep)' : 'Target Duration (min)'}
+              </Label>
+              <NumericInput
+                id={`sec-duration-${section.id}`}
+                mode="integer"
+                value={targetDuration}
+                onValueChange={setTargetDuration}
+                placeholder="e.g. 30"
+                disabled={isCompleted}
+              />
+            </div>
+          </div>
+          {isInterval && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor={`sec-intervals-${section.id}`}>Intervals</Label>
+                <NumericInput
+                  id={`sec-intervals-${section.id}`}
+                  mode="integer"
+                  value={intervalCount}
+                  onValueChange={setIntervalCount}
+                  placeholder="e.g. 6"
+                  disabled={isCompleted}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={`sec-rest-${section.id}`}>Rest (seconds)</Label>
+                <NumericInput
+                  id={`sec-rest-${section.id}`}
+                  mode="integer"
+                  value={intervalRest}
+                  onValueChange={setIntervalRest}
+                  placeholder="e.g. 90"
+                  disabled={isCompleted}
+                />
+              </div>
+            </div>
+          )}
+          <div className="space-y-2">
+            <Label htmlFor={`sec-cues-${section.id}`}>Coaching Cues</Label>
+            <textarea
+              id={`sec-cues-${section.id}`}
+              value={coachingCues}
+              onChange={(e) => setCoachingCues(e.target.value)}
+              placeholder="Notes visible to athlete..."
+              rows={2}
+              disabled={isCompleted}
+              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
+            />
+          </div>
+          {!isCompleted && (
+            <div className="flex gap-2">
+              <Button size="sm" onClick={handleSectionSave} disabled={isPending}>
+                {isPending ? 'Saving...' : 'Save'}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => { resetSectionFields(); setExpanded(false) }}>
+                Cancel
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {expanded && section.modality === 'mma' && (
+        <div className="border-t px-3 py-2 space-y-3">
+          {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
+          <div className="space-y-2">
+            <Label htmlFor={`sec-duration-${section.id}`}>Planned Duration (minutes)</Label>
+            <NumericInput
+              id={`sec-duration-${section.id}`}
+              mode="integer"
+              value={plannedDuration}
+              onValueChange={setPlannedDuration}
+              placeholder="e.g. 90"
+              disabled={isCompleted}
+            />
+          </div>
+          {!isCompleted && (
+            <div className="flex gap-2">
+              <Button size="sm" onClick={handleSectionSave} disabled={isPending}>
+                {isPending ? 'Saving...' : 'Save'}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => { resetSectionFields(); setExpanded(false) }}>
+                Cancel
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>
