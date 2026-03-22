@@ -15,3 +15,4 @@ Workout template server actions for all modalities (resistance, running, MMA/BJJ
 - `cascade-slot-ops.ts` — `cascadeAddSlot()`, `cascadeRemoveSlot()` Server Actions for atomic cascade add/remove of exercise slots across sibling templates, skips templates with logged workouts
 - `superset-actions.ts` — `createSuperset()`, `breakSuperset()`, `updateGroupRest()` Server Actions for grouping/ungrouping exercise slots into supersets and updating inter-set rest
 - `copy-actions.ts` — `copyTemplateToMesocycle()` Server Action: deep-copies a template (with sections, slots, superset groups) to another mesocycle, enforcing canonical_name uniqueness and completed-meso guard
+- `browse-queries.ts` — `getBrowseTemplates()` fetches all templates from other mesocycles with exercise counts for the browse/copy dialog; exports `BrowseTemplate` type

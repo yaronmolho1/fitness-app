@@ -8,6 +8,11 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: vi.fn() }),
 }))
 
+// Mock useIsMobile (desktop by default)
+vi.mock('@/hooks/use-mobile', () => ({
+  useIsMobile: () => false,
+}))
+
 // Mock child components
 vi.mock('@/components/running-template-form', () => ({
   RunningTemplateForm: (_props: { mesocycleId: number }) => (
@@ -41,6 +46,9 @@ vi.mock('@/components/layout/section-heading', () => ({
 vi.mock('@/lib/templates/actions', () => ({
   createResistanceTemplate: vi.fn(),
   deleteTemplate: vi.fn(),
+}))
+vi.mock('@/lib/templates/copy-actions', () => ({
+  copyTemplateToMesocycle: vi.fn(),
 }))
 
 import { TemplateSection } from './template-section'
