@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { eq, and } from 'drizzle-orm'
+import { z } from 'zod'
 import { db } from '@/lib/db/index'
 import {
   workout_templates,
@@ -9,6 +10,11 @@ import {
   exercise_slots,
   template_sections,
 } from '@/lib/db/schema'
+
+const copyTemplateSchema = z.object({
+  sourceTemplateId: z.number().int().positive('Invalid source template ID'),
+  targetMesocycleId: z.number().int().positive('Invalid target mesocycle ID'),
+})
 
 type TemplateRow = typeof workout_templates.$inferSelect
 
@@ -20,11 +26,19 @@ export async function copyTemplateToMesocycle(
   sourceTemplateId: number,
   targetMesocycleId: number
 ): Promise<CopyTemplateResult> {
+  const parsed = copyTemplateSchema.safeParse({ sourceTemplateId, targetMesocycleId })
+  if (!parsed.success) {
+    const firstError = parsed.error.issues[0]
+    return { success: false, error: firstError.message }
+  }
+
+  const { sourceTemplateId: validSourceId, targetMesocycleId: validTargetId } = parsed.data
+
   // Validate source template exists
   const source = db
     .select()
     .from(workout_templates)
-    .where(eq(workout_templates.id, sourceTemplateId))
+    .where(eq(workout_templates.id, validSourceId))
     .get()
 
   if (!source) {
@@ -35,7 +49,7 @@ export async function copyTemplateToMesocycle(
   const targetMeso = db
     .select()
     .from(mesocycles)
-    .where(eq(mesocycles.id, targetMesocycleId))
+    .where(eq(mesocycles.id, validTargetId))
     .get()
 
   if (!targetMeso) {
@@ -52,7 +66,7 @@ export async function copyTemplateToMesocycle(
     .from(workout_templates)
     .where(
       and(
-        eq(workout_templates.mesocycle_id, targetMesocycleId),
+        eq(workout_templates.mesocycle_id, validTargetId),
         eq(workout_templates.canonical_name, source.canonical_name)
       )
     )
@@ -71,7 +85,7 @@ export async function copyTemplateToMesocycle(
       const created = tx
         .insert(workout_templates)
         .values({
-          mesocycle_id: targetMesocycleId,
+          mesocycle_id: validTargetId,
           name: source.name,
           canonical_name: source.canonical_name,
           modality: source.modality,
@@ -174,7 +188,10 @@ export async function copyTemplateToMesocycle(
 
     revalidatePath('/mesocycles')
     return { success: true, data: newTemplate }
-  } catch {
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message.includes('UNIQUE constraint failed')) {
+      return { success: false, error: 'A template with this name already exists in the target mesocycle' }
+    }
     return { success: false, error: 'Failed to copy template' }
   }
 }
