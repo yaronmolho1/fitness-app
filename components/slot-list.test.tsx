@@ -153,7 +153,7 @@ describe('SlotList', () => {
       const setsInput = screen.getByLabelText(/sets/i)
       await user.clear(setsInput)
       await user.type(setsInput, '5')
-      await user.click(screen.getByRole('button', { name: /save/i }))
+      await user.click(screen.getByRole('button', { name: /^save$/i }))
 
       await waitFor(() => {
         expect(updateExerciseSlot).toHaveBeenCalledWith(expect.objectContaining({ id: 1, sets: 5 }))
@@ -184,7 +184,7 @@ describe('SlotList', () => {
       render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
 
       await user.click(screen.getByRole('button', { name: /edit/i }))
-      await user.click(screen.getByRole('button', { name: /save/i }))
+      await user.click(screen.getByRole('button', { name: /^save$/i }))
 
       expect(await screen.findByText(/sets must be positive/i)).toBeInTheDocument()
     })

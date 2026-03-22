@@ -227,9 +227,9 @@ describe('CascadeScopeSelector — characterization', () => {
     it('shows descriptions for each scope option', async () => {
       render(<CascadeScopeSelector {...defaultProps} />)
 
-      expect(await screen.findByText('Update this template in the current mesocycle')).toBeDefined()
-      expect(screen.getByText('Update this and all future mesocycles')).toBeDefined()
-      expect(screen.getByText('Update every active/planned mesocycle')).toBeDefined()
+      expect(await screen.findByText('Applied to this template only')).toBeDefined()
+      expect(screen.getByText('Also apply to future mesocycles')).toBeDefined()
+      expect(screen.getByText('Apply across all active/planned mesocycles')).toBeDefined()
     })
   })
 })

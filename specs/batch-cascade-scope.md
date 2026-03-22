@@ -1,6 +1,6 @@
 # Batch Cascade Scope
 
-**Status:** ready
+**Status:** implemented
 **Epic:** Template Cascade
 **Depends:** specs/cascade-scope-selection.md, specs/cascade-slot-edits.md
 

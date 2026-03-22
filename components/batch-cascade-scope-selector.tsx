@@ -3,28 +3,31 @@
 import { useState, useEffect, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { getCascadePreview, cascadeUpdateTemplates } from '@/lib/templates/cascade-actions'
-import { fireCascadeToast } from '@/components/cascade-toast'
+import { getCascadePreview } from '@/lib/templates/cascade-actions'
+import { batchCascadeSlotEdits } from '@/lib/templates/cascade-batch'
+import { fireBatchCascadeToast } from '@/components/cascade-toast'
+import type { SlotEdit } from '@/lib/templates/cascade-batch'
 import { SCOPE_OPTIONS } from '@/lib/templates/cascade-types'
-import type { CascadeScope, CascadePreviewData, CascadeUpdates } from '@/lib/templates/cascade-types'
+import type { CascadeScope, CascadePreviewData } from '@/lib/templates/cascade-types'
 
 type Props = {
   templateId: number
-  updates: CascadeUpdates
+  edits: SlotEdit[]
+  exerciseCount: number
   onComplete: () => void
   onCancel: () => void
 }
 
 type Step = 'scope-select' | 'confirm'
 
-export function CascadeScopeSelector({ templateId, updates, onComplete, onCancel }: Props) {
+export function BatchCascadeScopeSelector({ templateId, edits, exerciseCount, onComplete, onCancel }: Props) {
   const [step, setStep] = useState<Step>('scope-select')
   const [selectedScope, setSelectedScope] = useState<CascadeScope | null>(null)
   const [preview, setPreview] = useState<CascadePreviewData | null>(null)
   const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
 
-  // Fetch preview for all-phases on mount to show target counts
+  // Fetch preview on mount
   useEffect(() => {
     let cancelled = false
     getCascadePreview(templateId, 'all-phases').then((result) => {
@@ -40,7 +43,6 @@ export function CascadeScopeSelector({ templateId, updates, onComplete, onCancel
     setSelectedScope(scope)
     setError('')
 
-    // Fetch preview for the selected scope
     startTransition(async () => {
       const result = await getCascadePreview(templateId, scope)
       if (result.success) {
@@ -56,14 +58,14 @@ export function CascadeScopeSelector({ templateId, updates, onComplete, onCancel
     if (!selectedScope) return
 
     startTransition(async () => {
-      const result = await cascadeUpdateTemplates({
+      const result = await batchCascadeSlotEdits({
         templateId,
         scope: selectedScope,
-        updates,
+        edits,
       })
 
       if (result.success) {
-        fireCascadeToast(selectedScope, result.data)
+        fireBatchCascadeToast(selectedScope, result.data, exerciseCount)
         onComplete()
       } else {
         setError(result.error)
@@ -71,13 +73,13 @@ export function CascadeScopeSelector({ templateId, updates, onComplete, onCancel
     })
   }
 
-  // Confirm step — show preview of affected templates
+  // Confirm step
   if (step === 'confirm' && selectedScope && preview) {
     const scopeLabel = SCOPE_OPTIONS.find((o) => o.value === selectedScope)?.label
     return (
       <div className="space-y-3 rounded-lg border p-4">
         <p className="text-sm font-semibold tracking-tight">
-          Apply to: {scopeLabel}
+          Apply {exerciseCount} edit{exerciseCount !== 1 ? 's' : ''} to: {scopeLabel}
         </p>
 
         {error && (
@@ -125,7 +127,7 @@ export function CascadeScopeSelector({ templateId, updates, onComplete, onCancel
   return (
     <div className="space-y-3 rounded-lg border p-4">
       <p className="text-sm font-semibold tracking-tight">
-        Apply changes to...
+        Apply {exerciseCount} edit{exerciseCount !== 1 ? 's' : ''} to...
       </p>
 
       {error && (
