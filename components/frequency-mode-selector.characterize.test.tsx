@@ -24,34 +24,27 @@ describe('FrequencyModeSelector number input — characterization', () => {
   afterEach(() => cleanup())
 
   describe('weekly target input attributes', () => {
-    it('renders with type="number"', () => {
+    it('renders with type="text" and inputMode="numeric"', () => {
       renderSelector()
       const input = screen.getByLabelText(/times per week/i) as HTMLInputElement
-      expect(input.type).toBe('number')
-    })
-
-    it('has min=1 and max=7', () => {
-      renderSelector()
-      const input = screen.getByLabelText(/times per week/i) as HTMLInputElement
-      expect(input.min).toBe('1')
-      expect(input.max).toBe('7')
+      expect(input.type).toBe('text')
+      expect(input.inputMode).toBe('numeric')
     })
 
     it('shows the weeklyTarget value', () => {
       renderSelector({ weeklyTarget: 5 })
-      expect(screen.getByLabelText(/times per week/i)).toHaveValue(5)
+      expect(screen.getByLabelText(/times per week/i)).toHaveValue('5')
     })
   })
 
   describe('weekly target onChange behavior', () => {
-    it('calls onWeeklyTargetChange with Number(e.target.value) on typing', async () => {
+    it('calls onWeeklyTargetChange with 0 when cleared (empty string)', async () => {
       const user = userEvent.setup()
       const onWeeklyTargetChange = vi.fn()
       renderSelector({ weeklyTarget: 3, onWeeklyTargetChange })
 
       const input = screen.getByLabelText(/times per week/i)
       await user.clear(input)
-      // Number('') === 0, so clearing calls with 0
       expect(onWeeklyTargetChange).toHaveBeenCalledWith(0)
     })
 
@@ -63,9 +56,7 @@ describe('FrequencyModeSelector number input — characterization', () => {
       const input = screen.getByLabelText(/times per week/i)
       await user.clear(input)
       await user.type(input, '5')
-      // Component is fully controlled — prop stays 3, clear fires Number('')→0,
-      // then typing '5' appends to the DOM '3' → '35', so Number('35')→35
-      expect(onWeeklyTargetChange).toHaveBeenLastCalledWith(35)
+      expect(onWeeklyTargetChange).toHaveBeenLastCalledWith(5)
     })
   })
 

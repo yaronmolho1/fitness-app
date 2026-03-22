@@ -80,42 +80,39 @@ describe('SlotList number inputs — characterization', () => {
       return user
     }
 
-    it('sets input renders with type="number" and min=1', async () => {
+    it('sets input renders with type="text" and inputMode="numeric"', async () => {
       await renderEditMode()
       const input = screen.getByLabelText('Sets') as HTMLInputElement
-      expect(input.type).toBe('number')
-      expect(input.min).toBe('1')
+      expect(input.type).toBe('text')
+      expect(input.inputMode).toBe('numeric')
     })
 
-    it('reps input renders with type="number" and min=1', async () => {
+    it('reps input renders with type="text" and inputMode="numeric"', async () => {
       await renderEditMode()
       const input = screen.getByLabelText('Reps') as HTMLInputElement
-      expect(input.type).toBe('number')
-      expect(input.min).toBe('1')
+      expect(input.type).toBe('text')
+      expect(input.inputMode).toBe('numeric')
     })
 
-    it('weight input renders with type="number", min=0, step=0.5', async () => {
+    it('weight input renders with type="text" and inputMode="decimal"', async () => {
       await renderEditMode()
       const input = screen.getByLabelText('Weight (kg)') as HTMLInputElement
-      expect(input.type).toBe('number')
-      expect(input.min).toBe('0')
-      expect(input.step).toBe('0.5')
+      expect(input.type).toBe('text')
+      expect(input.inputMode).toBe('decimal')
     })
 
-    it('RPE input renders with type="number", min=1, max=10, step=0.5', async () => {
+    it('RPE input renders with type="text" and inputMode="decimal"', async () => {
       await renderEditMode()
       const input = screen.getByLabelText('RPE') as HTMLInputElement
-      expect(input.type).toBe('number')
-      expect(input.min).toBe('1')
-      expect(input.max).toBe('10')
-      expect(input.step).toBe('0.5')
+      expect(input.type).toBe('text')
+      expect(input.inputMode).toBe('decimal')
     })
 
-    it('rest input renders with type="number" and min=0', async () => {
+    it('rest input renders with type="text" and inputMode="numeric"', async () => {
       await renderEditMode()
       const input = screen.getByLabelText('Rest (sec)') as HTMLInputElement
-      expect(input.type).toBe('number')
-      expect(input.min).toBe('0')
+      expect(input.type).toBe('text')
+      expect(input.inputMode).toBe('numeric')
     })
   })
 
@@ -125,15 +122,15 @@ describe('SlotList number inputs — characterization', () => {
       const slot = makeSlot({ sets: 5 })
       render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
       await user.click(screen.getByRole('button', { name: /edit/i }))
-      expect(screen.getByLabelText('Sets')).toHaveValue(5)
+      expect(screen.getByLabelText('Sets')).toHaveValue('5')
     })
 
-    it('populates reps from slot.reps (parsed to number)', async () => {
+    it('populates reps from slot.reps', async () => {
       const user = userEvent.setup()
       const slot = makeSlot({ reps: '12' })
       render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
       await user.click(screen.getByRole('button', { name: /edit/i }))
-      expect(screen.getByLabelText('Reps')).toHaveValue(12)
+      expect(screen.getByLabelText('Reps')).toHaveValue('12')
     })
 
     it('populates weight from slot.weight', async () => {
@@ -141,7 +138,7 @@ describe('SlotList number inputs — characterization', () => {
       const slot = makeSlot({ weight: 60 })
       render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
       await user.click(screen.getByRole('button', { name: /edit/i }))
-      expect(screen.getByLabelText('Weight (kg)')).toHaveValue(60)
+      expect(screen.getByLabelText('Weight (kg)')).toHaveValue('60')
     })
 
     it('weight shows empty string when slot.weight is null', async () => {
@@ -149,8 +146,7 @@ describe('SlotList number inputs — characterization', () => {
       const slot = makeSlot({ weight: null })
       render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
       await user.click(screen.getByRole('button', { name: /edit/i }))
-      // Empty string '' for type=number renders as no value
-      expect(screen.getByLabelText('Weight (kg)')).toHaveValue(null)
+      expect(screen.getByLabelText('Weight (kg)')).toHaveValue('')
     })
 
     it('RPE shows empty when slot.rpe is null', async () => {
@@ -158,7 +154,7 @@ describe('SlotList number inputs — characterization', () => {
       const slot = makeSlot({ rpe: null })
       render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
       await user.click(screen.getByRole('button', { name: /edit/i }))
-      expect(screen.getByLabelText('RPE')).toHaveValue(null)
+      expect(screen.getByLabelText('RPE')).toHaveValue('')
     })
 
     it('rest shows empty when slot.rest_seconds is null', async () => {
@@ -166,12 +162,12 @@ describe('SlotList number inputs — characterization', () => {
       const slot = makeSlot({ rest_seconds: null })
       render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
       await user.click(screen.getByRole('button', { name: /edit/i }))
-      expect(screen.getByLabelText('Rest (sec)')).toHaveValue(null)
+      expect(screen.getByLabelText('Rest (sec)')).toHaveValue('')
     })
   })
 
   describe('SlotRow edit mode — onChange behavior', () => {
-    it('sets: clearing and typing produces Number() conversion (clearing gives 0)', async () => {
+    it('sets: clearing shows empty (fixed — was "0" before T135)', async () => {
       const user = userEvent.setup()
       const slot = makeSlot({ sets: 3 })
       render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
@@ -179,11 +175,10 @@ describe('SlotList number inputs — characterization', () => {
 
       const input = screen.getByLabelText('Sets') as HTMLInputElement
       await user.clear(input)
-      // Number('') === 0, so clearing sets → 0
-      expect(input).toHaveValue(0)
+      expect(input).toHaveValue('')
     })
 
-    it('reps: clearing and typing produces Number() conversion (clearing gives 0)', async () => {
+    it('reps: clearing shows empty (fixed — was "0" before T135)', async () => {
       const user = userEvent.setup()
       const slot = makeSlot({ reps: '10' })
       render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
@@ -191,7 +186,7 @@ describe('SlotList number inputs — characterization', () => {
 
       const input = screen.getByLabelText('Reps') as HTMLInputElement
       await user.clear(input)
-      expect(input).toHaveValue(0)
+      expect(input).toHaveValue('')
     })
 
     it('weight: clearing produces empty value (not 0)', async () => {
@@ -202,9 +197,7 @@ describe('SlotList number inputs — characterization', () => {
 
       const input = screen.getByLabelText('Weight (kg)') as HTMLInputElement
       await user.clear(input)
-      // onChange: e.target.value === '' ? '' : Number(e.target.value)
-      // Clearing produces '' → state becomes '' → renders empty
-      expect(input).toHaveValue(null)
+      expect(input).toHaveValue('')
     })
 
     it('RPE: clearing produces empty value (not 0)', async () => {
@@ -215,7 +208,7 @@ describe('SlotList number inputs — characterization', () => {
 
       const input = screen.getByLabelText('RPE') as HTMLInputElement
       await user.clear(input)
-      expect(input).toHaveValue(null)
+      expect(input).toHaveValue('')
     })
 
     it('rest: clearing produces empty value (not 0)', async () => {
@@ -226,7 +219,7 @@ describe('SlotList number inputs — characterization', () => {
 
       const input = screen.getByLabelText('Rest (sec)') as HTMLInputElement
       await user.clear(input)
-      expect(input).toHaveValue(null)
+      expect(input).toHaveValue('')
     })
 
     it('weight: typing a number after clearing shows the number', async () => {
@@ -238,12 +231,12 @@ describe('SlotList number inputs — characterization', () => {
       const input = screen.getByLabelText('Weight (kg)') as HTMLInputElement
       await user.clear(input)
       await user.type(input, '65')
-      expect(input).toHaveValue(65)
+      expect(input).toHaveValue('65')
     })
   })
 
   describe('group rest input — create superset flow', () => {
-    it('group rest input renders with type="number" and min=0', async () => {
+    it('group rest input renders with type="text" and inputMode="numeric"', async () => {
       const user = userEvent.setup()
       const slots = [
         makeSlot({ id: 1, order: 1, exercise_name: 'Bench Press' }),
@@ -260,8 +253,8 @@ describe('SlotList number inputs — characterization', () => {
       await user.click(screen.getByRole('button', { name: /create superset/i }))
 
       const input = screen.getByLabelText(/group rest/i) as HTMLInputElement
-      expect(input.type).toBe('number')
-      expect(input.min).toBe('0')
+      expect(input.type).toBe('text')
+      expect(input.inputMode).toBe('numeric')
     })
 
     it('group rest input defaults to 60', async () => {
@@ -277,10 +270,10 @@ describe('SlotList number inputs — characterization', () => {
       await user.click(screen.getByRole('checkbox', { name: /select squat/i }))
       await user.click(screen.getByRole('button', { name: /create superset/i }))
 
-      expect(screen.getByLabelText(/group rest/i)).toHaveValue(60)
+      expect(screen.getByLabelText(/group rest/i)).toHaveValue('60')
     })
 
-    it('group rest input: clearing gives empty, onChange uses (value === "" ? "" : Number(value))', async () => {
+    it('group rest input: clearing gives empty', async () => {
       const user = userEvent.setup()
       const slots = [
         makeSlot({ id: 1, order: 1, exercise_name: 'Bench Press' }),
@@ -295,13 +288,12 @@ describe('SlotList number inputs — characterization', () => {
 
       const input = screen.getByLabelText(/group rest/i) as HTMLInputElement
       await user.clear(input)
-      // '' check in onChange → state becomes ''
-      expect(input).toHaveValue(null)
+      expect(input).toHaveValue('')
     })
   })
 
   describe('superset edit rest input', () => {
-    it('edit rest input renders with type="number" and min=0', async () => {
+    it('edit rest input renders with type="text" and inputMode="numeric"', async () => {
       const user = userEvent.setup()
       const slots = [
         makeSlot({ id: 1, order: 1, exercise_name: 'Bench Press', group_id: 10, group_rest_seconds: 90 }),
@@ -312,8 +304,8 @@ describe('SlotList number inputs — characterization', () => {
       await user.click(screen.getByRole('button', { name: /edit rest/i }))
 
       const input = screen.getByLabelText(/group rest/i) as HTMLInputElement
-      expect(input.type).toBe('number')
-      expect(input.min).toBe('0')
+      expect(input.type).toBe('text')
+      expect(input.inputMode).toBe('numeric')
     })
 
     it('edit rest input initializes with current group rest value', async () => {
@@ -325,10 +317,10 @@ describe('SlotList number inputs — characterization', () => {
       render(<SlotList slots={slots} templateId={1} exercises={exercises} isCompleted={false} />)
 
       await user.click(screen.getByRole('button', { name: /edit rest/i }))
-      expect(screen.getByLabelText(/group rest/i)).toHaveValue(90)
+      expect(screen.getByLabelText(/group rest/i)).toHaveValue('90')
     })
 
-    it('edit rest input: clearing uses Number("") → NaN (buggy: Number() without empty check)', async () => {
+    it('edit rest input: clearing shows empty (fixed — was "0" before T135)', async () => {
       const user = userEvent.setup()
       const slots = [
         makeSlot({ id: 1, order: 1, exercise_name: 'Bench Press', group_id: 10, group_rest_seconds: 90 }),
@@ -339,9 +331,7 @@ describe('SlotList number inputs — characterization', () => {
       await user.click(screen.getByRole('button', { name: /edit rest/i }))
       const input = screen.getByLabelText(/group rest/i) as HTMLInputElement
       await user.clear(input)
-      // onChange: setRestInput(Number(e.target.value)) — no empty check!
-      // Number('') === 0, so state becomes 0
-      expect(input).toHaveValue(0)
+      expect(input).toHaveValue('')
     })
   })
 })

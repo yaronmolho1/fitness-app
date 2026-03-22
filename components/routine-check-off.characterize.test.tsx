@@ -58,23 +58,16 @@ describe('RoutineCheckOff number inputs — characterization', () => {
   afterEach(() => cleanup())
 
   describe('single field item — Weight input attributes', () => {
-    it('renders with type="number"', () => {
+    it('renders with type="text"', () => {
       render(<RoutineCheckOff items={[makeItem()]} logs={[]} logDate="2026-03-15" />)
       const input = screen.getByLabelText('Weight') as HTMLInputElement
-      expect(input.type).toBe('number')
+      expect(input.type).toBe('text')
     })
 
     it('has inputMode="decimal"', () => {
       render(<RoutineCheckOff items={[makeItem()]} logs={[]} logDate="2026-03-15" />)
       const input = screen.getByLabelText('Weight') as HTMLInputElement
       expect(input.inputMode).toBe('decimal')
-    })
-
-    it('has step="0.1" and min="0"', () => {
-      render(<RoutineCheckOff items={[makeItem()]} logs={[]} logDate="2026-03-15" />)
-      const input = screen.getByLabelText('Weight') as HTMLInputElement
-      expect(input.step).toBe('0.1')
-      expect(input.min).toBe('0')
     })
 
     it('has placeholder="0"', () => {
@@ -102,28 +95,16 @@ describe('RoutineCheckOff number inputs — characterization', () => {
   })
 
   describe('multi field item — Duration/Sets/Reps inputs', () => {
-    it('renders all active fields with type="number"', () => {
+    it('renders all active fields with type="text"', () => {
       render(<RoutineCheckOff items={[makeMultiFieldItem()]} logs={[]} logDate="2026-03-15" />)
 
       const duration = screen.getByLabelText('Duration') as HTMLInputElement
       const sets = screen.getByLabelText('Sets') as HTMLInputElement
       const reps = screen.getByLabelText('Reps') as HTMLInputElement
 
-      expect(duration.type).toBe('number')
-      expect(sets.type).toBe('number')
-      expect(reps.type).toBe('number')
-    })
-
-    it('duration has step=0.1, sets and reps have step=1', () => {
-      render(<RoutineCheckOff items={[makeMultiFieldItem()]} logs={[]} logDate="2026-03-15" />)
-
-      const duration = screen.getByLabelText('Duration') as HTMLInputElement
-      const sets = screen.getByLabelText('Sets') as HTMLInputElement
-      const reps = screen.getByLabelText('Reps') as HTMLInputElement
-
-      expect(duration.step).toBe('0.1')
-      expect(sets.step).toBe('1')
-      expect(reps.step).toBe('1')
+      expect(duration.type).toBe('text')
+      expect(sets.type).toBe('text')
+      expect(reps.type).toBe('text')
     })
 
     it('shows unit for duration (min) but not for sets/reps', () => {
@@ -131,7 +112,7 @@ describe('RoutineCheckOff number inputs — characterization', () => {
       expect(screen.getByText('min')).toBeInTheDocument()
     })
 
-    it('all inputs have inputMode="decimal"', () => {
+    it('duration has inputMode="decimal", sets/reps have inputMode="numeric"', () => {
       render(<RoutineCheckOff items={[makeMultiFieldItem()]} logs={[]} logDate="2026-03-15" />)
 
       const duration = screen.getByLabelText('Duration') as HTMLInputElement
@@ -139,8 +120,8 @@ describe('RoutineCheckOff number inputs — characterization', () => {
       const reps = screen.getByLabelText('Reps') as HTMLInputElement
 
       expect(duration.inputMode).toBe('decimal')
-      expect(sets.inputMode).toBe('decimal')
-      expect(reps.inputMode).toBe('decimal')
+      expect(sets.inputMode).toBe('numeric')
+      expect(reps.inputMode).toBe('numeric')
     })
   })
 
