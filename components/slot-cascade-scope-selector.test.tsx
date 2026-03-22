@@ -105,7 +105,7 @@ describe('SlotCascadeScopeSelector', () => {
       })
     })
 
-    it('shows summary with updated/skipped counts after cascade', async () => {
+    it('calls onComplete immediately after cascade (toast replaces summary)', async () => {
       vi.mocked(cascadeSlotParams).mockResolvedValue({
         success: true,
         data: { updated: 2, skipped: 1, skippedCompleted: 0, skippedNoMatch: 0 },
@@ -117,27 +117,12 @@ describe('SlotCascadeScopeSelector', () => {
       await user.click(await screen.findByText('All phases'))
       await user.click(await screen.findByRole('button', { name: /confirm/i }))
 
-      expect(await screen.findByText(/2 updated/)).toBeDefined()
-      expect(screen.getByText(/1 skipped/)).toBeDefined()
-    })
-
-    it('shows skippedNoMatch in summary', async () => {
-      vi.mocked(cascadeSlotParams).mockResolvedValue({
-        success: true,
-        data: { updated: 1, skipped: 0, skippedCompleted: 0, skippedNoMatch: 2 },
+      await waitFor(() => {
+        expect(paramProps.onComplete).toHaveBeenCalledTimes(1)
       })
-
-      const user = userEvent.setup()
-      render(<SlotCascadeScopeSelector {...paramProps} />)
-
-      await user.click(await screen.findByText('All phases'))
-      await user.click(await screen.findByRole('button', { name: /confirm/i }))
-
-      expect(await screen.findByText(/1 updated/)).toBeDefined()
-      expect(screen.getByText(/2 no match/)).toBeDefined()
     })
 
-    it('calls onComplete after dismissing summary', async () => {
+    it('calls onComplete immediately on this+future cascade', async () => {
       vi.mocked(cascadeSlotParams).mockResolvedValue({
         success: true,
         data: { updated: 2, skipped: 0, skippedCompleted: 0, skippedNoMatch: 0 },
@@ -148,9 +133,10 @@ describe('SlotCascadeScopeSelector', () => {
 
       await user.click(await screen.findByText('This + future'))
       await user.click(await screen.findByRole('button', { name: /confirm/i }))
-      await user.click(await screen.findByRole('button', { name: /done/i }))
 
-      expect(paramProps.onComplete).toHaveBeenCalledTimes(1)
+      await waitFor(() => {
+        expect(paramProps.onComplete).toHaveBeenCalledTimes(1)
+      })
     })
 
     it('calls onCancel from scope selection', async () => {
@@ -201,7 +187,7 @@ describe('SlotCascadeScopeSelector', () => {
       })
     })
 
-    it('shows summary after add cascade', async () => {
+    it('calls onComplete immediately after add cascade', async () => {
       vi.mocked(cascadeAddSlot).mockResolvedValue({
         success: true,
         data: { updated: 3, skipped: 0, skippedCompleted: 0, skippedNoMatch: 0 },
@@ -213,7 +199,9 @@ describe('SlotCascadeScopeSelector', () => {
       await user.click(await screen.findByText('All phases'))
       await user.click(await screen.findByRole('button', { name: /confirm/i }))
 
-      expect(await screen.findByText(/3 updated/)).toBeDefined()
+      await waitFor(() => {
+        expect(addProps.onComplete).toHaveBeenCalledTimes(1)
+      })
     })
 
     it('this-only skips cascade for add (no SA call)', async () => {
@@ -279,7 +267,7 @@ describe('SlotCascadeScopeSelector', () => {
       })
     })
 
-    it('shows summary with skippedNoMatch for diverged templates', async () => {
+    it('calls onComplete immediately after remove cascade', async () => {
       vi.mocked(cascadeRemoveSlot).mockResolvedValue({
         success: true,
         data: { updated: 1, skipped: 0, skippedCompleted: 0, skippedNoMatch: 1 },
@@ -291,78 +279,9 @@ describe('SlotCascadeScopeSelector', () => {
       await user.click(await screen.findByText('All phases'))
       await user.click(await screen.findByRole('button', { name: /confirm/i }))
 
-      expect(await screen.findByText(/1 updated/)).toBeDefined()
-      expect(screen.getByText(/1 no match/)).toBeDefined()
-    })
-  })
-
-  // --- Auto-dismiss tests ---
-
-  describe('auto-dismiss', () => {
-    const DISMISS_MS = 2000
-
-    beforeEach(() => {
-      vi.useFakeTimers({ shouldAdvanceTime: true })
-      vi.mocked(cascadeSlotParams).mockResolvedValue({
-        success: true,
-        data: { updated: 2, skipped: 0, skippedCompleted: 0, skippedNoMatch: 0 },
+      await waitFor(() => {
+        expect(removeProps.onComplete).toHaveBeenCalledTimes(1)
       })
-    })
-
-    afterEach(() => {
-      vi.useRealTimers()
-    })
-
-    const paramProps = {
-      templateId: 10,
-      operation: 'update-params' as const,
-      slotId: 5,
-      paramUpdates: { sets: 4 },
-      onComplete: vi.fn(),
-      onCancel: vi.fn(),
-    }
-
-    async function reachSummary(props = paramProps) {
-      const user = userEvent.setup({
-        advanceTimers: vi.advanceTimersByTime,
-      })
-      render(<SlotCascadeScopeSelector {...props} />)
-
-      // Use "This only" + update-params to skip async cascade call
-      await user.click(await screen.findByText('This only'))
-      await user.click(await screen.findByRole('button', { name: /confirm/i }))
-
-      await screen.findByText(/cascade complete/i)
-      return user
-    }
-
-    it('auto-dismisses summary after 2 seconds', async () => {
-      await reachSummary()
-
-      expect(paramProps.onComplete).not.toHaveBeenCalled()
-
-      await vi.advanceTimersByTimeAsync(DISMISS_MS)
-
-      expect(paramProps.onComplete).toHaveBeenCalledTimes(1)
-    })
-
-    it('dismisses immediately on Done click and cancels timer', async () => {
-      const user = await reachSummary()
-
-      await user.click(screen.getByRole('button', { name: /done/i }))
-      expect(paramProps.onComplete).toHaveBeenCalledTimes(1)
-
-      await vi.advanceTimersByTimeAsync(DISMISS_MS)
-      expect(paramProps.onComplete).toHaveBeenCalledTimes(1)
-    })
-
-    it('cleans up timeout on unmount', async () => {
-      await reachSummary()
-
-      cleanup()
-
-      await vi.advanceTimersByTimeAsync(DISMISS_MS)
-      expect(paramProps.onComplete).not.toHaveBeenCalled()
     })
   })
 

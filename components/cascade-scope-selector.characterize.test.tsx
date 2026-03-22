@@ -1,8 +1,18 @@
 // Characterization test — captures current behavior for safe refactoring
+// Updated for T136: summary panel replaced with toast notifications
 // @vitest-environment jsdom
 import { render, screen, cleanup, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { toast } from 'sonner'
+
+vi.mock('sonner', () => ({
+  toast: {
+    success: vi.fn(),
+    warning: vi.fn(),
+    error: vi.fn(),
+  },
+}))
 
 vi.mock('@/lib/templates/cascade-actions', () => ({
   getCascadePreview: vi.fn(),
@@ -40,15 +50,13 @@ describe('CascadeScopeSelector — characterization', () => {
     cleanup()
   })
 
-  // --- Summary panel display ---
+  // --- Toast notification behavior (replaces summary panel) ---
 
-  describe('summary panel content', () => {
-    async function reachSummaryWith(summaryData: {
-      updated: number
-      skipped: number
-      skippedCompleted: number
-      skippedNoMatch: number
-    }) {
+  describe('toast notifications on cascade complete', () => {
+    async function completeCascadeWith(
+      scope: 'This only' | 'All phases',
+      summaryData: { updated: number; skipped: number; skippedCompleted: number; skippedNoMatch: number },
+    ) {
       vi.mocked(cascadeUpdateTemplates).mockResolvedValue({
         success: true,
         data: summaryData,
@@ -57,104 +65,61 @@ describe('CascadeScopeSelector — characterization', () => {
       const user = userEvent.setup()
       render(<CascadeScopeSelector {...defaultProps} />)
 
-      await user.click(await screen.findByText('This only'))
+      await user.click(await screen.findByText(scope))
       await user.click(await screen.findByRole('button', { name: /confirm/i }))
 
-      await screen.findByText(/cascade complete/i)
+      await waitFor(() => {
+        expect(defaultProps.onComplete).toHaveBeenCalled()
+      })
       return user
     }
 
-    it('displays "Cascade complete" heading in summary', async () => {
-      await reachSummaryWith({ updated: 1, skipped: 0, skippedCompleted: 0, skippedNoMatch: 0 })
+    it('fires success toast with "Template updated" for this-only scope', async () => {
+      await completeCascadeWith('This only', { updated: 1, skipped: 0, skippedCompleted: 0, skippedNoMatch: 0 })
 
-      expect(screen.getByText('Cascade complete')).toBeDefined()
+      expect(toast.success).toHaveBeenCalledWith('Template updated')
     })
 
-    it('displays skippedNoMatch count when > 0', async () => {
-      await reachSummaryWith({ updated: 1, skipped: 0, skippedCompleted: 0, skippedNoMatch: 3 })
+    it('fires success toast with count for multi-template cascade', async () => {
+      await completeCascadeWith('All phases', { updated: 4, skipped: 0, skippedCompleted: 0, skippedNoMatch: 0 })
 
-      expect(screen.getByText(/3 no match/)).toBeDefined()
+      expect(toast.success).toHaveBeenCalledWith('4 templates updated')
     })
 
-    it('hides skipped when count is 0', async () => {
-      await reachSummaryWith({ updated: 2, skipped: 0, skippedCompleted: 0, skippedNoMatch: 0 })
+    it('fires warning toast when skipped > 0', async () => {
+      await completeCascadeWith('All phases', { updated: 2, skipped: 1, skippedCompleted: 0, skippedNoMatch: 0 })
 
-      expect(screen.queryByText(/skipped/)).toBeNull()
+      expect(toast.warning).toHaveBeenCalledWith('2 updated, 1 skipped — has logs')
     })
 
-    it('hides skippedNoMatch when count is 0', async () => {
-      await reachSummaryWith({ updated: 2, skipped: 0, skippedCompleted: 0, skippedNoMatch: 0 })
+    it('does not show summary panel — no "Cascade complete" text', async () => {
+      await completeCascadeWith('This only', { updated: 1, skipped: 0, skippedCompleted: 0, skippedNoMatch: 0 })
 
-      expect(screen.queryByText(/no match/)).toBeNull()
+      expect(screen.queryByText('Cascade complete')).toBeNull()
     })
 
-    // NOTE: CascadeScopeSelector does NOT render skippedCompleted at all
-    // (unlike SlotCascadeScopeSelector which does). Capturing this as current behavior.
-    it('does not render skippedCompleted even when > 0', async () => {
-      await reachSummaryWith({ updated: 1, skipped: 0, skippedCompleted: 5, skippedNoMatch: 0 })
+    it('does not render a Done button', async () => {
+      await completeCascadeWith('This only', { updated: 1, skipped: 0, skippedCompleted: 0, skippedNoMatch: 0 })
 
-      expect(screen.queryByText(/completed/)).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Done' })).toBeNull()
     })
 
-    it('shows updated count as "N updated" text', async () => {
-      await reachSummaryWith({ updated: 4, skipped: 0, skippedCompleted: 0, skippedNoMatch: 0 })
-
-      expect(screen.getByText('4 updated')).toBeDefined()
-    })
-
-    it('renders Done button with aria-label "Done"', async () => {
-      await reachSummaryWith({ updated: 1, skipped: 0, skippedCompleted: 0, skippedNoMatch: 0 })
-
-      const btn = screen.getByRole('button', { name: 'Done' })
-      expect(btn).toBeDefined()
-      expect(btn.textContent).toBe('Done')
-    })
-  })
-
-  // --- Auto-dismiss timing precision ---
-
-  describe('auto-dismiss timing', () => {
-    const DISMISS_MS = 2000
-
-    beforeEach(() => {
-      vi.useFakeTimers({ shouldAdvanceTime: true })
+    it('calls onComplete immediately — no auto-dismiss timer', async () => {
       vi.mocked(cascadeUpdateTemplates).mockResolvedValue({
         success: true,
         data: { updated: 1, skipped: 0, skippedCompleted: 0, skippedNoMatch: 0 },
       })
-    })
 
-    afterEach(() => {
-      vi.useRealTimers()
-    })
-
-    async function reachSummary() {
-      const user = userEvent.setup({
-        advanceTimers: vi.advanceTimersByTime,
-      })
+      const user = userEvent.setup()
       render(<CascadeScopeSelector {...defaultProps} />)
 
       await user.click(await screen.findByText('This only'))
       await user.click(await screen.findByRole('button', { name: /confirm/i }))
-      await screen.findByText(/cascade complete/i)
-      return user
-    }
 
-    it('auto-dismiss timer is set to 2000ms (not instant)', async () => {
-      await reachSummary()
-
-      // Summary is visible, onComplete hasn't been called yet synchronously
-      expect(screen.getByText('Cascade complete')).toBeDefined()
-      // After 2000ms, onComplete fires
-      await vi.advanceTimersByTimeAsync(2000)
-      expect(defaultProps.onComplete).toHaveBeenCalledTimes(1)
-    })
-
-    it('fires onComplete at exactly 2000ms', async () => {
-      await reachSummary()
-
-      await vi.advanceTimersByTimeAsync(2000)
-      expect(defaultProps.onComplete).toHaveBeenCalledTimes(1)
+      // onComplete fires synchronously after cascade resolves, no timer
+      await waitFor(() => {
+        expect(defaultProps.onComplete).toHaveBeenCalledTimes(1)
+      })
     })
   })
 
@@ -235,7 +200,6 @@ describe('CascadeScopeSelector — characterization', () => {
     })
 
     it('shows "Applying..." text on confirm button while pending', async () => {
-      // Make cascade hang to keep isPending = true
       vi.mocked(cascadeUpdateTemplates).mockReturnValue(new Promise(() => {}))
 
       const user = userEvent.setup()
@@ -245,7 +209,6 @@ describe('CascadeScopeSelector — characterization', () => {
       const confirmBtn = await screen.findByRole('button', { name: /confirm/i })
       await user.click(confirmBtn)
 
-      // Button text changes to Applying...
       await waitFor(() => {
         expect(screen.getByText('Applying...')).toBeDefined()
       })

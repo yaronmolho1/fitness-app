@@ -1,8 +1,18 @@
 // Characterization test — captures current behavior for safe refactoring
+// Updated for T136: summary panel replaced with toast notifications
 // @vitest-environment jsdom
 import { render, screen, cleanup, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { toast } from 'sonner'
+
+vi.mock('sonner', () => ({
+  toast: {
+    success: vi.fn(),
+    warning: vi.fn(),
+    error: vi.fn(),
+  },
+}))
 
 vi.mock('@/lib/templates/cascade-actions', () => ({
   getCascadePreview: vi.fn(),
@@ -63,31 +73,30 @@ describe('SlotCascadeScopeSelector — characterization', () => {
       await user.click(await screen.findByText('This only'))
       await user.click(await screen.findByRole('button', { name: /confirm/i }))
 
-      await screen.findByText(/cascade complete/i)
+      await waitFor(() => {
+        expect(paramProps.onComplete).toHaveBeenCalled()
+      })
 
       expect(cascadeSlotParams).not.toHaveBeenCalled()
     })
 
-    it('sets summary to all-zeros for this-only + update-params', async () => {
+    it('fires "Template updated" toast for this-only + update-params', async () => {
       const user = userEvent.setup()
       render(<SlotCascadeScopeSelector {...paramProps} />)
 
       await user.click(await screen.findByText('This only'))
       await user.click(await screen.findByRole('button', { name: /confirm/i }))
 
-      await screen.findByText(/cascade complete/i)
-
-      // Shows "0 updated" text
-      expect(screen.getByText('0 updated')).toBeDefined()
-      // skipped/skippedNoMatch are 0 so not shown
-      expect(screen.queryByText(/skipped/)).toBeNull()
-      expect(screen.queryByText(/no match/)).toBeNull()
+      await waitFor(() => {
+        expect(toast.success).toHaveBeenCalledWith('Template updated')
+      })
+      expect(paramProps.onComplete).toHaveBeenCalledTimes(1)
     })
   })
 
-  // --- Summary panel: skippedCompleted display ---
+  // --- Toast notification behavior (replaces summary panel) ---
 
-  describe('summary panel skippedCompleted', () => {
+  describe('toast notifications on cascade complete', () => {
     const paramProps = {
       templateId: 10,
       operation: 'update-params' as const,
@@ -97,22 +106,7 @@ describe('SlotCascadeScopeSelector — characterization', () => {
       onCancel: vi.fn(),
     }
 
-    it('renders skippedCompleted when > 0', async () => {
-      vi.mocked(cascadeSlotParams).mockResolvedValue({
-        success: true,
-        data: { updated: 1, skipped: 0, skippedCompleted: 2, skippedNoMatch: 0 },
-      })
-
-      const user = userEvent.setup()
-      render(<SlotCascadeScopeSelector {...paramProps} />)
-
-      await user.click(await screen.findByText('All phases'))
-      await user.click(await screen.findByRole('button', { name: /confirm/i }))
-
-      expect(await screen.findByText(/2 skipped \(completed\)/)).toBeDefined()
-    })
-
-    it('hides skippedCompleted when 0', async () => {
+    it('fires success toast with count for multi-template cascade', async () => {
       vi.mocked(cascadeSlotParams).mockResolvedValue({
         success: true,
         data: { updated: 2, skipped: 0, skippedCompleted: 0, skippedNoMatch: 0 },
@@ -124,25 +118,29 @@ describe('SlotCascadeScopeSelector — characterization', () => {
       await user.click(await screen.findByText('All phases'))
       await user.click(await screen.findByRole('button', { name: /confirm/i }))
 
-      await screen.findByText(/cascade complete/i)
-
-      expect(screen.queryByText(/completed/)).toBeNull()
+      await waitFor(() => {
+        expect(toast.success).toHaveBeenCalledWith('2 templates updated')
+      })
     })
-  })
 
-  // --- Summary panel content ---
+    it('fires warning toast when skipped > 0', async () => {
+      vi.mocked(cascadeSlotParams).mockResolvedValue({
+        success: true,
+        data: { updated: 1, skipped: 2, skippedCompleted: 0, skippedNoMatch: 0 },
+      })
 
-  describe('summary panel content', () => {
-    const paramProps = {
-      templateId: 10,
-      operation: 'update-params' as const,
-      slotId: 5,
-      paramUpdates: { sets: 4 },
-      onComplete: vi.fn(),
-      onCancel: vi.fn(),
-    }
+      const user = userEvent.setup()
+      render(<SlotCascadeScopeSelector {...paramProps} />)
 
-    it('displays "Cascade complete" heading', async () => {
+      await user.click(await screen.findByText('All phases'))
+      await user.click(await screen.findByRole('button', { name: /confirm/i }))
+
+      await waitFor(() => {
+        expect(toast.warning).toHaveBeenCalledWith('1 updated, 2 skipped — has logs')
+      })
+    })
+
+    it('does not show summary panel — no "Cascade complete" text', async () => {
       vi.mocked(cascadeSlotParams).mockResolvedValue({
         success: true,
         data: { updated: 1, skipped: 0, skippedCompleted: 0, skippedNoMatch: 0 },
@@ -154,10 +152,14 @@ describe('SlotCascadeScopeSelector — characterization', () => {
       await user.click(await screen.findByText('All phases'))
       await user.click(await screen.findByRole('button', { name: /confirm/i }))
 
-      expect(await screen.findByText('Cascade complete')).toBeDefined()
+      await waitFor(() => {
+        expect(paramProps.onComplete).toHaveBeenCalled()
+      })
+
+      expect(screen.queryByText('Cascade complete')).toBeNull()
     })
 
-    it('renders Done button with aria-label "Done"', async () => {
+    it('does not render a Done button', async () => {
       vi.mocked(cascadeSlotParams).mockResolvedValue({
         success: true,
         data: { updated: 1, skipped: 0, skippedCompleted: 0, skippedNoMatch: 0 },
@@ -169,63 +171,22 @@ describe('SlotCascadeScopeSelector — characterization', () => {
       await user.click(await screen.findByText('All phases'))
       await user.click(await screen.findByRole('button', { name: /confirm/i }))
 
-      await screen.findByText(/cascade complete/i)
-
-      const btn = screen.getByRole('button', { name: 'Done' })
-      expect(btn).toBeDefined()
-      expect(btn.textContent).toBe('Done')
-    })
-  })
-
-  // --- Auto-dismiss timing precision ---
-
-  describe('auto-dismiss timing', () => {
-    const DISMISS_MS = 2000
-
-    const paramProps = {
-      templateId: 10,
-      operation: 'update-params' as const,
-      slotId: 5,
-      paramUpdates: { sets: 4 },
-      onComplete: vi.fn(),
-      onCancel: vi.fn(),
-    }
-
-    beforeEach(() => {
-      vi.useFakeTimers({ shouldAdvanceTime: true })
-    })
-
-    afterEach(() => {
-      vi.useRealTimers()
-    })
-
-    async function reachSummary() {
-      const user = userEvent.setup({
-        advanceTimers: vi.advanceTimersByTime,
+      await waitFor(() => {
+        expect(paramProps.onComplete).toHaveBeenCalled()
       })
+
+      expect(screen.queryByRole('button', { name: 'Done' })).toBeNull()
+    })
+
+    it('calls onComplete immediately — no auto-dismiss timer', async () => {
+      const user = userEvent.setup()
       render(<SlotCascadeScopeSelector {...paramProps} />)
 
-      // Use "this-only" + update-params to hit the sync short-circuit
+      // Use this-only short-circuit path
       await user.click(await screen.findByText('This only'))
       await user.click(await screen.findByRole('button', { name: /confirm/i }))
-      await screen.findByText(/cascade complete/i)
-      return user
-    }
 
-    it('auto-dismiss timer is set to 2000ms (not instant)', async () => {
-      await reachSummary()
-
-      // Summary is visible, timer is running
-      expect(screen.getByText('Cascade complete')).toBeDefined()
-      // After 2000ms, onComplete fires
-      await vi.advanceTimersByTimeAsync(2000)
-      expect(paramProps.onComplete).toHaveBeenCalledTimes(1)
-    })
-
-    it('fires onComplete at exactly 2000ms', async () => {
-      await reachSummary()
-
-      await vi.advanceTimersByTimeAsync(2000)
+      // onComplete fires synchronously, no timer
       expect(paramProps.onComplete).toHaveBeenCalledTimes(1)
     })
   })
@@ -357,7 +318,6 @@ describe('SlotCascadeScopeSelector — characterization', () => {
       await user.click(await screen.findByText('This only'))
       await user.click(await screen.findByRole('button', { name: /confirm/i }))
 
-      // Confirm it enters async path (shows Applying...) instead of short-circuiting
       await waitFor(() => {
         expect(screen.getByText('Applying...')).toBeDefined()
       })
@@ -384,7 +344,6 @@ describe('SlotCascadeScopeSelector — characterization', () => {
       await user.click(await screen.findByText('This only'))
       await user.click(await screen.findByRole('button', { name: /confirm/i }))
 
-      // Confirm it enters async path (shows Applying...) instead of short-circuiting
       await waitFor(() => {
         expect(screen.getByText('Applying...')).toBeDefined()
       })
