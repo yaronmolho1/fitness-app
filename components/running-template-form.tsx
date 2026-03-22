@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createRunningTemplate } from '@/lib/templates/actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { NumericInput } from '@/components/ui/numeric-input'
 import { Label } from '@/components/ui/label'
 
 const RUN_TYPES = [
@@ -185,12 +186,11 @@ export function RunningTemplateForm({ mesocycleId, onSuccess }: Props) {
           <Label htmlFor="running-target-distance">
             {isInterval ? 'Target Distance (km, per rep)' : 'Target Distance (km)'}
           </Label>
-          <Input
+          <NumericInput
             id="running-target-distance"
-            type="text"
-            inputMode="decimal"
+            mode="decimal"
             value={targetDistance}
-            onChange={(e) => setTargetDistance(e.target.value)}
+            onValueChange={setTargetDistance}
             placeholder="e.g. 5"
             className="h-12 md:h-10"
           />
@@ -200,13 +200,11 @@ export function RunningTemplateForm({ mesocycleId, onSuccess }: Props) {
           <Label htmlFor="running-target-duration">
             {isInterval ? 'Target Duration (min, per rep)' : 'Target Duration (min)'}
           </Label>
-          <Input
+          <NumericInput
             id="running-target-duration"
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
+            mode="integer"
             value={targetDuration}
-            onChange={(e) => setTargetDuration(e.target.value)}
+            onValueChange={setTargetDuration}
             placeholder="e.g. 30"
             className="h-12 md:h-10"
           />
@@ -224,13 +222,11 @@ export function RunningTemplateForm({ mesocycleId, onSuccess }: Props) {
           <div className="grid grid-cols-2 gap-4 pt-1">
             <div className="space-y-2">
               <Label htmlFor="running-interval-count">Intervals</Label>
-              <Input
+              <NumericInput
                 id="running-interval-count"
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
+                mode="integer"
                 value={intervalCount}
-                onChange={(e) => setIntervalCount(e.target.value)}
+                onValueChange={setIntervalCount}
                 placeholder="e.g. 6"
                 className="h-12 md:h-10"
                 tabIndex={isInterval ? 0 : -1}
@@ -239,13 +235,11 @@ export function RunningTemplateForm({ mesocycleId, onSuccess }: Props) {
 
             <div className="space-y-2">
               <Label htmlFor="running-interval-rest">Rest (seconds)</Label>
-              <Input
+              <NumericInput
                 id="running-interval-rest"
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
+                mode="integer"
                 value={intervalRest}
-                onChange={(e) => setIntervalRest(e.target.value)}
+                onValueChange={setIntervalRest}
                 placeholder="e.g. 90"
                 className="h-12 md:h-10"
                 tabIndex={isInterval ? 0 : -1}

@@ -110,17 +110,14 @@ describe('RunningTemplateForm — distance/duration (T129)', () => {
   })
 
   // Validation edge cases
-  it('shows error for negative distance', async () => {
+  it('sanitizes negative sign from distance input (NumericInput prevents negative values)', async () => {
     const user = userEvent.setup()
     render(<RunningTemplateForm mesocycleId={1} />)
 
-    await user.type(screen.getByLabelText('Template Name'), 'Test')
-    await user.selectOptions(screen.getByLabelText('Run Type'), 'easy')
-    await user.type(screen.getByLabelText('Target Distance (km)'), '-1')
-    await user.click(screen.getByRole('button', { name: 'Create Running Template' }))
-
-    expect(screen.getByRole('alert')).toHaveTextContent('Distance must be positive')
-    expect(mockedCreate).not.toHaveBeenCalled()
+    const input = screen.getByLabelText('Target Distance (km)')
+    await user.type(input, '-1')
+    // NumericInput strips non-numeric chars; "-" is removed, leaving "1"
+    expect(input).toHaveValue('1')
   })
 
   it('shows error for zero duration', async () => {

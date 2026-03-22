@@ -1,7 +1,7 @@
 'use client'
 
 import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
+import { NumericInput } from '@/components/ui/numeric-input'
 import { cn } from '@/lib/utils'
 
 export type FrequencyMode = 'daily' | 'specific_days' | 'weekly_target'
@@ -98,13 +98,11 @@ export function FrequencyModeSelector({
       {mode === 'weekly_target' && (
         <div className="space-y-2">
           <Label htmlFor="frequency-weekly-target">Times per week</Label>
-          <Input
+          <NumericInput
             id="frequency-weekly-target"
-            type="number"
-            min={1}
-            max={7}
-            value={weeklyTarget}
-            onChange={(e) => onWeeklyTargetChange(Number(e.target.value))}
+            mode="integer"
+            value={String(weeklyTarget)}
+            onValueChange={(v) => onWeeklyTargetChange(v === '' ? 0 : Number(v))}
           />
         </div>
       )}

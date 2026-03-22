@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { NumericInput } from '@/components/ui/numeric-input'
 import { Badge } from '@/components/ui/badge'
 import { Flame } from 'lucide-react'
 import { markRoutineDone, markRoutineSkipped } from '@/lib/routines/actions'
@@ -223,16 +223,13 @@ function RoutineCheckOffCard({
               {field.label}
             </label>
             <div className="flex items-center gap-1">
-              <Input
+              <NumericInput
                 id={`${item.id}-${field.key}`}
-                type="number"
-                step={field.step}
-                min="0"
-                inputMode="decimal"
+                mode={field.step === '1' ? 'integer' : 'decimal'}
                 className="h-10 w-20"
                 placeholder="0"
                 value={fieldValues[field.key] ?? ''}
-                onChange={(e) => updateField(field.key, e.target.value)}
+                onValueChange={(v) => updateField(field.key, v)}
                 disabled={isPending}
               />
               {field.unit && (

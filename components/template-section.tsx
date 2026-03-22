@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { NumericInput } from '@/components/ui/numeric-input'
 import { Label } from '@/components/ui/label'
 import { RunningTemplateForm } from '@/components/running-template-form'
 import { MmaBjjTemplateForm } from '@/components/mma-bjj-template-form'
@@ -444,12 +445,11 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated }: Tem
                 <Label htmlFor={`distance-${template.id}`}>
                   {isInterval ? 'Target Distance (km, per rep)' : 'Target Distance (km)'}
                 </Label>
-                <Input
+                <NumericInput
                   id={`distance-${template.id}`}
-                  type="text"
-                  inputMode="decimal"
+                  mode="decimal"
                   value={targetDistance}
-                  onChange={(e) => setTargetDistance(e.target.value)}
+                  onValueChange={setTargetDistance}
                   placeholder="e.g. 5"
                 />
               </div>
@@ -457,13 +457,11 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated }: Tem
                 <Label htmlFor={`duration-edit-${template.id}`}>
                   {isInterval ? 'Target Duration (min, per rep)' : 'Target Duration (min)'}
                 </Label>
-                <Input
+                <NumericInput
                   id={`duration-edit-${template.id}`}
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
+                  mode="integer"
                   value={targetDuration}
-                  onChange={(e) => setTargetDuration(e.target.value)}
+                  onValueChange={setTargetDuration}
                   placeholder="e.g. 30"
                 />
               </div>
@@ -472,25 +470,21 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated }: Tem
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label htmlFor={`intervals-${template.id}`}>Intervals</Label>
-                  <Input
+                  <NumericInput
                     id={`intervals-${template.id}`}
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
+                    mode="integer"
                     value={intervalCount}
-                    onChange={(e) => setIntervalCount(e.target.value)}
+                    onValueChange={setIntervalCount}
                     placeholder="e.g. 6"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor={`rest-${template.id}`}>Rest (seconds)</Label>
-                  <Input
+                  <NumericInput
                     id={`rest-${template.id}`}
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
+                    mode="integer"
                     value={intervalRest}
-                    onChange={(e) => setIntervalRest(e.target.value)}
+                    onValueChange={setIntervalRest}
                     placeholder="e.g. 90"
                   />
                 </div>
@@ -513,13 +507,11 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated }: Tem
         {isMma && (
           <div className="space-y-2">
             <Label htmlFor={`duration-${template.id}`}>Planned Duration (minutes)</Label>
-            <Input
+            <NumericInput
               id={`duration-${template.id}`}
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
+              mode="integer"
               value={plannedDuration}
-              onChange={(e) => setPlannedDuration(e.target.value)}
+              onValueChange={setPlannedDuration}
               placeholder="e.g. 90"
             />
           </div>

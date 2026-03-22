@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { cn } from '@/lib/utils'
+import { NumericInput } from '@/components/ui/numeric-input'
 import { SectionHeading } from '@/components/layout/section-heading'
 import { groupSlotsByGroupId, getGroupLabel, formatRest as formatRestSeconds } from '@/lib/ui/superset-grouping'
 import { formatDateWithWeekday } from '@/lib/date-format'
@@ -218,28 +219,26 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
                         {setIndex + 1}
                       </div>
 
-                      <input
+                      <NumericInput
                         data-testid={`weight-input-${slotIndex}-${setIndex}`}
                         aria-label={`Actual weight for set ${setIndex + 1}`}
-                        type="text"
-                        inputMode="decimal"
+                        mode="decimal"
                         placeholder={slot.weight !== null ? String(slot.weight) : '\u2014'}
                         value={setData.weight}
-                        onChange={(e) =>
-                          updateSet(slotIndex, setIndex, 'weight', e.target.value)
+                        onValueChange={(v) =>
+                          updateSet(slotIndex, setIndex, 'weight', v)
                         }
                         className="min-h-[44px] w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       />
 
-                      <input
+                      <NumericInput
                         data-testid={`reps-input-${slotIndex}-${setIndex}`}
                         aria-label={`Actual reps for set ${setIndex + 1}`}
-                        type="text"
-                        inputMode="numeric"
+                        mode="integer"
                         placeholder={slot.reps || '\u2014'}
                         value={setData.reps}
-                        onChange={(e) =>
-                          updateSet(slotIndex, setIndex, 'reps', e.target.value)
+                        onValueChange={(v) =>
+                          updateSet(slotIndex, setIndex, 'reps', v)
                         }
                         className="min-h-[44px] w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       />
