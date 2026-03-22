@@ -4,6 +4,7 @@ import { getMesocycleById, getMesocycleCascadeSummary } from '@/lib/mesocycles/q
 import { getScheduleForMesocycle, getTemplatesForMesocycle } from '@/lib/schedule/queries'
 import { getExercises } from '@/lib/exercises/queries'
 import { getSlotsByTemplate } from '@/lib/templates/slot-queries'
+import { getSectionsForTemplate } from '@/lib/templates/section-queries'
 import { getBrowseTemplates } from '@/lib/templates/browse-queries'
 import { DeleteMesocycleButton } from '@/components/delete-mesocycle-button'
 import { PageContainer } from '@/components/layout/page-container'
@@ -41,10 +42,14 @@ export default async function MesocycleDetailPage({
     meso.status !== 'completed' ? getBrowseTemplates(numericId) : Promise.resolve([]),
   ])
 
-  // Fetch slots for each template
+  // Fetch slots and sections for each template
   const slotsByTemplate: Record<number, Awaited<ReturnType<typeof getSlotsByTemplate>>> = {}
+  const sectionsByTemplate: Record<number, Awaited<ReturnType<typeof getSectionsForTemplate>>> = {}
   for (const t of templates) {
     slotsByTemplate[t.id] = getSlotsByTemplate(t.id)
+    if (t.modality === 'mixed') {
+      sectionsByTemplate[t.id] = getSectionsForTemplate(t.id)
+    }
   }
 
   return (
@@ -94,6 +99,7 @@ export default async function MesocycleDetailPage({
           templates={templates}
           exercises={exercises}
           slotsByTemplate={slotsByTemplate}
+          sectionsByTemplate={sectionsByTemplate}
           isCompleted={meso.status === 'completed'}
           browseTemplates={browseTemplates}
         />

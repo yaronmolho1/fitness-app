@@ -20,6 +20,7 @@ import type { TemplateOption } from '@/lib/schedule/queries'
 import type { SlotWithExercise } from '@/lib/templates/slot-queries'
 import type { Exercise } from '@/lib/exercises/filters'
 import type { BrowseTemplate } from '@/lib/templates/browse-queries'
+import type { TemplateSectionRow } from '@/lib/templates/section-queries'
 
 type Props = {
   mesocycleId: number
@@ -28,9 +29,10 @@ type Props = {
   slotsByTemplate: Record<number, SlotWithExercise[]>
   isCompleted: boolean
   browseTemplates?: BrowseTemplate[]
+  sectionsByTemplate?: Record<number, TemplateSectionRow[]>
 }
 
-export function TemplateSection({ mesocycleId, templates, exercises, slotsByTemplate, isCompleted, browseTemplates = [] }: Props) {
+export function TemplateSection({ mesocycleId, templates, exercises, slotsByTemplate, isCompleted, browseTemplates = [], sectionsByTemplate = {} }: Props) {
   const router = useRouter()
   const [formType, setFormType] = useState<'resistance' | 'running' | 'mma' | 'mixed' | null>(null)
   const [resistanceName, setResistanceName] = useState('')
@@ -120,6 +122,7 @@ export function TemplateSection({ mesocycleId, templates, exercises, slotsByTemp
               exercises={exercises}
               isCompleted={isCompleted}
               onUpdated={() => router.refresh()}
+              sections={sectionsByTemplate[t.id] ?? []}
             />
           ))}
         </div>
@@ -226,6 +229,7 @@ type TemplateRowProps = {
   exercises: Exercise[]
   isCompleted: boolean
   onUpdated: () => void
+  sections: TemplateSectionRow[]
 }
 
 const RUN_TYPES = [
@@ -240,7 +244,7 @@ const HR_ZONES = [1, 2, 3, 4, 5] as const
 
 type RunType = 'easy' | 'tempo' | 'interval' | 'long' | 'race'
 
-function TemplateRow({ template, slots, exercises, isCompleted, onUpdated }: TemplateRowProps) {
+function TemplateRow({ template, slots, exercises, isCompleted, onUpdated, sections }: TemplateRowProps) {
   const [editing, setEditing] = useState(false)
   const [cascading, setCascading] = useState(false)
   const [confirming, setConfirming] = useState(false)
@@ -318,11 +322,13 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated }: Tem
     const updates = buildUpdates()
     if (Object.keys(updates).length === 0 && !canonicalChanged) {
       setEditing(false)
+      setExpanded(false)
       return
     }
 
     setPendingUpdates(updates)
     setEditing(false)
+    setExpanded(false)
     setCascading(true)
   }
 
@@ -337,7 +343,7 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated }: Tem
     setEditing(true)
   }
 
-  function handleCancel() {
+  function resetFields() {
     setName(template.name)
     setCanonicalName(template.canonical_name)
     setNotes(template.notes ?? '')
@@ -351,6 +357,10 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated }: Tem
     setCoachingCues(template.coaching_cues ?? '')
     setPlannedDuration(template.planned_duration?.toString() ?? '')
     setError('')
+  }
+
+  function handleCancel() {
+    resetFields()
     setEditing(false)
     setCascading(false)
   }
@@ -575,12 +585,13 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated }: Tem
 
   // Default display
   const isResistance = template.modality === 'resistance'
+  const isMixed = template.modality === 'mixed'
 
   return (
     <div className="rounded-xl border">
       <div
-        className="flex cursor-pointer items-center justify-between px-4 py-3 transition-colors duration-150 hover:bg-muted/50"
-        onClick={() => isResistance && setExpanded(!expanded)}
+        className="flex cursor-pointer items-start justify-between px-4 py-3 transition-colors duration-150 hover:bg-muted/50"
+        onClick={() => setExpanded(!expanded)}
       >
         <div className="min-w-0 flex-1">
           <span className="text-sm font-medium">{template.name}</span>
@@ -645,6 +656,187 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated }: Tem
             exercises={exercises}
             isCompleted={isCompleted}
           />
+        </div>
+      )}
+
+      {isRunning && expanded && (
+        <div className="border-t px-4 py-3 space-y-3">
+          {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
+          <div className="space-y-2">
+            <Label htmlFor={`run-type-exp-${template.id}`}>Run Type</Label>
+            <select
+              id={`run-type-exp-${template.id}`}
+              value={runType}
+              onChange={(e) => setRunType(e.target.value as RunType | '')}
+              disabled={isCompleted}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
+            >
+              <option value="">Select run type</option>
+              {RUN_TYPES.map((rt) => (
+                <option key={rt.value} value={rt.value}>{rt.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor={`pace-exp-${template.id}`}>Target Pace</Label>
+              <Input
+                id={`pace-exp-${template.id}`}
+                value={targetPace}
+                onChange={(e) => setTargetPace(e.target.value)}
+                placeholder="5:30/km"
+                disabled={isCompleted}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`hr-zone-exp-${template.id}`}>HR Zone</Label>
+              <select
+                id={`hr-zone-exp-${template.id}`}
+                value={hrZone}
+                onChange={(e) => setHrZone(e.target.value)}
+                disabled={isCompleted}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
+              >
+                <option value="">—</option>
+                {HR_ZONES.map((z) => (
+                  <option key={z} value={z}>Zone {z}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor={`distance-exp-${template.id}`}>
+                {isInterval ? 'Target Distance (km, per rep)' : 'Target Distance (km)'}
+              </Label>
+              <NumericInput
+                id={`distance-exp-${template.id}`}
+                mode="decimal"
+                value={targetDistance}
+                onValueChange={setTargetDistance}
+                placeholder="e.g. 5"
+                disabled={isCompleted}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`duration-exp-${template.id}`}>
+                {isInterval ? 'Target Duration (min, per rep)' : 'Target Duration (min)'}
+              </Label>
+              <NumericInput
+                id={`duration-exp-${template.id}`}
+                mode="integer"
+                value={targetDuration}
+                onValueChange={setTargetDuration}
+                placeholder="e.g. 30"
+                disabled={isCompleted}
+              />
+            </div>
+          </div>
+          {isInterval && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor={`intervals-exp-${template.id}`}>Intervals</Label>
+                <NumericInput
+                  id={`intervals-exp-${template.id}`}
+                  mode="integer"
+                  value={intervalCount}
+                  onValueChange={setIntervalCount}
+                  placeholder="e.g. 6"
+                  disabled={isCompleted}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={`rest-exp-${template.id}`}>Rest (seconds)</Label>
+                <NumericInput
+                  id={`rest-exp-${template.id}`}
+                  mode="integer"
+                  value={intervalRest}
+                  onValueChange={setIntervalRest}
+                  placeholder="e.g. 90"
+                  disabled={isCompleted}
+                />
+              </div>
+            </div>
+          )}
+          <div className="space-y-2">
+            <Label htmlFor={`cues-exp-${template.id}`}>Coaching Cues</Label>
+            <textarea
+              id={`cues-exp-${template.id}`}
+              value={coachingCues}
+              onChange={(e) => setCoachingCues(e.target.value)}
+              placeholder="Notes visible to athlete..."
+              rows={2}
+              disabled={isCompleted}
+              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
+            />
+          </div>
+          {!isCompleted && (
+            <div className="flex gap-2">
+              <Button size="sm" onClick={handleSave} disabled={isPending}>
+                {isPending ? 'Saving...' : 'Save'}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => { resetFields(); setExpanded(false) }}>
+                Cancel
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {isMma && expanded && (
+        <div className="border-t px-4 py-3 space-y-3">
+          {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
+          <div className="space-y-2">
+            <Label htmlFor={`duration-exp-${template.id}`}>Planned Duration (minutes)</Label>
+            <NumericInput
+              id={`duration-exp-${template.id}`}
+              mode="integer"
+              value={plannedDuration}
+              onValueChange={setPlannedDuration}
+              placeholder="e.g. 90"
+              disabled={isCompleted}
+            />
+          </div>
+          {!isCompleted && (
+            <div className="flex gap-2">
+              <Button size="sm" onClick={handleSave} disabled={isPending}>
+                {isPending ? 'Saving...' : 'Save'}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => { resetFields(); setExpanded(false) }}>
+                Cancel
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {isMixed && expanded && sections.length > 0 && (
+        <div className="border-t px-4 py-3 space-y-2">
+          {sections.map((sec) => (
+            <div key={sec.id} className="flex items-center gap-2 text-sm">
+              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                {sec.modality}
+              </span>
+              <span className="font-medium">{sec.section_name}</span>
+              {sec.modality === 'resistance' && (
+                <span className="text-xs text-muted-foreground">
+                  {slots.filter((s) => s.section_id === sec.id).length} exercises
+                </span>
+              )}
+              {sec.modality === 'running' && sec.run_type && (
+                <span className="text-xs text-muted-foreground">
+                  {sec.run_type}
+                  {sec.target_distance && ` · ${sec.target_distance}km`}
+                  {sec.target_duration && ` · ${sec.target_duration}min`}
+                </span>
+              )}
+              {sec.modality === 'mma' && sec.planned_duration && (
+                <span className="text-xs text-muted-foreground">
+                  {sec.planned_duration} min
+                </span>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>
