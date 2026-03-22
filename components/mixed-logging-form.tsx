@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { cn } from '@/lib/utils'
+import { NumericInput } from '@/components/ui/numeric-input'
 import { getModalityAccentClass, getModalityBadgeClasses } from '@/lib/ui/modality-colors'
 import { saveMixedWorkout } from '@/lib/workouts/actions'
 import type { SaveMixedWorkoutInput, MixedSectionInput } from '@/lib/workouts/save-mixed-workout'
@@ -136,28 +137,26 @@ function ResistanceSectionInputs({
                   {setIndex + 1}
                 </div>
 
-                <input
+                <NumericInput
                   data-testid={`weight-input-${sectionIndex}-${slotIndex}-${setIndex}`}
                   aria-label={`Actual weight for set ${setIndex + 1}`}
-                  type="text"
-                  inputMode="decimal"
+                  mode="decimal"
                   placeholder={slot.weight !== null ? String(slot.weight) : '\u2014'}
                   value={setData.weight}
-                  onChange={(e) =>
-                    onUpdateSet(slotIndex, setIndex, 'weight', e.target.value)
+                  onValueChange={(v) =>
+                    onUpdateSet(slotIndex, setIndex, 'weight', v)
                   }
                   className="min-h-[44px] w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 />
 
-                <input
+                <NumericInput
                   data-testid={`reps-input-${sectionIndex}-${slotIndex}-${setIndex}`}
                   aria-label={`Actual reps for set ${setIndex + 1}`}
-                  type="text"
-                  inputMode="numeric"
+                  mode="integer"
                   placeholder={slot.reps || '\u2014'}
                   value={setData.reps}
-                  onChange={(e) =>
-                    onUpdateSet(slotIndex, setIndex, 'reps', e.target.value)
+                  onValueChange={(v) =>
+                    onUpdateSet(slotIndex, setIndex, 'reps', v)
                   }
                   className="min-h-[44px] w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 />
@@ -293,14 +292,13 @@ function RunningSectionInputs({
             <label htmlFor={`actual-distance-${sectionIndex}`} className="text-sm font-medium">
               Distance (km)
             </label>
-            <input
+            <NumericInput
               id={`actual-distance-${sectionIndex}`}
               data-testid={`actual-distance-${sectionIndex}`}
-              type="text"
-              inputMode="decimal"
+              mode="decimal"
               placeholder="e.g. 8.5"
               value={state.distance}
-              onChange={(e) => onUpdate('distance', e.target.value)}
+              onValueChange={(v) => onUpdate('distance', v)}
               className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:h-10 md:text-sm"
             />
           </div>
@@ -322,14 +320,13 @@ function RunningSectionInputs({
             <label htmlFor={`actual-avg-hr-${sectionIndex}`} className="text-sm font-medium">
               Avg HR (bpm)
             </label>
-            <input
+            <NumericInput
               id={`actual-avg-hr-${sectionIndex}`}
               data-testid={`actual-avg-hr-${sectionIndex}`}
-              type="text"
-              inputMode="numeric"
+              mode="integer"
               placeholder="e.g. 155"
               value={state.hr}
-              onChange={(e) => onUpdate('hr', e.target.value)}
+              onValueChange={(v) => onUpdate('hr', v)}
               className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:h-10 md:text-sm"
             />
           </div>
@@ -378,14 +375,13 @@ function MmaSectionInputs({
           <label htmlFor={`actual-duration-${sectionIndex}`} className="text-sm font-medium">
             Duration (minutes)
           </label>
-          <input
+          <NumericInput
             id={`actual-duration-${sectionIndex}`}
             data-testid={`actual-duration-${sectionIndex}`}
-            type="text"
-            inputMode="numeric"
+            mode="integer"
             placeholder="e.g. 90"
             value={state.duration}
-            onChange={(e) => onUpdate('duration', e.target.value)}
+            onValueChange={(v) => onUpdate('duration', v)}
             className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:h-10 md:text-sm"
           />
         </div>

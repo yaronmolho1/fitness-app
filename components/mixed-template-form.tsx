@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { NumericInput } from '@/components/ui/numeric-input'
 import { Label } from '@/components/ui/label'
 import { createMixedTemplate } from '@/lib/templates/section-actions'
 import type { CreateMixedTemplateInput } from '@/lib/templates/section-actions'
@@ -367,12 +368,11 @@ function SectionEditor({
               <Label htmlFor={`target-distance-${section.id}`}>
                 {isInterval ? 'Target Distance (km, per rep)' : 'Target Distance (km)'}
               </Label>
-              <Input
+              <NumericInput
                 id={`target-distance-${section.id}`}
-                type="text"
-                inputMode="decimal"
+                mode="decimal"
                 value={section.target_distance}
-                onChange={(e) => onChange({ target_distance: e.target.value })}
+                onValueChange={(v) => onChange({ target_distance: v })}
                 placeholder="e.g. 5"
               />
             </div>
@@ -380,13 +380,11 @@ function SectionEditor({
               <Label htmlFor={`target-duration-${section.id}`}>
                 {isInterval ? 'Target Duration (min, per rep)' : 'Target Duration (min)'}
               </Label>
-              <Input
+              <NumericInput
                 id={`target-duration-${section.id}`}
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
+                mode="integer"
                 value={section.target_duration}
-                onChange={(e) => onChange({ target_duration: e.target.value })}
+                onValueChange={(v) => onChange({ target_duration: v })}
                 placeholder="e.g. 30"
               />
             </div>
@@ -396,25 +394,21 @@ function SectionEditor({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor={`interval-count-${section.id}`}>Intervals</Label>
-                <Input
+                <NumericInput
                   id={`interval-count-${section.id}`}
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
+                  mode="integer"
                   value={section.interval_count}
-                  onChange={(e) => onChange({ interval_count: e.target.value })}
+                  onValueChange={(v) => onChange({ interval_count: v })}
                   placeholder="e.g. 6"
                 />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor={`interval-rest-${section.id}`}>Rest (seconds)</Label>
-                <Input
+                <NumericInput
                   id={`interval-rest-${section.id}`}
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
+                  mode="integer"
                   value={section.interval_rest}
-                  onChange={(e) => onChange({ interval_rest: e.target.value })}
+                  onValueChange={(v) => onChange({ interval_rest: v })}
                   placeholder="e.g. 90"
                 />
               </div>
@@ -440,13 +434,11 @@ function SectionEditor({
         <div className="space-y-3 border-t pt-3">
           <div className="space-y-1.5">
             <Label htmlFor={`planned-duration-${section.id}`}>Planned Duration (minutes)</Label>
-            <Input
+            <NumericInput
               id={`planned-duration-${section.id}`}
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
+              mode="integer"
               value={section.planned_duration}
-              onChange={(e) => onChange({ planned_duration: e.target.value })}
+              onValueChange={(v) => onChange({ planned_duration: v })}
               placeholder="e.g. 90"
             />
           </div>

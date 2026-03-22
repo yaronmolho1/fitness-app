@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { cn } from '@/lib/utils'
+import { NumericInput } from '@/components/ui/numeric-input'
 import { getModalityAccentClass } from '@/lib/ui/modality-colors'
 import { saveRunningWorkout } from '@/lib/workouts/actions'
 import type { SaveRunningWorkoutInput, IntervalRepData } from '@/lib/workouts/actions'
@@ -253,14 +254,13 @@ export function RunningLoggingForm({ data }: { data: RunningWorkoutData }) {
             >
               Distance (km)
             </label>
-            <input
+            <NumericInput
               id="actual-distance"
               data-testid="actual-distance"
-              type="text"
-              inputMode="decimal"
+              mode="decimal"
               placeholder="e.g. 8.5"
               value={distance}
-              onChange={(e) => setDistance(e.target.value)}
+              onValueChange={setDistance}
               className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:h-10 md:text-sm"
             />
           </div>
@@ -290,14 +290,13 @@ export function RunningLoggingForm({ data }: { data: RunningWorkoutData }) {
             >
               Avg HR (bpm)
             </label>
-            <input
+            <NumericInput
               id="actual-avg-hr"
               data-testid="actual-avg-hr"
-              type="text"
-              inputMode="numeric"
+              mode="integer"
               placeholder="e.g. 155"
               value={hr}
-              onChange={(e) => setHr(e.target.value)}
+              onValueChange={setHr}
               className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:h-10 md:text-sm"
             />
           </div>
@@ -348,14 +347,13 @@ export function RunningLoggingForm({ data }: { data: RunningWorkoutData }) {
                     >
                       Avg HR
                     </label>
-                    <input
+                    <NumericInput
                       id={`interval-hr-${index + 1}`}
                       data-testid={`interval-hr-${index + 1}`}
-                      type="text"
-                      inputMode="numeric"
+                      mode="integer"
                       placeholder="bpm"
                       value={rep.hr}
-                      onChange={(e) => updateIntervalRep(index, 'hr', e.target.value)}
+                      onValueChange={(v) => updateIntervalRep(index, 'hr', v)}
                       className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     />
                   </div>

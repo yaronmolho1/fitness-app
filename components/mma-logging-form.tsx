@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { cn } from '@/lib/utils'
+import { NumericInput } from '@/components/ui/numeric-input'
 import { getModalityAccentClass } from '@/lib/ui/modality-colors'
 import { saveMmaWorkout } from '@/lib/workouts/actions'
 import type { SaveMmaWorkoutInput } from '@/lib/workouts/actions'
@@ -114,14 +115,13 @@ export function MmaLoggingForm({ data }: { data: MmaWorkoutData }) {
           >
             Duration (minutes)
           </label>
-          <input
+          <NumericInput
             id="actual-duration"
             data-testid="actual-duration"
-            type="text"
-            inputMode="numeric"
+            mode="integer"
             placeholder="e.g. 90"
             value={duration}
-            onChange={(e) => setDuration(e.target.value)}
+            onValueChange={setDuration}
             className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:h-10 md:text-sm"
           />
         </div>

@@ -4,6 +4,7 @@ import { useState, useTransition, useRef, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { NumericInput } from '@/components/ui/numeric-input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
@@ -83,7 +84,7 @@ export function SlotList({ slots, templateId, exercises, isCompleted }: SlotList
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedSlotIds, setSelectedSlotIds] = useState<Set<number>>(new Set())
   const [showGroupRestPrompt, setShowGroupRestPrompt] = useState(false)
-  const [groupRestInput, setGroupRestInput] = useState<number | ''>(60)
+  const [groupRestInput, setGroupRestInput] = useState('60')
   const [supersetError, setSupersetError] = useState('')
 
   // Touch drag state
@@ -227,7 +228,7 @@ export function SlotList({ slots, templateId, exercises, isCompleted }: SlotList
     setSelectionMode(false)
     setSelectedSlotIds(new Set())
     setShowGroupRestPrompt(false)
-    setGroupRestInput(60)
+    setGroupRestInput('60')
     setSupersetError('')
   }
 
@@ -237,7 +238,7 @@ export function SlotList({ slots, templateId, exercises, isCompleted }: SlotList
   }
 
   function handleConfirmSuperset() {
-    const restValue = groupRestInput === '' ? 0 : groupRestInput
+    const restValue = groupRestInput === '' ? 0 : Number(groupRestInput)
     startTransition(async () => {
       const result = await createSuperset({
         slot_ids: Array.from(selectedSlotIds),
@@ -314,12 +315,11 @@ export function SlotList({ slots, templateId, exercises, isCompleted }: SlotList
         <div className="rounded-lg border p-3 space-y-2">
           <div className="space-y-1">
             <Label htmlFor="group-rest-input">Group rest (seconds)</Label>
-            <Input
+            <NumericInput
               id="group-rest-input"
-              type="number"
-              min={0}
+              mode="integer"
               value={groupRestInput}
-              onChange={(e) => setGroupRestInput(e.target.value === '' ? '' : Number(e.target.value))}
+              onValueChange={setGroupRestInput}
             />
           </div>
           {supersetError && (
@@ -483,7 +483,7 @@ function SupersetGroup({
   onDragStart, onDragOver, onDragEnd, onTouchStart, onTouchMove, onTouchEnd,
 }: SupersetGroupProps) {
   const [editingRest, setEditingRest] = useState(false)
-  const [restInput, setRestInput] = useState(groupRestSeconds)
+  const [restInput, setRestInput] = useState(String(groupRestSeconds))
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
 
@@ -494,7 +494,7 @@ function SupersetGroup({
       const result = await updateGroupRest({
         group_id: groupId,
         template_id: templateId,
-        group_rest_seconds: restInput,
+        group_rest_seconds: restInput === '' ? 0 : Number(restInput),
       })
       if (result.success) {
         setEditingRest(false)
@@ -517,7 +517,7 @@ function SupersetGroup({
               variant="ghost"
               size="sm"
               className="h-6 px-2 text-xs"
-              onClick={() => { setRestInput(groupRestSeconds); setEditingRest(true) }}
+              onClick={() => { setRestInput(String(groupRestSeconds)); setEditingRest(true) }}
             >
               Edit rest
             </Button>
@@ -538,12 +538,11 @@ function SupersetGroup({
         <div className="rounded-lg border bg-muted/30 p-2 space-y-2">
           <div className="space-y-1">
             <Label htmlFor={`group-rest-${groupId}`}>Group rest (seconds)</Label>
-            <Input
+            <NumericInput
               id={`group-rest-${groupId}`}
-              type="number"
-              min={0}
+              mode="integer"
               value={restInput}
-              onChange={(e) => setRestInput(Number(e.target.value))}
+              onValueChange={setRestInput}
             />
           </div>
           <div className="flex gap-2">
@@ -621,20 +620,20 @@ function SlotRow({
   const [isPending, startTransition] = useTransition()
   const [pendingParamUpdates, setPendingParamUpdates] = useState<Record<string, unknown>>({})
 
-  // Edit form state
-  const [sets, setSets] = useState(slot.sets)
-  const [reps, setReps] = useState(Number(slot.reps))
-  const [weight, setWeight] = useState<number | ''>(slot.weight ?? '')
-  const [rpe, setRpe] = useState<number | ''>(slot.rpe ?? '')
-  const [restSeconds, setRestSeconds] = useState<number | ''>(slot.rest_seconds ?? '')
+  // Edit form state — string-based for NumericInput
+  const [sets, setSets] = useState(String(slot.sets))
+  const [reps, setReps] = useState(String(slot.reps))
+  const [weight, setWeight] = useState(slot.weight != null ? String(slot.weight) : '')
+  const [rpe, setRpe] = useState(slot.rpe != null ? String(slot.rpe) : '')
+  const [restSeconds, setRestSeconds] = useState(slot.rest_seconds != null ? String(slot.rest_seconds) : '')
   const [guidelines, setGuidelines] = useState(slot.guidelines ?? '')
 
   function resetForm() {
-    setSets(slot.sets)
-    setReps(Number(slot.reps))
-    setWeight(slot.weight ?? '')
-    setRpe(slot.rpe ?? '')
-    setRestSeconds(slot.rest_seconds ?? '')
+    setSets(String(slot.sets))
+    setReps(String(slot.reps))
+    setWeight(slot.weight != null ? String(slot.weight) : '')
+    setRpe(slot.rpe != null ? String(slot.rpe) : '')
+    setRestSeconds(slot.rest_seconds != null ? String(slot.rest_seconds) : '')
     setGuidelines(slot.guidelines ?? '')
     setError('')
   }
@@ -650,27 +649,30 @@ function SlotRow({
   }
 
   function handleSave() {
-    const diff: Record<string, unknown> = {}
-    if (sets !== slot.sets) diff.sets = sets
-    if (reps !== Number(slot.reps)) diff.reps = reps
-    const weightVal = weight === '' ? null : weight
-    if (weightVal !== slot.weight) diff.weight = weightVal
-    const rpeVal = rpe === '' ? null : rpe
-    if (rpeVal !== slot.rpe) diff.rpe = rpeVal
-    const restVal = restSeconds === '' ? null : restSeconds
-    if (restVal !== slot.rest_seconds) diff.rest_seconds = restVal
+    const setsNum = sets === '' ? slot.sets : Number(sets)
+    const repsNum = reps === '' ? Number(slot.reps) : Number(reps)
+    const weightNum = weight === '' ? null : Number(weight)
+    const rpeNum = rpe === '' ? null : Number(rpe)
+    const restNum = restSeconds === '' ? null : Number(restSeconds)
     const guidelinesVal = guidelines || null
+
+    const diff: Record<string, unknown> = {}
+    if (setsNum !== slot.sets) diff.sets = setsNum
+    if (repsNum !== Number(slot.reps)) diff.reps = repsNum
+    if (weightNum !== slot.weight) diff.weight = weightNum
+    if (rpeNum !== slot.rpe) diff.rpe = rpeNum
+    if (restNum !== slot.rest_seconds) diff.rest_seconds = restNum
     if (guidelinesVal !== slot.guidelines) diff.guidelines = guidelinesVal
 
     startTransition(async () => {
       const result = await updateExerciseSlot({
         id: slot.id,
-        sets,
-        reps,
-        weight: weight === '' ? null : weight,
-        rpe: rpe === '' ? null : rpe,
-        rest_seconds: restSeconds === '' ? null : restSeconds,
-        guidelines: guidelines || null,
+        sets: setsNum,
+        reps: repsNum,
+        weight: weightNum,
+        rpe: rpeNum,
+        rest_seconds: restNum,
+        guidelines: guidelinesVal,
       })
       if (result.success) {
         setError('')
@@ -746,55 +748,47 @@ function SlotRow({
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <div className="space-y-1">
             <Label htmlFor={`sets-${slot.id}`}>Sets</Label>
-            <Input
+            <NumericInput
               id={`sets-${slot.id}`}
-              type="number"
-              min={1}
+              mode="integer"
               value={sets}
-              onChange={(e) => setSets(Number(e.target.value))}
+              onValueChange={setSets}
             />
           </div>
           <div className="space-y-1">
             <Label htmlFor={`reps-${slot.id}`}>Reps</Label>
-            <Input
+            <NumericInput
               id={`reps-${slot.id}`}
-              type="number"
-              min={1}
+              mode="integer"
               value={reps}
-              onChange={(e) => setReps(Number(e.target.value))}
+              onValueChange={setReps}
             />
           </div>
           <div className="space-y-1">
             <Label htmlFor={`weight-${slot.id}`}>Weight (kg)</Label>
-            <Input
+            <NumericInput
               id={`weight-${slot.id}`}
-              type="number"
-              min={0}
-              step={0.5}
+              mode="decimal"
               value={weight}
-              onChange={(e) => setWeight(e.target.value === '' ? '' : Number(e.target.value))}
+              onValueChange={setWeight}
             />
           </div>
           <div className="space-y-1">
             <Label htmlFor={`rpe-${slot.id}`}>RPE</Label>
-            <Input
+            <NumericInput
               id={`rpe-${slot.id}`}
-              type="number"
-              min={1}
-              max={10}
-              step={0.5}
+              mode="decimal"
               value={rpe}
-              onChange={(e) => setRpe(e.target.value === '' ? '' : Number(e.target.value))}
+              onValueChange={setRpe}
             />
           </div>
           <div className="space-y-1">
             <Label htmlFor={`rest-${slot.id}`}>Rest (sec)</Label>
-            <Input
+            <NumericInput
               id={`rest-${slot.id}`}
-              type="number"
-              min={0}
+              mode="integer"
               value={restSeconds}
-              onChange={(e) => setRestSeconds(e.target.value === '' ? '' : Number(e.target.value))}
+              onValueChange={setRestSeconds}
             />
           </div>
         </div>

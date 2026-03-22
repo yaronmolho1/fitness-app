@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createMmaBjjTemplate } from '@/lib/templates/actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { NumericInput } from '@/components/ui/numeric-input'
 import { Label } from '@/components/ui/label'
 
 type Props = {
@@ -72,13 +73,11 @@ export function MmaBjjTemplateForm({ mesocycleId, onSuccess }: Props) {
 
       <div className="space-y-2">
         <Label htmlFor="mma-duration">Planned Duration (minutes)</Label>
-        <Input
+        <NumericInput
           id="mma-duration"
-          type="text"
-          inputMode="numeric"
-          pattern="[0-9]*"
+          mode="integer"
           value={duration}
-          onChange={(e) => setDuration(e.target.value)}
+          onValueChange={setDuration}
           placeholder="e.g. 90"
           className="h-12 md:h-10"
         />
