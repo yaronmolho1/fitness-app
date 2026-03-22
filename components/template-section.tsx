@@ -12,10 +12,14 @@ import { MixedTemplateForm } from '@/components/mixed-template-form'
 import { SlotList } from '@/components/slot-list'
 import { CascadeScopeSelector } from '@/components/cascade-scope-selector'
 import { SectionHeading } from '@/components/layout/section-heading'
+import { TemplateAddPicker, type PickerSelection } from '@/components/template-add-picker'
+import { TemplateBrowseDialog } from '@/components/template-browse-dialog'
 import { createResistanceTemplate, deleteTemplate } from '@/lib/templates/actions'
+import { copyTemplateToMesocycle } from '@/lib/templates/copy-actions'
 import type { TemplateOption } from '@/lib/schedule/queries'
 import type { SlotWithExercise } from '@/lib/templates/slot-queries'
 import type { Exercise } from '@/lib/exercises/filters'
+import type { BrowseTemplate } from '@/lib/templates/browse-queries'
 
 type Props = {
   mesocycleId: number
@@ -23,20 +27,46 @@ type Props = {
   exercises: Exercise[]
   slotsByTemplate: Record<number, SlotWithExercise[]>
   isCompleted: boolean
+  browseTemplates?: BrowseTemplate[]
 }
 
-export function TemplateSection({ mesocycleId, templates, exercises, slotsByTemplate, isCompleted }: Props) {
+export function TemplateSection({ mesocycleId, templates, exercises, slotsByTemplate, isCompleted, browseTemplates = [] }: Props) {
   const router = useRouter()
   const [formType, setFormType] = useState<'resistance' | 'running' | 'mma' | 'mixed' | null>(null)
   const [resistanceName, setResistanceName] = useState('')
   const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
+  const [browseOpen, setBrowseOpen] = useState(false)
+  const [copyPending, setCopyPending] = useState(false)
 
   function handleCreated() {
     setFormType(null)
     setResistanceName('')
     setError('')
     router.refresh()
+  }
+
+  function handlePickerSelect(selection: PickerSelection) {
+    setError('')
+    if (selection === 'from-existing') {
+      setBrowseOpen(true)
+    } else {
+      setFormType(selection)
+    }
+  }
+
+  function handleCopy(sourceTemplateId: number) {
+    setCopyPending(true)
+    startTransition(async () => {
+      const result = await copyTemplateToMesocycle(sourceTemplateId, mesocycleId)
+      setCopyPending(false)
+      if (result.success) {
+        setBrowseOpen(false)
+        router.refresh()
+      } else {
+        setError(result.error)
+      }
+    })
   }
 
   function handleResistanceSubmit(e: React.FormEvent) {
@@ -63,38 +93,17 @@ export function TemplateSection({ mesocycleId, templates, exercises, slotsByTemp
       <div className="flex items-center justify-between">
         <SectionHeading>Templates</SectionHeading>
         {!isCompleted && formType === null && (
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => { setFormType('resistance'); setError('') }}
-            >
-              + Resistance
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => { setFormType('running'); setError('') }}
-            >
-              + Running
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => { setFormType('mma'); setError('') }}
-            >
-              + MMA/BJJ
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => { setFormType('mixed'); setError('') }}
-            >
-              + Mixed Workout
-            </Button>
-          </div>
+          <TemplateAddPicker onSelect={handlePickerSelect} />
         )}
       </div>
+
+      <TemplateBrowseDialog
+        open={browseOpen}
+        onOpenChange={setBrowseOpen}
+        onCopy={handleCopy}
+        templates={browseTemplates}
+        isPending={copyPending}
+      />
 
       {templates.length === 0 && formType === null && (
         <p className="text-sm text-muted-foreground">No templates yet.</p>

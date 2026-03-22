@@ -1,4 +1,5 @@
 // Characterization test — captures current behavior for safe refactoring
+// Updated for T138: 4 type buttons replaced with "Add Template" picker
 // @vitest-environment jsdom
 import { render, screen, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -7,6 +8,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: vi.fn() }),
+}))
+
+// Mock useIsMobile (desktop by default)
+vi.mock('@/hooks/use-mobile', () => ({
+  useIsMobile: () => false,
 }))
 
 // Mock child components
@@ -37,6 +43,9 @@ vi.mock('@/components/layout/section-heading', () => ({
 vi.mock('@/lib/templates/actions', () => ({
   createResistanceTemplate: vi.fn(),
   deleteTemplate: vi.fn(),
+}))
+vi.mock('@/lib/templates/copy-actions', () => ({
+  copyTemplateToMesocycle: vi.fn(),
 }))
 
 import { TemplateSection } from './template-section'
@@ -79,73 +88,69 @@ describe('TemplateSection — characterization', () => {
     expect(msgs.length).toBeGreaterThanOrEqual(1)
   })
 
-  it('renders create buttons when not completed', () => {
+  // T138: replaced 4 type buttons with single "Add Template" picker
+  it('renders "Add Template" button when not completed', () => {
     render(<TemplateSection {...defaultProps} />)
-    expect(screen.getAllByRole('button', { name: '+ Resistance' }).length).toBeGreaterThanOrEqual(1)
-    expect(screen.getAllByRole('button', { name: '+ Running' }).length).toBeGreaterThanOrEqual(1)
-    expect(screen.getAllByRole('button', { name: '+ MMA/BJJ' }).length).toBeGreaterThanOrEqual(1)
-    expect(screen.getAllByRole('button', { name: '+ Mixed Workout' }).length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByRole('button', { name: /add template/i })).toBeInTheDocument()
   })
 
-  it('hides create buttons when completed', () => {
+  it('hides "Add Template" button when completed', () => {
     render(<TemplateSection {...defaultProps} isCompleted={true} />)
-    expect(screen.queryByRole('button', { name: '+ Resistance' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '+ Running' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /add template/i })).not.toBeInTheDocument()
   })
 
-  it('shows resistance form when + Resistance clicked', async () => {
+  it('shows resistance form via picker', async () => {
     const user = userEvent.setup()
     render(<TemplateSection {...defaultProps} />)
 
-    const btns = screen.getAllByRole('button', { name: '+ Resistance' })
-    await user.click(btns[0])
+    await user.click(screen.getByRole('button', { name: /add template/i }))
+    await user.click(screen.getByText('Resistance'))
 
     expect(screen.getByText('New Resistance Template')).toBeInTheDocument()
     expect(screen.getByLabelText('Name')).toBeInTheDocument()
   })
 
-  it('shows running form when + Running clicked', async () => {
+  it('shows running form via picker', async () => {
     const user = userEvent.setup()
     render(<TemplateSection {...defaultProps} />)
 
-    const btns = screen.getAllByRole('button', { name: '+ Running' })
-    await user.click(btns[0])
+    await user.click(screen.getByRole('button', { name: /add template/i }))
+    await user.click(screen.getByText('Running'))
 
     expect(screen.getByText('New Running Template')).toBeInTheDocument()
     expect(screen.getByTestId('mock-running-template-form')).toBeInTheDocument()
   })
 
-  it('shows MMA form when + MMA/BJJ clicked', async () => {
+  it('shows MMA form via picker', async () => {
     const user = userEvent.setup()
     render(<TemplateSection {...defaultProps} />)
 
-    const btns = screen.getAllByRole('button', { name: '+ MMA/BJJ' })
-    await user.click(btns[0])
+    await user.click(screen.getByRole('button', { name: /add template/i }))
+    await user.click(screen.getByText('MMA/BJJ'))
 
     expect(screen.getByText('New MMA/BJJ Template')).toBeInTheDocument()
     expect(screen.getByTestId('mock-mma-template-form')).toBeInTheDocument()
   })
 
-  it('shows mixed form when + Mixed Workout clicked', async () => {
+  it('shows mixed form via picker', async () => {
     const user = userEvent.setup()
     render(<TemplateSection {...defaultProps} />)
 
-    const btns = screen.getAllByRole('button', { name: '+ Mixed Workout' })
-    await user.click(btns[0])
+    await user.click(screen.getByRole('button', { name: /add template/i }))
+    await user.click(screen.getByText('Mixed Workout'))
 
     expect(screen.getByText('New Mixed Template')).toBeInTheDocument()
     expect(screen.getByTestId('mock-mixed-template-form')).toBeInTheDocument()
   })
 
-  it('hides create buttons when a form is open', async () => {
+  it('hides "Add Template" button when a form is open', async () => {
     const user = userEvent.setup()
     render(<TemplateSection {...defaultProps} />)
 
-    const btns = screen.getAllByRole('button', { name: '+ Resistance' })
-    await user.click(btns[0])
+    await user.click(screen.getByRole('button', { name: /add template/i }))
+    await user.click(screen.getByText('Resistance'))
 
-    // Create buttons hidden when form open
-    expect(screen.queryByRole('button', { name: '+ Running' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /add template/i })).not.toBeInTheDocument()
   })
 
   it('renders template rows with name and modality badge', () => {
@@ -258,25 +263,25 @@ describe('TemplateSection — characterization', () => {
     expect(screen.getByText(/90min/)).toBeInTheDocument()
   })
 
-  it('cancel button closes resistance form and restores create buttons', async () => {
+  it('cancel button closes resistance form and restores "Add Template" button', async () => {
     const user = userEvent.setup()
     render(<TemplateSection {...defaultProps} />)
 
-    const btns = screen.getAllByRole('button', { name: '+ Resistance' })
-    await user.click(btns[0])
+    await user.click(screen.getByRole('button', { name: /add template/i }))
+    await user.click(screen.getByText('Resistance'))
     expect(screen.getByText('New Resistance Template')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(screen.queryByText('New Resistance Template')).not.toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: '+ Resistance' }).length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByRole('button', { name: /add template/i })).toBeInTheDocument()
   })
 
   it('cancel button closes running form', async () => {
     const user = userEvent.setup()
     render(<TemplateSection {...defaultProps} />)
 
-    const btns = screen.getAllByRole('button', { name: '+ Running' })
-    await user.click(btns[0])
+    await user.click(screen.getByRole('button', { name: /add template/i }))
+    await user.click(screen.getByText('Running'))
     expect(screen.getByText('New Running Template')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
@@ -287,8 +292,8 @@ describe('TemplateSection — characterization', () => {
     const user = userEvent.setup()
     render(<TemplateSection {...defaultProps} />)
 
-    const btns = screen.getAllByRole('button', { name: '+ Resistance' })
-    await user.click(btns[0])
+    await user.click(screen.getByRole('button', { name: /add template/i }))
+    await user.click(screen.getByText('Resistance'))
 
     await user.click(screen.getByRole('button', { name: 'Create' }))
     expect(screen.getByRole('alert')).toHaveTextContent('Name is required')
