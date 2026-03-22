@@ -20,19 +20,7 @@ import type { TemplateOption } from '@/lib/schedule/queries'
 import type { SlotWithExercise } from '@/lib/templates/slot-queries'
 import type { Exercise } from '@/lib/exercises/filters'
 import type { BrowseTemplate } from '@/lib/templates/browse-queries'
-
-export type TemplateSectionRow = {
-  id: number
-  section_name: string
-  modality: 'resistance' | 'running' | 'mma'
-  order: number
-  run_type: string | null
-  target_pace: string | null
-  hr_zone: number | null
-  target_distance: number | null
-  target_duration: number | null
-  planned_duration: number | null
-}
+import type { TemplateSectionRow } from '@/lib/templates/section-queries'
 
 type Props = {
   mesocycleId: number
