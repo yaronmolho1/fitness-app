@@ -241,4 +241,62 @@ describe('TemplateSection — characterization', () => {
     render(<TemplateSection {...defaultProps} templates={templates} />)
     expect(screen.getByText('push-a-v2')).toBeInTheDocument()
   })
+
+  it('shows target distance and duration for running templates', () => {
+    const templates = [
+      makeTemplate({
+        id: 1,
+        name: 'Long Run',
+        modality: 'running',
+        run_type: 'long',
+        target_distance: 15,
+        target_duration: 90,
+      }),
+    ]
+    render(<TemplateSection {...defaultProps} templates={templates} />)
+    expect(screen.getByText(/15km/)).toBeInTheDocument()
+    expect(screen.getByText(/90min/)).toBeInTheDocument()
+  })
+
+  it('cancel button closes resistance form and restores create buttons', async () => {
+    const user = userEvent.setup()
+    render(<TemplateSection {...defaultProps} />)
+
+    const btns = screen.getAllByRole('button', { name: '+ Resistance' })
+    await user.click(btns[0])
+    expect(screen.getByText('New Resistance Template')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByText('New Resistance Template')).not.toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: '+ Resistance' }).length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('cancel button closes running form', async () => {
+    const user = userEvent.setup()
+    render(<TemplateSection {...defaultProps} />)
+
+    const btns = screen.getAllByRole('button', { name: '+ Running' })
+    await user.click(btns[0])
+    expect(screen.getByText('New Running Template')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByText('New Running Template')).not.toBeInTheDocument()
+  })
+
+  it('shows validation error when submitting resistance form with empty name', async () => {
+    const user = userEvent.setup()
+    render(<TemplateSection {...defaultProps} />)
+
+    const btns = screen.getAllByRole('button', { name: '+ Resistance' })
+    await user.click(btns[0])
+
+    await user.click(screen.getByRole('button', { name: 'Create' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Name is required')
+  })
+
+  it('hides empty state when templates exist', () => {
+    const templates = [makeTemplate()]
+    render(<TemplateSection {...defaultProps} templates={templates} />)
+    expect(screen.queryByText('No templates yet.')).not.toBeInTheDocument()
+  })
 })
