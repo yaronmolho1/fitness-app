@@ -10,8 +10,10 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
 import { ExercisePicker } from '@/components/exercise-picker'
 import { SlotCascadeScopeSelector } from '@/components/slot-cascade-scope-selector'
+import { BatchCascadeScopeSelector } from '@/components/batch-cascade-scope-selector'
 import { updateExerciseSlot, removeExerciseSlot, addExerciseSlot, reorderExerciseSlots } from '@/lib/templates/slot-actions'
 import { createSuperset, breakSuperset, updateGroupRest } from '@/lib/templates/superset-actions'
+import { usePendingEdits } from '@/lib/templates/use-pending-edits'
 import type { SlotWithExercise } from '@/lib/templates/slot-queries'
 import type { Exercise } from '@/lib/exercises/filters'
 
@@ -80,6 +82,10 @@ export function SlotList({ slots, templateId, exercises, isCompleted }: SlotList
   // Cascade state for add-slot operation
   const [addCascadeSlotId, setAddCascadeSlotId] = useState<number | null>(null)
 
+  // Batch cascade state
+  const pending = usePendingEdits()
+  const [showBatchCascade, setShowBatchCascade] = useState(false)
+
   // Selection mode for superset creation
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedSlotIds, setSelectedSlotIds] = useState<Set<number>>(new Set())
@@ -96,6 +102,16 @@ export function SlotList({ slots, templateId, exercises, isCompleted }: SlotList
   useEffect(() => {
     setOrderedSlots(slots)
   }, [slots])
+
+  // Navigate-away warning when pending edits exist (AC7)
+  useEffect(() => {
+    if (!pending.hasPendingEdits) return
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [pending.hasPendingEdits])
 
   const canDrag = !isCompleted && orderedSlots.length > 1 && !isReordering && !selectionMode
 
@@ -265,6 +281,20 @@ export function SlotList({ slots, templateId, exercises, isCompleted }: SlotList
     })
   }
 
+  function handleDeferredSave(slot: SlotWithExercise, diff: Record<string, unknown>) {
+    pending.markEdited(slot, diff)
+  }
+
+  function handleBatchCascadeComplete() {
+    pending.clearAll()
+    setShowBatchCascade(false)
+    router.refresh()
+  }
+
+  function handleBatchCascadeCancel() {
+    setShowBatchCascade(false)
+  }
+
   // Empty state (not shown during cascade)
   if (orderedSlots.length === 0 && !showPicker && addCascadeSlotId === null) {
     return (
@@ -288,6 +318,12 @@ export function SlotList({ slots, templateId, exercises, isCompleted }: SlotList
   }
 
   const grouped = groupSlots(orderedSlots)
+
+  // Build batch edits from pending state
+  const batchEdits = Array.from(pending.pendingEdits.entries()).map(([slotId, edit]) => ({
+    slotId,
+    updates: edit.diff,
+  }))
 
   return (
     <div className="space-y-2" ref={listRef}>
@@ -336,6 +372,34 @@ export function SlotList({ slots, templateId, exercises, isCompleted }: SlotList
         </div>
       )}
 
+      {/* Pending edits toolbar (AC2, AC8) */}
+      {pending.hasPendingEdits && !showBatchCascade && (
+        <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
+          <span className="text-xs font-medium">
+            {pending.pendingEditIds.length} pending edit{pending.pendingEditIds.length !== 1 ? 's' : ''}
+          </span>
+          <div className="ml-auto flex gap-2">
+            <Button size="sm" onClick={() => setShowBatchCascade(true)}>
+              Apply Changes
+            </Button>
+            <Button size="sm" variant="ghost" onClick={pending.clearAll}>
+              Discard Changes
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Batch cascade scope selector (AC3) */}
+      {showBatchCascade && (
+        <BatchCascadeScopeSelector
+          templateId={templateId}
+          edits={batchEdits}
+          exerciseCount={pending.pendingEditIds.length}
+          onComplete={handleBatchCascadeComplete}
+          onCancel={handleBatchCascadeCancel}
+        />
+      )}
+
       {/* Slot list with grouping */}
       {grouped.map((item) => {
         if (item.type === 'group') {
@@ -359,6 +423,8 @@ export function SlotList({ slots, templateId, exercises, isCompleted }: SlotList
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
+              isEdited={pending.isEdited}
+              onDeferredSave={handleDeferredSave}
             />
           )
         }
@@ -390,6 +456,8 @@ export function SlotList({ slots, templateId, exercises, isCompleted }: SlotList
                 onTouchStart={(e: React.TouchEvent) => handleTouchStart(e, flatIndex)}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
+                hasPendingEdit={pending.isEdited(slot.id)}
+                onDeferredSave={handleDeferredSave}
               />
             </div>
           </div>
@@ -475,12 +543,15 @@ type SupersetGroupProps = {
   onTouchStart: (e: React.TouchEvent, index: number) => void
   onTouchMove: (e: React.TouchEvent) => void
   onTouchEnd: () => void
+  isEdited: (slotId: number) => boolean
+  onDeferredSave: (slot: SlotWithExercise, diff: Record<string, unknown>) => void
 }
 
 function SupersetGroup({
   groupId, slots, groupRestSeconds, templateId, isCompleted,
   onUpdated, onBreak, canDrag, dragIndex, dropIndex, allSlots,
   onDragStart, onDragOver, onDragEnd, onTouchStart, onTouchMove, onTouchEnd,
+  isEdited, onDeferredSave,
 }: SupersetGroupProps) {
   const [editingRest, setEditingRest] = useState(false)
   const [restInput, setRestInput] = useState(String(groupRestSeconds))
@@ -575,6 +646,8 @@ function SupersetGroup({
             onTouchStart={(e: React.TouchEvent) => onTouchStart(e, flatIndex)}
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
+            hasPendingEdit={isEdited(slot.id)}
+            onDeferredSave={onDeferredSave}
           />
         )
       })}
@@ -607,6 +680,8 @@ type SlotRowProps = {
   onTouchStart?: (e: React.TouchEvent) => void
   onTouchMove?: (e: React.TouchEvent) => void
   onTouchEnd?: () => void
+  hasPendingEdit?: boolean
+  onDeferredSave?: (slot: SlotWithExercise, diff: Record<string, unknown>) => void
 }
 
 function SlotRow({
@@ -614,6 +689,7 @@ function SlotRow({
   showDragHandle, isDragging, isDropTarget,
   onDragStart, onDragOver, onDragEnd,
   onTouchStart, onTouchMove, onTouchEnd,
+  hasPendingEdit, onDeferredSave,
 }: SlotRowProps) {
   const [mode, setMode] = useState<'display' | 'edit' | 'confirm-remove' | 'cascade-params' | 'cascade-remove'>('display')
   const [error, setError] = useState('')
@@ -648,7 +724,7 @@ function SlotRow({
     setMode('display')
   }
 
-  function handleSave() {
+  function computeDiff() {
     const setsNum = sets === '' ? slot.sets : Number(sets)
     const repsNum = reps === '' ? Number(slot.reps) : Number(reps)
     const weightNum = weight === '' ? null : Number(weight)
@@ -663,6 +739,12 @@ function SlotRow({
     if (rpeNum !== slot.rpe) diff.rpe = rpeNum
     if (restNum !== slot.rest_seconds) diff.rest_seconds = restNum
     if (guidelinesVal !== slot.guidelines) diff.guidelines = guidelinesVal
+
+    return { diff, setsNum, repsNum, weightNum, rpeNum, restNum, guidelinesVal }
+  }
+
+  function handleSave() {
+    const { diff, setsNum, repsNum, weightNum, rpeNum, restNum, guidelinesVal } = computeDiff()
 
     startTransition(async () => {
       const result = await updateExerciseSlot({
@@ -683,6 +765,35 @@ function SlotRow({
           setMode('display')
           onUpdated()
         }
+      } else {
+        setError(result.error)
+      }
+    })
+  }
+
+  function handleSaveForLater() {
+    const { diff, setsNum, repsNum, weightNum, rpeNum, restNum, guidelinesVal } = computeDiff()
+
+    if (Object.keys(diff).length === 0) {
+      setMode('display')
+      return
+    }
+
+    startTransition(async () => {
+      const result = await updateExerciseSlot({
+        id: slot.id,
+        sets: setsNum,
+        reps: repsNum,
+        weight: weightNum,
+        rpe: rpeNum,
+        rest_seconds: restNum,
+        guidelines: guidelinesVal,
+      })
+      if (result.success) {
+        setError('')
+        onDeferredSave?.(slot, diff)
+        setMode('display')
+        onUpdated()
       } else {
         setError(result.error)
       }
@@ -807,6 +918,9 @@ function SlotRow({
           <Button size="sm" onClick={handleSave} disabled={isPending}>
             {isPending ? 'Saving...' : 'Save'}
           </Button>
+          <Button size="sm" variant="outline" onClick={handleSaveForLater} disabled={isPending}>
+            {isPending ? 'Saving...' : 'Save for later'}
+          </Button>
           <Button size="sm" variant="ghost" onClick={handleCancel} disabled={isPending}>
             Cancel
           </Button>
@@ -844,7 +958,8 @@ function SlotRow({
       className={cn(
         'flex items-center justify-between rounded-xl border px-4 py-3 transition-colors duration-150',
         isDragging && 'opacity-50',
-        isDropTarget && 'ring-2 ring-primary'
+        isDropTarget && 'ring-2 ring-primary',
+        hasPendingEdit && 'border-primary/50 bg-primary/5'
       )}
       draggable={showDragHandle}
       onDragStart={onDragStart}
@@ -869,6 +984,13 @@ function SlotRow({
             <circle cx="11" cy="13" r="1.5" />
           </svg>
         </div>
+      )}
+      {hasPendingEdit && (
+        <div
+          data-testid="pending-edit-indicator"
+          className="mr-2 h-2 w-2 rounded-full bg-primary"
+          aria-label="Pending edit"
+        />
       )}
       <div className="min-w-0 flex-1">
         <span className="text-sm font-medium">{slot.exercise_name}</span>

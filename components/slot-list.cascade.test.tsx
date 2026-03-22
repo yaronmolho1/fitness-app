@@ -97,7 +97,7 @@ describe('SlotList cascade integration', () => {
       const setsInput = screen.getByLabelText(/sets/i)
       await user.clear(setsInput)
       await user.type(setsInput, '5')
-      await user.click(screen.getByRole('button', { name: /save/i }))
+      await user.click(screen.getByRole('button', { name: /^save$/i }))
 
       // After local save, cascade selector should appear
       await waitFor(() => {
@@ -127,7 +127,7 @@ describe('SlotList cascade integration', () => {
       const setsInput = screen.getByLabelText(/sets/i)
       await user.clear(setsInput)
       await user.type(setsInput, '5')
-      await user.click(screen.getByRole('button', { name: /save/i }))
+      await user.click(screen.getByRole('button', { name: /^save$/i }))
 
       await waitFor(() => {
         expect(updateExerciseSlot).toHaveBeenCalled()
