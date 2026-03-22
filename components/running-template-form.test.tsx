@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
@@ -145,7 +145,9 @@ describe('RunningTemplateForm — distance/duration (T129)', () => {
     await user.type(screen.getByLabelText('Target Distance (km)'), '5')
     await user.click(screen.getByRole('button', { name: 'Create Running Template' }))
 
-    expect(screen.getByLabelText('Target Distance (km)')).toHaveValue('')
+    await waitFor(() => {
+      expect(screen.getByLabelText('Target Distance (km)')).toHaveValue('')
+    })
     expect(screen.getByLabelText('Target Duration (min)')).toHaveValue('')
   })
 })
