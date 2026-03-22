@@ -37,6 +37,8 @@ Shared React components — app-level UI and navigation.
 - `mixed-logging-form.tsx` — `MixedLoggingForm` post-workout logging form for mixed-modality templates with per-section resistance/running/MMA inputs
 - `frequency-mode-selector.tsx` — `FrequencyModeSelector` radio group for routine frequency (daily, weekly target, specific days) with day picker
 - `create-routine-item-form.tsx` — `CreateRoutineItemForm` form for adding routine items with name, category, input fields, frequency mode, scope
+- `template-add-picker.tsx` — `TemplateAddPicker` "Add Template" button with modality picker (resistance/running/MMA/mixed/from-existing); popover on desktop, bottom sheet on mobile
+- `template-browse-dialog.tsx` — `TemplateBrowseDialog` searchable dialog listing templates from other mesocycles grouped by mesocycle, with copy button per template
 
 ## Subdirectories
 - `layout/` — app shell and page layout primitives: desktop sidebar, mobile header + drawer, page container, page header, section heading ([README](./layout/README.md))
