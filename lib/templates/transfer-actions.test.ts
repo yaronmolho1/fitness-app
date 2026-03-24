@@ -432,6 +432,26 @@ describe('copyExerciseSlots', () => {
     expect(slots[1].order).toBe(2)
   })
 
+  // Cross-template validation: all slots must belong to same template
+  it('rejects slots from different templates', async () => {
+    const meso = seedMeso()
+    const ex1 = seedExercise('Bench Press')
+    const ex2 = seedExercise('Squat')
+    const t1 = seedTemplate(meso.id)
+    const t2 = seedTemplate(meso.id, { name: 'Pull A', canonical_name: 'pull-a' })
+    const target = seedTemplate(meso.id, { name: 'Target', canonical_name: 'target' })
+
+    const s1 = seedSlot(t1.id, ex1.id, { order: 1 })
+    const s2 = seedSlot(t2.id, ex2.id, { order: 1 })
+
+    const result = await copyExerciseSlots({
+      slotIds: [s1.id, s2.id],
+      targetTemplateId: target.id,
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toMatch(/same template/i)
+  })
+
   // Validation: non-existent slot
   it('rejects non-existent slot', async () => {
     const meso = seedMeso()
@@ -564,6 +584,26 @@ describe('moveExerciseSlots', () => {
     const result = await moveExerciseSlots({ slotIds: [slot.id], targetTemplateId: target.id })
     expect(result.success).toBe(false)
     if (!result.success) expect(result.error).toMatch(/completed/i)
+  })
+
+  // Cross-template validation: all slots must belong to same template
+  it('rejects slots from different templates', async () => {
+    const meso = seedMeso()
+    const ex1 = seedExercise('Bench Press')
+    const ex2 = seedExercise('Squat')
+    const t1 = seedTemplate(meso.id)
+    const t2 = seedTemplate(meso.id, { name: 'Pull A', canonical_name: 'pull-a' })
+    const target = seedTemplate(meso.id, { name: 'Target', canonical_name: 'target' })
+
+    const s1 = seedSlot(t1.id, ex1.id, { order: 1 })
+    const s2 = seedSlot(t2.id, ex2.id, { order: 1 })
+
+    const result = await moveExerciseSlots({
+      slotIds: [s1.id, s2.id],
+      targetTemplateId: target.id,
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toMatch(/same template/i)
   })
 
   // Edge: moving last slot from template leaves it empty

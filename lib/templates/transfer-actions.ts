@@ -162,6 +162,11 @@ export async function copyExerciseSlots(
 
   const slots = sourceSlots as SlotRow[]
 
+  // All slots must belong to the same source template
+  if (new Set(slots.map(s => s.template_id)).size > 1) {
+    return { success: false, error: 'All slots must belong to the same template' }
+  }
+
   // Determine group handling
   const fullGroup = isFullGroupTransfer(slotIds, slots)
 
@@ -250,6 +255,11 @@ export async function moveExerciseSlots(
   }
 
   const slots = sourceSlots as SlotRow[]
+
+  // All slots must belong to the same source template
+  if (new Set(slots.map(s => s.template_id)).size > 1) {
+    return { success: false, error: 'All slots must belong to the same template' }
+  }
 
   // Validate source meso not completed (move is destructive)
   const sourceStatus = getMesoStatus(slots[0].template_id)
