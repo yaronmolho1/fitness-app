@@ -475,14 +475,55 @@ describe('slot_week_overrides relations', () => {
   })
 
   it('slot_week_override has back-reference to exercise_slot', async () => {
-    const overrides = await db.select().from(schema.slot_week_overrides)
-    // Use the first override from previous test
-    if (overrides.length > 0) {
-      const result = await db.query.slot_week_overrides.findFirst({
-        with: { exercise_slot: true },
+    // Seed own data so the test is self-contained
+    const [exercise] = await db
+      .insert(schema.exercises)
+      .values({ name: 'Deadlift', modality: 'resistance' })
+      .returning()
+
+    const [meso] = await db
+      .insert(schema.mesocycles)
+      .values({
+        name: 'Back Ref Meso',
+        start_date: '2026-03-01',
+        end_date: '2026-04-30',
+        work_weeks: 4,
       })
-      expect(result).toBeDefined()
-      expect(result?.exercise_slot).toBeDefined()
-    }
+      .returning()
+
+    const [template] = await db
+      .insert(schema.workout_templates)
+      .values({
+        mesocycle_id: meso.id,
+        name: 'Pull',
+        canonical_name: 'pull',
+        modality: 'resistance',
+      })
+      .returning()
+
+    const [slot] = await db
+      .insert(schema.exercise_slots)
+      .values({
+        template_id: template.id,
+        exercise_id: exercise.id,
+        sets: 3,
+        reps: '5',
+        order: 1,
+      })
+      .returning()
+
+    await db.insert(schema.slot_week_overrides).values({
+      exercise_slot_id: slot.id,
+      week_number: 1,
+      weight: 100,
+    })
+
+    const result = await db.query.slot_week_overrides.findFirst({
+      where: eq(schema.slot_week_overrides.exercise_slot_id, slot.id),
+      with: { exercise_slot: true },
+    })
+    expect(result).toBeDefined()
+    expect(result?.exercise_slot).toBeDefined()
+    expect(result?.exercise_slot.id).toBe(slot.id)
   })
 })
