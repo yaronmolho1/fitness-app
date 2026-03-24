@@ -1,10 +1,10 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { eq, sql, asc } from 'drizzle-orm'
+import { eq, sql, asc, and } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '@/lib/db/index'
-import { exercise_slots, workout_templates, exercises, mesocycles } from '@/lib/db/schema'
+import { exercise_slots, workout_templates, exercises, mesocycles, template_sections } from '@/lib/db/schema'
 
 type SlotRow = typeof exercise_slots.$inferSelect
 
@@ -52,6 +52,7 @@ const rpeRange = z.number().min(1).max(10)
 const addSlotSchema = z.object({
   template_id: positiveInt,
   exercise_id: positiveInt,
+  section_id: positiveInt.optional(),
   sets: positiveInt,
   reps: positiveInt,
   weight: nonNegativeNumber.optional(),
@@ -63,6 +64,7 @@ const addSlotSchema = z.object({
 type AddExerciseSlotInput = {
   template_id: number
   exercise_id: number
+  section_id?: number
   sets: number
   reps: number
   weight?: number
@@ -79,7 +81,7 @@ export async function addExerciseSlot(
     return { success: false, error: parsed.error.issues[0].message }
   }
 
-  const { template_id, exercise_id, sets, reps, weight, rpe, rest_seconds, guidelines } = parsed.data
+  const { template_id, exercise_id, section_id, sets, reps, weight, rpe, rest_seconds, guidelines } = parsed.data
 
   // Verify template exists
   const template = db
@@ -95,6 +97,19 @@ export async function addExerciseSlot(
   const completedError = checkCompletedMesocycle(template_id)
   if (completedError) {
     return { success: false, error: completedError }
+  }
+
+  // Verify section exists and belongs to this template
+  if (section_id !== undefined) {
+    const section = db
+      .select()
+      .from(template_sections)
+      .where(and(eq(template_sections.id, section_id), eq(template_sections.template_id, template_id)))
+      .get()
+
+    if (!section) {
+      return { success: false, error: 'Section not found or does not belong to this template' }
+    }
   }
 
   // Verify exercise exists
@@ -122,6 +137,7 @@ export async function addExerciseSlot(
     .values({
       template_id,
       exercise_id,
+      section_id: section_id ?? null,
       sets,
       reps: String(reps), // stored as text to support future range notation (e.g. "8-12")
       weight: weight ?? null,

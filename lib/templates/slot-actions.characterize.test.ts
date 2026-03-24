@@ -342,3 +342,104 @@ describe('updateExerciseSlot — no-op returns existing data', () => {
     }
   })
 })
+
+// ============================================================================
+// T140 pre-change characterization: section_id not in addExerciseSlot
+// ============================================================================
+
+describe('addExerciseSlot — section_id behavior (pre-T140)', () => {
+  it('input type does NOT include section_id', async () => {
+    // The addSlotSchema only has: template_id, exercise_id, sets, reps, weight, rpe, rest_seconds, guidelines
+    // Passing section_id as extra property is stripped by zod .object() (strip mode)
+    const meso = seedMesocycle()
+    const tmpl = seedTemplate(meso.id)
+    const ex = seedExercise()
+
+    const result = await addExerciseSlot({
+      template_id: tmpl.id,
+      exercise_id: ex.id,
+      sets: 3,
+      reps: 10,
+    } as AddExerciseSlotInput)
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      // NOTE: section_id column exists in DB but addExerciseSlot never sets it
+      expect(result.data.section_id).toBeNull()
+    }
+  })
+
+  it('created slot has section_id = null in database', async () => {
+    const meso = seedMesocycle()
+    const tmpl = seedTemplate(meso.id)
+    const ex = seedExercise()
+
+    await addExerciseSlot({ template_id: tmpl.id, exercise_id: ex.id, sets: 3, reps: 10 })
+
+    const rows = testDb.select().from(schema.exercise_slots).all()
+    expect(rows).toHaveLength(1)
+    expect(rows[0].section_id).toBeNull()
+  })
+
+  it('order auto-increment is global per template, not per section', async () => {
+    const meso = seedMesocycle()
+    const tmpl = seedTemplate(meso.id)
+    const ex1 = seedExercise('Bench Press')
+    const ex2 = seedExercise('Squat')
+
+    // Manually insert a slot with section_id set (simulating future behavior)
+    testDb.insert(schema.exercise_slots).values({
+      template_id: tmpl.id,
+      exercise_id: ex1.id,
+      section_id: 999, // hypothetical section
+      sets: 3,
+      reps: '10',
+      order: 1,
+      is_main: false,
+      created_at: new Date(),
+    }).run()
+
+    // addExerciseSlot computes max(order) across ALL slots in template, regardless of section
+    const result = await addExerciseSlot({ template_id: tmpl.id, exercise_id: ex2.id, sets: 3, reps: 10 })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      // Should be 2, not 1 — order is template-scoped
+      expect(result.data.order).toBe(2)
+    }
+  })
+
+  it('is_main is always hardcoded to false', async () => {
+    const meso = seedMesocycle()
+    const tmpl = seedTemplate(meso.id)
+    const ex = seedExercise()
+
+    const result = await addExerciseSlot({ template_id: tmpl.id, exercise_id: ex.id, sets: 3, reps: 10 })
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.is_main).toBe(false)
+  })
+
+  it('reps is stored as text (String(reps))', async () => {
+    const meso = seedMesocycle()
+    const tmpl = seedTemplate(meso.id)
+    const ex = seedExercise()
+
+    const result = await addExerciseSlot({ template_id: tmpl.id, exercise_id: ex.id, sets: 3, reps: 12 })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(typeof result.data.reps).toBe('string')
+      expect(result.data.reps).toBe('12')
+    }
+  })
+})
+
+// Re-export type for use in section_id test above
+type AddExerciseSlotInput = {
+  template_id: number
+  exercise_id: number
+  sets: number
+  reps: number
+  weight?: number
+  rpe?: number
+  rest_seconds?: number
+  guidelines?: string
+}
