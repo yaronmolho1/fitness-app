@@ -79,7 +79,7 @@ type RestResult = {
   mesocycle_status?: MesocycleStatus
 }
 
-type Period = 'morning' | 'afternoon' | 'evening'
+export type Period = 'morning' | 'afternoon' | 'evening'
 
 type ProjectedResult = {
   type: 'projected'

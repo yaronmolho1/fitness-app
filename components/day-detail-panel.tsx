@@ -142,7 +142,8 @@ export function DayDetailPanel({ date, onClose }: DayDetailPanelProps) {
       const res = await fetch(`/api/calendar/day?date=${d}`)
       if (!res.ok) throw new Error('Failed to fetch')
       const data = await res.json()
-      setDetail(data)
+      // API returns array (T144) — unwrap first entry until T146 adds multi-card UI
+      setDetail(Array.isArray(data) ? data[0] ?? null : data)
     } catch {
       setError('Failed to load day detail')
       setDetail(null)
