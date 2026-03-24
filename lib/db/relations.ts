@@ -6,6 +6,7 @@ import {
   weekly_schedule,
   routine_items,
   exercise_slots,
+  slot_week_overrides,
   exercises,
   logged_workouts,
   logged_exercises,
@@ -42,20 +43,34 @@ export const template_sectionsRelations = relations(
   })
 )
 
-export const exercise_slotsRelations = relations(exercise_slots, ({ one }) => ({
-  template: one(workout_templates, {
-    fields: [exercise_slots.template_id],
-    references: [workout_templates.id],
-  }),
-  exercise: one(exercises, {
-    fields: [exercise_slots.exercise_id],
-    references: [exercises.id],
-  }),
-  section: one(template_sections, {
-    fields: [exercise_slots.section_id],
-    references: [template_sections.id],
-  }),
-}))
+export const exercise_slotsRelations = relations(
+  exercise_slots,
+  ({ one, many }) => ({
+    template: one(workout_templates, {
+      fields: [exercise_slots.template_id],
+      references: [workout_templates.id],
+    }),
+    exercise: one(exercises, {
+      fields: [exercise_slots.exercise_id],
+      references: [exercises.id],
+    }),
+    section: one(template_sections, {
+      fields: [exercise_slots.section_id],
+      references: [template_sections.id],
+    }),
+    slot_week_overrides: many(slot_week_overrides),
+  })
+)
+
+export const slot_week_overridesRelations = relations(
+  slot_week_overrides,
+  ({ one }) => ({
+    exercise_slot: one(exercise_slots, {
+      fields: [slot_week_overrides.exercise_slot_id],
+      references: [exercise_slots.id],
+    }),
+  })
+)
 
 export const exercisesRelations = relations(exercises, ({ many }) => ({
   exercise_slots: many(exercise_slots),
