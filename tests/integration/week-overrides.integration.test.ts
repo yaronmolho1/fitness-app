@@ -1,16 +1,15 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
-import { eq } from 'drizzle-orm'
 import * as schema from '../../lib/db/schema'
 import * as relationsModule from '../../lib/db/relations'
+import type { AppDb } from '../../lib/db'
 import {
   upsertWeekOverride,
   deleteWeekOverride,
   getWeekOverrides,
 } from '../../lib/progression/week-overrides'
 
-type TestDb = ReturnType<typeof drizzle<typeof fullSchema>>
 const fullSchema = { ...schema, ...relationsModule }
 
 const CREATE_SQL = `
@@ -86,13 +85,13 @@ const CREATE_SQL = `
 
 describe('week override CRUD', () => {
   let sqlite: Database.Database
-  let db: TestDb
+  let db: AppDb
   let slotId: number
 
   beforeAll(() => {
     sqlite = new Database(':memory:')
     sqlite.pragma('foreign_keys = ON')
-    db = drizzle(sqlite, { schema: fullSchema })
+    db = drizzle(sqlite, { schema: fullSchema }) as AppDb
     sqlite.exec(CREATE_SQL)
   })
 
