@@ -115,6 +115,32 @@ export const exercise_slots = sqliteTable('exercise_slots', {
   created_at: integer('created_at', { mode: 'timestamp' }),
 })
 
+export const slot_week_overrides = sqliteTable(
+  'slot_week_overrides',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    exercise_slot_id: integer('exercise_slot_id')
+      .notNull()
+      .references(() => exercise_slots.id, { onDelete: 'cascade' }),
+    week_number: integer('week_number').notNull(),
+    weight: real('weight'),
+    reps: text('reps'),
+    sets: integer('sets'),
+    rpe: real('rpe'),
+    distance: real('distance'),
+    duration: integer('duration'),
+    pace: text('pace'),
+    is_deload: integer('is_deload').notNull().default(0),
+    created_at: integer('created_at', { mode: 'timestamp' }),
+  },
+  (t) => ({
+    uniq: uniqueIndex('slot_week_overrides_slot_week_idx').on(
+      t.exercise_slot_id,
+      t.week_number
+    ),
+  })
+)
+
 export const weekly_schedule = sqliteTable(
   'weekly_schedule',
   {
