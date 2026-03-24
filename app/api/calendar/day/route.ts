@@ -16,8 +16,8 @@ export async function GET(request: Request) {
       )
     }
 
-    const result = await getDayDetail(db, date)
-    return NextResponse.json(result)
+    const results = await getDayDetail(db, date)
+    return NextResponse.json(results)
   } catch {
     return NextResponse.json(
       { error: 'Internal server error' },
