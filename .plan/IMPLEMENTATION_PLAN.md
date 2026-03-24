@@ -1,6 +1,6 @@
 # Implementation Plan
 
-> 125 tasks across 22 waves (Wave 0 infra + 14 feature waves + 3 UI overhaul + 3 UI redesign + 4 enhancement waves). Each feature task = one TDD cycle.
+> 144 tasks across 26 waves (Wave 0 infra + 14 feature waves + 3 UI overhaul + 3 UI redesign + 4 enhancement waves + 4 P3 waves). Each feature task = one TDD cycle.
 > Waves are sequential; tracks within a wave are parallel.
 
 ## Critical Path
@@ -696,3 +696,110 @@ T136 → T139 (estimated: S + M = ~6-10h)
 | Small | 3 | 1-3h | ~6h |
 | Medium | 2 | 4-8h | ~12h |
 | **Total** | **5** | | **~18h** |
+
+---
+
+## Wave P3.1: Mixed Template Section Fixes
+
+> Bug fixes for mixed template form + section_id plumbing. All tasks parallel (no interdependencies).
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T140 | Mixed template form alignment: add `<Label>` to section name field in mixed-template-form.tsx to match modality dropdown's label. Both fields aligned in 2-col grid. | small | Bug Fix | — | mixed-template-section-fixes |
+| T141 | Add `section_id` parameter to `addExerciseSlot` SA: extend `addSlotSchema` and `AddExerciseSlotInput` type with optional `section_id`. Validate section exists and belongs to template. Pass through to insert. Backward compatible (null for pure resistance). | small | Bug Fix | — | mixed-template-section-fixes |
+| T142 | ExercisePicker modality prop: replace hardcoded `'resistance'` filter with a `modality` prop. SlotList passes section modality when in section context, defaults to `'resistance'` for pure templates. | small | Bug Fix | — | mixed-template-section-fixes |
+
+## Wave P3.2: Mixed Template Section Editing UI
+
+> Depends on P3.1. Renders full editing UI per section in mixed templates.
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T143 | Mixed template section editing UI: replace read-only summary (template-section.tsx:813-841) with modality-specific editors per section. Resistance sections render SlotList (with section_id context). Running sections render editable running fields. MMA sections render editable duration. Each section gets its own add/edit/remove controls. Pass section context (section_id, modality) through to SlotList and ExercisePicker. | medium | Bug Fix | T141, T142 | mixed-template-section-fixes |
+
+## Wave P3.3: Calendar Multi-Workout Display
+
+> Independent of P3.1/P3.2. Three sequential tasks.
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T144 | Day detail query: change `getDayDetail()` in day-detail.ts to return all schedule entries for a day (`.all()` instead of `.get()`). Query all logged workouts for the date. Return array of `DayDetailResult` items with `period` field. Handle mix of projected + completed entries. | small | Bug Fix | — | calendar-multi-workout-display |
+| T145 | Day detail API array response: update `/api/calendar/day` route handler to return array. Update `DayDetailResult` type exports. Ensure backward compatibility — single-workout days return array with one element. | small | Bug Fix | T144 | calendar-multi-workout-display |
+| T146 | DayDetailPanel expandable cards: refactor panel to render one collapsible card per workout. Card header: template name + modality badge + period label (AM/PM/EVE). Collapsed by default when multi-workout; expanded by default when single. Click toggles expand/collapse. Each card reuses existing SlotRow, RunningDetail, MmaDetail, CompletedExerciseRow components. | medium | Enhancement | T145 | calendar-multi-workout-display |
+
+## Wave P3.4: Exercise Slot Transfer
+
+> Depends on T141 (section_id in addExerciseSlot). Four tasks, partially parallel.
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T147 | Copy/move exercise slot server actions: `copyExerciseSlots(slotIds, targetTemplateId, targetSectionId?)` and `moveExerciseSlots(same)`. Validate target template/meso not completed, source meso not completed (for move). Copy slot fields, remap section_id + group_id (reuse pattern from copy-actions.ts:140-184). Move = copy + delete source in single transaction. Reorder remaining source slots after move. | medium | Feature | T141 | exercise-slot-transfer |
+| T148 | Target picker modal component: 3-step selection (mesocycle → template → section). Loads active/planned mesocycles, filters templates to compatible modalities (resistance or mixed with resistance sections). Section step only for mixed targets. Confirm button triggers copy/move SA. | medium | Feature | T147 | exercise-slot-transfer |
+| T149 | Slot context menu integration: add "Copy to..." and "Move to..." actions to slot-list.tsx exercise dropdown/context menu. Wire to target picker modal. Show operation result via Sonner toast. | small | Feature | T148 | exercise-slot-transfer |
+| T150 | Superset group transfer: when selected slot has group_id, prompt "This exercise only" vs "Entire superset". If entire group: collect all slots sharing group_id, pass all to copyExerciseSlots/moveExerciseSlots. New group_id assigned sequentially after target's max. group_rest_seconds transferred with group. | small | Feature | T147 | exercise-slot-transfer |
+
+## Wave P3.5: Intra-Phase Progression
+
+> Largest feature. 8 tasks across 3 sub-waves. Schema first, then backend, then UI.
+
+### Sub-wave P3.5a — Schema
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T151 | `slot_week_overrides` table: schema in lib/db/schema.ts. Columns: id (PK), exercise_slot_id (FK → exercise_slots, CASCADE delete), week_number (integer), weight (real), reps (text), sets (integer), rpe (real), distance (real), duration (integer), pace (text), is_deload (integer, default 0), created_at. Unique on (exercise_slot_id, week_number). Add defineRelations. Generate + apply migration. | small | Feature | — | intra-phase-progression |
+
+### Sub-wave P3.5b — Backend
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T152 | Week override CRUD: server actions `upsertWeekOverride(slotId, weekNumber, fields)` and `deleteWeekOverride(slotId, weekNumber)`. Query `getWeekOverrides(slotId)` returns all overrides for a slot. Merge helper: `mergeSlotWithOverride(baseSlot, override)` returns effective values (override field if non-null, else base). Deload default calculation: 60% weight, 50% sets, RPE −2. | medium | Feature | T151 | intra-phase-progression |
+| T153 | Today view week override merge: in `getTodayWorkout()` (lib/today/queries.ts), after loading slots, query slot_week_overrides for the current week_number. Merge override values into slot response. Week number already computed at line 185-202. Slots without overrides return base values unchanged. | small | Feature | T152 | intra-phase-progression |
+| T154 | Calendar day detail merge: in `getDayDetail()` (lib/calendar/day-detail.ts), for projected results, query slot_week_overrides and merge into slot data. Week number already computed at line 142. | small | Feature | T152 | intra-phase-progression |
+| T155 | Logging snapshot: add `week_number_in_meso` field to template_snapshot JSON. Snapshot captures effective (merged) values for that week, not base. Bump snapshot version. | small | Feature | T152 | intra-phase-progression |
+| T156 | Template copy includes overrides: extend `copyTemplateToMesocycle` in copy-actions.ts to also copy slot_week_overrides rows, remapping exercise_slot_id to new slot IDs. | small | Feature | T152 | intra-phase-progression |
+
+### Sub-wave P3.5c — UI + Cascade
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T157 | Plan Weeks grid UI: new `week-progression-grid.tsx` component. Opens from "Plan Weeks" button on exercise slot. Grid: rows = weeks (1..work_weeks + deload if enabled), columns = overrideable fields (weight/reps/sets/RPE for resistance; distance/duration/pace for running). Week 1 pre-filled with base. Deload pre-filled with defaults. Edits call upsertWeekOverride SA. Empty/cleared fields delete override. Read-only in completed mesocycles. | medium | Feature | T152 | intra-phase-progression |
+| T158 | Cascade override warning: when editing a base slot that has existing week overrides, show confirmation dialog: "This exercise has per-week progression values. Keep existing overrides or clear them?" Options: keep, clear all. Wire into updateExerciseSlot SA flow. | small | Feature | T152 | intra-phase-progression |
+
+## Wave P3 Dependency Graph
+
+```
+T140 (form alignment) ── standalone
+T141 (section_id SA) ── T143 (section editing UI)
+                     └── T147 (copy/move SA) → T148 (target picker) → T149 (context menu)
+                                             └── T150 (superset transfer)
+T142 (picker modality) ── T143 (section editing UI)
+
+T144 (day detail query) → T145 (API array) → T146 (expandable cards)
+
+T151 (schema) → T152 (CRUD SA)
+                ├── T153 (today merge)
+                ├── T154 (calendar merge)
+                ├── T155 (snapshot)
+                ├── T156 (template copy)
+                ├── T157 (Plan Weeks UI)
+                └── T158 (cascade warning)
+```
+
+## Wave P3 Critical Path
+
+T151 → T152 → T157 (schema → CRUD → Plan Weeks UI, estimated: S + M + M = ~10-16h)
+
+## Wave P3 Risk Areas
+
+- **T143 (section editing UI)**: Largest refactor — replacing read-only mixed template summary with per-section editors. template-section.tsx is already the largest component (~850 lines). May need to extract section renderers into sub-components.
+- **T146 (expandable cards)**: DayDetailPanel currently expects single result. Changing to array affects fetch, state, and all conditional rendering blocks. Breaking change to API response shape.
+- **T152 (week override CRUD)**: Merge logic touches hot paths (today + calendar). Must ensure zero performance regression when no overrides exist (the common case).
+- **T157 (Plan Weeks grid)**: New UI component with week×field grid. Many input fields — must handle numeric validation consistently (reuse T135 number input patterns).
+
+## Wave P3 Scope Summary
+
+| Scope | Count | Est. Hours Each | Total |
+|-------|-------|-----------------|-------|
+| Small | 12 | 1-3h | ~24h |
+| Medium | 7 | 4-8h | ~42h |
+| **Total** | **19** | | **~66h** |
