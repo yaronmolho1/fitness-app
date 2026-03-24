@@ -72,6 +72,7 @@ describe('DayDetailPanel', () => {
         { exercise_name: 'Incline DB Press', sets: 3, reps: '10-12', weight: 30, rpe: 7, rest_seconds: 90, guidelines: null, order: 2, is_main: false },
       ],
       is_deload: false,
+      period: 'morning',
     }
     mockFetchResponse(projected)
 
@@ -120,6 +121,7 @@ describe('DayDetailPanel', () => {
       },
       slots: [],
       is_deload: false,
+      period: 'morning',
     }
     mockFetchResponse(projected)
 
@@ -158,6 +160,7 @@ describe('DayDetailPanel', () => {
       },
       slots: [],
       is_deload: false,
+      period: 'morning',
     }
     mockFetchResponse(projected)
 
@@ -204,6 +207,7 @@ describe('DayDetailPanel', () => {
       rating: 4,
       notes: 'Great session',
       is_deload: false,
+      period: 'morning',
     }
     mockFetchResponse(completed)
 
@@ -248,6 +252,7 @@ describe('DayDetailPanel', () => {
       rating: null,
       notes: null,
       is_deload: false,
+      period: 'morning',
     }
     mockFetchResponse(completed)
 
@@ -283,6 +288,7 @@ describe('DayDetailPanel', () => {
       },
       slots: [],
       is_deload: true,
+      period: 'morning',
     }
     mockFetchResponse(projected)
 
@@ -331,6 +337,7 @@ describe('DayDetailPanel', () => {
         },
         slots: [],
         is_deload: false,
+        period: 'morning',
       }
       mockFetchResponse(projected)
 
@@ -362,6 +369,7 @@ describe('DayDetailPanel', () => {
         },
         slots: [],
         is_deload: false,
+        period: 'morning',
       }
       mockFetchResponse(projected)
 
@@ -444,6 +452,7 @@ describe('DayDetailPanel', () => {
         rating: 4,
         notes: null,
         is_deload: false,
+        period: 'morning',
       }
       mockFetchResponse(completed)
 
@@ -474,6 +483,7 @@ describe('DayDetailPanel', () => {
         rating: 4,
         notes: null,
         is_deload: false,
+        period: 'morning',
       }
       mockFetchResponse(completed)
 

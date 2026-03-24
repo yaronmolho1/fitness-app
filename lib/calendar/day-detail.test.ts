@@ -137,9 +137,9 @@ describe('getDayDetail', () => {
   // ============================================================================
 
   it('returns rest state when no mesocycle covers date', async () => {
-    const result = await getDayDetail(db, '2026-03-10')
-    expect(result.type).toBe('rest')
-    expect(result.date).toBe('2026-03-10')
+    const results = await getDayDetail(db, '2026-03-10')
+    expect(results[0].type).toBe('rest')
+    expect(results[0].date).toBe('2026-03-10')
   })
 
   it('returns rest state when mesocycle exists but no schedule for that day', async () => {
@@ -152,8 +152,8 @@ describe('getDayDetail', () => {
       VALUES (1, 0, 1, 'normal');
     `)
     // 2026-03-03 is Tuesday, no schedule
-    const result = await getDayDetail(db, '2026-03-03')
-    expect(result.type).toBe('rest')
+    const results = await getDayDetail(db, '2026-03-03')
+    expect(results[0].type).toBe('rest')
   })
 
   // ============================================================================
@@ -176,7 +176,7 @@ describe('getDayDetail', () => {
       VALUES (1, 0, 1, 'normal');
     `)
 
-    const result = await getDayDetail(db, '2026-03-02')
+    const result = (await getDayDetail(db, '2026-03-02'))[0]
     expect(result.type).toBe('projected')
     if (result.type !== 'projected') return
 
@@ -215,7 +215,7 @@ describe('getDayDetail', () => {
       VALUES (1, 0, 1, 'normal');
     `)
 
-    const result = await getDayDetail(db, '2026-03-02')
+    const result = (await getDayDetail(db, '2026-03-02'))[0]
     expect(result.type).toBe('projected')
     if (result.type !== 'projected') return
 
@@ -240,7 +240,7 @@ describe('getDayDetail', () => {
       VALUES (1, 0, 1, 'normal');
     `)
 
-    const result = await getDayDetail(db, '2026-03-02')
+    const result = (await getDayDetail(db, '2026-03-02'))[0]
     expect(result.type).toBe('projected')
     if (result.type !== 'projected') return
 
@@ -274,7 +274,7 @@ describe('getDayDetail', () => {
       VALUES (1, 1, 'push-a', '2026-03-02', 1740900000, 4, 'Great session', '${snapshot}');
     `)
 
-    const result = await getDayDetail(db, '2026-03-02')
+    const result = (await getDayDetail(db, '2026-03-02'))[0]
     expect(result.type).toBe('completed')
     if (result.type !== 'completed') return
 
@@ -319,7 +319,7 @@ describe('getDayDetail', () => {
       VALUES (1, 3, 8, 82.5);
     `)
 
-    const result = await getDayDetail(db, '2026-03-02')
+    const result = (await getDayDetail(db, '2026-03-02'))[0]
     expect(result.type).toBe('completed')
     if (result.type !== 'completed') return
 
@@ -361,7 +361,7 @@ describe('getDayDetail', () => {
       VALUES (1, 1, 'push-a', '2026-03-02', 1740900000, '${snapshot}');
     `)
 
-    const result = await getDayDetail(db, '2026-03-02')
+    const result = (await getDayDetail(db, '2026-03-02'))[0]
     expect(result.type).toBe('completed')
     if (result.type !== 'completed') return
 
@@ -382,8 +382,8 @@ describe('getDayDetail', () => {
       VALUES (1, 0, null, 'normal');
     `)
 
-    const result = await getDayDetail(db, '2026-03-02')
-    expect(result.type).toBe('rest')
+    const results = await getDayDetail(db, '2026-03-02')
+    expect(results[0].type).toBe('rest')
   })
 
   // ============================================================================
@@ -408,7 +408,7 @@ describe('getDayDetail', () => {
     `)
 
     // 2026-03-09 is Monday in deload week
-    const result = await getDayDetail(db, '2026-03-09')
+    const result = (await getDayDetail(db, '2026-03-09'))[0]
     expect(result.type).toBe('projected')
     if (result.type !== 'projected') return
 
@@ -439,7 +439,7 @@ describe('getDayDetail', () => {
       VALUES (1, 0, 1, 'normal');
     `)
 
-    const result = await getDayDetail(db, '2026-03-02')
+    const result = (await getDayDetail(db, '2026-03-02'))[0]
     if (result.type !== 'projected') return
 
     expect(result.slots[0].exercise_name).toBe('Bench Press')
@@ -462,7 +462,7 @@ describe('getDayDetail', () => {
       VALUES (1, 0, 1, 'normal');
     `)
 
-    const result = await getDayDetail(db, '2026-03-02')
+    const result = (await getDayDetail(db, '2026-03-02'))[0]
     if (result.type !== 'projected') return
     expect(result.is_deload).toBe(false)
   })
@@ -481,7 +481,7 @@ describe('getDayDetail', () => {
       VALUES (1, 0, 1, 'normal');
     `)
 
-    const result = await getDayDetail(db, '2026-03-02')
+    const result = (await getDayDetail(db, '2026-03-02'))[0]
     expect(result.type).toBe('projected')
     if (result.type !== 'projected') return
     expect(result.mesocycle_id).toBe(1)
@@ -506,7 +506,7 @@ describe('getDayDetail', () => {
       VALUES (1, 1, 'push-a', '2026-03-02', 1740900000, '${snapshot}');
     `)
 
-    const result = await getDayDetail(db, '2026-03-02')
+    const result = (await getDayDetail(db, '2026-03-02'))[0]
     expect(result.type).toBe('completed')
     if (result.type !== 'completed') return
     expect(result.mesocycle_id).toBe(1)
@@ -524,7 +524,7 @@ describe('getDayDetail', () => {
     `)
 
     // 2026-03-03 is Tuesday, no schedule entry
-    const result = await getDayDetail(db, '2026-03-03')
+    const result = (await getDayDetail(db, '2026-03-03'))[0]
     expect(result.type).toBe('rest')
     if (result.type !== 'rest') return
     expect(result.mesocycle_id).toBe(1)
@@ -532,10 +532,172 @@ describe('getDayDetail', () => {
   })
 
   it('rest day outside any mesocycle has no mesocycle_id', async () => {
-    const result = await getDayDetail(db, '2026-03-10')
+    const result = (await getDayDetail(db, '2026-03-10'))[0]
     expect(result.type).toBe('rest')
     if (result.type !== 'rest') return
     expect(result.mesocycle_id).toBeUndefined()
     expect(result.mesocycle_status).toBeUndefined()
+  })
+
+  // ============================================================================
+  // T144: Multi-workout — returns array, period field, multiple entries
+  // ============================================================================
+
+  it('returns an array (not single object)', async () => {
+    const results = await getDayDetail(db, '2026-03-10')
+    expect(Array.isArray(results)).toBe(true)
+  })
+
+  it('returns array with single rest entry when no mesocycle', async () => {
+    const results = await getDayDetail(db, '2026-03-10')
+    expect(results).toHaveLength(1)
+    expect(results[0].type).toBe('rest')
+  })
+
+  it('projected result includes period field', async () => {
+    sqlite.exec(`
+      INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
+      VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
+      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+      VALUES (1, 1, 'Push A', 'push-a', 'resistance');
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
+      VALUES (1, 0, 1, 'normal', 'morning');
+    `)
+
+    const results = await getDayDetail(db, '2026-03-02')
+    expect(results).toHaveLength(1)
+    expect(results[0].type).toBe('projected')
+    if (results[0].type !== 'projected') return
+    expect(results[0].period).toBe('morning')
+  })
+
+  it('returns multiple projected entries for same day with different periods', async () => {
+    sqlite.exec(`
+      INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
+      VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
+      INSERT INTO exercises (id, name, modality) VALUES (1, 'Bench Press', 'resistance');
+      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+      VALUES (1, 1, 'Push A', 'push-a', 'resistance');
+      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality, planned_duration)
+      VALUES (2, 1, 'Evening Run', 'evening-run', 'running', 30);
+      INSERT INTO exercise_slots (template_id, exercise_id, sets, reps, "order", is_main)
+      VALUES (1, 1, 4, '6-8', 1, 1);
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
+      VALUES (1, 0, 1, 'normal', 'morning');
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
+      VALUES (1, 0, 2, 'normal', 'evening');
+    `)
+
+    const results = await getDayDetail(db, '2026-03-02')
+    expect(results).toHaveLength(2)
+
+    // Ordered by period: morning, afternoon, evening
+    expect(results[0].type).toBe('projected')
+    expect(results[1].type).toBe('projected')
+    if (results[0].type !== 'projected' || results[1].type !== 'projected') return
+
+    expect(results[0].period).toBe('morning')
+    expect(results[0].template.name).toBe('Push A')
+    expect(results[0].slots).toHaveLength(1)
+
+    expect(results[1].period).toBe('evening')
+    expect(results[1].template.name).toBe('Evening Run')
+  })
+
+  it('returns multiple logged workouts on same date', async () => {
+    const snapshot1 = JSON.stringify({ version: 1, name: 'Push A', modality: 'resistance' })
+    const snapshot2 = JSON.stringify({ version: 1, name: 'Easy Run', modality: 'running' })
+
+    sqlite.exec(`
+      INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
+      VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
+      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+      VALUES (1, 1, 'Push A', 'push-a', 'resistance');
+      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+      VALUES (2, 1, 'Easy Run', 'easy-run', 'running');
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
+      VALUES (1, 0, 1, 'normal', 'morning');
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
+      VALUES (1, 0, 2, 'normal', 'evening');
+      INSERT INTO logged_workouts (id, template_id, canonical_name, log_date, logged_at, template_snapshot)
+      VALUES (1, 1, 'push-a', '2026-03-02', 1740900000, '${snapshot1}');
+      INSERT INTO logged_workouts (id, template_id, canonical_name, log_date, logged_at, template_snapshot)
+      VALUES (2, 2, 'easy-run', '2026-03-02', 1740910000, '${snapshot2}');
+    `)
+
+    const results = await getDayDetail(db, '2026-03-02')
+    // Both should be completed
+    const completed = results.filter(r => r.type === 'completed')
+    expect(completed).toHaveLength(2)
+  })
+
+  it('returns mix of completed and projected on same day', async () => {
+    const snapshot = JSON.stringify({ version: 1, name: 'Push A', modality: 'resistance' })
+
+    sqlite.exec(`
+      INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
+      VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
+      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+      VALUES (1, 1, 'Push A', 'push-a', 'resistance');
+      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+      VALUES (2, 1, 'Easy Run', 'easy-run', 'running');
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
+      VALUES (1, 0, 1, 'normal', 'morning');
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
+      VALUES (1, 0, 2, 'normal', 'evening');
+      INSERT INTO logged_workouts (id, template_id, canonical_name, log_date, logged_at, template_snapshot)
+      VALUES (1, 1, 'push-a', '2026-03-02', 1740900000, '${snapshot}');
+    `)
+
+    const results = await getDayDetail(db, '2026-03-02')
+    expect(results).toHaveLength(2)
+    const types = results.map(r => r.type).sort()
+    expect(types).toEqual(['completed', 'projected'])
+  })
+
+  it('rest within mesocycle returns single rest entry', async () => {
+    sqlite.exec(`
+      INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
+      VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
+      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+      VALUES (1, 1, 'Push A', 'push-a', 'resistance');
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
+      VALUES (1, 0, 1, 'normal', 'morning');
+    `)
+
+    // Tuesday — no schedule
+    const results = await getDayDetail(db, '2026-03-03')
+    expect(results).toHaveLength(1)
+    expect(results[0].type).toBe('rest')
+  })
+
+  it('three workouts all periods returns all in period order', async () => {
+    sqlite.exec(`
+      INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
+      VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
+      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+      VALUES (1, 1, 'Morning Lift', 'morning-lift', 'resistance');
+      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+      VALUES (2, 1, 'Afternoon BJJ', 'afternoon-bjj', 'mma');
+      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+      VALUES (3, 1, 'Evening Run', 'evening-run', 'running');
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
+      VALUES (1, 0, 1, 'normal', 'morning');
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
+      VALUES (1, 0, 2, 'normal', 'afternoon');
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
+      VALUES (1, 0, 3, 'normal', 'evening');
+    `)
+
+    const results = await getDayDetail(db, '2026-03-02')
+    expect(results).toHaveLength(3)
+    if (results[0].type !== 'projected' || results[1].type !== 'projected' || results[2].type !== 'projected') return
+
+    expect(results[0].period).toBe('morning')
+    expect(results[0].template.name).toBe('Morning Lift')
+    expect(results[1].period).toBe('afternoon')
+    expect(results[1].template.name).toBe('Afternoon BJJ')
+    expect(results[2].period).toBe('evening')
+    expect(results[2].template.name).toBe('Evening Run')
   })
 })

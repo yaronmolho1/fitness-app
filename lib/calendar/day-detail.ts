@@ -79,11 +79,14 @@ type RestResult = {
   mesocycle_status?: MesocycleStatus
 }
 
+type Period = 'morning' | 'afternoon' | 'evening'
+
 type ProjectedResult = {
   type: 'projected'
   date: string
   mesocycle_id: number
   mesocycle_status: MesocycleStatus
+  period: Period
   template: TemplateDetail
   slots: SlotDetail[]
   is_deload: boolean
@@ -94,6 +97,7 @@ type CompletedResult = {
   date: string
   mesocycle_id: number
   mesocycle_status: MesocycleStatus
+  period: Period
   snapshot: TemplateSnapshot
   exercises: LoggedExerciseDetail[]
   rating: number | null
@@ -115,10 +119,13 @@ function daysBetween(startDate: string, date: string): number {
   return Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
 }
 
+// Period sort order for deterministic output
+const PERIOD_ORDER: Record<string, number> = { morning: 0, afternoon: 1, evening: 2 }
+
 export async function getDayDetail(
   database: AppDb,
   date: string
-): Promise<DayDetailResult> {
+): Promise<DayDetailResult[]> {
   // Find mesocycle covering this date
   const meso = database
     .select({
@@ -134,7 +141,7 @@ export async function getDayDetail(
     .get()
 
   if (!meso) {
-    return { type: 'rest', date }
+    return [{ type: 'rest', date }]
   }
 
   // Determine week type (normal vs deload)
@@ -146,10 +153,11 @@ export async function getDayDetail(
 
   const dow = isoDayOfWeek(date)
 
-  // Check schedule
-  const schedEntry = database
+  // Get all schedule entries for this day
+  const schedEntries = database
     .select({
       template_id: weekly_schedule.template_id,
+      period: weekly_schedule.period,
     })
     .from(weekly_schedule)
     .where(
@@ -159,135 +167,180 @@ export async function getDayDetail(
         eq(weekly_schedule.week_type, weekType)
       )
     )
-    .get()
+    .all()
+    .filter(e => e.template_id != null)
 
   const mesoStatus = meso.status as MesocycleStatus
 
-  if (!schedEntry || !schedEntry.template_id) {
-    return { type: 'rest', date, mesocycle_id: meso.id, mesocycle_status: mesoStatus }
+  if (schedEntries.length === 0) {
+    return [{ type: 'rest', date, mesocycle_id: meso.id, mesocycle_status: mesoStatus }]
   }
 
-  // Check if completed (logged workout exists for this date)
-  const loggedWorkout = database
+  // Get all logged workouts for this date
+  const loggedWorkouts = database
     .select({
       id: logged_workouts.id,
+      template_id: logged_workouts.template_id,
       rating: logged_workouts.rating,
       notes: logged_workouts.notes,
       template_snapshot: logged_workouts.template_snapshot,
     })
     .from(logged_workouts)
     .where(eq(logged_workouts.log_date, date))
-    .get()
+    .all()
 
-  if (loggedWorkout) {
-    // Fetch logged exercises + sets
-    const loggedExerciseRows = database
+  // Index logged workouts by template_id for matching
+  const loggedByTemplateId = new Map<number, typeof loggedWorkouts[number]>()
+  for (const lw of loggedWorkouts) {
+    if (lw.template_id != null) {
+      loggedByTemplateId.set(lw.template_id, lw)
+    }
+  }
+
+  const results: DayDetailResult[] = []
+
+  for (const entry of schedEntries) {
+    const period = (entry.period ?? 'morning') as Period
+    const templateId = entry.template_id!
+
+    // Check if this schedule entry has a logged workout
+    const loggedWorkout = loggedByTemplateId.get(templateId)
+
+    if (loggedWorkout) {
+      const completedResult = buildCompletedResult(
+        database, loggedWorkout, date, meso.id, mesoStatus, period, isDeload
+      )
+      if (completedResult) {
+        results.push(completedResult)
+        continue
+      }
+    }
+
+    // Projected — load live template
+    const template = database
       .select({
-        id: logged_exercises.id,
-        exercise_name: logged_exercises.exercise_name,
-        order: logged_exercises.order,
-        actual_rpe: logged_exercises.actual_rpe,
+        id: workout_templates.id,
+        name: workout_templates.name,
+        modality: workout_templates.modality,
+        notes: workout_templates.notes,
+        run_type: workout_templates.run_type,
+        target_pace: workout_templates.target_pace,
+        hr_zone: workout_templates.hr_zone,
+        interval_count: workout_templates.interval_count,
+        interval_rest: workout_templates.interval_rest,
+        coaching_cues: workout_templates.coaching_cues,
+        planned_duration: workout_templates.planned_duration,
       })
-      .from(logged_exercises)
-      .where(eq(logged_exercises.logged_workout_id, loggedWorkout.id))
-      .orderBy(asc(logged_exercises.order))
+      .from(workout_templates)
+      .where(eq(workout_templates.id, templateId))
+      .get()
+
+    if (!template) continue
+
+    // Load exercise slots
+    const slots = database
+      .select({
+        exercise_name: exercises.name,
+        sets: exercise_slots.sets,
+        reps: exercise_slots.reps,
+        weight: exercise_slots.weight,
+        rpe: exercise_slots.rpe,
+        rest_seconds: exercise_slots.rest_seconds,
+        guidelines: exercise_slots.guidelines,
+        order: exercise_slots.order,
+        is_main: exercise_slots.is_main,
+      })
+      .from(exercise_slots)
+      .innerJoin(exercises, eq(exercise_slots.exercise_id, exercises.id))
+      .where(eq(exercise_slots.template_id, template.id))
+      .orderBy(asc(exercise_slots.order))
       .all()
+      .map((row) => ({ ...row, is_main: Boolean(row.is_main) })) as SlotDetail[]
 
-    const exercisesWithSets: LoggedExerciseDetail[] = []
-    for (const ex of loggedExerciseRows) {
-      const sets = database
-        .select({
-          set_number: logged_sets.set_number,
-          actual_reps: logged_sets.actual_reps,
-          actual_weight: logged_sets.actual_weight,
-        })
-        .from(logged_sets)
-        .where(eq(logged_sets.logged_exercise_id, ex.id))
-        .orderBy(asc(logged_sets.set_number))
-        .all()
-
-      exercisesWithSets.push({
-        exercise_name: ex.exercise_name,
-        order: ex.order,
-        actual_rpe: ex.actual_rpe,
-        sets,
-      })
-    }
-
-    const snapshot = loggedWorkout.template_snapshot as unknown
-    if (
-      typeof snapshot !== 'object' ||
-      snapshot === null ||
-      !('version' in snapshot) ||
-      typeof (snapshot as Record<string, unknown>).version !== 'number'
-    ) {
-      // Corrupted or missing snapshot — treat as rest
-      return { type: 'rest', date }
-    }
-
-    return {
-      type: 'completed',
+    results.push({
+      type: 'projected',
       date,
       mesocycle_id: meso.id,
       mesocycle_status: mesoStatus,
-      snapshot: snapshot as TemplateSnapshot,
-      exercises: exercisesWithSets,
-      rating: loggedWorkout.rating,
-      notes: loggedWorkout.notes,
+      period,
+      template,
+      slots,
       is_deload: isDeload,
-    }
+    })
   }
 
-  // Projected — load live template
-  const template = database
-    .select({
-      id: workout_templates.id,
-      name: workout_templates.name,
-      modality: workout_templates.modality,
-      notes: workout_templates.notes,
-      run_type: workout_templates.run_type,
-      target_pace: workout_templates.target_pace,
-      hr_zone: workout_templates.hr_zone,
-      interval_count: workout_templates.interval_count,
-      interval_rest: workout_templates.interval_rest,
-      coaching_cues: workout_templates.coaching_cues,
-      planned_duration: workout_templates.planned_duration,
-    })
-    .from(workout_templates)
-    .where(eq(workout_templates.id, schedEntry.template_id))
-    .get()
+  // Sort by period order
+  results.sort((a, b) => {
+    const pa = 'period' in a ? PERIOD_ORDER[a.period] ?? 0 : 0
+    const pb = 'period' in b ? PERIOD_ORDER[b.period] ?? 0 : 0
+    return pa - pb
+  })
 
-  if (!template) {
-    return { type: 'rest', date }
-  }
+  return results.length > 0 ? results : [{ type: 'rest', date, mesocycle_id: meso.id, mesocycle_status: mesoStatus }]
+}
 
-  // Load exercise slots for resistance templates
-  const slots = database
+function buildCompletedResult(
+  database: AppDb,
+  loggedWorkout: { id: number; rating: number | null; notes: string | null; template_snapshot: unknown },
+  date: string,
+  mesoId: number,
+  mesoStatus: MesocycleStatus,
+  period: Period,
+  isDeload: boolean,
+): CompletedResult | null {
+  const loggedExerciseRows = database
     .select({
-      exercise_name: exercises.name,
-      sets: exercise_slots.sets,
-      reps: exercise_slots.reps,
-      weight: exercise_slots.weight,
-      rpe: exercise_slots.rpe,
-      rest_seconds: exercise_slots.rest_seconds,
-      guidelines: exercise_slots.guidelines,
-      order: exercise_slots.order,
-      is_main: exercise_slots.is_main,
+      id: logged_exercises.id,
+      exercise_name: logged_exercises.exercise_name,
+      order: logged_exercises.order,
+      actual_rpe: logged_exercises.actual_rpe,
     })
-    .from(exercise_slots)
-    .innerJoin(exercises, eq(exercise_slots.exercise_id, exercises.id))
-    .where(eq(exercise_slots.template_id, template.id))
-    .orderBy(asc(exercise_slots.order))
+    .from(logged_exercises)
+    .where(eq(logged_exercises.logged_workout_id, loggedWorkout.id))
+    .orderBy(asc(logged_exercises.order))
     .all()
-    .map((row) => ({ ...row, is_main: Boolean(row.is_main) })) as SlotDetail[]
+
+  const exercisesWithSets: LoggedExerciseDetail[] = []
+  for (const ex of loggedExerciseRows) {
+    const sets = database
+      .select({
+        set_number: logged_sets.set_number,
+        actual_reps: logged_sets.actual_reps,
+        actual_weight: logged_sets.actual_weight,
+      })
+      .from(logged_sets)
+      .where(eq(logged_sets.logged_exercise_id, ex.id))
+      .orderBy(asc(logged_sets.set_number))
+      .all()
+
+    exercisesWithSets.push({
+      exercise_name: ex.exercise_name,
+      order: ex.order,
+      actual_rpe: ex.actual_rpe,
+      sets,
+    })
+  }
+
+  const snapshot = loggedWorkout.template_snapshot as unknown
+  if (
+    typeof snapshot !== 'object' ||
+    snapshot === null ||
+    !('version' in snapshot) ||
+    typeof (snapshot as Record<string, unknown>).version !== 'number'
+  ) {
+    return null
+  }
 
   return {
-    type: 'projected',
+    type: 'completed',
     date,
-    mesocycle_id: meso.id,
+    mesocycle_id: mesoId,
     mesocycle_status: mesoStatus,
-    template,
-    slots,
+    period,
+    snapshot: snapshot as TemplateSnapshot,
+    exercises: exercisesWithSets,
+    rating: loggedWorkout.rating,
+    notes: loggedWorkout.notes,
     is_deload: isDeload,
   }
 }
