@@ -22,6 +22,8 @@ type SlotListProps = {
   templateId: number
   exercises: Exercise[]
   isCompleted: boolean
+  sectionId?: number
+  modality?: 'resistance' | 'running' | 'mma'
 }
 
 function getGroupLabel(count: number): string {
@@ -70,7 +72,7 @@ function groupSlots(slots: SlotWithExercise[]): GroupedItem[] {
   return items
 }
 
-export function SlotList({ slots, templateId, exercises, isCompleted }: SlotListProps) {
+export function SlotList({ slots, templateId, exercises, isCompleted, sectionId, modality }: SlotListProps) {
   const router = useRouter()
   const [showPicker, setShowPicker] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -220,6 +222,7 @@ export function SlotList({ slots, templateId, exercises, isCompleted }: SlotList
         exercise_id: exercise.id,
         sets: 3,
         reps: 10,
+        ...(sectionId != null && { section_id: sectionId }),
       })
       if (result.success) {
         setShowPicker(false)
@@ -505,6 +508,7 @@ export function SlotList({ slots, templateId, exercises, isCompleted }: SlotList
           <ExercisePicker
             exercises={exercises}
             onSelect={handleExerciseSelected}
+            {...(modality && { modality })}
           />
           {isPending && <p className="text-xs text-muted-foreground">Adding...</p>}
         </div>

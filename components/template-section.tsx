@@ -974,6 +974,8 @@ function MixedSectionRow({ section, slots, exercises, templateId, isCompleted, o
             templateId={templateId}
             exercises={exercises}
             isCompleted={isCompleted}
+            sectionId={section.id}
+            modality={section.modality}
           />
         </div>
       )}
