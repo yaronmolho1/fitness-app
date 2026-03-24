@@ -64,6 +64,8 @@ const defaultProps = {
   exercises: [],
   slotsByTemplate: {},
   isCompleted: false,
+  workWeeks: 4,
+  hasDeload: false,
 }
 
 describe('TemplateSection — expand-to-edit', () => {

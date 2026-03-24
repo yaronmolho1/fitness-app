@@ -71,6 +71,8 @@ const defaultProps = {
   exercises: [],
   slotsByTemplate: {},
   isCompleted: false,
+  workWeeks: 4,
+  hasDeload: false,
 }
 
 describe('TemplateSection — distance/duration inline edit (T129)', () => {

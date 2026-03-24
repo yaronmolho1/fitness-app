@@ -195,6 +195,7 @@ export function WeekProgressionGrid({
 }: WeekProgressionGridProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+  const [saveError, setSaveError] = useState('')
   const [weeks, setWeeks] = useState<WeekState[]>(() =>
     initWeeks(workWeeks, hasDeload, slot, runningBase)
   )
@@ -217,7 +218,7 @@ export function WeekProgressionGrid({
     return () => {
       cancelled = true
     }
-  }, [open, slot.id, slot, modality])
+  }, [open, slot.id, modality])
 
   const updateWeekField = useCallback(
     (weekNumber: number, field: string, value: string) => {
@@ -245,17 +246,18 @@ export function WeekProgressionGrid({
 
   function handleSave() {
     startTransition(async () => {
-      for (const week of weeks) {
+      setSaveError('')
+
+      const ops = weeks.map((week) => {
         const baseR = week.isDeload ? deloadResistanceBase : resistanceBase
 
         if (modality === 'resistance') {
           const differs = resistanceDiffersFromBase(week.resistance, baseR)
 
           if (!differs && week.weekNumber !== 1) {
-            // No difference from base — delete any existing override
-            await deleteWeekOverrideAction(slot.id, week.weekNumber)
+            return deleteWeekOverrideAction(slot.id, week.weekNumber)
           } else if (differs) {
-            await upsertWeekOverrideAction(slot.id, week.weekNumber, {
+            return upsertWeekOverrideAction(slot.id, week.weekNumber, {
               weight: week.resistance.weight === '' ? null : Number(week.resistance.weight),
               reps: week.resistance.reps === '' ? null : week.resistance.reps,
               sets: week.resistance.sets === '' ? null : Number(week.resistance.sets),
@@ -267,9 +269,9 @@ export function WeekProgressionGrid({
           const differs = runningDiffersFromBase(week.running, runBase)
 
           if (!differs && week.weekNumber !== 1) {
-            await deleteWeekOverrideAction(slot.id, week.weekNumber)
+            return deleteWeekOverrideAction(slot.id, week.weekNumber)
           } else if (differs) {
-            await upsertWeekOverrideAction(slot.id, week.weekNumber, {
+            return upsertWeekOverrideAction(slot.id, week.weekNumber, {
               distance: week.running.distance === '' ? null : Number(week.running.distance),
               duration: week.running.duration === '' ? null : Number(week.running.duration),
               pace: week.running.pace === '' ? null : week.running.pace,
@@ -277,6 +279,17 @@ export function WeekProgressionGrid({
             })
           }
         }
+        return null
+      })
+
+      const results = await Promise.all(ops.filter(Boolean))
+      const failed = results.find(
+        (r) => r && 'success' in r && !r.success
+      )
+
+      if (failed && 'error' in failed) {
+        setSaveError(failed.error)
+        return
       }
 
       router.refresh()
@@ -428,6 +441,10 @@ export function WeekProgressionGrid({
             </div>
           ))}
         </div>
+
+        {saveError && (
+          <p className="text-sm text-destructive" role="alert">{saveError}</p>
+        )}
 
         {!isCompleted && (
           <div className="flex justify-end gap-2 pt-2">

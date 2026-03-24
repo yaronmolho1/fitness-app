@@ -89,6 +89,8 @@ const defaultProps = {
   exercises: [],
   slotsByTemplate: {},
   isCompleted: false,
+  workWeeks: 4,
+  hasDeload: false,
 }
 
 describe('T143 — mixed template section inline editing', () => {
