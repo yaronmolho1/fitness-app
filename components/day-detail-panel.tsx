@@ -234,31 +234,32 @@ function WorkoutCard({
 
   return (
     <Collapsible open={open} onOpenChange={setOpen} data-testid="workout-card">
-      <CollapsibleTrigger
-        className="flex w-full items-center gap-2 rounded-lg border border-border bg-card px-3 py-2.5 text-left hover:bg-accent/50 transition-colors"
-        data-testid="workout-card-trigger"
-      >
-        <span className="font-semibold text-sm flex-1">{name}</span>
-        {modality && <ModalityBadge modality={modality} />}
-        {detail.is_deload && <Badge variant="outline">Deload</Badge>}
-        <Badge variant="outline" className="text-[0.65rem] px-1.5 py-0 font-medium">
-          {periodLabel[detail.period]}
-        </Badge>
+      <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2.5">
+        <CollapsibleTrigger
+          className="flex flex-1 items-center gap-2 text-left hover:bg-accent/50 -m-1 p-1 rounded transition-colors"
+          data-testid="workout-card-trigger"
+        >
+          <span className="font-semibold text-sm flex-1">{name}</span>
+          {modality && <ModalityBadge modality={modality} />}
+          {detail.is_deload && <Badge variant="outline">Deload</Badge>}
+          <Badge variant="outline" className="text-[0.65rem] px-1.5 py-0 font-medium">
+            {periodLabel[detail.period]}
+          </Badge>
+          <ChevronDown
+            className={`h-4 w-4 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`}
+          />
+        </CollapsibleTrigger>
         {detail.mesocycle_status !== 'completed' && (
           <Link
             href={`/mesocycles/${detail.mesocycle_id}`}
             data-testid="edit-template-link"
             className="text-muted-foreground hover:text-foreground transition-colors"
             title="Edit template"
-            onClick={(e) => e.stopPropagation()}
           >
             <Pencil className="h-4 w-4" />
           </Link>
         )}
-        <ChevronDown
-          className={`h-4 w-4 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`}
-        />
-      </CollapsibleTrigger>
+      </div>
       <CollapsibleContent className="px-3 pt-2 pb-1">
         {detail.type === 'projected' && <ProjectedCardBody detail={detail} />}
         {detail.type === 'completed' && <CompletedCardBody detail={detail} />}
@@ -351,7 +352,7 @@ export function DayDetailPanel({ date, onClose }: DayDetailPanelProps) {
             <div className="space-y-3">
               {workouts.map((w, i) => (
                 <WorkoutCard
-                  key={i}
+                  key={`${w.type}-${w.period}`}
                   detail={w}
                   defaultOpen={isSingleWorkout}
                 />
