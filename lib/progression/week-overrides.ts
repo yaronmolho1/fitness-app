@@ -4,7 +4,7 @@ import { exercise_slots, slot_week_overrides } from '@/lib/db/schema'
 
 type OverrideRow = typeof slot_week_overrides.$inferSelect
 
-type UpsertFields = {
+export type UpsertFields = {
   weight?: number | null
   reps?: string | null
   sets?: number | null

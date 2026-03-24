@@ -168,6 +168,7 @@ describe('week override CRUD', () => {
       if (!result.success) return
 
       expect(result.data.weight).toBe(65)
+      expect(result.data.rpe).toBe(7)
     })
 
     it('supports is_deload flag', async () => {
