@@ -40,6 +40,7 @@ Shared React components — app-level UI and navigation.
 - `frequency-mode-selector.tsx` — `FrequencyModeSelector` radio group for routine frequency (daily, weekly target, specific days) with day picker
 - `create-routine-item-form.tsx` — `CreateRoutineItemForm` form for adding routine items with name, category, input fields, frequency mode, scope
 - `template-add-picker.tsx` — `TemplateAddPicker` "Add Template" button with modality picker (resistance/running/MMA/mixed/from-existing); popover on desktop, bottom sheet on mobile
+- `target-picker-modal.tsx` — `TargetPickerModal` 3-step dialog for selecting copy/move target: mesocycle → template → section (mixed only); exports `ConfirmPayload` type
 - `template-browse-dialog.tsx` — `TemplateBrowseDialog` searchable dialog listing templates from other mesocycles grouped by mesocycle, with copy button per template
 
 ## Subdirectories
