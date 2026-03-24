@@ -31,9 +31,11 @@ type Props = {
   isCompleted: boolean
   browseTemplates?: BrowseTemplate[]
   sectionsByTemplate?: Record<number, TemplateSectionRow[]>
+  workWeeks: number
+  hasDeload: boolean
 }
 
-export function TemplateSection({ mesocycleId, templates, exercises, slotsByTemplate, isCompleted, browseTemplates = [], sectionsByTemplate = {} }: Props) {
+export function TemplateSection({ mesocycleId, templates, exercises, slotsByTemplate, isCompleted, browseTemplates = [], sectionsByTemplate = {}, workWeeks, hasDeload }: Props) {
   const router = useRouter()
   const [formType, setFormType] = useState<'resistance' | 'running' | 'mma' | 'mixed' | null>(null)
   const [resistanceName, setResistanceName] = useState('')
@@ -124,6 +126,8 @@ export function TemplateSection({ mesocycleId, templates, exercises, slotsByTemp
               isCompleted={isCompleted}
               onUpdated={() => router.refresh()}
               sections={sectionsByTemplate[t.id] ?? []}
+              workWeeks={workWeeks}
+              hasDeload={hasDeload}
             />
           ))}
         </div>
@@ -231,6 +235,8 @@ type TemplateRowProps = {
   isCompleted: boolean
   onUpdated: () => void
   sections: TemplateSectionRow[]
+  workWeeks: number
+  hasDeload: boolean
 }
 
 const RUN_TYPES = [
@@ -245,7 +251,7 @@ const HR_ZONES = [1, 2, 3, 4, 5] as const
 
 type RunType = 'easy' | 'tempo' | 'interval' | 'long' | 'race'
 
-function TemplateRow({ template, slots, exercises, isCompleted, onUpdated, sections }: TemplateRowProps) {
+function TemplateRow({ template, slots, exercises, isCompleted, onUpdated, sections, workWeeks, hasDeload }: TemplateRowProps) {
   const [editing, setEditing] = useState(false)
   const [cascading, setCascading] = useState(false)
   const [confirming, setConfirming] = useState(false)
@@ -656,6 +662,8 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated, secti
             templateId={template.id}
             exercises={exercises}
             isCompleted={isCompleted}
+            workWeeks={workWeeks}
+            hasDeload={hasDeload}
           />
         </div>
       )}
@@ -822,6 +830,8 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated, secti
               templateId={template.id}
               isCompleted={isCompleted}
               onUpdated={onUpdated}
+              workWeeks={workWeeks}
+              hasDeload={hasDeload}
             />
           ))}
         </div>
@@ -841,9 +851,11 @@ type MixedSectionRowProps = {
   templateId: number
   isCompleted: boolean
   onUpdated: () => void
+  workWeeks: number
+  hasDeload: boolean
 }
 
-function MixedSectionRow({ section, slots, exercises, templateId, isCompleted, onUpdated }: MixedSectionRowProps) {
+function MixedSectionRow({ section, slots, exercises, templateId, isCompleted, onUpdated, workWeeks, hasDeload }: MixedSectionRowProps) {
   const [expanded, setExpanded] = useState(false)
   const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
@@ -976,6 +988,8 @@ function MixedSectionRow({ section, slots, exercises, templateId, isCompleted, o
             isCompleted={isCompleted}
             sectionId={section.id}
             modality={section.modality}
+            workWeeks={workWeeks}
+            hasDeload={hasDeload}
           />
         </div>
       )}

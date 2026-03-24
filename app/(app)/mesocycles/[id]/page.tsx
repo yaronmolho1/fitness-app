@@ -102,6 +102,8 @@ export default async function MesocycleDetailPage({
           sectionsByTemplate={sectionsByTemplate}
           isCompleted={meso.status === 'completed'}
           browseTemplates={browseTemplates}
+          workWeeks={meso.work_weeks}
+          hasDeload={meso.has_deload}
         />
 
         <ScheduleTabs
