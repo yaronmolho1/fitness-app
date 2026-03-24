@@ -14,6 +14,7 @@ import { BatchCascadeScopeSelector } from '@/components/batch-cascade-scope-sele
 import { updateExerciseSlot, removeExerciseSlot, addExerciseSlot, reorderExerciseSlots } from '@/lib/templates/slot-actions'
 import { createSuperset, breakSuperset, updateGroupRest } from '@/lib/templates/superset-actions'
 import { usePendingEdits } from '@/lib/templates/use-pending-edits'
+import { WeekProgressionGrid } from '@/components/week-progression-grid'
 import type { SlotWithExercise } from '@/lib/templates/slot-queries'
 import type { Exercise } from '@/lib/exercises/filters'
 
@@ -24,6 +25,8 @@ type SlotListProps = {
   isCompleted: boolean
   sectionId?: number
   modality?: 'resistance' | 'running' | 'mma'
+  workWeeks?: number
+  hasDeload?: boolean
 }
 
 function getGroupLabel(count: number): string {
@@ -72,7 +75,7 @@ function groupSlots(slots: SlotWithExercise[]): GroupedItem[] {
   return items
 }
 
-export function SlotList({ slots, templateId, exercises, isCompleted, sectionId, modality }: SlotListProps) {
+export function SlotList({ slots, templateId, exercises, isCompleted, sectionId, modality, workWeeks, hasDeload }: SlotListProps) {
   const router = useRouter()
   const [showPicker, setShowPicker] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -429,6 +432,8 @@ export function SlotList({ slots, templateId, exercises, isCompleted, sectionId,
               isEdited={pending.isEdited}
               getPendingDiff={(slotId: number) => pending.pendingEdits.get(slotId)?.diff}
               onDeferredSave={handleDeferredSave}
+              workWeeks={workWeeks}
+              hasDeload={hasDeload}
             />
           )
         }
@@ -463,6 +468,8 @@ export function SlotList({ slots, templateId, exercises, isCompleted, sectionId,
                 hasPendingEdit={pending.isEdited(slot.id)}
                 pendingDiff={pending.pendingEdits.get(slot.id)?.diff}
                 onDeferredSave={handleDeferredSave}
+                workWeeks={workWeeks}
+                hasDeload={hasDeload}
               />
             </div>
           </div>
@@ -552,13 +559,15 @@ type SupersetGroupProps = {
   isEdited: (slotId: number) => boolean
   getPendingDiff: (slotId: number) => Record<string, unknown> | undefined
   onDeferredSave: (slot: SlotWithExercise, diff: Record<string, unknown>) => void
+  workWeeks?: number
+  hasDeload?: boolean
 }
 
 function SupersetGroup({
   groupId, slots, groupRestSeconds, templateId, isCompleted,
   onUpdated, onBreak, canDrag, dragIndex, dropIndex, allSlots,
   onDragStart, onDragOver, onDragEnd, onTouchStart, onTouchMove, onTouchEnd,
-  isEdited, getPendingDiff, onDeferredSave,
+  isEdited, getPendingDiff, onDeferredSave, workWeeks, hasDeload,
 }: SupersetGroupProps) {
   const [editingRest, setEditingRest] = useState(false)
   const [restInput, setRestInput] = useState(String(groupRestSeconds))
@@ -656,6 +665,8 @@ function SupersetGroup({
             hasPendingEdit={isEdited(slot.id)}
             pendingDiff={getPendingDiff(slot.id)}
             onDeferredSave={onDeferredSave}
+            workWeeks={workWeeks}
+            hasDeload={hasDeload}
           />
         )
       })}
@@ -691,6 +702,8 @@ type SlotRowProps = {
   hasPendingEdit?: boolean
   pendingDiff?: Record<string, unknown>
   onDeferredSave?: (slot: SlotWithExercise, diff: Record<string, unknown>) => void
+  workWeeks?: number
+  hasDeload?: boolean
 }
 
 function SlotRow({
@@ -699,8 +712,10 @@ function SlotRow({
   onDragStart, onDragOver, onDragEnd,
   onTouchStart, onTouchMove, onTouchEnd,
   hasPendingEdit, pendingDiff, onDeferredSave,
+  workWeeks, hasDeload,
 }: SlotRowProps) {
   const [mode, setMode] = useState<'display' | 'edit' | 'confirm-remove' | 'cascade-params' | 'cascade-remove'>('display')
+  const [showWeekGrid, setShowWeekGrid] = useState(false)
   const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
   const [pendingParamUpdates, setPendingParamUpdates] = useState<Record<string, unknown>>({})
@@ -1000,6 +1015,16 @@ function SlotRow({
       </div>
       {!isCompleted && (
         <div className="flex items-center gap-1">
+          {workWeeks != null && workWeeks > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => setShowWeekGrid(true)}
+            >
+              Plan Weeks
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
@@ -1017,6 +1042,17 @@ function SlotRow({
             Remove
           </Button>
         </div>
+      )}
+
+      {workWeeks != null && workWeeks > 0 && (
+        <WeekProgressionGrid
+          slot={slot}
+          workWeeks={workWeeks}
+          hasDeload={hasDeload ?? false}
+          isCompleted={isCompleted}
+          open={showWeekGrid}
+          onOpenChange={setShowWeekGrid}
+        />
       )}
     </div>
   )
