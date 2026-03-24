@@ -126,7 +126,6 @@ function initWeeks(
 function applyOverrides(
   weeks: WeekState[],
   overrides: OverrideRow[],
-  slot: SlotWithExercise,
   modality: 'resistance' | 'running'
 ): WeekState[] {
   const overrideMap = new Map(overrides.map((o) => [o.week_number, o]))
@@ -199,8 +198,6 @@ export function WeekProgressionGrid({
   const [weeks, setWeeks] = useState<WeekState[]>(() =>
     initWeeks(workWeeks, hasDeload, slot, runningBase)
   )
-  const [loaded, setLoaded] = useState(false)
-
   const resistanceBase = buildResistanceBase(slot)
   const deloadResistanceBase = buildDeloadResistance(slot)
   const runBase = buildRunningBase(runningBase)
@@ -213,8 +210,7 @@ export function WeekProgressionGrid({
     async function load() {
       const overrides = await getWeekOverridesAction(slot.id)
       if (cancelled) return
-      setWeeks((prev) => applyOverrides(prev, overrides, slot, modality))
-      setLoaded(true)
+      setWeeks((prev) => applyOverrides(prev, overrides, modality))
     }
     load()
 
