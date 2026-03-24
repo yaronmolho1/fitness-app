@@ -101,6 +101,21 @@ function createTestDb() {
       actual_weight REAL,
       created_at INTEGER
     );
+    CREATE TABLE slot_week_overrides (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      exercise_slot_id INTEGER NOT NULL REFERENCES exercise_slots(id) ON DELETE CASCADE,
+      week_number INTEGER NOT NULL,
+      weight REAL,
+      reps TEXT,
+      sets INTEGER,
+      rpe REAL,
+      distance REAL,
+      duration INTEGER,
+      pace TEXT,
+      is_deload INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER
+    );
+    CREATE UNIQUE INDEX slot_week_overrides_slot_week_idx ON slot_week_overrides(exercise_slot_id, week_number);
   `)
 
   const db = drizzle(sqlite, { schema: { ...schema, ...relationsModule } }) as AppDb
@@ -122,6 +137,7 @@ describe('getDayDetail', () => {
   })
 
   beforeEach(() => {
+    sqlite.exec('DELETE FROM slot_week_overrides')
     sqlite.exec('DELETE FROM logged_sets')
     sqlite.exec('DELETE FROM logged_exercises')
     sqlite.exec('DELETE FROM logged_workouts')
@@ -699,5 +715,151 @@ describe('getDayDetail', () => {
     expect(results[1].template.name).toBe('Afternoon BJJ')
     expect(results[2].period).toBe('evening')
     expect(results[2].template.name).toBe('Evening Run')
+  })
+
+  // ============================================================================
+  // T153: Week override merge into getDayDetail
+  // ============================================================================
+
+  it('projected slot merges week override for current week (AC12)', async () => {
+    sqlite.exec(`
+      INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
+      VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
+      INSERT INTO exercises (id, name, modality) VALUES (1, 'Bench Press', 'resistance');
+      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+      VALUES (1, 1, 'Push A', 'push-a', 'resistance');
+      INSERT INTO exercise_slots (id, template_id, exercise_id, sets, reps, weight, rpe, "order", is_main)
+      VALUES (1, 1, 1, 4, '6-8', 100, 8, 1, 1);
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type)
+      VALUES (1, 0, 1, 'normal');
+      INSERT INTO slot_week_overrides (exercise_slot_id, week_number, weight, reps, is_deload)
+      VALUES (1, 2, 110, '5-7', 0);
+    `)
+
+    // 2026-03-09 is Mon, week 2
+    const result = (await getDayDetail(db, '2026-03-09'))[0]
+    expect(result.type).toBe('projected')
+    if (result.type !== 'projected') return
+
+    expect(result.slots[0].weight).toBe(110) // overridden
+    expect(result.slots[0].reps).toBe('5-7') // overridden
+    expect(result.slots[0].sets).toBe(4) // base
+    expect(result.slots[0].rpe).toBe(8) // base
+  })
+
+  it('no override for current week returns base values (AC17)', async () => {
+    sqlite.exec(`
+      INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
+      VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
+      INSERT INTO exercises (id, name, modality) VALUES (1, 'Bench Press', 'resistance');
+      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+      VALUES (1, 1, 'Push A', 'push-a', 'resistance');
+      INSERT INTO exercise_slots (id, template_id, exercise_id, sets, reps, weight, rpe, "order", is_main)
+      VALUES (1, 1, 1, 4, '6-8', 100, 8, 1, 1);
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type)
+      VALUES (1, 0, 1, 'normal');
+      INSERT INTO slot_week_overrides (exercise_slot_id, week_number, weight, is_deload)
+      VALUES (1, 3, 120, 0);
+    `)
+
+    // 2026-03-09 is Mon, week 2 — override is for week 3
+    const result = (await getDayDetail(db, '2026-03-09'))[0]
+    expect(result.type).toBe('projected')
+    if (result.type !== 'projected') return
+
+    expect(result.slots[0].weight).toBe(100) // base, not 120
+    expect(result.slots[0].reps).toBe('6-8')
+  })
+
+  it('partial override only changes provided fields', async () => {
+    sqlite.exec(`
+      INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
+      VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
+      INSERT INTO exercises (id, name, modality) VALUES (1, 'Squat', 'resistance');
+      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+      VALUES (1, 1, 'Legs', 'legs', 'resistance');
+      INSERT INTO exercise_slots (id, template_id, exercise_id, sets, reps, weight, rpe, "order", is_main)
+      VALUES (1, 1, 1, 5, '5', 120, 8, 1, 1);
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type)
+      VALUES (1, 0, 1, 'normal');
+      INSERT INTO slot_week_overrides (exercise_slot_id, week_number, rpe, is_deload)
+      VALUES (1, 1, 9.5, 0);
+    `)
+
+    // 2026-03-02 is Mon, week 1
+    const result = (await getDayDetail(db, '2026-03-02'))[0]
+    expect(result.type).toBe('projected')
+    if (result.type !== 'projected') return
+
+    expect(result.slots[0].weight).toBe(120) // base
+    expect(result.slots[0].sets).toBe(5) // base
+    expect(result.slots[0].reps).toBe('5') // base
+    expect(result.slots[0].rpe).toBe(9.5) // overridden
+  })
+
+  it('multiple slots each get their own override merged', async () => {
+    sqlite.exec(`
+      INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
+      VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
+      INSERT INTO exercises (id, name, modality) VALUES (1, 'Bench', 'resistance');
+      INSERT INTO exercises (id, name, modality) VALUES (2, 'OHP', 'resistance');
+      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+      VALUES (1, 1, 'Push', 'push', 'resistance');
+      INSERT INTO exercise_slots (id, template_id, exercise_id, sets, reps, weight, "order", is_main)
+      VALUES (1, 1, 1, 4, '6', 100, 1, 1);
+      INSERT INTO exercise_slots (id, template_id, exercise_id, sets, reps, weight, "order", is_main)
+      VALUES (2, 1, 2, 3, '8-10', 50, 2, 0);
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type)
+      VALUES (1, 0, 1, 'normal');
+      INSERT INTO slot_week_overrides (exercise_slot_id, week_number, weight, is_deload)
+      VALUES (1, 2, 110, 0);
+      INSERT INTO slot_week_overrides (exercise_slot_id, week_number, sets, reps, is_deload)
+      VALUES (2, 2, 4, '6-8', 0);
+    `)
+
+    // 2026-03-09 is Mon, week 2
+    const result = (await getDayDetail(db, '2026-03-09'))[0]
+    expect(result.type).toBe('projected')
+    if (result.type !== 'projected') return
+
+    expect(result.slots[0].weight).toBe(110) // overridden
+    expect(result.slots[0].sets).toBe(4) // base
+    expect(result.slots[1].weight).toBe(50) // base
+    expect(result.slots[1].sets).toBe(4) // overridden
+    expect(result.slots[1].reps).toBe('6-8') // overridden
+  })
+
+  it('completed workout is unaffected by overrides (reads from snapshot)', async () => {
+    const snapshot = JSON.stringify({
+      version: 1,
+      name: 'Push A',
+      modality: 'resistance',
+      slots: [
+        { exercise_name: 'Bench', sets: 3, reps: '8', weight: 80, rpe: 7, rest_seconds: null, guidelines: null, order: 1, is_main: true },
+      ],
+    })
+
+    sqlite.exec(`
+      INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
+      VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
+      INSERT INTO exercises (id, name, modality) VALUES (1, 'Bench', 'resistance');
+      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+      VALUES (1, 1, 'Push A', 'push-a', 'resistance');
+      INSERT INTO exercise_slots (id, template_id, exercise_id, sets, reps, weight, rpe, "order", is_main)
+      VALUES (1, 1, 1, 5, '5', 120, 9, 1, 1);
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type)
+      VALUES (1, 0, 1, 'normal');
+      INSERT INTO logged_workouts (id, template_id, canonical_name, log_date, logged_at, template_snapshot)
+      VALUES (1, 1, 'push-a', '2026-03-02', 1740900000, '${snapshot}');
+      INSERT INTO slot_week_overrides (exercise_slot_id, week_number, weight, is_deload)
+      VALUES (1, 1, 999, 0);
+    `)
+
+    const result = (await getDayDetail(db, '2026-03-02'))[0]
+    expect(result.type).toBe('completed')
+    if (result.type !== 'completed') return
+
+    // Snapshot values unchanged by override
+    expect(result.snapshot.slots![0].weight).toBe(80)
   })
 })

@@ -1,4 +1,4 @@
-import { eq, and, asc } from 'drizzle-orm'
+import { eq, and, asc, inArray } from 'drizzle-orm'
 import { db } from '@/lib/db/index'
 import {
   mesocycles,
@@ -12,9 +12,11 @@ import {
   routine_logs,
   logged_exercises,
   logged_sets,
+  slot_week_overrides,
 } from '@/lib/db/schema'
 import { filterActiveRoutineItems } from '@/lib/routines/scope-filter'
 import { getWeeklyCompletionCounts, getStreaks } from '@/lib/routines/queries'
+import { mergeSlotWithOverride } from '@/lib/progression/week-overrides'
 
 // Response types
 
@@ -206,6 +208,50 @@ function getDayOfWeek(dateStr: string): number {
   return new Date(dateStr + 'T00:00:00Z').getUTCDay()
 }
 
+// Compute 1-based week number from mesocycle start
+function getWeekNumber(startDate: string, today: string): number {
+  const start = new Date(startDate + 'T00:00:00Z')
+  const current = new Date(today + 'T00:00:00Z')
+  const diffDays = Math.round((current.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+  return Math.floor(diffDays / 7) + 1
+}
+
+// Fetch overrides for a set of slot IDs at a given week, return map by slot ID
+async function fetchOverrideMap(
+  slotIds: number[],
+  weekNumber: number
+): Promise<Map<number, typeof slot_week_overrides.$inferSelect>> {
+  if (slotIds.length === 0) return new Map()
+  try {
+    const overrides = await db
+      .select()
+      .from(slot_week_overrides)
+      .where(
+        and(
+          inArray(slot_week_overrides.exercise_slot_id, slotIds),
+          eq(slot_week_overrides.week_number, weekNumber)
+        )
+      )
+      .all()
+    const map = new Map<number, typeof slot_week_overrides.$inferSelect>()
+    for (const o of overrides) {
+      map.set(o.exercise_slot_id, o)
+    }
+    return map
+  } catch {
+    // Table may not exist yet (pre-migration); gracefully return empty
+    return new Map()
+  }
+}
+
+// Apply overrides to an array of slots
+function applySlotsOverrides<T extends { id: number }>(
+  slots: T[],
+  overrideMap: Map<number, typeof slot_week_overrides.$inferSelect>
+): T[] {
+  return slots.map((slot) => mergeSlotWithOverride(slot, overrideMap.get(slot.id) ?? null))
+}
+
 // Fetch active routines + logs for a given date
 async function getRestDayRoutines(today: string): Promise<RestDayRoutines> {
   const [allItems, allMesos, logs] = await Promise.all([
@@ -369,6 +415,9 @@ export async function getTodayWorkout(today: string): Promise<TodayResult[]> {
     return [{ type: 'rest_day', date: today, mesocycle: mesoInfo, routines }]
   }
 
+  // Step 5b: compute week number for override lookup
+  const weekNumber = getWeekNumber(activeMeso.start_date, today)
+
   // Step 6: build result for each scheduled session
   const results: TodayResult[] = []
 
@@ -435,6 +484,11 @@ export async function getTodayWorkout(today: string): Promise<TodayResult[]> {
       .orderBy(asc(exercise_slots.order))
       .all()
 
+    // Merge week overrides into slots
+    const slotIds = slots.map((s) => s.id)
+    const overrideMap = await fetchOverrideMap(slotIds, weekNumber)
+    const mergedSlots = applySlotsOverrides(slots, overrideMap)
+
     // Load sections for mixed templates
     let sections: SectionData[] | undefined
     if (template.modality === 'mixed') {
@@ -490,9 +544,17 @@ export async function getTodayWorkout(today: string): Promise<TodayResult[]> {
               .all()
           : undefined
 
+        // Merge week overrides into section slots
+        let mergedSectionSlots = sectionSlots as SlotData[] | undefined
+        if (sectionSlots) {
+          const secSlotIds = sectionSlots.map((s) => s.id)
+          const secOverrideMap = await fetchOverrideMap(secSlotIds, weekNumber)
+          mergedSectionSlots = applySlotsOverrides(sectionSlots, secOverrideMap) as SlotData[]
+        }
+
         sections.push({
           ...sec,
-          slots: sectionSlots as SlotData[] | undefined,
+          slots: mergedSectionSlots,
         })
       }
     }
@@ -516,7 +578,7 @@ export async function getTodayWorkout(today: string): Promise<TodayResult[]> {
         target_duration: template.target_duration,
         planned_duration: template.planned_duration,
       },
-      slots: slots as SlotData[],
+      slots: mergedSlots as SlotData[],
       period,
       time_slot: timeSlot,
     }

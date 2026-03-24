@@ -1,4 +1,4 @@
-import { and, eq, gte, lte, asc } from 'drizzle-orm'
+import { and, eq, gte, lte, asc, inArray } from 'drizzle-orm'
 import type { AppDb } from '@/lib/db'
 import {
   mesocycles,
@@ -9,10 +9,13 @@ import {
   logged_workouts,
   logged_exercises,
   logged_sets,
+  slot_week_overrides,
 } from '@/lib/db/schema'
+import { mergeSlotWithOverride } from '@/lib/progression/week-overrides'
 
 // Slot target data from live template
 export type SlotDetail = {
+  id?: number
   exercise_name: string
   sets: number
   reps: string
@@ -238,8 +241,9 @@ export async function getDayDetail(
     if (!template) continue
 
     // Load exercise slots
-    const slots = database
+    const rawSlots = database
       .select({
+        id: exercise_slots.id,
         exercise_name: exercises.name,
         sets: exercise_slots.sets,
         reps: exercise_slots.reps,
@@ -256,6 +260,30 @@ export async function getDayDetail(
       .orderBy(asc(exercise_slots.order))
       .all()
       .map((row) => ({ ...row, is_main: Boolean(row.is_main) })) as SlotDetail[]
+
+    // Merge week overrides into projected slots
+    const slotIds = rawSlots.map((s) => s.id).filter((id): id is number => id != null)
+    let overrides: (typeof slot_week_overrides.$inferSelect)[] = []
+    if (slotIds.length > 0) {
+      try {
+        overrides = database
+          .select()
+          .from(slot_week_overrides)
+          .where(
+            and(
+              inArray(slot_week_overrides.exercise_slot_id, slotIds),
+              eq(slot_week_overrides.week_number, weekNumber)
+            )
+          )
+          .all()
+      } catch {
+        // Table may not exist yet (pre-migration); gracefully skip
+      }
+    }
+    const overrideMap = new Map(overrides.map((o) => [o.exercise_slot_id, o]))
+    const slots = rawSlots.map((slot) =>
+      mergeSlotWithOverride(slot, slot.id != null ? (overrideMap.get(slot.id) ?? null) : null)
+    )
 
     results.push({
       type: 'projected',
