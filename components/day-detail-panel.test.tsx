@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { render, screen, cleanup, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, afterEach } from 'vitest'
 
 vi.mock('next/link', () => ({
@@ -11,10 +12,57 @@ vi.mock('next/link', () => ({
 import { DayDetailPanel } from './day-detail-panel'
 import type { DayDetailResult } from '@/lib/calendar/day-detail'
 
-function mockFetchResponse(data: DayDetailResult) {
+// API returns array since T144
+function mockFetchResponse(data: DayDetailResult | DayDetailResult[]) {
+  const arr = Array.isArray(data) ? data : [data]
   global.fetch = vi.fn(() =>
-    Promise.resolve(new Response(JSON.stringify(data)))
+    Promise.resolve(new Response(JSON.stringify(arr)))
   )
+}
+
+// Reusable fixtures
+const projectedResistance: DayDetailResult = {
+  type: 'projected',
+  date: '2026-03-02',
+  mesocycle_id: 1,
+  mesocycle_status: 'active',
+  template: {
+    id: 1,
+    name: 'Push A',
+    modality: 'resistance',
+    notes: 'Focus on chest',
+    run_type: null, target_pace: null, hr_zone: null,
+    interval_count: null, interval_rest: null, coaching_cues: null,
+    planned_duration: null,
+  },
+  slots: [
+    { exercise_name: 'Bench Press', sets: 4, reps: '6-8', weight: 100, rpe: 8, rest_seconds: 120, guidelines: 'Pause at bottom', order: 1, is_main: true },
+    { exercise_name: 'Incline DB Press', sets: 3, reps: '10-12', weight: 30, rpe: 7, rest_seconds: 90, guidelines: null, order: 2, is_main: false },
+  ],
+  is_deload: false,
+  period: 'morning',
+}
+
+const projectedRunning: DayDetailResult = {
+  type: 'projected',
+  date: '2026-03-02',
+  mesocycle_id: 1,
+  mesocycle_status: 'active',
+  template: {
+    id: 2,
+    name: 'Evening Run',
+    modality: 'running',
+    notes: null,
+    run_type: 'tempo',
+    target_pace: '5:00',
+    hr_zone: 3,
+    interval_count: null, interval_rest: null,
+    coaching_cues: 'Stay relaxed',
+    planned_duration: null,
+  },
+  slots: [],
+  is_deload: false,
+  period: 'evening',
 }
 
 describe('DayDetailPanel', () => {
@@ -49,32 +97,7 @@ describe('DayDetailPanel', () => {
   // ============================================================================
 
   it('shows projected resistance template with exercise slots', async () => {
-    const projected: DayDetailResult = {
-      type: 'projected',
-      date: '2026-03-02',
-      mesocycle_id: 1,
-      mesocycle_status: 'active',
-      template: {
-        id: 1,
-        name: 'Push A',
-        modality: 'resistance',
-        notes: 'Focus on chest',
-        run_type: null,
-        target_pace: null,
-        hr_zone: null,
-        interval_count: null,
-        interval_rest: null,
-        coaching_cues: null,
-        planned_duration: null,
-      },
-      slots: [
-        { exercise_name: 'Bench Press', sets: 4, reps: '6-8', weight: 100, rpe: 8, rest_seconds: 120, guidelines: 'Pause at bottom', order: 1, is_main: true },
-        { exercise_name: 'Incline DB Press', sets: 3, reps: '10-12', weight: 30, rpe: 7, rest_seconds: 90, guidelines: null, order: 2, is_main: false },
-      ],
-      is_deload: false,
-      period: 'morning',
-    }
-    mockFetchResponse(projected)
+    mockFetchResponse(projectedResistance)
 
     render(<DayDetailPanel date="2026-03-02" onClose={() => {}} />)
 
@@ -494,6 +517,181 @@ describe('DayDetailPanel', () => {
       })
 
       expect(screen.queryByTestId('edit-template-link')).not.toBeInTheDocument()
+    })
+  })
+
+  // ============================================================================
+  // T146: Expandable cards — multi-workout display
+  // ============================================================================
+
+  describe('Expandable cards (T146)', () => {
+    it('renders one card per non-rest workout', async () => {
+      mockFetchResponse([projectedResistance, projectedRunning])
+
+      render(<DayDetailPanel date="2026-03-02" onClose={() => {}} />)
+
+      await waitFor(() => {
+        expect(screen.getAllByTestId('workout-card')).toHaveLength(2)
+      })
+    })
+
+    it('card header shows template name, modality badge, and period label', async () => {
+      mockFetchResponse([projectedResistance, projectedRunning])
+
+      render(<DayDetailPanel date="2026-03-02" onClose={() => {}} />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Push A')).toBeInTheDocument()
+      })
+
+      // Period labels
+      expect(screen.getByText('AM')).toBeInTheDocument()
+      expect(screen.getByText('EVE')).toBeInTheDocument()
+
+      // Modality badges
+      expect(screen.getByText('resistance')).toBeInTheDocument()
+      expect(screen.getByText('running')).toBeInTheDocument()
+    })
+
+    it('multi-workout cards are collapsed by default', async () => {
+      mockFetchResponse([projectedResistance, projectedRunning])
+
+      render(<DayDetailPanel date="2026-03-02" onClose={() => {}} />)
+
+      await waitFor(() => {
+        expect(screen.getAllByTestId('workout-card')).toHaveLength(2)
+      })
+
+      // Content should not be visible when collapsed
+      expect(screen.queryByTestId('slot-row')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('running-detail')).not.toBeInTheDocument()
+    })
+
+    it('single workout card is expanded by default', async () => {
+      mockFetchResponse([projectedResistance])
+
+      render(<DayDetailPanel date="2026-03-02" onClose={() => {}} />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('workout-card')).toBeInTheDocument()
+      })
+
+      // Content visible — single workout auto-expands
+      expect(screen.getAllByTestId('slot-row')).toHaveLength(2)
+    })
+
+    it('clicking collapsed card header expands it', async () => {
+      const user = userEvent.setup()
+      mockFetchResponse([projectedResistance, projectedRunning])
+
+      render(<DayDetailPanel date="2026-03-02" onClose={() => {}} />)
+
+      await waitFor(() => {
+        expect(screen.getAllByTestId('workout-card')).toHaveLength(2)
+      })
+
+      // Click the first card header to expand
+      const triggers = screen.getAllByTestId('workout-card-trigger')
+      await user.click(triggers[0])
+
+      // Resistance slots now visible
+      await waitFor(() => {
+        expect(screen.getAllByTestId('slot-row')).toHaveLength(2)
+      })
+    })
+
+    it('clicking expanded card header collapses it', async () => {
+      const user = userEvent.setup()
+      mockFetchResponse([projectedResistance])
+
+      render(<DayDetailPanel date="2026-03-02" onClose={() => {}} />)
+
+      await waitFor(() => {
+        expect(screen.getAllByTestId('slot-row')).toHaveLength(2)
+      })
+
+      // Click to collapse
+      const trigger = screen.getByTestId('workout-card-trigger')
+      await user.click(trigger)
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('slot-row')).not.toBeInTheDocument()
+      })
+    })
+
+    it('afternoon period shows PM label', async () => {
+      const afternoon: DayDetailResult = {
+        ...projectedResistance,
+        period: 'afternoon',
+        template: { ...projectedResistance.template, id: 10, name: 'Afternoon Push' },
+      } as DayDetailResult
+      mockFetchResponse([afternoon])
+
+      render(<DayDetailPanel date="2026-03-02" onClose={() => {}} />)
+
+      await waitFor(() => {
+        expect(screen.getByText('PM')).toBeInTheDocument()
+      })
+    })
+
+    it('rest-only array shows rest day message, no cards', async () => {
+      mockFetchResponse([{ type: 'rest', date: '2026-03-03' }])
+
+      render(<DayDetailPanel date="2026-03-03" onClose={() => {}} />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('rest-day-message')).toBeInTheDocument()
+      })
+
+      expect(screen.queryByTestId('workout-card')).not.toBeInTheDocument()
+    })
+
+    it('mixed projected + completed renders both cards', async () => {
+      const completed: DayDetailResult = {
+        type: 'completed',
+        date: '2026-03-02',
+        mesocycle_id: 1,
+        mesocycle_status: 'active',
+        snapshot: { version: 1, name: 'Morning Logged', modality: 'resistance', notes: null },
+        exercises: [],
+        rating: 3,
+        notes: null,
+        is_deload: false,
+        period: 'morning',
+      }
+      mockFetchResponse([completed, projectedRunning])
+
+      render(<DayDetailPanel date="2026-03-02" onClose={() => {}} />)
+
+      await waitFor(() => {
+        expect(screen.getAllByTestId('workout-card')).toHaveLength(2)
+      })
+
+      expect(screen.getByText('Morning Logged')).toBeInTheDocument()
+      expect(screen.getByText('Evening Run')).toBeInTheDocument()
+    })
+
+    it('renders cards in period order: morning, afternoon, evening', async () => {
+      const eveningFirst: DayDetailResult = {
+        ...projectedRunning,
+        period: 'evening',
+      } as DayDetailResult
+      const morningSecond: DayDetailResult = {
+        ...projectedResistance,
+        period: 'morning',
+      } as DayDetailResult
+      // Send evening first, morning second — should render morning first
+      mockFetchResponse([eveningFirst, morningSecond])
+
+      render(<DayDetailPanel date="2026-03-02" onClose={() => {}} />)
+
+      await waitFor(() => {
+        expect(screen.getAllByTestId('workout-card')).toHaveLength(2)
+      })
+
+      const cards = screen.getAllByTestId('workout-card')
+      expect(cards[0]).toHaveTextContent('AM')
+      expect(cards[1]).toHaveTextContent('EVE')
     })
   })
 })

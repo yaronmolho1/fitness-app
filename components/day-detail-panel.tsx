@@ -8,16 +8,33 @@ import {
   SheetTitle,
   SheetDescription,
 } from '@/components/ui/sheet'
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from '@/components/ui/collapsible'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
-import { Pencil, CalendarDays, Star } from 'lucide-react'
-import type { DayDetailResult, SlotDetail, LoggedExerciseDetail, TemplateSnapshot } from '@/lib/calendar/day-detail'
+import { Pencil, CalendarDays, Star, ChevronDown } from 'lucide-react'
+import type { DayDetailResult, SlotDetail, LoggedExerciseDetail, TemplateSnapshot, Period } from '@/lib/calendar/day-detail'
 import { formatDateLong } from '@/lib/date-format'
 import { getModalityBadgeClasses } from '@/lib/ui/modality-colors'
 
 interface DayDetailPanelProps {
   date: string | null
   onClose: () => void
+}
+
+const periodLabel: Record<Period, string> = {
+  morning: 'AM',
+  afternoon: 'PM',
+  evening: 'EVE',
+}
+
+const periodOrder: Record<Period, number> = {
+  morning: 0,
+  afternoon: 1,
+  evening: 2,
 }
 
 function ModalityBadge({ modality }: { modality: string }) {
@@ -130,8 +147,128 @@ function MmaDetail({ template }: { template: { planned_duration?: number | null 
   )
 }
 
+// Card body for projected workouts
+function ProjectedCardBody({ detail }: { detail: Extract<DayDetailResult, { type: 'projected' }> }) {
+  return (
+    <div className="space-y-4">
+      {detail.template.notes && (
+        <p className="text-sm text-muted-foreground">{detail.template.notes}</p>
+      )}
+
+      {detail.template.modality === 'resistance' && detail.slots.length > 0 && (
+        <div data-testid="resistance-slots">
+          {detail.slots.map((slot, i) => (
+            <SlotRow key={i} slot={slot} />
+          ))}
+        </div>
+      )}
+
+      {detail.template.modality === 'running' && (
+        <RunningDetail template={detail.template} />
+      )}
+
+      {detail.template.modality === 'mma' && (
+        <MmaDetail template={detail.template} />
+      )}
+    </div>
+  )
+}
+
+// Card body for completed workouts
+function CompletedCardBody({ detail }: { detail: Extract<DayDetailResult, { type: 'completed' }> }) {
+  return (
+    <div className="space-y-4">
+      {detail.snapshot.notes && (
+        <p className="text-sm text-muted-foreground">{detail.snapshot.notes}</p>
+      )}
+
+      {detail.rating != null && (
+        <div className="flex items-center gap-3">
+          <RatingDisplay rating={detail.rating} />
+          <span className="text-sm text-muted-foreground">({detail.rating}/5)</span>
+        </div>
+      )}
+      {detail.notes && (
+        <p className="text-sm bg-muted/50 rounded p-2">{detail.notes}</p>
+      )}
+
+      {detail.exercises.length > 0 && (
+        <div data-testid="completed-exercises">
+          {detail.exercises.map((ex, i) => {
+            const planned = detail.snapshot.slots?.find(
+              (s) => s.exercise_name === ex.exercise_name
+            )
+            return <CompletedExerciseRow key={i} exercise={ex} planned={planned} />
+          })}
+        </div>
+      )}
+
+      {detail.exercises.length === 0 && detail.snapshot.slots && detail.snapshot.slots.length > 0 && (
+        <div data-testid="snapshot-slots">
+          {detail.snapshot.slots.map((slot, i) => (
+            <SlotRow key={i} slot={slot} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Get workout name and modality from a non-rest result
+function getWorkoutMeta(detail: Exclude<DayDetailResult, { type: 'rest' }>) {
+  if (detail.type === 'projected') {
+    return { name: detail.template.name, modality: detail.template.modality }
+  }
+  return { name: detail.snapshot.name ?? 'Workout', modality: detail.snapshot.modality }
+}
+
+function WorkoutCard({
+  detail,
+  defaultOpen,
+}: {
+  detail: Exclude<DayDetailResult, { type: 'rest' }>
+  defaultOpen: boolean
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  const { name, modality } = getWorkoutMeta(detail)
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen} data-testid="workout-card">
+      <CollapsibleTrigger
+        className="flex w-full items-center gap-2 rounded-lg border border-border bg-card px-3 py-2.5 text-left hover:bg-accent/50 transition-colors"
+        data-testid="workout-card-trigger"
+      >
+        <span className="font-semibold text-sm flex-1">{name}</span>
+        {modality && <ModalityBadge modality={modality} />}
+        {detail.is_deload && <Badge variant="outline">Deload</Badge>}
+        <Badge variant="outline" className="text-[0.65rem] px-1.5 py-0 font-medium">
+          {periodLabel[detail.period]}
+        </Badge>
+        {detail.mesocycle_status !== 'completed' && (
+          <Link
+            href={`/mesocycles/${detail.mesocycle_id}`}
+            data-testid="edit-template-link"
+            className="text-muted-foreground hover:text-foreground transition-colors"
+            title="Edit template"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Pencil className="h-4 w-4" />
+          </Link>
+        )}
+        <ChevronDown
+          className={`h-4 w-4 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`}
+        />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="px-3 pt-2 pb-1">
+        {detail.type === 'projected' && <ProjectedCardBody detail={detail} />}
+        {detail.type === 'completed' && <CompletedCardBody detail={detail} />}
+      </CollapsibleContent>
+    </Collapsible>
+  )
+}
+
 export function DayDetailPanel({ date, onClose }: DayDetailPanelProps) {
-  const [detail, setDetail] = useState<DayDetailResult | null>(null)
+  const [details, setDetails] = useState<DayDetailResult[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -142,11 +279,10 @@ export function DayDetailPanel({ date, onClose }: DayDetailPanelProps) {
       const res = await fetch(`/api/calendar/day?date=${d}`)
       if (!res.ok) throw new Error('Failed to fetch')
       const data = await res.json()
-      // API returns array (T144) — unwrap first entry until T146 adds multi-card UI
-      setDetail(Array.isArray(data) ? data[0] ?? null : data)
+      setDetails(Array.isArray(data) ? data : [data])
     } catch {
       setError('Failed to load day detail')
-      setDetail(null)
+      setDetails([])
     } finally {
       setLoading(false)
     }
@@ -156,22 +292,36 @@ export function DayDetailPanel({ date, onClose }: DayDetailPanelProps) {
     if (date) {
       fetchDetail(date)
     } else {
-      setDetail(null)
+      setDetails([])
     }
   }, [date, fetchDetail])
 
   const open = date !== null
+
+  // Separate rest entries from workouts
+  const restEntry = details.find((d) => d.type === 'rest')
+  const workouts = details
+    .filter((d): d is Exclude<DayDetailResult, { type: 'rest' }> => d.type !== 'rest')
+    .sort((a, b) => periodOrder[a.period] - periodOrder[b.period])
+
+  const isRestDay = details.length > 0 && workouts.length === 0
+  const isSingleWorkout = workouts.length === 1
+
+  // Sheet description text
+  let description = ''
+  if (isRestDay) description = 'Rest Day'
+  else if (workouts.length === 1) {
+    description = workouts[0].type === 'projected' ? 'Projected workout' : 'Completed workout'
+  } else if (workouts.length > 1) {
+    description = `${workouts.length} workouts`
+  }
 
   return (
     <Sheet open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose() }}>
       <SheetContent side="right" className="overflow-y-auto" data-testid="day-detail-panel">
         <SheetHeader>
           <SheetTitle>{date ? formatDateLong(date) : ''}</SheetTitle>
-          <SheetDescription>
-            {detail?.type === 'rest' && 'Rest Day'}
-            {detail?.type === 'projected' && 'Projected workout'}
-            {detail?.type === 'completed' && 'Completed workout'}
-          </SheetDescription>
+          <SheetDescription>{description}</SheetDescription>
         </SheetHeader>
 
         <div className="mt-4">
@@ -179,13 +329,13 @@ export function DayDetailPanel({ date, onClose }: DayDetailPanelProps) {
           {error && <p className="text-sm text-destructive">{error}</p>}
 
           {/* Rest day */}
-          {detail?.type === 'rest' && (
+          {isRestDay && restEntry?.type === 'rest' && (
             <div data-testid="rest-day-message" className="py-8 text-center">
               <p className="text-lg font-medium text-muted-foreground">Rest Day</p>
               <p className="text-sm text-muted-foreground mt-1">No workout scheduled</p>
-              {detail.mesocycle_id != null && detail.mesocycle_status !== 'completed' && (
+              {restEntry.mesocycle_id != null && restEntry.mesocycle_status !== 'completed' && (
                 <Link
-                  href={`/mesocycles/${detail.mesocycle_id}`}
+                  href={`/mesocycles/${restEntry.mesocycle_id}`}
                   data-testid="schedule-link"
                   className="inline-flex items-center gap-1.5 mt-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
@@ -196,104 +346,16 @@ export function DayDetailPanel({ date, onClose }: DayDetailPanelProps) {
             </div>
           )}
 
-          {/* Projected day */}
-          {detail?.type === 'projected' && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold">{detail.template.name}</h3>
-                <ModalityBadge modality={detail.template.modality} />
-                {detail.is_deload && <Badge variant="outline">Deload</Badge>}
-                {detail.mesocycle_status !== 'completed' && (
-                  <Link
-                    href={`/mesocycles/${detail.mesocycle_id}`}
-                    data-testid="edit-template-link"
-                    className="ml-auto text-muted-foreground hover:text-foreground transition-colors"
-                    title="Edit template"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Link>
-                )}
-              </div>
-
-              {detail.template.notes && (
-                <p className="text-sm text-muted-foreground">{detail.template.notes}</p>
-              )}
-
-              {/* Resistance: show slots */}
-              {detail.template.modality === 'resistance' && detail.slots.length > 0 && (
-                <div data-testid="resistance-slots">
-                  {detail.slots.map((slot, i) => (
-                    <SlotRow key={i} slot={slot} />
-                  ))}
-                </div>
-              )}
-
-              {/* Running */}
-              {detail.template.modality === 'running' && (
-                <RunningDetail template={detail.template} />
-              )}
-
-              {/* MMA */}
-              {detail.template.modality === 'mma' && (
-                <MmaDetail template={detail.template} />
-              )}
-            </div>
-          )}
-
-          {/* Completed day */}
-          {detail?.type === 'completed' && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold">{detail.snapshot.name ?? 'Workout'}</h3>
-                {detail.snapshot.modality && <ModalityBadge modality={detail.snapshot.modality} />}
-                {detail.is_deload && <Badge variant="outline">Deload</Badge>}
-                {detail.mesocycle_status !== 'completed' && (
-                  <Link
-                    href={`/mesocycles/${detail.mesocycle_id}`}
-                    data-testid="edit-template-link"
-                    className="ml-auto text-muted-foreground hover:text-foreground transition-colors"
-                    title="Edit template"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Link>
-                )}
-              </div>
-
-              {detail.snapshot.notes && (
-                <p className="text-sm text-muted-foreground">{detail.snapshot.notes}</p>
-              )}
-
-              {/* Rating + notes */}
-              {detail.rating != null && (
-                <div className="flex items-center gap-3">
-                  <RatingDisplay rating={detail.rating} />
-                  <span className="text-sm text-muted-foreground">({detail.rating}/5)</span>
-                </div>
-              )}
-              {detail.notes && (
-                <p className="text-sm bg-muted/50 rounded p-2">{detail.notes}</p>
-              )}
-
-              {/* Exercises with actuals */}
-              {detail.exercises.length > 0 && (
-                <div data-testid="completed-exercises">
-                  {detail.exercises.map((ex, i) => {
-                    const planned = detail.snapshot.slots?.find(
-                      (s) => s.exercise_name === ex.exercise_name
-                    )
-                    return <CompletedExerciseRow key={i} exercise={ex} planned={planned} />
-                  })}
-                </div>
-              )}
-
-              {/* If snapshot has slots but no logged exercises (running/mma) */}
-              {detail.exercises.length === 0 && detail.snapshot.slots && detail.snapshot.slots.length > 0 && (
-                <div data-testid="snapshot-slots">
-                  {detail.snapshot.slots.map((slot, i) => (
-                    <SlotRow key={i} slot={slot} />
-                  ))}
-                </div>
-              )}
+          {/* Workout cards */}
+          {workouts.length > 0 && (
+            <div className="space-y-3">
+              {workouts.map((w, i) => (
+                <WorkoutCard
+                  key={i}
+                  detail={w}
+                  defaultOpen={isSingleWorkout}
+                />
+              ))}
             </div>
           )}
         </div>
