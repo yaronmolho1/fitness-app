@@ -22,12 +22,14 @@ import { getTodayWorkout, isDeloadWeek } from './queries'
 // Helpers
 
 function createTables() {
+  testDb.run(sql`DROP TABLE IF EXISTS slot_week_overrides`)
   testDb.run(sql`DROP TABLE IF EXISTS routine_logs`)
   testDb.run(sql`DROP TABLE IF EXISTS routine_items`)
   testDb.run(sql`DROP TABLE IF EXISTS logged_sets`)
   testDb.run(sql`DROP TABLE IF EXISTS logged_exercises`)
   testDb.run(sql`DROP TABLE IF EXISTS logged_workouts`)
   testDb.run(sql`DROP TABLE IF EXISTS exercise_slots`)
+  testDb.run(sql`DROP TABLE IF EXISTS template_sections`)
   testDb.run(sql`DROP TABLE IF EXISTS weekly_schedule`)
   testDb.run(sql`DROP TABLE IF EXISTS workout_templates`)
   testDb.run(sql`DROP TABLE IF EXISTS exercises`)
@@ -75,11 +77,29 @@ function createTables() {
     )
   `)
   testDb.run(sql`
+    CREATE TABLE template_sections (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      template_id INTEGER NOT NULL REFERENCES workout_templates(id) ON DELETE CASCADE,
+      modality TEXT NOT NULL,
+      section_name TEXT NOT NULL,
+      "order" INTEGER NOT NULL,
+      run_type TEXT,
+      target_pace TEXT,
+      hr_zone INTEGER,
+      interval_count INTEGER,
+      interval_rest INTEGER,
+      coaching_cues TEXT,
+      target_distance REAL, target_duration INTEGER,
+      planned_duration INTEGER,
+      created_at INTEGER
+    )
+  `)
+  testDb.run(sql`
     CREATE TABLE exercise_slots (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       template_id INTEGER NOT NULL REFERENCES workout_templates(id) ON DELETE CASCADE,
       exercise_id INTEGER NOT NULL REFERENCES exercises(id),
-    section_id INTEGER,
+    section_id INTEGER REFERENCES template_sections(id),
       sets INTEGER NOT NULL,
       reps TEXT NOT NULL,
       weight REAL,
@@ -91,6 +111,25 @@ function createTables() {
       created_at INTEGER
     )
   `)
+  testDb.run(sql`
+    CREATE TABLE slot_week_overrides (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      exercise_slot_id INTEGER NOT NULL REFERENCES exercise_slots(id) ON DELETE CASCADE,
+      week_number INTEGER NOT NULL,
+      weight REAL,
+      reps TEXT,
+      sets INTEGER,
+      rpe REAL,
+      distance REAL,
+      duration INTEGER,
+      pace TEXT,
+      is_deload INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER
+    )
+  `)
+  testDb.run(
+    sql`CREATE UNIQUE INDEX slot_week_overrides_slot_week_idx ON slot_week_overrides(exercise_slot_id, week_number)`
+  )
   testDb.run(sql`
     CREATE TABLE weekly_schedule (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -815,7 +854,7 @@ describe('getTodayWorkout', () => {
     }
   })
 
-  it('rest_day skips skip_on_deload routines during deload week', async () => {
+  it('rest day skips skip_on_deload routines during deload week', async () => {
     const meso = seedMesocycle({
       status: 'active',
       start_date: '2026-03-01',
@@ -836,5 +875,209 @@ describe('getTodayWorkout', () => {
       expect(result.routines.items).toHaveLength(1)
       expect(result.routines.items[0].name).toBe('Body Weight')
     }
+  })
+})
+
+// ============================================================================
+// T153: Week override merge into getTodayWorkout
+// ============================================================================
+
+function seedOverride(
+  slotId: number,
+  weekNumber: number,
+  fields: Partial<{ weight: number; reps: string; sets: number; rpe: number }>
+) {
+  return testDb
+    .insert(schema.slot_week_overrides)
+    .values({
+      exercise_slot_id: slotId,
+      week_number: weekNumber,
+      weight: fields.weight ?? null,
+      reps: fields.reps ?? null,
+      sets: fields.sets ?? null,
+      rpe: fields.rpe ?? null,
+      is_deload: 0,
+      created_at: new Date(),
+    })
+    .returning({ id: schema.slot_week_overrides.id })
+    .get()
+}
+
+describe('getTodayWorkout — week override merge (T153)', () => {
+  beforeEach(() => {
+    createTables()
+  })
+
+  it('merges week override values into slot for the current week', async () => {
+    // Meso starts 2026-03-01 (Sunday), week 2 = days 7-13
+    const meso = seedMesocycle({
+      status: 'active',
+      start_date: '2026-03-01',
+      end_date: '2026-03-28',
+      work_weeks: 4,
+    })
+    const tmpl = seedTemplate(meso.id, 'Push A')
+    const ex = seedExercise('Bench Press')
+    const slot = seedSlot(tmpl.id, ex.id, 1, { sets: 3, reps: '8-12', weight: 80, rpe: 7 })
+    seedSchedule(meso.id, 2, tmpl.id) // Tuesday
+
+    // Override for week 2: heavier weight, lower reps
+    seedOverride(slot.id, 2, { weight: 90, reps: '6-8' })
+
+    // 2026-03-10 is Tuesday, week 2
+    const results = await getTodayWorkout('2026-03-10')
+    const result = results[0]
+    expect(result.type).toBe('workout')
+    if (result.type !== 'workout') return
+
+    expect(result.slots[0].weight).toBe(90)
+    expect(result.slots[0].reps).toBe('6-8')
+    // Non-overridden fields fall back to base
+    expect(result.slots[0].sets).toBe(3)
+    expect(result.slots[0].rpe).toBe(7)
+  })
+
+  it('no override for current week returns base slot values unchanged', async () => {
+    const meso = seedMesocycle({
+      status: 'active',
+      start_date: '2026-03-01',
+      end_date: '2026-03-28',
+      work_weeks: 4,
+    })
+    const tmpl = seedTemplate(meso.id, 'Push A')
+    const ex = seedExercise('Bench Press')
+    const slot = seedSlot(tmpl.id, ex.id, 1, { sets: 3, reps: '8-12', weight: 80, rpe: 7 })
+    seedSchedule(meso.id, 2, tmpl.id)
+
+    // Override exists for week 3, but we query week 2
+    seedOverride(slot.id, 3, { weight: 100 })
+
+    const results = await getTodayWorkout('2026-03-10') // week 2 Tuesday
+    const result = results[0]
+    expect(result.type).toBe('workout')
+    if (result.type !== 'workout') return
+
+    expect(result.slots[0].weight).toBe(80)
+    expect(result.slots[0].sets).toBe(3)
+    expect(result.slots[0].reps).toBe('8-12')
+    expect(result.slots[0].rpe).toBe(7)
+  })
+
+  it('partial override merges only non-null fields', async () => {
+    const meso = seedMesocycle({
+      status: 'active',
+      start_date: '2026-03-01',
+      end_date: '2026-03-28',
+      work_weeks: 4,
+    })
+    const tmpl = seedTemplate(meso.id, 'Push A')
+    const ex = seedExercise('Bench Press')
+    const slot = seedSlot(tmpl.id, ex.id, 1, { sets: 4, reps: '6-8', weight: 100, rpe: 8.5 })
+    seedSchedule(meso.id, 2, tmpl.id)
+
+    // Only override RPE for week 2
+    seedOverride(slot.id, 2, { rpe: 9 })
+
+    const results = await getTodayWorkout('2026-03-10')
+    const result = results[0]
+    expect(result.type).toBe('workout')
+    if (result.type !== 'workout') return
+
+    expect(result.slots[0].weight).toBe(100) // base
+    expect(result.slots[0].sets).toBe(4) // base
+    expect(result.slots[0].reps).toBe('6-8') // base
+    expect(result.slots[0].rpe).toBe(9) // overridden
+  })
+
+  it('merges overrides for multiple slots independently', async () => {
+    const meso = seedMesocycle({
+      status: 'active',
+      start_date: '2026-03-01',
+      end_date: '2026-03-28',
+      work_weeks: 4,
+    })
+    const tmpl = seedTemplate(meso.id, 'Push A')
+    const ex1 = seedExercise('Bench Press')
+    const ex2 = seedExercise('OHP')
+    const slot1 = seedSlot(tmpl.id, ex1.id, 1, { sets: 4, reps: '6', weight: 100 })
+    const slot2 = seedSlot(tmpl.id, ex2.id, 2, { sets: 3, reps: '8-10', weight: 50 })
+    seedSchedule(meso.id, 2, tmpl.id)
+
+    seedOverride(slot1.id, 2, { weight: 110 })
+    seedOverride(slot2.id, 2, { sets: 4, reps: '6-8' })
+
+    const results = await getTodayWorkout('2026-03-10')
+    const result = results[0]
+    expect(result.type).toBe('workout')
+    if (result.type !== 'workout') return
+
+    expect(result.slots[0].weight).toBe(110)
+    expect(result.slots[0].sets).toBe(4) // base (not overridden)
+    expect(result.slots[1].weight).toBe(50) // base (not overridden)
+    expect(result.slots[1].sets).toBe(4) // overridden
+    expect(result.slots[1].reps).toBe('6-8') // overridden
+  })
+
+  it('week 1 override applies on first week of mesocycle', async () => {
+    const meso = seedMesocycle({
+      status: 'active',
+      start_date: '2026-03-01',
+      end_date: '2026-03-28',
+      work_weeks: 4,
+    })
+    const tmpl = seedTemplate(meso.id, 'Push A')
+    const ex = seedExercise('Bench Press')
+    const slot = seedSlot(tmpl.id, ex.id, 1, { sets: 3, reps: '10', weight: 60 })
+    seedSchedule(meso.id, 2, tmpl.id)
+
+    seedOverride(slot.id, 1, { weight: 65 })
+
+    // 2026-03-03 is Tuesday, week 1
+    const results = await getTodayWorkout('2026-03-03')
+    const result = results[0]
+    expect(result.type).toBe('workout')
+    if (result.type !== 'workout') return
+
+    expect(result.slots[0].weight).toBe(65)
+  })
+
+  it('mixed template section slots also get overrides merged', async () => {
+    const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
+    const tmpl = seedTemplate(meso.id, 'Mixed Session', 'mixed')
+    const sec = testDb
+      .insert(schema.template_sections)
+      .values({
+        template_id: tmpl.id,
+        modality: 'resistance',
+        section_name: 'Strength',
+        order: 1,
+        created_at: new Date(),
+      })
+      .returning({ id: schema.template_sections.id })
+      .get()
+    const ex = seedExercise('Squat')
+    const slot = seedSlot(tmpl.id, ex.id, 1, {
+      sets: 5,
+      reps: '3',
+      weight: 140,
+      rpe: 9,
+      is_main: true,
+    })
+    // Set section_id on the slot
+    testDb.run(sql`UPDATE exercise_slots SET section_id = ${sec.id} WHERE id = ${slot.id}`)
+    seedSchedule(meso.id, 2, tmpl.id)
+
+    // Override for week 2
+    seedOverride(slot.id, 2, { weight: 150, rpe: 9.5 })
+
+    const results = await getTodayWorkout('2026-03-10')
+    if (results[0].type !== 'workout') return
+
+    const section = results[0].sections![0]
+    expect(section.slots).toHaveLength(1)
+    expect(section.slots![0].weight).toBe(150) // overridden
+    expect(section.slots![0].rpe).toBe(9.5) // overridden
+    expect(section.slots![0].sets).toBe(5) // base
+    expect(section.slots![0].reps).toBe('3') // base
   })
 })
