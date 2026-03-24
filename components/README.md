@@ -7,7 +7,7 @@ Shared React components — app-level UI and navigation.
 - `bottom-bar.tsx` — `BottomBar` mobile nav (hidden on desktop), 5 nav items
 - `login-form.tsx` — `LoginForm` card with username/password, calls `/api/auth/login`
 - `exercise-form.tsx` — `ExerciseForm` create form with name, modality, muscle group, equipment fields
-- `exercise-picker.tsx` — `ExercisePicker` searchable exercise selector, resistance-only filter, onSelect callback
+- `exercise-picker.tsx` — `ExercisePicker` searchable exercise selector with optional `modality` filter (defaults to resistance), onSelect callback
 - `mesocycle-form.tsx` — `MesocycleForm` create/edit form with name, start date (DatePicker), work weeks, deload toggle, live end date preview; supports `mode` prop for create vs edit
 - `schedule-grid.tsx` — `ScheduleGrid` 7-day weekly schedule grid; assign/replace/remove template per day slot via `assignTemplate`/`removeAssignment` actions; read-only when mesocycle is completed
 - `status-badge.tsx` — `StatusBadge` colored pill for mesocycle status (planned/active/completed)

@@ -291,7 +291,9 @@ function SectionEditor({
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
+          <Label htmlFor={`section-name-${section.id}`}>Section Name</Label>
           <Input
+            id={`section-name-${section.id}`}
             value={section.section_name}
             onChange={(e) => onChange({ section_name: e.target.value })}
             placeholder="Section name"

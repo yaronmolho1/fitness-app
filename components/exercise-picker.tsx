@@ -9,29 +9,29 @@ import { filterExercises, type Exercise } from '@/lib/exercises/filters'
 type ExercisePickerProps = {
   exercises: Exercise[]
   onSelect: (exercise: Exercise) => void
+  modality?: 'resistance' | 'running' | 'mma'
 }
 
-export function ExercisePicker({ exercises, onSelect }: ExercisePickerProps) {
+export function ExercisePicker({ exercises, onSelect, modality = 'resistance' }: ExercisePickerProps) {
   const [search, setSearch] = useState('')
 
-  // Filter to resistance-only by default
-  const filtered = filterExercises(exercises, search, 'resistance')
+  const filtered = filterExercises(exercises, search, modality)
 
   return (
     <div className="space-y-3">
       <Input
-        placeholder="Search resistance exercises..."
+        placeholder={`Search ${modality} exercises...`}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
 
       {filtered.length === 0 ? (
         <div className="py-8 text-center text-muted-foreground">
-          {exercises.some((e) => e.modality === 'resistance') ? (
-            <p>No matching resistance exercises</p>
+          {exercises.some((e) => e.modality === modality) ? (
+            <p>No matching {modality} exercises</p>
           ) : (
             <div>
-              <p className="font-medium">No resistance exercises</p>
+              <p className="font-medium">No {modality} exercises</p>
               <p className="mt-1 text-sm">
                 <Link href="/exercises" className="text-primary underline transition-colors hover:text-primary/80">
                   Create exercises
