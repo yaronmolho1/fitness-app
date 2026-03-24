@@ -17,4 +17,5 @@ Workout template server actions for all modalities (resistance, running, MMA/BJJ
 - `copy-actions.ts` — `copyTemplateToMesocycle()` Server Action: deep-copies a template (with sections, slots, superset groups) to another mesocycle, enforcing canonical_name uniqueness and completed-meso guard
 - `browse-queries.ts` — `getBrowseTemplates()` fetches all templates from other mesocycles with exercise counts for the browse/copy dialog; exports `BrowseTemplate` type
 - `cascade-batch.ts` — `batchCascadeSlotEdits()` Server Action for atomic batch cascade of multiple slot parameter edits across sibling templates in a single transaction; matches slots via `findMatchingSlots`
+- `transfer-actions.ts` — `copyExerciseSlots()`, `moveExerciseSlots()` Server Actions for copying/moving exercise slots between templates with group_id remapping, completed-meso guards, and reorder-after-move
 - `use-pending-edits.ts` — `usePendingEdits()` client hook for tracking slot-level edits before batch cascade; exposes `markEdited`, `clearAll`, `clearOne`, `isEdited`, `hasPendingEdits`, `pendingEditIds`
