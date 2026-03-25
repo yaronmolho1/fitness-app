@@ -75,7 +75,8 @@ describe('SlotList — override warning dialog (T158)', () => {
     render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
 
     // Enter edit mode
-    await user.click(screen.getByRole('button', { name: /edit/i }))
+    await user.click(screen.getByRole('button', { name: /actions/i }))
+    await user.click(screen.getByRole('menuitem', { name: /edit/i }))
 
     // Change weight
     const weightInput = screen.getByLabelText(/weight/i)
@@ -102,7 +103,8 @@ describe('SlotList — override warning dialog (T158)', () => {
 
     render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
 
-    await user.click(screen.getByRole('button', { name: /edit/i }))
+    await user.click(screen.getByRole('button', { name: /actions/i }))
+    await user.click(screen.getByRole('menuitem', { name: /edit/i }))
 
     const weightInput = screen.getByLabelText(/weight/i)
     await user.clear(weightInput)
@@ -131,7 +133,8 @@ describe('SlotList — override warning dialog (T158)', () => {
 
     render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
 
-    await user.click(screen.getByRole('button', { name: /edit/i }))
+    await user.click(screen.getByRole('button', { name: /actions/i }))
+    await user.click(screen.getByRole('menuitem', { name: /edit/i }))
 
     const weightInput = screen.getByLabelText(/weight/i)
     await user.clear(weightInput)
@@ -160,7 +163,8 @@ describe('SlotList — override warning dialog (T158)', () => {
 
     render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
 
-    await user.click(screen.getByRole('button', { name: /edit/i }))
+    await user.click(screen.getByRole('button', { name: /actions/i }))
+    await user.click(screen.getByRole('menuitem', { name: /edit/i }))
 
     const weightInput = screen.getByLabelText(/weight/i)
     await user.clear(weightInput)
@@ -185,7 +189,8 @@ describe('SlotList — override warning dialog (T158)', () => {
 
     render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
 
-    await user.click(screen.getByRole('button', { name: /edit/i }))
+    await user.click(screen.getByRole('button', { name: /actions/i }))
+    await user.click(screen.getByRole('menuitem', { name: /edit/i }))
 
     const guidelinesInput = screen.getByLabelText(/guidelines/i)
     await user.clear(guidelinesInput)

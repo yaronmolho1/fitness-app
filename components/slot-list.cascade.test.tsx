@@ -94,7 +94,8 @@ describe('SlotList cascade integration', () => {
       render(<SlotList slots={[slot]} templateId={10} exercises={exercises} isCompleted={false} />)
 
       // Enter edit mode
-      await user.click(screen.getByRole('button', { name: /edit/i }))
+      await user.click(screen.getByRole('button', { name: /actions/i }))
+      await user.click(screen.getByRole('menuitem', { name: /edit/i }))
       const setsInput = screen.getByLabelText(/sets/i)
       await user.clear(setsInput)
       await user.type(setsInput, '5')
@@ -124,7 +125,8 @@ describe('SlotList cascade integration', () => {
       render(<SlotList slots={[slot]} templateId={10} exercises={exercises} isCompleted={false} />)
 
       // Edit -> Save -> Cascade
-      await user.click(screen.getByRole('button', { name: /edit/i }))
+      await user.click(screen.getByRole('button', { name: /actions/i }))
+      await user.click(screen.getByRole('menuitem', { name: /edit/i }))
       const setsInput = screen.getByLabelText(/sets/i)
       await user.clear(setsInput)
       await user.type(setsInput, '5')
@@ -159,7 +161,8 @@ describe('SlotList cascade integration', () => {
       render(<SlotList slots={[slot]} templateId={10} exercises={exercises} isCompleted={false} />)
 
       // Remove -> Confirm
-      await user.click(screen.getByRole('button', { name: /remove/i }))
+      await user.click(screen.getByRole('button', { name: /actions/i }))
+      await user.click(screen.getByRole('menuitem', { name: /remove/i }))
       await user.click(screen.getByRole('button', { name: /confirm/i }))
 
       await waitFor(() => {
@@ -183,7 +186,8 @@ describe('SlotList cascade integration', () => {
       render(<SlotList slots={[slot]} templateId={10} exercises={exercises} isCompleted={false} />)
 
       // Remove -> Confirm
-      await user.click(screen.getByRole('button', { name: /remove/i }))
+      await user.click(screen.getByRole('button', { name: /actions/i }))
+      await user.click(screen.getByRole('menuitem', { name: /remove/i }))
       await user.click(screen.getByRole('button', { name: /confirm/i }))
 
       await waitFor(() => {

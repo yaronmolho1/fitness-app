@@ -120,7 +120,8 @@ describe('SlotList', () => {
       const slot = makeSlot()
       render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
 
-      await user.click(screen.getByRole('button', { name: /edit/i }))
+      await user.click(screen.getByRole('button', { name: /actions/i }))
+      await user.click(screen.getByRole('menuitem', { name: /edit/i }))
       // Should show input fields
       expect(screen.getByLabelText(/sets/i)).toBeInTheDocument()
       expect(screen.getByLabelText(/reps/i)).toBeInTheDocument()
@@ -131,7 +132,8 @@ describe('SlotList', () => {
       const slot = makeSlot({ sets: 4, reps: '8', weight: 100, rpe: 9, rest_seconds: 90, guidelines: 'Go slow' })
       render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
 
-      await user.click(screen.getByRole('button', { name: /edit/i }))
+      await user.click(screen.getByRole('button', { name: /actions/i }))
+      await user.click(screen.getByRole('menuitem', { name: /edit/i }))
       expect(screen.getByLabelText(/sets/i)).toHaveValue("4")
       expect(screen.getByLabelText(/reps/i)).toHaveValue("8")
       expect(screen.getByLabelText(/weight/i)).toHaveValue("100")
@@ -150,7 +152,8 @@ describe('SlotList', () => {
       const slot = makeSlot()
       render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
 
-      await user.click(screen.getByRole('button', { name: /edit/i }))
+      await user.click(screen.getByRole('button', { name: /actions/i }))
+      await user.click(screen.getByRole('menuitem', { name: /edit/i }))
       const setsInput = screen.getByLabelText(/sets/i)
       await user.clear(setsInput)
       await user.type(setsInput, '5')
@@ -166,7 +169,8 @@ describe('SlotList', () => {
       const slot = makeSlot()
       render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
 
-      await user.click(screen.getByRole('button', { name: /edit/i }))
+      await user.click(screen.getByRole('button', { name: /actions/i }))
+      await user.click(screen.getByRole('menuitem', { name: /edit/i }))
       await user.click(screen.getByRole('button', { name: /cancel/i }))
 
       // Back to display mode
@@ -184,7 +188,8 @@ describe('SlotList', () => {
       const slot = makeSlot()
       render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
 
-      await user.click(screen.getByRole('button', { name: /edit/i }))
+      await user.click(screen.getByRole('button', { name: /actions/i }))
+      await user.click(screen.getByRole('menuitem', { name: /edit/i }))
       await user.click(screen.getByRole('button', { name: /^save$/i }))
 
       expect(await screen.findByText(/sets must be positive/i)).toBeInTheDocument()
@@ -197,7 +202,8 @@ describe('SlotList', () => {
       const slot = makeSlot()
       render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
 
-      await user.click(screen.getByRole('button', { name: /remove/i }))
+      await user.click(screen.getByRole('button', { name: /actions/i }))
+      await user.click(screen.getByRole('menuitem', { name: /remove/i }))
       // Text is split across elements (<strong>), use a function matcher on <p>
       expect(screen.getByText((_content, el) =>
         el?.tagName === 'P' &&
@@ -214,7 +220,8 @@ describe('SlotList', () => {
       const slot = makeSlot()
       render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
 
-      await user.click(screen.getByRole('button', { name: /remove/i }))
+      await user.click(screen.getByRole('button', { name: /actions/i }))
+      await user.click(screen.getByRole('menuitem', { name: /remove/i }))
       await user.click(screen.getByRole('button', { name: /confirm/i }))
 
       await waitFor(() => {
@@ -227,7 +234,8 @@ describe('SlotList', () => {
       const slot = makeSlot()
       render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
 
-      await user.click(screen.getByRole('button', { name: /remove/i }))
+      await user.click(screen.getByRole('button', { name: /actions/i }))
+      await user.click(screen.getByRole('menuitem', { name: /remove/i }))
       await user.click(screen.getByRole('button', { name: /cancel/i }))
 
       expect(removeExerciseSlot).not.toHaveBeenCalled()
@@ -237,12 +245,14 @@ describe('SlotList', () => {
   })
 
   describe('completed mesocycle', () => {
-    it('hides edit and remove buttons when completed', () => {
+    it('hides edit and remove menu items when completed', async () => {
+      const user = userEvent.setup()
       const slot = makeSlot()
       render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={true} />)
 
-      expect(screen.queryByRole('button', { name: /edit/i })).not.toBeInTheDocument()
-      expect(screen.queryByRole('button', { name: /remove/i })).not.toBeInTheDocument()
+      await user.click(screen.getByRole('button', { name: /actions/i }))
+      expect(screen.queryByRole('menuitem', { name: /edit/i })).not.toBeInTheDocument()
+      expect(screen.queryByRole('menuitem', { name: /remove/i })).not.toBeInTheDocument()
     })
 
     it('hides add exercise button when completed', () => {

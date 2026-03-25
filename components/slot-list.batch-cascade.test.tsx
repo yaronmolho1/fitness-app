@@ -77,7 +77,8 @@ const exercises = [
 // Helper: defer-save a slot edit (client-only, no DB write)
 async function deferSaveSlot(user: ReturnType<typeof userEvent.setup>, rowIndex: number, field: RegExp, value: string) {
   const rows = screen.getAllByTestId('slot-row')
-  await user.click(within(rows[rowIndex]).getByRole('button', { name: /edit/i }))
+  await user.click(within(rows[rowIndex]).getByRole('button', { name: /actions/i }))
+  await user.click(screen.getByRole('menuitem', { name: /edit/i }))
   const input = screen.getByLabelText(field)
   await user.clear(input)
   await user.type(input, value)
@@ -117,7 +118,8 @@ describe('SlotList batch cascade', () => {
       const slot = makeSlot()
       render(<SlotList slots={[slot]} templateId={10} exercises={exercises} isCompleted={false} />)
 
-      await user.click(screen.getByRole('button', { name: /edit/i }))
+      await user.click(screen.getByRole('button', { name: /actions/i }))
+      await user.click(screen.getByRole('menuitem', { name: /edit/i }))
       const setsInput = screen.getByLabelText(/sets/i)
       await user.clear(setsInput)
       await user.type(setsInput, '5')
@@ -413,7 +415,8 @@ describe('SlotList batch cascade', () => {
 
       // Normal edit + save (not "save for later")
       const rows = screen.getAllByTestId('slot-row')
-      await user.click(within(rows[0]).getByRole('button', { name: /edit/i }))
+      await user.click(within(rows[0]).getByRole('button', { name: /actions/i }))
+      await user.click(screen.getByRole('menuitem', { name: /edit/i }))
       await user.clear(screen.getByLabelText(/sets/i))
       await user.type(screen.getByLabelText(/sets/i), '5')
       await user.click(screen.getByRole('button', { name: /^save$/i }))

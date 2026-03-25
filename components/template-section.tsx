@@ -10,6 +10,7 @@ import { RunningTemplateForm } from '@/components/running-template-form'
 import { MmaBjjTemplateForm } from '@/components/mma-bjj-template-form'
 import { MixedTemplateForm } from '@/components/mixed-template-form'
 import { SlotList } from '@/components/slot-list'
+import { TemplateWeekGrid } from '@/components/template-week-grid'
 import { CascadeScopeSelector } from '@/components/cascade-scope-selector'
 import { SectionHeading } from '@/components/layout/section-heading'
 import { TemplateAddPicker, type PickerSelection } from '@/components/template-add-picker'
@@ -363,6 +364,7 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated, secti
   const [coachingCues, setCoachingCues] = useState(template.coaching_cues ?? '')
   // MMA fields
   const [plannedDuration, setPlannedDuration] = useState(template.planned_duration?.toString() ?? '')
+  const [showTemplateWeekGrid, setShowTemplateWeekGrid] = useState(false)
   const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
   const [pendingUpdates, setPendingUpdates] = useState<import('@/lib/templates/cascade-types').CascadeUpdates>({})
@@ -600,7 +602,6 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated, secti
       >
         <div className="min-w-0 flex-1">
           <span className="text-sm font-medium">{template.name}</span>
-          <span className="ml-2 text-xs text-muted-foreground">{template.canonical_name}</span>
           {isResistance && (
             <span className="ml-2 text-xs text-muted-foreground">
               {slots.length} exercise{slots.length !== 1 ? 's' : ''}
@@ -670,15 +671,40 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated, secti
         <div className="border-t px-4 py-3 space-y-3">
           {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
           <RunningFields idPrefix={`exp-${template.id}`} runType={runType} setRunType={setRunType} targetPace={targetPace} setTargetPace={setTargetPace} hrZone={hrZone} setHrZone={setHrZone} targetDistance={targetDistance} setTargetDistance={setTargetDistance} targetDuration={targetDuration} setTargetDuration={setTargetDuration} intervalCount={intervalCount} setIntervalCount={setIntervalCount} intervalRest={intervalRest} setIntervalRest={setIntervalRest} coachingCues={coachingCues} setCoachingCues={setCoachingCues} isInterval={isInterval} disabled={isCompleted} />
-          {!isCompleted && (
-            <div className="flex gap-2">
-              <Button size="sm" onClick={handleSave} disabled={isPending}>
-                {isPending ? 'Saving...' : 'Save'}
+          <div className="flex gap-2">
+            {!isCompleted && (
+              <>
+                <Button size="sm" onClick={handleSave} disabled={isPending}>
+                  {isPending ? 'Saving...' : 'Save'}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => { resetFields(); setExpanded(false) }}>
+                  Cancel
+                </Button>
+              </>
+            )}
+            {workWeeks > 0 && (
+              <Button size="sm" variant="outline" onClick={() => setShowTemplateWeekGrid(true)}>
+                Plan Weeks
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => { resetFields(); setExpanded(false) }}>
-                Cancel
-              </Button>
-            </div>
+            )}
+          </div>
+          {workWeeks > 0 && (
+            <TemplateWeekGrid
+              templateId={template.id}
+              sectionId={null}
+              workWeeks={workWeeks}
+              hasDeload={hasDeload}
+              isCompleted={isCompleted}
+              open={showTemplateWeekGrid}
+              onOpenChange={setShowTemplateWeekGrid}
+              modality="running"
+              runningBase={{
+                distance: template.target_distance ?? null,
+                duration: template.target_duration ?? null,
+                pace: template.target_pace ?? null,
+              }}
+              title={template.name}
+            />
           )}
         </div>
       )}
@@ -687,15 +713,36 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated, secti
         <div className="border-t px-4 py-3 space-y-3">
           {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
           <MmaFields idPrefix={`exp-${template.id}`} plannedDuration={plannedDuration} setPlannedDuration={setPlannedDuration} disabled={isCompleted} />
-          {!isCompleted && (
-            <div className="flex gap-2">
-              <Button size="sm" onClick={handleSave} disabled={isPending}>
-                {isPending ? 'Saving...' : 'Save'}
+          <div className="flex gap-2">
+            {!isCompleted && (
+              <>
+                <Button size="sm" onClick={handleSave} disabled={isPending}>
+                  {isPending ? 'Saving...' : 'Save'}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => { resetFields(); setExpanded(false) }}>
+                  Cancel
+                </Button>
+              </>
+            )}
+            {workWeeks > 0 && (
+              <Button size="sm" variant="outline" onClick={() => setShowTemplateWeekGrid(true)}>
+                Plan Weeks
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => { resetFields(); setExpanded(false) }}>
-                Cancel
-              </Button>
-            </div>
+            )}
+          </div>
+          {workWeeks > 0 && (
+            <TemplateWeekGrid
+              templateId={template.id}
+              sectionId={null}
+              workWeeks={workWeeks}
+              hasDeload={hasDeload}
+              isCompleted={isCompleted}
+              open={showTemplateWeekGrid}
+              onOpenChange={setShowTemplateWeekGrid}
+              modality="mma"
+              mmaBase={{ planned_duration: template.planned_duration ?? null }}
+              title={template.name}
+            />
           )}
         </div>
       )}
@@ -740,6 +787,7 @@ function MixedSectionRow({ section, slots, exercises, templateId, isCompleted, o
   const [expanded, setExpanded] = useState(false)
   const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
+  const [showSectionWeekGrid, setShowSectionWeekGrid] = useState(false)
   // Running fields
   const [runType, setRunType] = useState<RunType | ''>(section.run_type as RunType ?? '')
   const [targetPace, setTargetPace] = useState(section.target_pace ?? '')
@@ -986,15 +1034,40 @@ function MixedSectionRow({ section, slots, exercises, templateId, isCompleted, o
               className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
             />
           </div>
-          {!isCompleted && (
-            <div className="flex gap-2">
-              <Button size="sm" onClick={handleSectionSave} disabled={isPending}>
-                {isPending ? 'Saving...' : 'Save'}
+          <div className="flex gap-2">
+            {!isCompleted && (
+              <>
+                <Button size="sm" onClick={handleSectionSave} disabled={isPending}>
+                  {isPending ? 'Saving...' : 'Save'}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => { resetSectionFields(); setExpanded(false) }}>
+                  Cancel
+                </Button>
+              </>
+            )}
+            {workWeeks > 0 && (
+              <Button size="sm" variant="outline" onClick={() => setShowSectionWeekGrid(true)}>
+                Plan Weeks
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => { resetSectionFields(); setExpanded(false) }}>
-                Cancel
-              </Button>
-            </div>
+            )}
+          </div>
+          {workWeeks > 0 && (
+            <TemplateWeekGrid
+              templateId={templateId}
+              sectionId={section.id}
+              workWeeks={workWeeks}
+              hasDeload={hasDeload}
+              isCompleted={isCompleted}
+              open={showSectionWeekGrid}
+              onOpenChange={setShowSectionWeekGrid}
+              modality="running"
+              runningBase={{
+                distance: section.target_distance ?? null,
+                duration: section.target_duration ?? null,
+                pace: section.target_pace ?? null,
+              }}
+              title={section.section_name}
+            />
           )}
         </div>
       )}
@@ -1013,15 +1086,36 @@ function MixedSectionRow({ section, slots, exercises, templateId, isCompleted, o
               disabled={isCompleted}
             />
           </div>
-          {!isCompleted && (
-            <div className="flex gap-2">
-              <Button size="sm" onClick={handleSectionSave} disabled={isPending}>
-                {isPending ? 'Saving...' : 'Save'}
+          <div className="flex gap-2">
+            {!isCompleted && (
+              <>
+                <Button size="sm" onClick={handleSectionSave} disabled={isPending}>
+                  {isPending ? 'Saving...' : 'Save'}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => { resetSectionFields(); setExpanded(false) }}>
+                  Cancel
+                </Button>
+              </>
+            )}
+            {workWeeks > 0 && (
+              <Button size="sm" variant="outline" onClick={() => setShowSectionWeekGrid(true)}>
+                Plan Weeks
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => { resetSectionFields(); setExpanded(false) }}>
-                Cancel
-              </Button>
-            </div>
+            )}
+          </div>
+          {workWeeks > 0 && (
+            <TemplateWeekGrid
+              templateId={templateId}
+              sectionId={section.id}
+              workWeeks={workWeeks}
+              hasDeload={hasDeload}
+              isCompleted={isCompleted}
+              open={showSectionWeekGrid}
+              onOpenChange={setShowSectionWeekGrid}
+              modality="mma"
+              mmaBase={{ planned_duration: section.planned_duration ?? null }}
+              title={section.section_name}
+            />
           )}
         </div>
       )}
