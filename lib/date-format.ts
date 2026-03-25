@@ -20,6 +20,12 @@ export function formatDateBanner(dateStr: string): string {
   return `${day}/${MONTH_ABBR[parseInt(monthNum, 10) - 1]}/${year}`
 }
 
+// Format for toast notifications: "20/Mar"
+export function formatDateToast(dateStr: string): string {
+  const [, monthNum, day] = dateStr.split('-')
+  return `${day}/${MONTH_ABBR[parseInt(monthNum, 10) - 1]}`
+}
+
 // Format with long weekday: "Monday 20/03/2026"
 export function formatDateLong(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00')

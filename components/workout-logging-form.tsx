@@ -57,7 +57,7 @@ function buildInitialSets(slots: SlotData[]): SetFormData[][] {
   )
 }
 
-export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
+export function WorkoutLoggingForm({ data, onSaveSuccess }: { data: WorkoutData; onSaveSuccess?: () => void }) {
   const sortedSlots = [...data.slots].sort((a, b) => a.order - b.order)
   const [sets, setSets] = useState<SetFormData[][]>(() =>
     buildInitialSets(sortedSlots)
@@ -95,6 +95,7 @@ export function WorkoutLoggingForm({ data }: { data: WorkoutData }) {
       const result = await saveWorkout(input)
       if (result.success) {
         setSaved(true)
+        onSaveSuccess?.()
       } else {
         setError(result.error)
       }

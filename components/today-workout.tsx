@@ -1,6 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
+import { handlePostSaveRedirect } from '@/lib/post-save-redirect'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { WorkoutLoggingForm } from '@/components/workout-logging-form'
 import { RunningLoggingForm } from '@/components/running-logging-form'
@@ -650,11 +652,13 @@ function SessionSection({
   showPeriodLabel,
   loggingState,
   onStartLogging,
+  onSaveSuccess,
 }: {
   session: TodayResponse
   showPeriodLabel: boolean
   loggingState: Record<string, boolean>
   onStartLogging: (key: string) => void
+  onSaveSuccess?: () => void
 }) {
   if (session.type === 'already_logged') {
     return (
@@ -675,15 +679,15 @@ function SessionSection({
 
     if (isLogging) {
       if (session.template.modality === 'mixed') {
-        return <MixedLoggingForm data={{ ...session, sections: session.sections ?? [] }} />
+        return <MixedLoggingForm data={{ ...session, sections: session.sections ?? [] }} onSaveSuccess={onSaveSuccess} />
       }
       if (session.template.modality === 'running') {
-        return <RunningLoggingForm data={session} />
+        return <RunningLoggingForm data={session} onSaveSuccess={onSaveSuccess} />
       }
       if (session.template.modality === 'mma') {
-        return <MmaLoggingForm data={session} />
+        return <MmaLoggingForm data={session} onSaveSuccess={onSaveSuccess} />
       }
-      return <WorkoutLoggingForm data={session} />
+      return <WorkoutLoggingForm data={session} onSaveSuccess={onSaveSuccess} />
     }
 
     return (
@@ -722,6 +726,11 @@ export function TodayWorkout({ date }: { date?: string }) {
   const [error, setError] = useState(false)
   const [loggingState, setLoggingState] = useState<Record<string, boolean>>({})
   const today = getToday()
+  const router = useRouter()
+
+  const onSaveSuccess = useCallback(() => {
+    handlePostSaveRedirect({ date, today, push: router.push })
+  }, [date, today, router.push])
 
   useEffect(() => {
     let stale = false
@@ -851,15 +860,15 @@ export function TodayWorkout({ date }: { date?: string }) {
 
       if (isLogging) {
         if (session.template.modality === 'mixed') {
-          return <>{banner}<MixedLoggingForm data={{ ...session, sections: session.sections ?? [] }} /></>
+          return <>{banner}<MixedLoggingForm data={{ ...session, sections: session.sections ?? [] }} onSaveSuccess={onSaveSuccess} /></>
         }
         if (session.template.modality === 'running') {
-          return <>{banner}<RunningLoggingForm data={session} /></>
+          return <>{banner}<RunningLoggingForm data={session} onSaveSuccess={onSaveSuccess} /></>
         }
         if (session.template.modality === 'mma') {
-          return <>{banner}<MmaLoggingForm data={session} /></>
+          return <>{banner}<MmaLoggingForm data={session} onSaveSuccess={onSaveSuccess} /></>
         }
-        return <>{banner}<WorkoutLoggingForm data={session} /></>
+        return <>{banner}<WorkoutLoggingForm data={session} onSaveSuccess={onSaveSuccess} /></>
       }
 
       if (session.template.modality === 'mixed') {
@@ -892,6 +901,7 @@ export function TodayWorkout({ date }: { date?: string }) {
           showPeriodLabel={showPeriodLabels}
           loggingState={loggingState}
           onStartLogging={startLogging}
+          onSaveSuccess={onSaveSuccess}
         />
       ))}
     </div>

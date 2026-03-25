@@ -16,7 +16,7 @@ export type MmaWorkoutData = {
   template: TemplateInfo
 }
 
-export function MmaLoggingForm({ data }: { data: MmaWorkoutData }) {
+export function MmaLoggingForm({ data, onSaveSuccess }: { data: MmaWorkoutData; onSaveSuccess?: () => void }) {
   const { template } = data
 
   const [duration, setDuration] = useState('')
@@ -49,6 +49,7 @@ export function MmaLoggingForm({ data }: { data: MmaWorkoutData }) {
       const result = await saveMmaWorkout(input)
       if (result.success) {
         setSaved(true)
+        onSaveSuccess?.()
       } else {
         setError(result.error)
       }

@@ -414,7 +414,7 @@ function MmaSectionInputs({
   )
 }
 
-export function MixedLoggingForm({ data }: { data: MixedWorkoutData }) {
+export function MixedLoggingForm({ data, onSaveSuccess }: { data: MixedWorkoutData; onSaveSuccess?: () => void }) {
   const sections = [...data.sections].sort((a, b) => a.order - b.order)
 
   // State per section: resistance has sets + rpe, running has distance/pace/hr, mma has duration/feeling
@@ -521,6 +521,7 @@ export function MixedLoggingForm({ data }: { data: MixedWorkoutData }) {
       const result = await saveMixedWorkout(input)
       if (result.success) {
         setSaved(true)
+        onSaveSuccess?.()
       } else {
         setError(result.error)
       }
