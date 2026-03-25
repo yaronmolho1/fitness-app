@@ -714,14 +714,20 @@ export function TodayWorkout({ date }: { date?: string }) {
   const [loggingState, setLoggingState] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
-    const url = date ? `/api/today?date=${date}` : '/api/today'
+    let stale = false
+    const url = date ? `/api/today?date=${encodeURIComponent(date)}` : '/api/today'
     fetch(url)
       .then((res) => {
         if (!res.ok) throw new Error('Failed to fetch')
         return res.json()
       })
-      .then((json: TodayResponse[]) => setSessions(json))
-      .catch(() => setError(true))
+      .then((json: TodayResponse[]) => {
+        if (!stale) setSessions(json)
+      })
+      .catch(() => {
+        if (!stale) setError(true)
+      })
+    return () => { stale = true }
   }, [date])
 
   function startLogging(key: string) {
