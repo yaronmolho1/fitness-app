@@ -42,6 +42,7 @@ Shared React components — app-level UI and navigation.
 - `template-add-picker.tsx` — `TemplateAddPicker` "Add Template" button with modality picker (resistance/running/MMA/mixed/from-existing); popover on desktop, bottom sheet on mobile
 - `target-picker-modal.tsx` — `TargetPickerModal` 3-step dialog for selecting copy/move target: mesocycle → template → section (mixed only); exports `ConfirmPayload` type
 - `template-browse-dialog.tsx` — `TemplateBrowseDialog` searchable dialog listing templates from other mesocycles grouped by mesocycle, with copy button per template
+- `superset-transfer-prompt.tsx` — `SupersetTransferPrompt` dialog for copy/move of superset slots: prompts user to transfer single slot or entire superset group
 - `week-progression-grid.tsx` — `WeekProgressionGrid` dialog with per-week override grid (rows = weeks + optional deload, columns = modality-specific fields); pre-fills base values, deload defaults (60% weight, 50% sets, RPE−2); saves via `upsertWeekOverrideAction`/`deleteWeekOverrideAction`; read-only when mesocycle is completed
 
 ## Subdirectories
