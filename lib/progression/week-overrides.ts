@@ -135,9 +135,15 @@ export async function getWeekOverrides(
 type SlotFields = Record<string, unknown>
 type OverrideFields = Record<string, unknown>
 
+// Only merge training-parameter fields from overrides
+const MERGE_FIELDS = new Set([
+  'weight', 'reps', 'sets', 'rpe', 'distance', 'duration', 'pace',
+])
+
 /**
  * Merge a base slot with an override. Override fields take precedence when
- * non-null; null fields fall back to base values.
+ * non-null; null fields fall back to base values. Only training-parameter
+ * fields are merged — metadata like id, exercise_slot_id, week_number are ignored.
  */
 export function mergeSlotWithOverride<T extends SlotFields>(
   base: T,
@@ -146,8 +152,8 @@ export function mergeSlotWithOverride<T extends SlotFields>(
   if (!override) return { ...base }
 
   const merged = { ...base }
-  for (const key of Object.keys(override)) {
-    if (override[key] !== null && override[key] !== undefined) {
+  for (const key of MERGE_FIELDS) {
+    if (key in override && override[key] !== null && override[key] !== undefined) {
       ;(merged as Record<string, unknown>)[key] = override[key]
     }
   }

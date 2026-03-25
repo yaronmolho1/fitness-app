@@ -90,6 +90,13 @@ const CREATE_SQL = `
     actual_weight REAL,
     created_at INTEGER
   );
+  CREATE TABLE slot_week_overrides (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    exercise_slot_id INTEGER NOT NULL REFERENCES exercise_slots(id) ON DELETE CASCADE,
+    week_number INTEGER NOT NULL, weight REAL, reps TEXT, sets INTEGER,
+    rpe REAL, distance REAL, duration INTEGER, pace TEXT,
+    is_deload INTEGER NOT NULL DEFAULT 0, created_at INTEGER
+  );
 `
 
 const SEED_SQL = `
@@ -173,10 +180,10 @@ describe('saveWorkoutCore', () => {
     expect(sets).toHaveLength(6)
   })
 
-  it('stores template_snapshot with version:1', async () => {
+  it('stores template_snapshot with version:2', async () => {
     await saveWorkoutCore(db, buildValidInput())
     const [workout] = db.select().from(schema.logged_workouts).all()
-    expect(workout.template_snapshot.version).toBe(1)
+    expect(workout.template_snapshot.version).toBe(2)
   })
 
   it('template_snapshot includes all exercise slot fields', async () => {
