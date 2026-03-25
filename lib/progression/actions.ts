@@ -6,18 +6,8 @@ import {
   upsertWeekOverride as upsertFn,
   deleteWeekOverride as deleteFn,
   getWeekOverrides as getFn,
+  type UpsertFields,
 } from './week-overrides'
-
-type UpsertFields = {
-  weight?: number | null
-  reps?: string | null
-  sets?: number | null
-  rpe?: number | null
-  distance?: number | null
-  duration?: number | null
-  pace?: string | null
-  is_deload?: boolean
-}
 
 export async function upsertWeekOverrideAction(
   slotId: number,
