@@ -147,3 +147,29 @@
 | T137 | Template copy server action | P1 | [ ] | | | | |
 | T138 | Template add picker + copy browse UI | P2 | [ ] | | | | |
 | T139 | Batch cascade scope (SA + UI) | P2 | [ ] | | | | |
+| T140 | Mixed template plumbing fixes | P3.1 | [x] | feat/task-140-mixed-plumbing | | 2026-03-22 | merged via PR #289 |
+| T143 | Mixed template section editing UI | P3.2 | [x] | feat/task-143-section-editing | | 2026-03-22 | merged via PR #296 |
+| T144 | Day detail multi-workout query + API | P3.3 | [x] | feat/task-144-day-detail-multi | | 2026-03-22 | merged via PR #300 |
+| T146 | DayDetailPanel expandable cards | P3.3 | [x] | feat/task-146-expandable-cards | | 2026-03-22 | merged via PR #305 |
+| T147 | Copy/move exercise slot SAs | P3.4 | [x] | feat/task-147-copy-move-sa | | 2026-03-23 | merged via PR #320 |
+| T148 | Target picker modal | P3.4 | [x] | feat/task-148-target-picker | | 2026-03-23 | merged via PR #330 |
+| T149 | Slot context menu copy/move actions | P3.4 | [x] | feat/task-149-context-menu | | 2026-03-25 | merged via PR #345 |
+| T150 | Superset group transfer prompt | P3.4 | [x] | feat/task-150-superset-transfer | | 2026-03-25 | merged via PR #346 |
+| T151 | `slot_week_overrides` schema | P3.5a | [x] | feat/task-151-override-schema | | 2026-03-24 | merged via PR #335 |
+| T152 | Week override CRUD SAs | P3.5b | [x] | feat/task-152-override-crud | | 2026-03-24 | merged via PR #336 |
+| T153 | Week override merge — today + calendar | P3.5b | [x] | feat/task-153-override-merge | | 2026-03-25 | merged via PR #343 |
+| T155 | Snapshot week_number + template copy overrides | P3.5b | [x] | feat/task-155-snapshot-overrides | | 2026-03-25 | merged via PR #344 |
+| T157 | Plan Weeks grid UI | P3.5c | [x] | feat/task-157-plan-weeks-grid | | 2026-03-25 | merged via PR #342 |
+| T158 | Cascade override warning | P3.5c | [ ] | | | | |
+| T159 | `athlete_profile` schema + migration | CS1.1 | [ ] | | | | |
+| T160 | Profile queries + actions | CS1.1 | [ ] | | | | |
+| T161 | Active mesocycle query (coaching) | CS1.2 | [ ] | | | | |
+| T162 | Recent sessions query (coaching) | CS1.2 | [ ] | | | | |
+| T163 | Summary generator | CS1.2 | [ ] | | | | |
+| T164 | Summary route handler | CS1.3 | [ ] | | | | |
+| T165 | Coaching page (server component) | CS2 | [ ] | | | | |
+| T166 | Profile form component | CS2 | [ ] | | | | |
+| T167 | Subjective state form component | CS2 | [ ] | | | | |
+| T168 | Summary preview component | CS2 | [ ] | | | | |
+| T169 | Client orchestrator component | CS2 | [ ] | | | | |
+| T170 | Nav link (coaching) | CS2 | [ ] | | | | |
