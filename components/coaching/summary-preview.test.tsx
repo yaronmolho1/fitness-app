@@ -166,6 +166,27 @@ describe('SummaryPreview', () => {
       })
     })
 
+    it('shows error when clipboard API fails', async () => {
+      render(<SummaryPreview subjectiveState={defaultState} />)
+
+      fireEvent.click(screen.getByRole('button', { name: /generate summary/i }))
+      await waitFor(() => screen.getByRole('button', { name: /copy/i }))
+
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText: vi.fn().mockRejectedValue(new Error('Clipboard blocked')) },
+        writable: true,
+        configurable: true,
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: /copy/i }))
+
+      await waitFor(() => {
+        const alerts = screen.getAllByRole('alert')
+        const copyAlert = alerts.find((a) => a.textContent?.includes('clipboard'))
+        expect(copyAlert).toBeTruthy()
+      })
+    })
+
     it('shows check icon feedback after copy', async () => {
       Object.defineProperty(navigator, 'clipboard', {
         value: { writeText: vi.fn().mockResolvedValue(undefined) },
