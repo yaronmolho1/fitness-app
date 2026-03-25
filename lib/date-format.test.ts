@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatDateBanner } from './date-format'
+import { formatDateBanner, formatDateToast } from './date-format'
 
 describe('formatDateBanner', () => {
   it('formats YYYY-MM-DD as dd/Mon/yyyy', () => {
@@ -12,5 +12,19 @@ describe('formatDateBanner', () => {
 
   it('handles December', () => {
     expect(formatDateBanner('2025-12-31')).toBe('31/Dec/2025')
+  })
+})
+
+describe('formatDateToast', () => {
+  it('formats YYYY-MM-DD as dd/Mon', () => {
+    expect(formatDateToast('2026-03-20')).toBe('20/Mar')
+  })
+
+  it('handles January', () => {
+    expect(formatDateToast('2026-01-05')).toBe('05/Jan')
+  })
+
+  it('handles December', () => {
+    expect(formatDateToast('2026-12-31')).toBe('31/Dec')
   })
 })

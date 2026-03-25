@@ -4,7 +4,8 @@ Server-side business logic, database, and auth.
 
 ## Files
 - `utils.ts` — `cn()` Tailwind class merge utility
-- `date-format.ts` — shared date display formatting: `formatDateDisplay()` (dd/mm/yyyy), `formatDateWithWeekday()`, `formatDateLong()`
+- `date-format.ts` — shared date display formatting: `formatDateDisplay()` (dd/mm/yyyy), `formatDateWithWeekday()`, `formatDateLong()`, `formatDateBanner()`, `formatDateToast()`
+- `post-save-redirect.ts` — `handlePostSaveRedirect()`: after retroactive workout save, shows toast and navigates to calendar
 
 ## Subdirectories
 - `auth/` — JWT authentication, credentials, logout ([README](./auth/README.md))

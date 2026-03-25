@@ -3,6 +3,10 @@
 import { render, screen, waitFor, cleanup } from '@testing-library/react'
 import { describe, it, expect, afterEach, vi } from 'vitest'
 
+vi.mock('next/navigation', () => ({
+  useRouter: vi.fn(() => ({ refresh: vi.fn(), push: vi.fn() })),
+}))
+
 vi.mock('@/components/workout-logging-form', () => ({
   WorkoutLoggingForm: () => <div data-testid="mock-workout-logging-form">WorkoutLoggingForm</div>,
 }))

@@ -4,6 +4,10 @@ import { render, screen, waitFor, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, afterEach, vi, beforeEach } from 'vitest'
 
+vi.mock('next/navigation', () => ({
+  useRouter: vi.fn(() => ({ refresh: vi.fn(), push: vi.fn() })),
+}))
+
 // Mock child components to isolate today-workout behavior
 vi.mock('@/components/workout-logging-form', () => ({
   WorkoutLoggingForm: ({ data }: { data: unknown }) => (

@@ -33,7 +33,7 @@ function formatRest(seconds: number): string {
   return `${seconds}s`
 }
 
-export function RunningLoggingForm({ data }: { data: RunningWorkoutData }) {
+export function RunningLoggingForm({ data, onSaveSuccess }: { data: RunningWorkoutData; onSaveSuccess?: () => void }) {
   const { template } = data
   const config = template.run_type ? runTypeConfig[template.run_type] : null
   const isInterval = template.run_type === 'interval'
@@ -130,6 +130,7 @@ export function RunningLoggingForm({ data }: { data: RunningWorkoutData }) {
       const result = await saveRunningWorkout(input)
       if (result.success) {
         setSaved(true)
+        onSaveSuccess?.()
       } else {
         setError(result.error)
       }

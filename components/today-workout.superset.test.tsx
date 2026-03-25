@@ -3,7 +3,7 @@ import { render, screen, cleanup, waitFor, within } from '@testing-library/react
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 vi.mock('next/navigation', () => ({
-  useRouter: vi.fn(() => ({ refresh: vi.fn() })),
+  useRouter: vi.fn(() => ({ refresh: vi.fn(), push: vi.fn() })),
 }))
 
 vi.mock('next/link', () => ({
