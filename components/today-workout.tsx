@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
 import { Pencil } from 'lucide-react'
 import { SectionHeading } from '@/components/layout/section-heading'
+import { RetroactiveDateBanner } from '@/components/retroactive-date-banner'
 
 type WorkoutResponse = {
   type: 'workout'
@@ -708,25 +709,42 @@ function SessionSection({
   return null
 }
 
+function getToday(): string {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 export function TodayWorkout({ date }: { date?: string }) {
   const [sessions, setSessions] = useState<TodayResponse[] | null>(null)
   const [error, setError] = useState(false)
   const [loggingState, setLoggingState] = useState<Record<string, boolean>>({})
+  const today = getToday()
 
   useEffect(() => {
-    const url = date ? `/api/today?date=${date}` : '/api/today'
+    let stale = false
+    const url = date ? `/api/today?date=${encodeURIComponent(date)}` : '/api/today'
     fetch(url)
       .then((res) => {
         if (!res.ok) throw new Error('Failed to fetch')
         return res.json()
       })
-      .then((json: TodayResponse[]) => setSessions(json))
-      .catch(() => setError(true))
+      .then((json: TodayResponse[]) => {
+        if (!stale) setSessions(json)
+      })
+      .catch(() => {
+        if (!stale) setError(true)
+      })
+    return () => { stale = true }
   }, [date])
 
   function startLogging(key: string) {
     setLoggingState((prev) => ({ ...prev, [key]: true }))
   }
+
+  const banner = <RetroactiveDateBanner date={date} today={today} />
 
   // Loading
   if (!sessions && !error) {
@@ -786,6 +804,7 @@ export function TodayWorkout({ date }: { date?: string }) {
   if (first.type === 'rest_day') {
     return (
       <div data-testid="rest-day" className="space-y-6">
+        {banner}
         <Card>
           <CardContent className="py-12 text-center">
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
@@ -818,7 +837,12 @@ export function TodayWorkout({ date }: { date?: string }) {
     const session = sessions[0]
 
     if (session.type === 'already_logged') {
-      return <AlreadyLoggedSummary data={session} />
+      return (
+        <>
+          {banner}
+          <AlreadyLoggedSummary data={session} />
+        </>
+      )
     }
 
     if (session.type === 'workout') {
@@ -827,32 +851,32 @@ export function TodayWorkout({ date }: { date?: string }) {
 
       if (isLogging) {
         if (session.template.modality === 'mixed') {
-          return <MixedLoggingForm data={{ ...session, sections: session.sections ?? [] }} />
+          return <>{banner}<MixedLoggingForm data={{ ...session, sections: session.sections ?? [] }} /></>
         }
         if (session.template.modality === 'running') {
-          return <RunningLoggingForm data={session} />
+          return <>{banner}<RunningLoggingForm data={session} /></>
         }
         if (session.template.modality === 'mma') {
-          return <MmaLoggingForm data={session} />
+          return <>{banner}<MmaLoggingForm data={session} /></>
         }
-        return <WorkoutLoggingForm data={session} />
+        return <>{banner}<WorkoutLoggingForm data={session} /></>
       }
 
       if (session.template.modality === 'mixed') {
-        return <MixedDisplay data={session} onStartLogging={() => startLogging(key)} />
+        return <>{banner}<MixedDisplay data={session} onStartLogging={() => startLogging(key)} /></>
       }
       if (session.template.modality === 'running') {
         return (
-          <RunningDisplay data={session} onStartLogging={() => startLogging(key)} />
+          <>{banner}<RunningDisplay data={session} onStartLogging={() => startLogging(key)} /></>
         )
       }
       if (session.template.modality === 'mma') {
         return (
-          <MmaDisplay data={session} onStartLogging={() => startLogging(key)} />
+          <>{banner}<MmaDisplay data={session} onStartLogging={() => startLogging(key)} /></>
         )
       }
       return (
-        <ResistanceDisplay data={session} onStartLogging={() => startLogging(key)} />
+        <>{banner}<ResistanceDisplay data={session} onStartLogging={() => startLogging(key)} /></>
       )
     }
   }
@@ -860,6 +884,7 @@ export function TodayWorkout({ date }: { date?: string }) {
   // Multiple sessions — render grouped by period
   return (
     <div data-testid="multi-session-view" className="space-y-8">
+      {banner}
       {sessions.map((session, i) => (
         <SessionSection
           key={i}

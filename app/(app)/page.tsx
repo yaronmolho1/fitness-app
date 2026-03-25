@@ -12,7 +12,7 @@ export default async function TodayPage({
     <PageContainer variant="narrow">
       <div className="space-y-6">
         <PageHeader title="Today" />
-        <TodayWorkout date={date} />
+        <TodayWorkout key={date ?? 'today'} date={date} />
       </div>
     </PageContainer>
   )
