@@ -1,6 +1,6 @@
 // Characterization test — captures current behavior for safe refactoring
 // Updated for T114: getTodayWorkout now returns TodayResult[]
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
 const mockGetTodayWorkout = vi.fn()
