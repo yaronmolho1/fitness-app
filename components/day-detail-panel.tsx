@@ -15,7 +15,8 @@ import {
 } from '@/components/ui/collapsible'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
-import { Pencil, CalendarDays, Star, ChevronDown } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Pencil, CalendarDays, Star, ChevronDown, ClipboardCheck } from 'lucide-react'
 import type { DayDetailResult, SlotDetail, LoggedExerciseDetail, TemplateSnapshot, Period } from '@/lib/calendar/day-detail'
 import { formatDateLong } from '@/lib/date-format'
 import { getModalityBadgeClasses } from '@/lib/ui/modality-colors'
@@ -222,15 +223,25 @@ function getWorkoutMeta(detail: Exclude<DayDetailResult, { type: 'rest' }>) {
   return { name: detail.snapshot.name ?? 'Workout', modality: detail.snapshot.modality }
 }
 
+// Whether a date string (YYYY-MM-DD) is today or in the past
+function isLoggable(dateStr: string): boolean {
+  const today = new Date()
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  return dateStr <= todayStr
+}
+
 function WorkoutCard({
   detail,
+  date,
   defaultOpen,
 }: {
   detail: Exclude<DayDetailResult, { type: 'rest' }>
+  date: string
   defaultOpen: boolean
 }) {
   const [open, setOpen] = useState(defaultOpen)
   const { name, modality } = getWorkoutMeta(detail)
+  const showLogButton = detail.type === 'projected' && isLoggable(date)
 
   return (
     <Collapsible open={open} onOpenChange={setOpen} data-testid="workout-card">
@@ -264,6 +275,16 @@ function WorkoutCard({
         {detail.type === 'projected' && <ProjectedCardBody detail={detail} />}
         {detail.type === 'completed' && <CompletedCardBody detail={detail} />}
       </CollapsibleContent>
+      {showLogButton && (
+        <div className="px-3 pt-2 pb-1">
+          <Button asChild variant="default" size="sm" className="w-full" data-testid="log-workout-button">
+            <Link href={`/?date=${date}`}>
+              <ClipboardCheck className="h-4 w-4 mr-1.5" />
+              Log Workout
+            </Link>
+          </Button>
+        </div>
+      )}
     </Collapsible>
   )
 }
@@ -354,6 +375,7 @@ export function DayDetailPanel({ date, onClose }: DayDetailPanelProps) {
                 <WorkoutCard
                   key={`${w.type}-${w.period}`}
                   detail={w}
+                  date={date!}
                   defaultOpen={isSingleWorkout}
                 />
               ))}
