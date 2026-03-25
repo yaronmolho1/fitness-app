@@ -72,6 +72,7 @@ const makeSlot = (overrides: Partial<SlotWithExercise> = {}): SlotWithExercise =
   is_main: false,
   created_at: new Date(),
   exercise_name: 'Bench Press',
+  overrideCount: 0,
   ...overrides,
 })
 

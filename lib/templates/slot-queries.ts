@@ -1,9 +1,10 @@
-import { eq, asc } from 'drizzle-orm'
+import { eq, asc, sql } from 'drizzle-orm'
 import { db } from '@/lib/db/index'
-import { exercise_slots, exercises } from '@/lib/db/schema'
+import { exercise_slots, exercises, slot_week_overrides } from '@/lib/db/schema'
 
 export type SlotWithExercise = typeof exercise_slots.$inferSelect & {
   exercise_name: string
+  overrideCount: number
 }
 
 export function getSlotsByTemplate(templateId: number): SlotWithExercise[] {
@@ -25,6 +26,10 @@ export function getSlotsByTemplate(templateId: number): SlotWithExercise[] {
       is_main: exercise_slots.is_main,
       created_at: exercise_slots.created_at,
       exercise_name: exercises.name,
+      overrideCount: sql<number>`(
+        select count(*) from ${slot_week_overrides}
+        where ${slot_week_overrides.exercise_slot_id} = ${exercise_slots.id}
+      )`.as('override_count'),
     })
     .from(exercise_slots)
     .innerJoin(exercises, eq(exercise_slots.exercise_id, exercises.id))
