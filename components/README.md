@@ -46,6 +46,7 @@ Shared React components — app-level UI and navigation.
 - `week-progression-grid.tsx` — `WeekProgressionGrid` dialog with per-week override grid (rows = weeks + optional deload, columns = modality-specific fields); pre-fills base values, deload defaults (60% weight, 50% sets, RPE−2); saves via `upsertWeekOverrideAction`/`deleteWeekOverrideAction`; read-only when mesocycle is completed
 
 ## Subdirectories
+- `coaching/` — coaching summary UI: subjective state capture, coaching insights ([README](./coaching/README.md))
 - `layout/` — app shell and page layout primitives: desktop sidebar, mobile header + drawer, page container, page header, section heading ([README](./layout/README.md))
 - `schedule/` — schedule assignment UI: period selector, time slot picker ([README](./schedule/README.md))
 - `ui/` — shadcn/ui primitives ([README](./ui/README.md))
