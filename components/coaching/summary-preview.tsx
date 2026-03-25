@@ -46,11 +46,19 @@ export function SummaryPreview({ subjectiveState }: Props) {
     }
   }, [subjectiveState])
 
+  const [copyError, setCopyError] = useState(false)
+
   const handleCopy = useCallback(async () => {
     if (!markdown) return
-    await navigator.clipboard.writeText(markdown)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    try {
+      await navigator.clipboard.writeText(markdown)
+      setCopied(true)
+      setCopyError(false)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      setCopyError(true)
+      setTimeout(() => setCopyError(false), 3000)
+    }
   }, [markdown])
 
   return (
@@ -89,6 +97,11 @@ export function SummaryPreview({ subjectiveState }: Props) {
               )}
             </Button>
           </div>
+          {copyError && (
+            <div role="alert" className="mb-2 rounded-md border border-destructive bg-destructive/10 p-2 text-sm text-destructive">
+              Failed to copy to clipboard
+            </div>
+          )}
           <pre
             data-testid="summary-preview"
             className="overflow-x-auto whitespace-pre-wrap rounded-md border bg-muted p-4 text-sm"
