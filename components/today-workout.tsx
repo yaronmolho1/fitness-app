@@ -708,7 +708,7 @@ function SessionSection({
   return null
 }
 
-export function TodayWorkout({ date }: { date?: string } = {}) {
+export function TodayWorkout({ date }: { date?: string }) {
   const [sessions, setSessions] = useState<TodayResponse[] | null>(null)
   const [error, setError] = useState(false)
   const [loggingState, setLoggingState] = useState<Record<string, boolean>>({})
