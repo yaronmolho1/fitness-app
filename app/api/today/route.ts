@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getTodayWorkout } from '@/lib/today/queries'
 
 function todayDateString(): string {
@@ -9,10 +9,39 @@ function todayDateString(): string {
   return `${year}-${month}-${day}`
 }
 
-export async function GET() {
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+
+function isValidDate(dateStr: string): boolean {
+  if (!DATE_RE.test(dateStr)) return false
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const date = new Date(y, m - 1, d)
+  return date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d
+}
+
+export async function GET(request: NextRequest) {
   try {
-    const today = todayDateString()
-    const results = await getTodayWorkout(today)
+    const dateParam = request.nextUrl.searchParams.get('date')
+
+    let date: string
+    if (!dateParam) {
+      date = todayDateString()
+    } else {
+      if (!isValidDate(dateParam)) {
+        return NextResponse.json(
+          { error: 'Invalid date format. Expected YYYY-MM-DD.' },
+          { status: 400 }
+        )
+      }
+      if (dateParam > todayDateString()) {
+        return NextResponse.json(
+          { error: 'Future dates are not allowed.' },
+          { status: 400 }
+        )
+      }
+      date = dateParam
+    }
+
+    const results = await getTodayWorkout(date)
     return NextResponse.json(results)
   } catch {
     return NextResponse.json(

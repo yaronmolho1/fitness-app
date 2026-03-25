@@ -1,6 +1,7 @@
 // Characterization test — captures current behavior for safe refactoring
 // Updated for T114: getTodayWorkout now returns TodayResult[]
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { NextRequest } from 'next/server'
 
 const mockGetTodayWorkout = vi.fn()
 
@@ -9,6 +10,10 @@ vi.mock('@/lib/today/queries', () => ({
 }))
 
 import { GET } from './route'
+
+function makeRequest(url = 'http://localhost/api/today'): NextRequest {
+  return new NextRequest(url)
+}
 
 describe('GET /api/today — characterize gaps', () => {
   beforeEach(() => {
@@ -21,7 +26,7 @@ describe('GET /api/today — characterize gaps', () => {
       date: '2026-03-20',
     }])
 
-    await GET()
+    await GET(makeRequest())
 
     expect(mockGetTodayWorkout).toHaveBeenCalledTimes(1)
     const dateArg = mockGetTodayWorkout.mock.calls[0][0]
@@ -65,7 +70,7 @@ describe('GET /api/today — characterize gaps', () => {
     }]
     mockGetTodayWorkout.mockResolvedValue(alreadyLoggedData)
 
-    const res = await GET()
+    const res = await GET(makeRequest())
     expect(res.status).toBe(200)
 
     const data = await res.json()
@@ -86,7 +91,7 @@ describe('GET /api/today — characterize gaps', () => {
 
     for (const data of types) {
       mockGetTodayWorkout.mockResolvedValue(data)
-      const res = await GET()
+      const res = await GET(makeRequest())
       expect(res.status).toBe(200)
     }
   })
@@ -94,7 +99,7 @@ describe('GET /api/today — characterize gaps', () => {
   it('error response body shape is { error: string }', async () => {
     mockGetTodayWorkout.mockRejectedValue(new Error('test'))
 
-    const res = await GET()
+    const res = await GET(makeRequest())
     expect(res.status).toBe(500)
 
     const data = await res.json()
@@ -105,7 +110,7 @@ describe('GET /api/today — characterize gaps', () => {
   it('swallows the original error message (does not leak)', async () => {
     mockGetTodayWorkout.mockRejectedValue(new Error('sensitive DB info'))
 
-    const res = await GET()
+    const res = await GET(makeRequest())
     const data = await res.json()
     expect(data.error).toBe('Internal server error')
     expect(data.error).not.toContain('sensitive')
