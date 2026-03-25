@@ -77,7 +77,7 @@ docker compose up -d   # containerized run
 ## Architecture References
 
 - Core invariant: plan changes cascade via `canonical_name`; logged history frozen at snapshot time
-- 11 tables: 7 planning (mutable, includes `template_sections`) + 4 logging (immutable). See `docs/architecture.md` Data Model.
+- 13 tables: 8 planning (mutable, includes `template_sections`, `slot_week_overrides`) + 4 logging (immutable) + 1 config (`athlete_profile`). See `docs/architecture.md` Data Model.
 - Auth: single-user, JWT cookie, env vars `AUTH_USERNAME`, `AUTH_PASSWORD_HASH`, `JWT_SECRET`
 - Infra: standalone port 3000, orchestrated port 3002. SQLite volume at `/app/data/`
 - Sibling apps: expense-tracker (3001), tutor-ai. Shared nginx in docker-app-stack.

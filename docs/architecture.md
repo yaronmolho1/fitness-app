@@ -49,7 +49,7 @@ See ADR-001 (SQLite decision) and ADR-004 (hybrid API decision).
 
 ## Data Model
 
-Eleven tables split into two layers. See `lib/db/schema.ts` for column definitions and `lib/db/relations.ts` for Drizzle v2 `defineRelations` config. See ADR-002 (mesocycle-scoped templates) and ADR-003 (deload as separate schedule) for the structural decisions behind this schema.
+Thirteen tables split into three layers. See `lib/db/schema.ts` for column definitions and `lib/db/relations.ts` for Drizzle v2 `defineRelations` config. See ADR-002 (mesocycle-scoped templates) and ADR-003 (deload as separate schedule) for the structural decisions behind this schema.
 
 ```mermaid
 erDiagram
@@ -60,11 +60,17 @@ erDiagram
     workout_templates ||--o{ exercise_slots : "includes"
     template_sections ||--o{ exercise_slots : "scopes (resistance sections)"
     exercises ||--o{ exercise_slots : "referenced by"
+    exercise_slots ||--o{ slot_week_overrides : "per-week targets"
     weekly_schedule }o--|| workout_templates : "assigns template to day"
 
     logged_workouts ||--o{ logged_exercises : "contains"
     logged_exercises ||--o{ logged_sets : "contains"
     routine_items ||--o{ routine_logs : "tracked by"
+    athlete_profile {
+        integer id
+        real body_weight_kg
+        real height_cm
+    }
 
     workout_templates }|..o{ logged_workouts : "canonical_name link (string, not FK)"
 ```
@@ -79,6 +85,7 @@ erDiagram
 | `workout_templates` | Named workout plans (e.g. Push A, Easy Run) scoped to a mesocycle; carry a `canonical_name` slug for cross-phase linking |
 | `mesocycles` | Training phases: N work weeks + optional deload week; status lifecycle (planned → active → completed) |
 | `weekly_schedule` | Day-to-template assignment grid; separate rows for normal vs deload week variants |
+| `slot_week_overrides` | Per-week overrides for exercise slot targets (sets/reps/weight/RPE); enables week-by-week periodization within a mesocycle |
 | `routine_items` | Daily habit items with flexible scope: global, per-mesocycle, date-range, or skip-on-deload |
 
 ### Logging Layer (immutable after save)
@@ -89,6 +96,12 @@ erDiagram
 | `logged_exercises` | Normalized per-exercise log row enabling SQL analytics (progression charts, volume tracking) |
 | `logged_sets` | Normalized per-set log row with actual reps, weight, and RPE |
 | `routine_logs` | Daily routine completion records (done via field entry / explicitly skipped) with per-field values: weight, length, duration, sets, reps |
+
+### Config Layer (singleton)
+
+| Table | Purpose |
+|-------|---------|
+| `athlete_profile` | Single-row athlete configuration: body weight, height, date of birth, sex, training start date; used for progression calculations and bodyweight-relative metrics |
 
 **Cross-layer link**: `workout_templates.canonical_name` ↔ `logged_workouts.canonical_name` — string slug match, not a foreign key. See ADR-006.
 
