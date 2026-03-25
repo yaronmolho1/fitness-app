@@ -120,7 +120,7 @@ beforeEach(() => {
       reps TEXT,
       weight REAL,
       rpe REAL,
-      rest_seconds INTEGER, group_id INTEGER, group_rest_seconds INTEGER,
+      rest_seconds INTEGER, duration INTEGER, group_id INTEGER, group_rest_seconds INTEGER,
       guidelines TEXT,
       "order" INTEGER NOT NULL,
       is_main INTEGER NOT NULL DEFAULT 0,
@@ -180,7 +180,7 @@ describe('addExerciseSlot', () => {
       expect(result.success).toBe(false)
     })
 
-    it('rejects reps = 0', async () => {
+    it('accepts reps = 0 (duration-based slots)', async () => {
       const meso = seedMesocycle()
       const tmpl = seedTemplate(meso.id)
       const ex = seedExercise()
@@ -190,7 +190,8 @@ describe('addExerciseSlot', () => {
         sets: 3,
         reps: 0,
       })
-      expect(result.success).toBe(false)
+      expect(result.success).toBe(true)
+      if (result.success) expect(result.data.reps).toBe('0')
     })
 
     it('rejects negative reps', async () => {

@@ -13,6 +13,8 @@ type UpsertFields = {
   duration?: number | null
   pace?: string | null
   planned_duration?: number | null
+  interval_count?: number | null
+  interval_rest?: number | null
   is_deload?: boolean
 }
 

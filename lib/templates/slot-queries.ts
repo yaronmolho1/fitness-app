@@ -19,6 +19,7 @@ export function getSlotsByTemplate(templateId: number): SlotWithExercise[] {
       weight: exercise_slots.weight,
       rpe: exercise_slots.rpe,
       rest_seconds: exercise_slots.rest_seconds,
+      duration: exercise_slots.duration,
       group_id: exercise_slots.group_id,
       group_rest_seconds: exercise_slots.group_rest_seconds,
       guidelines: exercise_slots.guidelines,

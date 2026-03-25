@@ -105,6 +105,7 @@ export const exercise_slots = sqliteTable('exercise_slots', {
   weight: real('weight'),
   rpe: real('rpe'),
   rest_seconds: integer('rest_seconds'),
+  duration: integer('duration'), // seconds, nullable — alternative to reps for isometric exercises
   group_id: integer('group_id'), // superset grouping, nullable
   group_rest_seconds: integer('group_rest_seconds'), // rest after full superset round, nullable
   guidelines: text('guidelines'),
@@ -155,6 +156,8 @@ export const template_week_overrides = sqliteTable(
     duration: integer('duration'),
     pace: text('pace'),
     planned_duration: integer('planned_duration'),
+    interval_count: integer('interval_count'),
+    interval_rest: integer('interval_rest'),
     is_deload: integer('is_deload').notNull().default(0),
     created_at: integer('created_at', { mode: 'timestamp' }),
   },

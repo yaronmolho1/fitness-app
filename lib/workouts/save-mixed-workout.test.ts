@@ -50,7 +50,7 @@ const CREATE_SQL = `
     exercise_id INTEGER NOT NULL REFERENCES exercises(id),
     section_id INTEGER REFERENCES template_sections(id),
     sets INTEGER NOT NULL, reps TEXT NOT NULL, weight REAL, rpe REAL,
-    rest_seconds INTEGER, group_id INTEGER, group_rest_seconds INTEGER, guidelines TEXT, "order" INTEGER NOT NULL,
+    rest_seconds INTEGER, duration INTEGER, group_id INTEGER, group_rest_seconds INTEGER, guidelines TEXT, "order" INTEGER NOT NULL,
     is_main INTEGER NOT NULL DEFAULT 0, created_at INTEGER
   );
   CREATE TABLE logged_workouts (

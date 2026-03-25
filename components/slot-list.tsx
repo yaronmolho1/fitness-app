@@ -763,6 +763,8 @@ function SlotRow({
   const [rpe, setRpe] = useState(slot.rpe != null ? String(slot.rpe) : '')
   const [restSeconds, setRestSeconds] = useState(slot.rest_seconds != null ? String(slot.rest_seconds) : '')
   const [guidelines, setGuidelines] = useState(slot.guidelines ?? '')
+  const [useDuration, setUseDuration] = useState(slot.duration != null)
+  const [duration, setDuration] = useState(slot.duration != null ? String(slot.duration) : '')
 
   function resetForm() {
     setSets(String(slot.sets))
@@ -771,6 +773,8 @@ function SlotRow({
     setRpe(slot.rpe != null ? String(slot.rpe) : '')
     setRestSeconds(slot.rest_seconds != null ? String(slot.rest_seconds) : '')
     setGuidelines(slot.guidelines ?? '')
+    setUseDuration(slot.duration != null)
+    setDuration(slot.duration != null ? String(slot.duration) : '')
     setError('')
   }
 
@@ -847,38 +851,43 @@ function SlotRow({
 
   function computeDiff() {
     const setsNum = sets === '' ? slot.sets : Number(sets)
-    const repsNum = reps === '' ? Number(slot.reps) : Number(reps)
     const weightNum = weight === '' ? null : Number(weight)
     const rpeNum = rpe === '' ? null : Number(rpe)
     const restNum = restSeconds === '' ? null : Number(restSeconds)
     const guidelinesVal = guidelines || null
 
+    // Duration mode: reps forced to 0, duration from input
+    const repsNum = useDuration ? 0 : (reps === '' ? Number(slot.reps) : Number(reps))
+    const durationNum = useDuration ? (duration === '' ? null : Number(duration)) : null
+
     const diff: Record<string, unknown> = {}
     if (setsNum !== slot.sets) diff.sets = setsNum
     if (repsNum !== Number(slot.reps)) diff.reps = repsNum
+    if (durationNum !== slot.duration) diff.duration = durationNum
     if (weightNum !== slot.weight) diff.weight = weightNum
     if (rpeNum !== slot.rpe) diff.rpe = rpeNum
     if (restNum !== slot.rest_seconds) diff.rest_seconds = restNum
     if (guidelinesVal !== slot.guidelines) diff.guidelines = guidelinesVal
 
-    return { diff, setsNum, repsNum, weightNum, rpeNum, restNum, guidelinesVal }
+    return { diff, setsNum, repsNum, durationNum, weightNum, rpeNum, restNum, guidelinesVal }
   }
 
   // Training params that week overrides can affect
-  const TRAINING_PARAM_KEYS = new Set(['sets', 'reps', 'weight', 'rpe'])
+  const TRAINING_PARAM_KEYS = new Set(['sets', 'reps', 'weight', 'rpe', 'duration'])
 
   function hasTrainingParamChange(diff: Record<string, unknown>): boolean {
     return Object.keys(diff).some(k => TRAINING_PARAM_KEYS.has(k))
   }
 
   function executeSave(clearOverrides?: boolean) {
-    const { diff, setsNum, repsNum, weightNum, rpeNum, restNum, guidelinesVal } = computeDiff()
+    const { diff, setsNum, repsNum, durationNum, weightNum, rpeNum, restNum, guidelinesVal } = computeDiff()
 
     startTransition(async () => {
       const result = await updateExerciseSlot({
         id: slot.id,
         sets: setsNum,
         reps: repsNum,
+        duration: durationNum,
         weight: weightNum,
         rpe: rpeNum,
         rest_seconds: restNum,
@@ -993,13 +1002,38 @@ function SlotRow({
             />
           </div>
           <div className="space-y-1">
-            <Label htmlFor={`reps-${slot.id}`}>Reps</Label>
-            <NumericInput
-              id={`reps-${slot.id}`}
-              mode="integer"
-              value={reps}
-              onValueChange={setReps}
-            />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className={cn('text-xs px-2 py-0.5 rounded', !useDuration ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground')}
+                onClick={() => setUseDuration(false)}
+              >
+                Reps
+              </button>
+              <button
+                type="button"
+                className={cn('text-xs px-2 py-0.5 rounded', useDuration ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground')}
+                onClick={() => setUseDuration(true)}
+              >
+                Duration (sec)
+              </button>
+            </div>
+            {useDuration ? (
+              <NumericInput
+                id={`duration-${slot.id}`}
+                mode="integer"
+                value={duration}
+                onValueChange={setDuration}
+              />
+            ) : (
+              <NumericInput
+                id={`reps-${slot.id}`}
+                aria-label="Reps"
+                mode="integer"
+                value={reps}
+                onValueChange={setReps}
+              />
+            )}
           </div>
           <div className="space-y-1">
             <Label htmlFor={`weight-${slot.id}`}>Weight (kg)</Label>
@@ -1151,7 +1185,12 @@ function SlotRow({
       <div className="min-w-0 flex-1">
         <span className="text-sm font-medium">{slot.exercise_name}</span>
         <div className="mt-0.5 flex flex-wrap gap-2 text-xs text-muted-foreground">
-          <span>{String(pendingDiff?.sets ?? slot.sets)}&times;{String(pendingDiff?.reps ?? slot.reps)}</span>
+          <span>
+            {String(pendingDiff?.sets ?? slot.sets)}&times;
+            {(pendingDiff?.duration ?? slot.duration) != null
+              ? `${String(pendingDiff?.duration ?? slot.duration)}s`
+              : String(pendingDiff?.reps ?? slot.reps)}
+          </span>
           {(pendingDiff?.weight ?? slot.weight) != null && <span>{String(pendingDiff?.weight ?? slot.weight)}kg</span>}
           {(pendingDiff?.rpe ?? slot.rpe) != null && <span>RPE {String(pendingDiff?.rpe ?? slot.rpe)}</span>}
           {(pendingDiff?.rest_seconds ?? slot.rest_seconds) != null && <span>{formatRest(Number(pendingDiff?.rest_seconds ?? slot.rest_seconds))}</span>}

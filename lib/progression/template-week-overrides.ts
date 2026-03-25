@@ -9,6 +9,8 @@ type UpsertFields = {
   duration?: number | null
   pace?: string | null
   planned_duration?: number | null
+  interval_count?: number | null
+  interval_rest?: number | null
   is_deload?: boolean
 }
 
@@ -57,6 +59,8 @@ export async function upsertTemplateWeekOverride(
   if (fields.duration !== undefined) values.duration = fields.duration
   if (fields.pace !== undefined) values.pace = fields.pace
   if (fields.planned_duration !== undefined) values.planned_duration = fields.planned_duration
+  if (fields.interval_count !== undefined) values.interval_count = fields.interval_count
+  if (fields.interval_rest !== undefined) values.interval_rest = fields.interval_rest
   if (fields.is_deload !== undefined) values.is_deload = fields.is_deload ? 1 : 0
 
   const whereClause = and(

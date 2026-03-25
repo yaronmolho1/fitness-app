@@ -59,6 +59,7 @@ const CREATE_SQL = `
     weight REAL,
     rpe REAL,
     rest_seconds INTEGER,
+    duration INTEGER,
     group_id INTEGER,
     group_rest_seconds INTEGER,
     guidelines TEXT,
@@ -77,6 +78,9 @@ const CREATE_SQL = `
     distance REAL,
     duration INTEGER,
     pace TEXT,
+    planned_duration INTEGER,
+    interval_count INTEGER,
+    interval_rest INTEGER,
     is_deload INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER,
     UNIQUE(exercise_slot_id, week_number)
