@@ -1013,4 +1013,33 @@ describe('TodayWorkout', () => {
       expect(link).toHaveAttribute('href', '/mesocycles')
     })
   })
+
+  describe('date prop', () => {
+    it('fetches /api/today with no query param when date prop is omitted', async () => {
+      mockApiResponse({ type: 'no_active_mesocycle', date: '2026-03-25' })
+      render(<TodayWorkout />)
+
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledWith('/api/today')
+      })
+    })
+
+    it('fetches /api/today?date=2026-03-20 when date prop is provided', async () => {
+      mockApiResponse({ type: 'no_active_mesocycle', date: '2026-03-20' })
+      render(<TodayWorkout date="2026-03-20" />)
+
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledWith('/api/today?date=2026-03-20')
+      })
+    })
+
+    it('fetches /api/today with no query param when date prop is empty string', async () => {
+      mockApiResponse({ type: 'no_active_mesocycle', date: '2026-03-25' })
+      render(<TodayWorkout date="" />)
+
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledWith('/api/today')
+      })
+    })
+  })
 })
