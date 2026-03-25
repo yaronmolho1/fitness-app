@@ -392,3 +392,11 @@ export async function moveExerciseSlots(
     return { success: false, error: `Failed to move slots: ${msg}` }
   }
 }
+
+// Server action wrapper — client components can't import transfer-queries directly (db dependency)
+import { getTransferTargets as _getTransferTargets, type TransferTarget } from './transfer-queries'
+export type { TransferTarget }
+
+export async function getTransferTargets(): Promise<TransferTarget[]> {
+  return _getTransferTargets()
+}

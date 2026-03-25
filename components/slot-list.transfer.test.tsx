@@ -37,15 +37,12 @@ vi.mock('@/lib/templates/cascade-slot-ops', () => ({
 }))
 
 const mockGetTransferTargets = vi.fn()
-vi.mock('@/lib/templates/transfer-queries', () => ({
-  getTransferTargets: (...args: unknown[]) => mockGetTransferTargets(...args),
-}))
-
 const mockCopyExerciseSlots = vi.fn()
 const mockMoveExerciseSlots = vi.fn()
 vi.mock('@/lib/templates/transfer-actions', () => ({
   copyExerciseSlots: (...args: unknown[]) => mockCopyExerciseSlots(...args),
   moveExerciseSlots: (...args: unknown[]) => mockMoveExerciseSlots(...args),
+  getTransferTargets: (...args: unknown[]) => mockGetTransferTargets(...args),
 }))
 
 const { mockToast } = vi.hoisted(() => ({
@@ -114,9 +111,9 @@ describe('SlotList — transfer actions (T149)', () => {
     expect(screen.getByRole('button', { name: /move to/i })).toBeInTheDocument()
   })
 
-  it('hides transfer buttons for completed mesocycles', () => {
+  it('shows copy but hides move for completed mesocycles', () => {
     render(<SlotList slots={[makeSlot()]} templateId={1} exercises={exercises} isCompleted={true} />)
-    expect(screen.queryByRole('button', { name: /copy to/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /copy to/i })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /move to/i })).not.toBeInTheDocument()
   })
 

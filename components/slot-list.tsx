@@ -14,11 +14,10 @@ import { BatchCascadeScopeSelector } from '@/components/batch-cascade-scope-sele
 import { toast } from 'sonner'
 import { updateExerciseSlot, removeExerciseSlot, addExerciseSlot, reorderExerciseSlots } from '@/lib/templates/slot-actions'
 import { createSuperset, breakSuperset, updateGroupRest } from '@/lib/templates/superset-actions'
-import { copyExerciseSlots, moveExerciseSlots } from '@/lib/templates/transfer-actions'
-import { getTransferTargets } from '@/lib/templates/transfer-queries'
+import { copyExerciseSlots, moveExerciseSlots, getTransferTargets } from '@/lib/templates/transfer-actions'
+import type { TransferTarget } from '@/lib/templates/transfer-actions'
 import { TargetPickerModal } from '@/components/target-picker-modal'
 import type { ConfirmPayload } from '@/components/target-picker-modal'
-import type { TransferTarget } from '@/lib/templates/transfer-queries'
 import { usePendingEdits } from '@/lib/templates/use-pending-edits'
 import { WeekProgressionGrid } from '@/components/week-progression-grid'
 import type { SlotWithExercise } from '@/lib/templates/slot-queries'
@@ -728,7 +727,6 @@ function SlotRow({
   const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
   const [pendingParamUpdates, setPendingParamUpdates] = useState<Record<string, unknown>>({})
-  const router = useRouter()
 
   // Transfer modal state
   const [transferMode, setTransferMode] = useState<'copy' | 'move' | null>(null)
@@ -757,22 +755,22 @@ function SlotRow({
     setError('')
   }
 
-  function openTransfer(mode: 'copy' | 'move') {
+  async function openTransfer(mode: 'copy' | 'move') {
     // If slot is in a superset, prompt for group vs single
     if (slot.group_id !== null && groupSlotIds && groupSlotIds.length > 1) {
       setPendingTransferMode(mode)
       setShowGroupPrompt(true)
       return
     }
-    const targets = getTransferTargets()
+    const targets = await getTransferTargets()
     setTransferTargets(targets)
     setTransferMode(mode)
     setTransferError(undefined)
   }
 
-  function handleGroupPromptChoice(transferGroup: boolean) {
+  async function handleGroupPromptChoice(transferGroup: boolean) {
     setShowGroupPrompt(false)
-    const targets = getTransferTargets()
+    const targets = await getTransferTargets()
     setTransferTargets(targets)
     if (transferGroup) {
       // Store that we want to transfer the whole group — use groupSlotIds
@@ -1093,52 +1091,54 @@ function SlotRow({
           <p className="mt-1 text-xs text-muted-foreground italic">{String(pendingDiff?.guidelines ?? slot.guidelines)}</p>
         )}
       </div>
-      {!isCompleted && (
-        <div className="flex items-center gap-1">
-          {workWeeks != null && workWeeks > 0 && (
+      <div className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-xs"
+          onClick={() => openTransfer('copy')}
+        >
+          Copy to...
+        </Button>
+        {!isCompleted && (
+          <>
+            {workWeeks != null && workWeeks > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => setShowWeekGrid(true)}
+              >
+                Plan Weeks
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"
               className="h-7 px-2 text-xs"
-              onClick={() => setShowWeekGrid(true)}
+              onClick={() => openTransfer('move')}
             >
-              Plan Weeks
+              Move to...
             </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2 text-xs"
-            onClick={() => openTransfer('copy')}
-          >
-            Copy to...
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2 text-xs"
-            onClick={() => openTransfer('move')}
-          >
-            Move to...
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2 text-xs"
-            onClick={handleEdit}
-          >
-            Edit
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2 text-xs text-destructive hover:text-destructive"
-            onClick={() => setMode('confirm-remove')}
-          >
-            Remove
-          </Button>
-        </div>
-      )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={handleEdit}
+            >
+              Edit
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+              onClick={() => setMode('confirm-remove')}
+            >
+              Remove
+            </Button>
+          </>
+        )}
+      </div>
 
       {workWeeks != null && workWeeks > 0 && (
         <WeekProgressionGrid
