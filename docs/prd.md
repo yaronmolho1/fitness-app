@@ -126,9 +126,20 @@ Single user. Two usage contexts that drive distinct UX requirements:
   - Story: As a coach, I want the exercise creation form collapsed by default with a toggle to expand, so the page focuses on the library view.
   - Story: As a coach, I want equipment and muscle group fields as auto-suggest comboboxes populated from existing values, so I get consistency without rigid lists.
 
-### Activity 6: Navigation & Discoverability (Coach + Athlete)
+### Activity 6: Consult on Training (Coach)
 
-- Task 6.1: Improve navigation
+- Task 6.1: Generate coaching context summary
+  - Story: As a coach, I want to generate a markdown summary of my full training state (profile, plan, recent sessions, trends, upcoming schedule) so I can paste it into any LLM conversation and get contextual coaching advice without re-explaining my background every time.
+  - Story: As a coach, I want to fill in my current subjective state (fatigue, soreness, sleep quality, injuries, notes) each time I generate a summary, so the coach/LLM knows how I feel right now.
+  - Story: As a coach, I want a one-click copy button that puts the raw markdown into my clipboard, so exporting takes zero friction.
+
+- Task 6.2: Manage athlete profile
+  - Story: As a coach, I want to store my athlete profile (age, weight, height, gender, training age, primary goal, injury history) so the coaching summary includes who I am without me re-entering it.
+  - Story: As a coach, I want to edit my profile inline on the coaching page with auto-save, so keeping it current is effortless.
+
+### Activity 7: Navigation & Discoverability (Coach + Athlete)
+
+- Task 7.1: Improve navigation
   - Story: As a user, I want progression accessible from the main navigation, so I can review my training history without hunting for it.
   - Story: As a user, I want quick links from calendar days and today's workout to template editing, so I can adjust plans without navigating through mesocycle details.
   - Story: As a user, I want consistent header spacing, padding, and typography across all pages, so the app feels polished and cohesive.
@@ -150,7 +161,7 @@ Single user. Two usage contexts that drive distinct UX requirements:
 - Auto-progression logic (manual in V1; user decides when to increase)
 - Google Calendar sync
 - Garmin/Strava API import
-- LLM-assisted coaching or plan suggestions
+- In-app LLM chat or AI-generated recommendations
 - Nutrition tracking
 - PWA/offline support
 - Dark mode
@@ -162,7 +173,7 @@ Single user. Two usage contexts that drive distinct UX requirements:
 
 | Idea | Context | Priority |
 |------|---------|----------|
-| LLM-assisted progression | AI reviews past logs and suggests next phase programming | V2 — high |
+| LLM-assisted progression | AI reviews past logs and suggests next phase programming (builds on coaching summary) | V2 — high |
 | Garmin/Strava import | Auto-fill running metrics from watch data | V2 — high |
 | Google Calendar sync | Show workouts alongside life calendar | V2 — medium |
 | Nutrition tracking | Macros/calories alongside training | V2 — low |

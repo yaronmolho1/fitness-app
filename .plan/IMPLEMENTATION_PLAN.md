@@ -1,6 +1,6 @@
 # Implementation Plan
 
-> 138 tasks across 26 waves (Wave 0 infra + 14 feature waves + 3 UI overhaul + 3 UI redesign + 4 enhancement waves + 4 P3 waves). Each feature task = one TDD cycle.
+> 152 tasks across 28 waves (Wave 0 infra + 14 feature waves + 3 UI overhaul + 3 UI redesign + 4 enhancement waves + 4 P3 waves + 2 coaching summary waves). Each feature task = one TDD cycle.
 > Waves are sequential; tracks within a wave are parallel.
 
 ## Critical Path
@@ -794,3 +794,69 @@ T151 → T152 → T157 (schema → CRUD → Plan Weeks UI, estimated: S + M + M 
 | Small | 6 | 2-4h | ~18h |
 | Medium | 7 | 4-8h | ~42h |
 | **Total** | **13** | | **~60h** |
+
+---
+
+## Wave CS1: Coaching Summary — Foundation
+
+> New feature: coaching context export page. Schema + data layer + summary generator.
+
+### Sub-wave CS1.1 — Schema + Profile
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T159 | `athlete_profile` table: id (PK), age (int), weight_kg (real), height_cm (real), gender (text), training_age_years (int), primary_goal (text), injury_history (text), created_at (timestamp), updated_at (timestamp). All nullable. Single-row. Generate + apply migration. | small | Coaching Summary | — | coaching-summary |
+| T160 | Profile queries + actions: `getAthleteProfile()` returns single row or null. `saveAthleteProfile(input)` upsert with zod validation. Follow exercises/actions.ts pattern. Revalidate `/coaching`. | small | Coaching Summary | T159 | coaching-summary |
+
+### Sub-wave CS1.2 — Summary Generator
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T161 | Active mesocycle query: fetch active meso with templates → exercise_slots → exercises + weekly_schedule. New function `getCurrentPlan(db)` in coaching queries. | medium | Coaching Summary | T159 | coaching-summary |
+| T162 | Recent sessions query: `getRecentSessions(db, weeks)` — fetch logged_workouts (last 4 weeks) with logged_exercises + logged_sets. Join exercise names. Chronological order. | medium | Coaching Summary | T159 | coaching-summary |
+| T163 | Summary generator: `generateCoachingSummary(subjectiveState)` assembles 6 markdown sections: Profile, Current Plan, Recent Sessions (4 wks), Progression Trends (reuse `getProgressionData`), Subjective State (passthrough), Upcoming Plan (reuse `getCalendarProjection`). Returns markdown string. | large | Coaching Summary | T160, T161, T162 | coaching-summary |
+
+### Sub-wave CS1.3 — API
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T164 | Summary route handler: `POST /api/coaching/summary` — accepts `{ fatigue, soreness, sleep, injuries, notes }` in body, validates with zod, calls `generateCoachingSummary()`, returns `{ markdown }`. | small | Coaching Summary | T163 | coaching-summary |
+
+## Wave CS2: Coaching Summary — UI
+
+> Depends on CS1. Page + components + nav.
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T165 | Coaching page (server component): `/coaching` route. Loads profile via `getAthleteProfile()`, passes to client. `force-dynamic`. | small | Coaching Summary | T160 | coaching-summary |
+| T166 | Profile form component: inline edit with controlled inputs. Fields: age, weight, height, gender (select), training age, primary goal, injury history (textarea). Auto-save on blur via `saveAthleteProfile`. Uses `useTransition`. | medium | Coaching Summary | T160, T165 | coaching-summary |
+| T167 | Subjective state form component: ephemeral (not persisted). Radio groups for fatigue/soreness/sleep (1-5), current injuries textarea, notes textarea. Local state, passed up via callback. | small | Coaching Summary | T165 | coaching-summary |
+| T168 | Summary preview component: fetches POST `/api/coaching/summary` on "Generate" click. Shows markdown in `<pre>` block. Copy-to-clipboard button with check icon feedback. Loading state. | medium | Coaching Summary | T164 | coaching-summary |
+| T169 | Client orchestrator component: composes profile form, subjective state form, generate button, summary preview. Manages state flow between components. | medium | Coaching Summary | T166, T167, T168 | coaching-summary |
+| T170 | Nav link: add `{ href: '/coaching', label: 'Coaching', icon: BrainCircuit }` after Routines in nav-items.ts. | small | Coaching Summary | T165 | coaching-summary |
+
+## Wave CS Dependency Graph
+
+```
+T159 (schema)
+├── T160 (profile queries+actions) → T163 (summary generator) → T164 (API route) → T168 (preview)
+├── T161 (current plan query) ──────┘                                                      │
+├── T162 (recent sessions query) ───┘                                                      │
+├── T165 (page) → T166 (profile form) ──┐                                                  │
+│              → T167 (subjective form) ─┼── T169 (orchestrator) ◄─────────────────────────┘
+│              → T170 (nav link)         │
+└────────────────────────────────────────┘
+```
+
+## Wave CS Critical Path
+
+T159 → T160 → T163 → T164 → T168 → T169 (schema → profile → generator → API → preview → orchestrator)
+
+## Wave CS Scope Summary
+
+| Scope | Count | Est. Hours Each | Total |
+|-------|-------|-----------------|-------|
+| Small | 5 | 1-2h | ~8h |
+| Medium | 4 | 2-4h | ~12h |
+| Large | 1 | 4-6h | ~5h |
+| **Total** | **12** (T159-T170) | | **~25h** |
