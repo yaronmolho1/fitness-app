@@ -31,8 +31,8 @@ As a coach/athlete, I can generate a markdown summary of my full training state 
 - [ ] Subjective state values are included in the summary generation request body
 
 ### Summary Generation
-- [ ] A "Generate Summary" button triggers `POST /api/coaching/summary`
-- [ ] The request body includes the subjective state fields
+- [x] A "Generate Summary" button triggers `POST /api/coaching/summary`
+- [x] The request body includes the subjective state fields
 - [x] The route handler reads profile, plan, log, and progression data server-side
 - [x] The response is a plain markdown string (content-type `text/plain` or JSON-wrapped)
 - [x] The markdown includes these sections in order:
@@ -44,10 +44,10 @@ As a coach/athlete, I can generate a markdown summary of my full training state 
   6. **Upcoming Plan** — next 7–14 days of projected schedule (reuses `getCalendarProjection()`)
 
 ### Summary Preview & Copy
-- [ ] After generation, the markdown renders in a `<pre>` block below the button
-- [ ] A "Copy to Clipboard" button appears next to the preview
-- [ ] Clicking copy writes the raw markdown to the clipboard via `navigator.clipboard.writeText`
-- [ ] Visual feedback confirms the copy (e.g. button text changes to "Copied!" for 2 seconds)
+- [x] After generation, the markdown renders in a `<pre>` block below the button
+- [x] A "Copy to Clipboard" button appears next to the preview
+- [x] Clicking copy writes the raw markdown to the clipboard via `navigator.clipboard.writeText`
+- [x] Visual feedback confirms the copy (e.g. button text changes to "Copied!" for 2 seconds)
 
 ### Navigation
 - [ ] A "Coaching" link is added to the app navigation after the Routines link
