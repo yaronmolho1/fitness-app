@@ -63,6 +63,7 @@ function seedExercise(name: string) {
 }
 
 beforeEach(() => {
+  testDb.run(sql`DROP TABLE IF EXISTS slot_week_overrides`)
   testDb.run(sql`DROP TABLE IF EXISTS exercise_slots`)
   testDb.run(sql`DROP TABLE IF EXISTS workout_templates`)
   testDb.run(sql`DROP TABLE IF EXISTS mesocycles`)
@@ -123,6 +124,15 @@ beforeEach(() => {
       "order" INTEGER NOT NULL,
       is_main INTEGER NOT NULL DEFAULT 0,
       created_at INTEGER
+    )
+  `)
+  testDb.run(sql`
+    CREATE TABLE slot_week_overrides (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      exercise_slot_id INTEGER NOT NULL REFERENCES exercise_slots(id) ON DELETE CASCADE,
+      week_number INTEGER NOT NULL, weight REAL, reps TEXT, sets INTEGER,
+      rpe REAL, distance REAL, duration INTEGER, pace TEXT,
+      is_deload INTEGER NOT NULL DEFAULT 0, created_at INTEGER
     )
   `)
 })
