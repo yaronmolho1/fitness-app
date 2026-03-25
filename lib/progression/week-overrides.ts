@@ -183,3 +183,25 @@ export function computeDeloadDefaults(base: DeloadInput): DeloadResult {
     rpe: base.rpe !== null ? Math.max(1, base.rpe - 2) : null,
   }
 }
+
+export function computeRunningDeloadDefaults(base: {
+  distance: number | null
+  duration: number | null
+  pace: string | null
+}) {
+  return {
+    distance: base.distance !== null ? Math.round(base.distance * 0.8 * 100) / 100 : null,
+    duration: base.duration,
+    pace: base.pace,
+  }
+}
+
+export function computeMmaDeloadDefaults(base: {
+  planned_duration: number | null
+}) {
+  return {
+    planned_duration: base.planned_duration !== null
+      ? Math.round(base.planned_duration * 0.7)
+      : null,
+  }
+}

@@ -243,10 +243,14 @@ describe('TemplateSection — characterization', () => {
     expect(screen.getByText('Focus on form')).toBeInTheDocument()
   })
 
-  it('shows canonical name next to template name', () => {
+  it('shows canonical name in edit mode', async () => {
+    const user = userEvent.setup()
     const templates = [makeTemplate({ canonical_name: 'push-a-v2' })]
     render(<TemplateSection {...defaultProps} templates={templates} />)
-    expect(screen.getByText('push-a-v2')).toBeInTheDocument()
+    // Canonical name is not shown in display mode, only in edit form
+    expect(screen.queryByText('push-a-v2')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Edit' }))
+    expect(screen.getByDisplayValue('push-a-v2')).toBeInTheDocument()
   })
 
   it('shows target distance and duration for running templates', () => {

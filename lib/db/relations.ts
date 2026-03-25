@@ -7,6 +7,7 @@ import {
   routine_items,
   exercise_slots,
   slot_week_overrides,
+  template_week_overrides,
   exercises,
   logged_workouts,
   logged_exercises,
@@ -25,6 +26,7 @@ export const workout_templatesRelations = relations(
   ({ many, one }) => ({
     exercise_slots: many(exercise_slots),
     template_sections: many(template_sections),
+    template_week_overrides: many(template_week_overrides),
     mesocycle: one(mesocycles, {
       fields: [workout_templates.mesocycle_id],
       references: [mesocycles.id],
@@ -40,6 +42,7 @@ export const template_sectionsRelations = relations(
       references: [workout_templates.id],
     }),
     exercise_slots: many(exercise_slots),
+    template_week_overrides: many(template_week_overrides),
   })
 )
 
@@ -132,3 +135,17 @@ export const routine_logsRelations = relations(routine_logs, ({ one }) => ({
     references: [routine_items.id],
   }),
 }))
+
+export const template_week_overridesRelations = relations(
+  template_week_overrides,
+  ({ one }) => ({
+    template: one(workout_templates, {
+      fields: [template_week_overrides.template_id],
+      references: [workout_templates.id],
+    }),
+    section: one(template_sections, {
+      fields: [template_week_overrides.section_id],
+      references: [template_sections.id],
+    }),
+  })
+)

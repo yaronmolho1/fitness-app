@@ -77,7 +77,8 @@ describe('SlotList number inputs — characterization', () => {
       const user = userEvent.setup()
       const slot = makeSlot(slotOverrides)
       render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
-      await user.click(screen.getByRole('button', { name: /edit/i }))
+      await user.click(screen.getByRole('button', { name: /actions/i }))
+      await user.click(screen.getByRole('menuitem', { name: /edit/i }))
       return user
     }
 
@@ -122,7 +123,8 @@ describe('SlotList number inputs — characterization', () => {
       const user = userEvent.setup()
       const slot = makeSlot({ sets: 5 })
       render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
-      await user.click(screen.getByRole('button', { name: /edit/i }))
+      await user.click(screen.getByRole('button', { name: /actions/i }))
+      await user.click(screen.getByRole('menuitem', { name: /edit/i }))
       expect(screen.getByLabelText('Sets')).toHaveValue('5')
     })
 
@@ -130,7 +132,8 @@ describe('SlotList number inputs — characterization', () => {
       const user = userEvent.setup()
       const slot = makeSlot({ reps: '12' })
       render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
-      await user.click(screen.getByRole('button', { name: /edit/i }))
+      await user.click(screen.getByRole('button', { name: /actions/i }))
+      await user.click(screen.getByRole('menuitem', { name: /edit/i }))
       expect(screen.getByLabelText('Reps')).toHaveValue('12')
     })
 
@@ -138,7 +141,8 @@ describe('SlotList number inputs — characterization', () => {
       const user = userEvent.setup()
       const slot = makeSlot({ weight: 60 })
       render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
-      await user.click(screen.getByRole('button', { name: /edit/i }))
+      await user.click(screen.getByRole('button', { name: /actions/i }))
+      await user.click(screen.getByRole('menuitem', { name: /edit/i }))
       expect(screen.getByLabelText('Weight (kg)')).toHaveValue('60')
     })
 
@@ -146,7 +150,8 @@ describe('SlotList number inputs — characterization', () => {
       const user = userEvent.setup()
       const slot = makeSlot({ weight: null })
       render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
-      await user.click(screen.getByRole('button', { name: /edit/i }))
+      await user.click(screen.getByRole('button', { name: /actions/i }))
+      await user.click(screen.getByRole('menuitem', { name: /edit/i }))
       expect(screen.getByLabelText('Weight (kg)')).toHaveValue('')
     })
 
@@ -154,7 +159,8 @@ describe('SlotList number inputs — characterization', () => {
       const user = userEvent.setup()
       const slot = makeSlot({ rpe: null })
       render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
-      await user.click(screen.getByRole('button', { name: /edit/i }))
+      await user.click(screen.getByRole('button', { name: /actions/i }))
+      await user.click(screen.getByRole('menuitem', { name: /edit/i }))
       expect(screen.getByLabelText('RPE')).toHaveValue('')
     })
 
@@ -162,7 +168,8 @@ describe('SlotList number inputs — characterization', () => {
       const user = userEvent.setup()
       const slot = makeSlot({ rest_seconds: null })
       render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
-      await user.click(screen.getByRole('button', { name: /edit/i }))
+      await user.click(screen.getByRole('button', { name: /actions/i }))
+      await user.click(screen.getByRole('menuitem', { name: /edit/i }))
       expect(screen.getByLabelText('Rest (sec)')).toHaveValue('')
     })
   })
@@ -172,7 +179,8 @@ describe('SlotList number inputs — characterization', () => {
       const user = userEvent.setup()
       const slot = makeSlot({ sets: 3 })
       render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
-      await user.click(screen.getByRole('button', { name: /edit/i }))
+      await user.click(screen.getByRole('button', { name: /actions/i }))
+      await user.click(screen.getByRole('menuitem', { name: /edit/i }))
 
       const input = screen.getByLabelText('Sets') as HTMLInputElement
       await user.clear(input)
@@ -183,7 +191,8 @@ describe('SlotList number inputs — characterization', () => {
       const user = userEvent.setup()
       const slot = makeSlot({ reps: '10' })
       render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
-      await user.click(screen.getByRole('button', { name: /edit/i }))
+      await user.click(screen.getByRole('button', { name: /actions/i }))
+      await user.click(screen.getByRole('menuitem', { name: /edit/i }))
 
       const input = screen.getByLabelText('Reps') as HTMLInputElement
       await user.clear(input)
@@ -194,7 +203,8 @@ describe('SlotList number inputs — characterization', () => {
       const user = userEvent.setup()
       const slot = makeSlot({ weight: 80 })
       render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
-      await user.click(screen.getByRole('button', { name: /edit/i }))
+      await user.click(screen.getByRole('button', { name: /actions/i }))
+      await user.click(screen.getByRole('menuitem', { name: /edit/i }))
 
       const input = screen.getByLabelText('Weight (kg)') as HTMLInputElement
       await user.clear(input)
@@ -205,7 +215,8 @@ describe('SlotList number inputs — characterization', () => {
       const user = userEvent.setup()
       const slot = makeSlot({ rpe: 8 })
       render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
-      await user.click(screen.getByRole('button', { name: /edit/i }))
+      await user.click(screen.getByRole('button', { name: /actions/i }))
+      await user.click(screen.getByRole('menuitem', { name: /edit/i }))
 
       const input = screen.getByLabelText('RPE') as HTMLInputElement
       await user.clear(input)
@@ -216,7 +227,8 @@ describe('SlotList number inputs — characterization', () => {
       const user = userEvent.setup()
       const slot = makeSlot({ rest_seconds: 120 })
       render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
-      await user.click(screen.getByRole('button', { name: /edit/i }))
+      await user.click(screen.getByRole('button', { name: /actions/i }))
+      await user.click(screen.getByRole('menuitem', { name: /edit/i }))
 
       const input = screen.getByLabelText('Rest (sec)') as HTMLInputElement
       await user.clear(input)
@@ -227,7 +239,8 @@ describe('SlotList number inputs — characterization', () => {
       const user = userEvent.setup()
       const slot = makeSlot({ weight: 80 })
       render(<SlotList slots={[slot]} templateId={1} exercises={exercises} isCompleted={false} />)
-      await user.click(screen.getByRole('button', { name: /edit/i }))
+      await user.click(screen.getByRole('button', { name: /actions/i }))
+      await user.click(screen.getByRole('menuitem', { name: /edit/i }))
 
       const input = screen.getByLabelText('Weight (kg)') as HTMLInputElement
       await user.clear(input)
