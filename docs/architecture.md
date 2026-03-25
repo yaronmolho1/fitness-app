@@ -136,6 +136,7 @@ Route Handlers are intentionally kept for reads that may serve V2 consumers (LLM
 | Logging | Workout log creation (snapshot + normalized rows), immutable after save |
 | Routines | Routine item CRUD with flexible scoping, daily log tracking |
 | Calendar / Progression | Computed views: projected calendar, exercise progression charts, today's sessions (multi-session per day) |
+| Coaching | Summary generation: assembles athlete profile, current plan, recent sessions, progression trends, and subjective state into a structured markdown brief for coaching review |
 
 For response format and status codes, see `docs/api-standards.md`.
 
