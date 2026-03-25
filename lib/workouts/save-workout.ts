@@ -246,7 +246,7 @@ function getWeekNumber(startDate: string, logDate: string): number {
   const diffDays = Math.round(
     (current.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
   )
-  return Math.floor(diffDays / 7) + 1
+  return Math.max(1, Math.floor(diffDays / 7) + 1)
 }
 
 // Fetch overrides for slot IDs at a given week, returns map by slot ID
@@ -268,7 +268,8 @@ async function fetchOverrideMap(
       )
       .all()
     return new Map(overrides.map((o) => [o.exercise_slot_id, o]))
-  } catch {
+  } catch (err) {
+    console.error('Failed to fetch week overrides:', err)
     return new Map()
   }
 }
