@@ -708,20 +708,21 @@ function SessionSection({
   return null
 }
 
-export function TodayWorkout() {
+export function TodayWorkout({ date }: { date?: string } = {}) {
   const [sessions, setSessions] = useState<TodayResponse[] | null>(null)
   const [error, setError] = useState(false)
   const [loggingState, setLoggingState] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
-    fetch('/api/today')
+    const url = date ? `/api/today?date=${date}` : '/api/today'
+    fetch(url)
       .then((res) => {
         if (!res.ok) throw new Error('Failed to fetch')
         return res.json()
       })
       .then((json: TodayResponse[]) => setSessions(json))
       .catch(() => setError(true))
-  }, [])
+  }, [date])
 
   function startLogging(key: string) {
     setLoggingState((prev) => ({ ...prev, [key]: true }))
