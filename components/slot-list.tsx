@@ -11,8 +11,14 @@ import { cn } from '@/lib/utils'
 import { ExercisePicker } from '@/components/exercise-picker'
 import { SlotCascadeScopeSelector } from '@/components/slot-cascade-scope-selector'
 import { BatchCascadeScopeSelector } from '@/components/batch-cascade-scope-selector'
+import { toast } from 'sonner'
 import { updateExerciseSlot, removeExerciseSlot, addExerciseSlot, reorderExerciseSlots } from '@/lib/templates/slot-actions'
 import { createSuperset, breakSuperset, updateGroupRest } from '@/lib/templates/superset-actions'
+import { copyExerciseSlots, moveExerciseSlots } from '@/lib/templates/transfer-actions'
+import { getTransferTargets } from '@/lib/templates/transfer-queries'
+import { TargetPickerModal } from '@/components/target-picker-modal'
+import type { ConfirmPayload } from '@/components/target-picker-modal'
+import type { TransferTarget } from '@/lib/templates/transfer-queries'
 import { usePendingEdits } from '@/lib/templates/use-pending-edits'
 import { WeekProgressionGrid } from '@/components/week-progression-grid'
 import type { SlotWithExercise } from '@/lib/templates/slot-queries'
@@ -667,6 +673,7 @@ function SupersetGroup({
             onDeferredSave={onDeferredSave}
             workWeeks={workWeeks}
             hasDeload={hasDeload}
+            groupSlotIds={slots.map(s => s.id)}
           />
         )
       })}
@@ -704,6 +711,7 @@ type SlotRowProps = {
   onDeferredSave?: (slot: SlotWithExercise, diff: Record<string, unknown>) => void
   workWeeks?: number
   hasDeload?: boolean
+  groupSlotIds?: number[]
 }
 
 function SlotRow({
@@ -713,12 +721,23 @@ function SlotRow({
   onTouchStart, onTouchMove, onTouchEnd,
   hasPendingEdit, pendingDiff, onDeferredSave,
   workWeeks, hasDeload,
+  groupSlotIds,
 }: SlotRowProps) {
   const [mode, setMode] = useState<'display' | 'edit' | 'confirm-remove' | 'cascade-params' | 'cascade-remove'>('display')
   const [showWeekGrid, setShowWeekGrid] = useState(false)
   const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
   const [pendingParamUpdates, setPendingParamUpdates] = useState<Record<string, unknown>>({})
+  const router = useRouter()
+
+  // Transfer modal state
+  const [transferMode, setTransferMode] = useState<'copy' | 'move' | null>(null)
+  const [transferTargets, setTransferTargets] = useState<TransferTarget[]>([])
+  const [isTransferPending, setIsTransferPending] = useState(false)
+  const [transferError, setTransferError] = useState<string | undefined>()
+  // Superset group prompt state
+  const [showGroupPrompt, setShowGroupPrompt] = useState(false)
+  const [pendingTransferMode, setPendingTransferMode] = useState<'copy' | 'move' | null>(null)
 
   // Edit form state — string-based for NumericInput
   const [sets, setSets] = useState(String(slot.sets))
@@ -736,6 +755,67 @@ function SlotRow({
     setRestSeconds(slot.rest_seconds != null ? String(slot.rest_seconds) : '')
     setGuidelines(slot.guidelines ?? '')
     setError('')
+  }
+
+  function openTransfer(mode: 'copy' | 'move') {
+    // If slot is in a superset, prompt for group vs single
+    if (slot.group_id !== null && groupSlotIds && groupSlotIds.length > 1) {
+      setPendingTransferMode(mode)
+      setShowGroupPrompt(true)
+      return
+    }
+    const targets = getTransferTargets()
+    setTransferTargets(targets)
+    setTransferMode(mode)
+    setTransferError(undefined)
+  }
+
+  function handleGroupPromptChoice(transferGroup: boolean) {
+    setShowGroupPrompt(false)
+    const targets = getTransferTargets()
+    setTransferTargets(targets)
+    if (transferGroup) {
+      // Store that we want to transfer the whole group — use groupSlotIds
+      setTransferMode(pendingTransferMode)
+    } else {
+      // Single slot only
+      setTransferMode(pendingTransferMode)
+    }
+    setTransferError(undefined)
+    // We track whether it's a group transfer via a ref-like approach
+    // For simplicity, store in a local var that persists through the confirm handler
+    handleGroupTransferRef.current = transferGroup
+  }
+
+  const handleGroupTransferRef = useRef(false)
+
+  async function handleTransferConfirm(payload: ConfirmPayload) {
+    setIsTransferPending(true)
+    setTransferError(undefined)
+
+    const isGroupTransfer = handleGroupTransferRef.current && groupSlotIds && groupSlotIds.length > 1
+    const slotIds = isGroupTransfer ? groupSlotIds : [slot.id]
+
+    const action = transferMode === 'copy' ? copyExerciseSlots : moveExerciseSlots
+    const result = await action({
+      slotIds,
+      targetTemplateId: payload.targetTemplateId,
+      targetSectionId: payload.targetSectionId,
+    })
+
+    setIsTransferPending(false)
+
+    if (result.success) {
+      const label = transferMode === 'copy' ? 'Copied' : 'Moved'
+      const count = slotIds.length
+      toast.success(`${label} ${count} slot${count !== 1 ? 's' : ''}`)
+      setTransferMode(null)
+      handleGroupTransferRef.current = false
+      onUpdated()
+    } else {
+      toast.error(result.error)
+      setTransferError(result.error)
+    }
   }
 
   function handleEdit() {
@@ -1029,6 +1109,22 @@ function SlotRow({
             variant="ghost"
             size="sm"
             className="h-7 px-2 text-xs"
+            onClick={() => openTransfer('copy')}
+          >
+            Copy to...
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs"
+            onClick={() => openTransfer('move')}
+          >
+            Move to...
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs"
             onClick={handleEdit}
           >
             Edit
@@ -1052,6 +1148,43 @@ function SlotRow({
           isCompleted={isCompleted}
           open={showWeekGrid}
           onOpenChange={setShowWeekGrid}
+        />
+      )}
+
+      {/* Superset group transfer prompt */}
+      {showGroupPrompt && (
+        <div className="mt-2 rounded-lg border p-3 space-y-2">
+          <p className="text-sm">Transfer entire superset or just this exercise?</p>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={() => handleGroupPromptChoice(true)}>
+              Entire superset
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => handleGroupPromptChoice(false)}>
+              This exercise only
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => { setShowGroupPrompt(false); setPendingTransferMode(null) }}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Transfer target picker modal */}
+      {transferMode !== null && (
+        <TargetPickerModal
+          open={transferMode !== null}
+          onOpenChange={(open) => {
+            if (!open) {
+              setTransferMode(null)
+              setTransferError(undefined)
+              handleGroupTransferRef.current = false
+            }
+          }}
+          onConfirm={handleTransferConfirm}
+          targets={transferTargets}
+          isPending={isTransferPending}
+          mode={transferMode}
+          error={transferError}
         />
       )}
     </div>
