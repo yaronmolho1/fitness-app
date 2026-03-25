@@ -5,6 +5,7 @@ import { db } from '@/lib/db'
 import {
   upsertWeekOverride as upsertFn,
   deleteWeekOverride as deleteFn,
+  getWeekOverrides as getFn,
   type UpsertFields,
 } from './week-overrides'
 
@@ -29,4 +30,8 @@ export async function deleteWeekOverrideAction(
     revalidatePath('/mesocycles')
   }
   return result
+}
+
+export async function getWeekOverridesAction(slotId: number) {
+  return getFn(db, slotId)
 }
