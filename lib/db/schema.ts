@@ -214,6 +214,23 @@ export const routine_items = sqliteTable('routine_items', {
 })
 
 // ============================================================================
+// PROFILE LAYER (1 table) — single-row athlete profile
+// ============================================================================
+
+export const athlete_profile = sqliteTable('athlete_profile', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  age: integer('age'),
+  weight_kg: real('weight_kg'),
+  height_cm: real('height_cm'),
+  gender: text('gender'),
+  training_age_years: integer('training_age_years'),
+  primary_goal: text('primary_goal'),
+  injury_history: text('injury_history'),
+  created_at: integer('created_at', { mode: 'timestamp' }),
+  updated_at: integer('updated_at', { mode: 'timestamp' }),
+})
+
+// ============================================================================
 // LOGGING LAYER (4 tables) — immutable snapshots
 // ============================================================================
 
