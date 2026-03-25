@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { render, screen, cleanup, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 
 vi.mock('next/link', () => ({
   default: ({ children, href, ...props }: { children: React.ReactNode; href: string; [key: string]: unknown }) => (
@@ -692,6 +692,166 @@ describe('DayDetailPanel', () => {
       const cards = screen.getAllByTestId('workout-card')
       expect(cards[0]).toHaveTextContent('AM')
       expect(cards[1]).toHaveTextContent('EVE')
+    })
+  })
+
+  // ============================================================================
+  // T173: "Log Workout" button on projected cards
+  // ============================================================================
+
+  describe('Log Workout button (T173)', () => {
+    // Fix "today" to 2026-03-25 for deterministic date comparisons
+    beforeEach(() => {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+      vi.setSystemTime(new Date('2026-03-25T12:00:00'))
+    })
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    // AC1: projected workout, date <= today → show button
+    it('shows "Log Workout" button on projected card when date <= today', async () => {
+      const projected: DayDetailResult = {
+        ...projectedResistance,
+        date: '2026-03-25', // today
+      }
+      mockFetchResponse(projected)
+
+      render(<DayDetailPanel date="2026-03-25" onClose={() => {}} />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Push A')).toBeInTheDocument()
+      })
+
+      expect(screen.getByTestId('log-workout-button')).toBeInTheDocument()
+      expect(screen.getByTestId('log-workout-button')).toHaveTextContent('Log Workout')
+    })
+
+    it('shows "Log Workout" button on projected card for past date', async () => {
+      const projected: DayDetailResult = {
+        ...projectedResistance,
+        date: '2026-03-20', // past
+      }
+      mockFetchResponse(projected)
+
+      render(<DayDetailPanel date="2026-03-20" onClose={() => {}} />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Push A')).toBeInTheDocument()
+      })
+
+      expect(screen.getByTestId('log-workout-button')).toBeInTheDocument()
+    })
+
+    // AC2: button navigates to /?date=YYYY-MM-DD
+    it('"Log Workout" button links to /?date=YYYY-MM-DD', async () => {
+      const projected: DayDetailResult = {
+        ...projectedResistance,
+        date: '2026-03-20',
+      }
+      mockFetchResponse(projected)
+
+      render(<DayDetailPanel date="2026-03-20" onClose={() => {}} />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Push A')).toBeInTheDocument()
+      })
+
+      const btn = screen.getByTestId('log-workout-button')
+      // Button renders as <a> via asChild + Link
+      expect(btn).toHaveAttribute('href', '/?date=2026-03-20')
+    })
+
+    // AC3: projected workout, date > today → no button
+    it('hides "Log Workout" button on projected card when date > today', async () => {
+      const projected: DayDetailResult = {
+        ...projectedResistance,
+        date: '2026-03-26', // tomorrow
+      }
+      mockFetchResponse(projected)
+
+      render(<DayDetailPanel date="2026-03-26" onClose={() => {}} />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Push A')).toBeInTheDocument()
+      })
+
+      expect(screen.queryByTestId('log-workout-button')).not.toBeInTheDocument()
+    })
+
+    // AC4: completed workout → no button
+    it('hides "Log Workout" button on completed card', async () => {
+      const completed: DayDetailResult = {
+        type: 'completed',
+        date: '2026-03-20',
+        mesocycle_id: 1,
+        mesocycle_status: 'active',
+        snapshot: { version: 1, name: 'Push A', modality: 'resistance', notes: null },
+        exercises: [],
+        rating: 4,
+        notes: null,
+        is_deload: false,
+        period: 'morning',
+      }
+      mockFetchResponse(completed)
+
+      render(<DayDetailPanel date="2026-03-20" onClose={() => {}} />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Push A')).toBeInTheDocument()
+      })
+
+      expect(screen.queryByTestId('log-workout-button')).not.toBeInTheDocument()
+    })
+
+    // AC5: rest day → no button
+    it('hides "Log Workout" button on rest day', async () => {
+      mockFetchResponse({ type: 'rest', date: '2026-03-20' })
+
+      render(<DayDetailPanel date="2026-03-20" onClose={() => {}} />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('rest-day-message')).toBeInTheDocument()
+      })
+
+      expect(screen.queryByTestId('log-workout-button')).not.toBeInTheDocument()
+    })
+
+    // AC6: multi-session, one logged + one projected → only unlogged shows button
+    it('shows "Log Workout" only on unlogged projected card in multi-session day', async () => {
+      const completed: DayDetailResult = {
+        type: 'completed',
+        date: '2026-03-20',
+        mesocycle_id: 1,
+        mesocycle_status: 'active',
+        snapshot: { version: 1, name: 'Morning Logged', modality: 'resistance', notes: null },
+        exercises: [],
+        rating: 3,
+        notes: null,
+        is_deload: false,
+        period: 'morning',
+      }
+      const projected: DayDetailResult = {
+        ...projectedRunning,
+        date: '2026-03-20',
+        period: 'evening' as const,
+      }
+      mockFetchResponse([completed, projected])
+
+      render(<DayDetailPanel date="2026-03-20" onClose={() => {}} />)
+
+      await waitFor(() => {
+        expect(screen.getAllByTestId('workout-card')).toHaveLength(2)
+      })
+
+      // Only one "Log Workout" button — on the projected card
+      const logButtons = screen.getAllByTestId('log-workout-button')
+      expect(logButtons).toHaveLength(1)
+
+      // The button should be inside the evening projected card
+      const cards = screen.getAllByTestId('workout-card')
+      expect(cards[0]).not.toContainElement(screen.queryByTestId('log-workout-button'))
+      expect(cards[1]).toContainElement(logButtons[0])
     })
   })
 })
