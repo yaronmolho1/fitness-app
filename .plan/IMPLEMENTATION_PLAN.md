@@ -1,6 +1,6 @@
 # Implementation Plan
 
-> 152 tasks across 28 waves (Wave 0 infra + 14 feature waves + 3 UI overhaul + 3 UI redesign + 4 enhancement waves + 4 P3 waves + 2 coaching summary waves). Each feature task = one TDD cycle.
+> 158 tasks across 30 waves (Wave 0 infra + 14 feature waves + 3 UI overhaul + 3 UI redesign + 4 enhancement waves + 4 P3 waves + 2 coaching summary waves + 2 retroactive logging waves). Each feature task = one TDD cycle.
 > Waves are sequential; tracks within a wave are parallel.
 
 ## Critical Path
@@ -860,3 +860,62 @@ T159 → T160 → T163 → T164 → T168 → T169 (schema → profile → genera
 | Medium | 4 | 2-4h | ~12h |
 | Large | 1 | 4-6h | ~5h |
 | **Total** | **12** (T159-T170) | | **~25h** |
+
+---
+
+## Wave RL1: Retroactive Logging — API + Calendar Entry
+
+> Unlock logging for past dates. API parameterization + calendar action button. No backend data changes needed — `saveWorkout`/`saveRunningWorkout` already accept any `logDate`.
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T171 | Today API date param: add optional `date` query param to `GET /api/today`. Validate YYYY-MM-DD format, reject future dates (400), fall back to `todayDateString()` when absent or empty. Pass validated date to `getTodayWorkout(date)`. | small | Retroactive Logging | T045 | retroactive-workout-logging |
+| T172 | Today page searchParams: read `searchParams.date` in `app/(app)/page.tsx`, pass as prop to `TodayWorkout`. Component fetches `/api/today?date=X` when prop present, `/api/today` otherwise. | small | Retroactive Logging | T171 | retroactive-workout-logging |
+| T173 | DayDetailPanel "Log Workout" button: add action button on projected workout cards where `date ≤ today`. Button navigates to `/?date=YYYY-MM-DD`. Hidden for completed, rest, future dates. Multi-session: only unlogged cards show button. | small | Retroactive Logging | T066 | retroactive-workout-logging |
+
+## Wave RL2: Retroactive Logging — Banner + Post-Save
+
+> UI layer: retroactive date banner, post-save redirect to calendar.
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T174 | Retroactive date banner: when `date` prop differs from today, render colored banner "Logging for dd/Mon/yyyy" with "Back to Calendar" link. No banner when date equals today or is absent. Add `formatDateBanner()` to `lib/date-format.ts` if needed. | small | Retroactive Logging | T172 | retroactive-workout-logging |
+| T175 | Post-save redirect: when logging form saves with a retroactive date, show toast "Workout logged for dd/Mon" and navigate to `/calendar?month=YYYY-MM`. Today's normal flow (no date param) preserves existing inline confirmation with no redirect. | small | Retroactive Logging | T172, T174 | retroactive-workout-logging |
+| T176 | E2E: retroactive logging flow: open calendar → tap past projected day → tap "Log Workout" → verify banner + correct date → fill form → save → verify toast + calendar redirect + completed marker. Also verify future dates blocked and already-logged shows summary. | medium | Retroactive Logging | T173, T175 | retroactive-workout-logging |
+
+## Wave RL Dependency Graph
+
+```
+T045 (existing: GET /api/today)
+└── T171 (API date param)
+    └── T172 (page searchParams + fetch)
+        ├── T174 (date banner)
+        │   └── T175 (post-save redirect) ──┐
+        └───────────────────────────────────┘
+                                             └── T176 (E2E)
+T066 (existing: day detail panel)
+└── T173 (Log Workout button) ──────────────────┘
+```
+
+## Wave RL Critical Path
+
+T171 → T172 → T174 → T175 → T176 (API param → page integration → banner → post-save → E2E)
+
+## Wave RL Gap Analysis
+
+- **E14 (multi-session duplicate check)**: `hasExistingLog` checks per-mesocycle, not per-template. Logging a second session on same date will fail at save layer even though UI shows it as available. Pre-existing bug, not introduced by this feature. Documented in spec, separate fix recommended.
+- **Open question**: action sheet vs standalone button for "Log Workout". Spec notes this as extensible for future "Move Workout" feature. Recommend simple button for now — extract to shared action sheet when schedule-override spec lands.
+
+## Wave RL Risk Areas
+
+- **Post-save redirect timing**: toast + navigation must sequence correctly. Toast should be visible during navigation transition, not after.
+- **Calendar cache invalidation**: after retroactive save, `revalidatePath('/calendar')` must fire so the day transitions from projected → completed on redirect.
+
+## Wave RL Scope Summary
+
+| Scope | Count | Est. Hours Each | Total |
+|-------|-------|-----------------|-------|
+| Small | 4 | 1-2h | ~6h |
+| Medium | 1 | 2-4h | ~3h |
+| Large | 0 | — | — |
+| **Total** | **6** (T171-T176) | | **~9h** |
