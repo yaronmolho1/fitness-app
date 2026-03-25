@@ -55,7 +55,7 @@ const CREATE_SQL = `
     reps TEXT NOT NULL,
     weight REAL,
     rpe REAL,
-    rest_seconds INTEGER, group_id INTEGER, group_rest_seconds INTEGER,
+    rest_seconds INTEGER, duration INTEGER, group_id INTEGER, group_rest_seconds INTEGER,
     guidelines TEXT,
     "order" INTEGER NOT NULL,
     is_main INTEGER NOT NULL DEFAULT 0,
@@ -72,6 +72,9 @@ const CREATE_SQL = `
     distance REAL,
     duration INTEGER,
     pace TEXT,
+    planned_duration INTEGER,
+    interval_count INTEGER,
+    interval_rest INTEGER,
     is_deload INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER
   );

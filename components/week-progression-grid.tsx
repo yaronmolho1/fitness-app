@@ -45,6 +45,7 @@ type ResistanceValues = {
   reps: string
   sets: string
   rpe: string
+  duration: string
 }
 
 type RunningValues = {
@@ -67,6 +68,7 @@ function buildResistanceBase(slot: SlotWithExercise): ResistanceValues {
     reps: String(slot.reps),
     sets: String(slot.sets),
     rpe: slot.rpe != null ? String(slot.rpe) : '',
+    duration: slot.duration != null ? String(slot.duration) : '',
   }
 }
 
@@ -89,6 +91,7 @@ function buildDeloadResistance(slot: SlotWithExercise): ResistanceValues {
     reps: String(slot.reps), // 100% preserved
     sets: String(defaults.sets),
     rpe: defaults.rpe != null ? String(defaults.rpe) : '',
+    duration: slot.duration != null ? String(slot.duration) : '', // 100% preserved on deload
   }
 }
 
@@ -153,6 +156,7 @@ function applyOverrides(
         reps: ov.reps != null ? String(ov.reps) : w.resistance.reps,
         sets: ov.sets != null ? String(ov.sets) : w.resistance.sets,
         rpe: ov.rpe != null ? String(ov.rpe) : w.resistance.rpe,
+        duration: ov.duration != null ? String(ov.duration) : w.resistance.duration,
       },
     }
   })
@@ -167,7 +171,8 @@ function resistanceDiffersFromBase(
     values.weight !== base.weight ||
     values.reps !== base.reps ||
     values.sets !== base.sets ||
-    values.rpe !== base.rpe
+    values.rpe !== base.rpe ||
+    values.duration !== base.duration
   )
 }
 
@@ -199,6 +204,7 @@ export function WeekProgressionGrid({
   const [weeks, setWeeks] = useState<WeekState[]>(() =>
     initWeeks(workWeeks, hasDeload, slot, runningBase)
   )
+  const isDurationBased = slot.duration != null
   const resistanceBase = buildResistanceBase(slot)
   const deloadResistanceBase = buildDeloadResistance(slot)
   const runBase = buildRunningBase(runningBase)
@@ -262,6 +268,7 @@ export function WeekProgressionGrid({
               reps: week.resistance.reps === '' ? null : week.resistance.reps,
               sets: week.resistance.sets === '' ? null : Number(week.resistance.sets),
               rpe: week.resistance.rpe === '' ? null : Number(week.resistance.rpe),
+              duration: week.resistance.duration === '' ? null : Number(week.resistance.duration),
               is_deload: week.isDeload,
             })
           }
@@ -310,7 +317,7 @@ export function WeekProgressionGrid({
             <div data-testid="column-headers" className="grid grid-cols-[80px_1fr_1fr_1fr_1fr] gap-2 px-2 text-xs font-medium text-muted-foreground">
               <span>Week</span>
               <span>Weight</span>
-              <span>Reps</span>
+              <span>{isDurationBased ? 'Duration (sec)' : 'Reps'}</span>
               <span>Sets</span>
               <span>RPE</span>
             </div>
@@ -355,19 +362,35 @@ export function WeekProgressionGrid({
                       readOnly={isCompleted}
                     />
                   </div>
-                  <div>
-                    <Label htmlFor={`reps-w${week.weekNumber}`} className="sr-only">
-                      Reps
-                    </Label>
-                    <NumericInput
-                      id={`reps-w${week.weekNumber}`}
-                      aria-label={`Reps week ${week.isDeload ? 'deload' : week.weekNumber}`}
-                      mode="integer"
-                      value={week.resistance.reps}
-                      onValueChange={(v) => updateWeekField(week.weekNumber, 'reps', v)}
-                      readOnly={isCompleted}
-                    />
-                  </div>
+                  {isDurationBased ? (
+                    <div>
+                      <Label htmlFor={`duration-w${week.weekNumber}`} className="sr-only">
+                        Duration (sec)
+                      </Label>
+                      <NumericInput
+                        id={`duration-w${week.weekNumber}`}
+                        aria-label={`Duration week ${week.isDeload ? 'deload' : week.weekNumber}`}
+                        mode="integer"
+                        value={week.resistance.duration}
+                        onValueChange={(v) => updateWeekField(week.weekNumber, 'duration', v)}
+                        readOnly={isCompleted}
+                      />
+                    </div>
+                  ) : (
+                    <div>
+                      <Label htmlFor={`reps-w${week.weekNumber}`} className="sr-only">
+                        Reps
+                      </Label>
+                      <NumericInput
+                        id={`reps-w${week.weekNumber}`}
+                        aria-label={`Reps week ${week.isDeload ? 'deload' : week.weekNumber}`}
+                        mode="integer"
+                        value={week.resistance.reps}
+                        onValueChange={(v) => updateWeekField(week.weekNumber, 'reps', v)}
+                        readOnly={isCompleted}
+                      />
+                    </div>
+                  )}
                   <div>
                     <Label htmlFor={`sets-w${week.weekNumber}`} className="sr-only">
                       Sets

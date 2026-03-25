@@ -27,6 +27,9 @@ type RunningBase = {
   distance: number | null
   duration: number | null
   pace: string | null
+  run_type?: string | null
+  interval_count?: number | null
+  interval_rest?: number | null
 }
 
 type MmaBase = {
@@ -47,7 +50,7 @@ type TemplateWeekGridProps = {
   | { modality: 'mma'; mmaBase: MmaBase; runningBase?: never }
 )
 
-type RunningValues = { distance: string; duration: string; pace: string }
+type RunningValues = { distance: string; duration: string; pace: string; interval_count: string; interval_rest: string }
 type MmaValues = { planned_duration: string }
 
 type WeekState = {
@@ -63,6 +66,8 @@ function buildRunningValues(base?: RunningBase | null): RunningValues {
     distance: base?.distance != null ? String(base.distance) : '',
     duration: base?.duration != null ? String(base.duration) : '',
     pace: base?.pace ?? '',
+    interval_count: base?.interval_count != null ? String(base.interval_count) : '',
+    interval_rest: base?.interval_rest != null ? String(base.interval_rest) : '',
   }
 }
 
@@ -131,6 +136,8 @@ function applyOverrides(
           distance: ov.distance != null ? String(ov.distance) : w.running.distance,
           duration: ov.duration != null ? String(ov.duration) : w.running.duration,
           pace: ov.pace != null ? ov.pace : w.running.pace,
+          interval_count: ov.interval_count != null ? String(ov.interval_count) : w.running.interval_count,
+          interval_rest: ov.interval_rest != null ? String(ov.interval_rest) : w.running.interval_rest,
         },
       }
     }
@@ -146,7 +153,13 @@ function applyOverrides(
 }
 
 function runningDiffers(values: RunningValues, base: RunningValues): boolean {
-  return values.distance !== base.distance || values.duration !== base.duration || values.pace !== base.pace
+  return (
+    values.distance !== base.distance ||
+    values.duration !== base.duration ||
+    values.pace !== base.pace ||
+    values.interval_count !== base.interval_count ||
+    values.interval_rest !== base.interval_rest
+  )
 }
 
 function mmaDiffers(values: MmaValues, base: MmaValues): boolean {
@@ -168,6 +181,7 @@ export function TemplateWeekGrid(props: TemplateWeekGridProps) {
 
   const runningBase = modality === 'running' ? props.runningBase : undefined
   const mmaBase = modality === 'mma' ? props.mmaBase : undefined
+  const isInterval = runningBase?.run_type === 'interval'
 
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -234,6 +248,8 @@ export function TemplateWeekGrid(props: TemplateWeekGridProps) {
               distance: week.running.distance === '' ? null : Number(week.running.distance),
               duration: week.running.duration === '' ? null : Number(week.running.duration),
               pace: week.running.pace === '' ? null : week.running.pace,
+              interval_count: week.running.interval_count === '' ? null : Number(week.running.interval_count),
+              interval_rest: week.running.interval_rest === '' ? null : Number(week.running.interval_rest),
               is_deload: week.isDeload,
             })
           }
@@ -275,11 +291,16 @@ export function TemplateWeekGrid(props: TemplateWeekGridProps) {
 
         <div className="space-y-1">
           {modality === 'running' ? (
-            <div className="grid grid-cols-[80px_1fr_1fr_1fr] gap-2 px-2 text-xs font-medium text-muted-foreground">
+            <div className={cn(
+              'grid gap-2 px-2 text-xs font-medium text-muted-foreground',
+              isInterval ? 'grid-cols-[80px_1fr_1fr_1fr_1fr_1fr]' : 'grid-cols-[80px_1fr_1fr_1fr]'
+            )}>
               <span>Week</span>
               <span>Distance (km)</span>
               <span>Duration (min)</span>
               <span>Pace</span>
+              {isInterval && <span>Intervals</span>}
+              {isInterval && <span>Rest (sec)</span>}
             </div>
           ) : (
             <div className="grid grid-cols-[80px_1fr] gap-2 px-2 text-xs font-medium text-muted-foreground">
@@ -294,7 +315,7 @@ export function TemplateWeekGrid(props: TemplateWeekGridProps) {
               className={cn(
                 'grid gap-2 rounded-lg px-2 py-1.5 items-center',
                 modality === 'running'
-                  ? 'grid-cols-[80px_1fr_1fr_1fr]'
+                  ? (isInterval ? 'grid-cols-[80px_1fr_1fr_1fr_1fr_1fr]' : 'grid-cols-[80px_1fr_1fr_1fr]')
                   : 'grid-cols-[80px_1fr]',
                 week.isDeload && 'bg-muted/50 border border-dashed'
               )}
@@ -338,6 +359,32 @@ export function TemplateWeekGrid(props: TemplateWeekGridProps) {
                       placeholder="mm:ss"
                     />
                   </div>
+                  {isInterval && (
+                    <div>
+                      <Label htmlFor={`t-intcount-w${week.weekNumber}`} className="sr-only">Intervals</Label>
+                      <NumericInput
+                        id={`t-intcount-w${week.weekNumber}`}
+                        aria-label={`Intervals week ${week.isDeload ? 'deload' : week.weekNumber}`}
+                        mode="integer"
+                        value={week.running.interval_count}
+                        onValueChange={(v) => updateWeekField(week.weekNumber, 'interval_count', v)}
+                        readOnly={isCompleted}
+                      />
+                    </div>
+                  )}
+                  {isInterval && (
+                    <div>
+                      <Label htmlFor={`t-intrest-w${week.weekNumber}`} className="sr-only">Interval Rest</Label>
+                      <NumericInput
+                        id={`t-intrest-w${week.weekNumber}`}
+                        aria-label={`Interval rest week ${week.isDeload ? 'deload' : week.weekNumber}`}
+                        mode="integer"
+                        value={week.running.interval_rest}
+                        onValueChange={(v) => updateWeekField(week.weekNumber, 'interval_rest', v)}
+                        readOnly={isCompleted}
+                      />
+                    </div>
+                  )}
                 </>
               ) : (
                 <div>

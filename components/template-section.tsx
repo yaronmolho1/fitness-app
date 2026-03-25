@@ -702,6 +702,9 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated, secti
                 distance: template.target_distance ?? null,
                 duration: template.target_duration ?? null,
                 pace: template.target_pace ?? null,
+                run_type: template.run_type ?? null,
+                interval_count: template.interval_count ?? null,
+                interval_rest: template.interval_rest ?? null,
               }}
               title={template.name}
             />
@@ -1065,6 +1068,9 @@ function MixedSectionRow({ section, slots, exercises, templateId, isCompleted, o
                 distance: section.target_distance ?? null,
                 duration: section.target_duration ?? null,
                 pace: section.target_pace ?? null,
+                run_type: section.run_type ?? null,
+                interval_count: section.interval_count ?? null,
+                interval_rest: section.interval_rest ?? null,
               }}
               title={section.section_name}
             />

@@ -54,10 +54,11 @@ const addSlotSchema = z.object({
   exercise_id: positiveInt,
   section_id: positiveInt.optional(),
   sets: positiveInt,
-  reps: positiveInt,
+  reps: nonNegativeInt, // 0 when duration-based
   weight: nonNegativeNumber.optional(),
   rpe: rpeRange.optional(),
   rest_seconds: nonNegativeInt.optional(),
+  duration: positiveInt.optional(), // seconds, for isometric exercises
   guidelines: z.string().optional(),
 })
 
@@ -70,6 +71,7 @@ type AddExerciseSlotInput = {
   weight?: number
   rpe?: number
   rest_seconds?: number
+  duration?: number
   guidelines?: string
 }
 
@@ -81,7 +83,7 @@ export async function addExerciseSlot(
     return { success: false, error: parsed.error.issues[0].message }
   }
 
-  const { template_id, exercise_id, section_id, sets, reps, weight, rpe, rest_seconds, guidelines } = parsed.data
+  const { template_id, exercise_id, section_id, sets, reps, weight, rpe, rest_seconds, duration, guidelines } = parsed.data
 
   // Verify template exists
   const template = db
@@ -143,6 +145,7 @@ export async function addExerciseSlot(
       weight: weight ?? null,
       rpe: rpe ?? null,
       rest_seconds: rest_seconds ?? null,
+      duration: duration ?? null,
       guidelines: guidelines ?? null,
       is_main: false,
       order: nextOrder,
@@ -159,10 +162,11 @@ export async function addExerciseSlot(
 const updateSlotSchema = z.object({
   id: positiveInt,
   sets: positiveInt.optional(),
-  reps: positiveInt.optional(),
+  reps: nonNegativeInt.optional(), // 0 when duration-based
   weight: nonNegativeNumber.nullable().optional(),
   rpe: rpeRange.nullable().optional(),
   rest_seconds: nonNegativeInt.nullable().optional(),
+  duration: positiveInt.nullable().optional(), // seconds, for isometric exercises
   guidelines: z.string().nullable().optional(),
   clearOverrides: z.boolean().optional(),
 })
@@ -174,6 +178,7 @@ type UpdateExerciseSlotInput = {
   weight?: number | null
   rpe?: number | null
   rest_seconds?: number | null
+  duration?: number | null
   guidelines?: string | null
   clearOverrides?: boolean
 }
@@ -186,7 +191,7 @@ export async function updateExerciseSlot(
     return { success: false, error: parsed.error.issues[0].message }
   }
 
-  const { id, sets, reps, weight, rpe, rest_seconds, guidelines, clearOverrides } = parsed.data
+  const { id, sets, reps, weight, rpe, rest_seconds, duration, guidelines, clearOverrides } = parsed.data
 
   // Verify slot exists
   const existing = db
@@ -211,6 +216,7 @@ export async function updateExerciseSlot(
   if (weight !== undefined) updates.weight = weight
   if (rpe !== undefined) updates.rpe = rpe
   if (rest_seconds !== undefined) updates.rest_seconds = rest_seconds
+  if (duration !== undefined) updates.duration = duration
   if (guidelines !== undefined) updates.guidelines = guidelines
 
   if (Object.keys(updates).length === 0) {

@@ -89,6 +89,7 @@ function resetTables() {
     weight REAL,
     rpe REAL,
     rest_seconds INTEGER,
+    duration INTEGER,
     group_id INTEGER,
     group_rest_seconds INTEGER,
     guidelines TEXT,

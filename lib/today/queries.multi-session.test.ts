@@ -83,7 +83,7 @@ function createTables() {
       reps TEXT NOT NULL,
       weight REAL,
       rpe REAL,
-      rest_seconds INTEGER, group_id INTEGER, group_rest_seconds INTEGER,
+      rest_seconds INTEGER, duration INTEGER, group_id INTEGER, group_rest_seconds INTEGER,
       guidelines TEXT,
       "order" INTEGER NOT NULL,
       is_main INTEGER NOT NULL DEFAULT 0,
