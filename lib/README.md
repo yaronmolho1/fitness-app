@@ -19,5 +19,5 @@ Server-side business logic, database, and auth.
 - `workouts/` — Workout logging: save workout Server Action with validation, template snapshot, and atomic inserts ([README](./workouts/README.md))
 - `progression/` — Exercise progression data queries (planned vs actual weight/volume over time) ([README](./progression/README.md))
 - `calendar/` — Monthly calendar projection query (scheduled vs completed days) ([README](./calendar/README.md))
-- `coaching/` — Athlete profile queries and actions (single-row profile for coaching context) ([README](./coaching/README.md))
+- `coaching/` — Athlete profile and recent session history for coaching context ([README](./coaching/README.md))
 - `ui/` — Shared UI utilities (modality color mappings, superset grouping) ([README](./ui/README.md))
