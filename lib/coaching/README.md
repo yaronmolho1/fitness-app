@@ -1,11 +1,11 @@
 # coaching/
 
-Athlete profile data access — single-row profile for coaching context.
+Athlete profile data access and recent session history for coaching context.
 
 ## Files
-- `queries.ts` — `getAthleteProfile()` fetches the singleton athlete profile (returns row or null)
+- `queries.ts` — `getAthleteProfile()` fetches the singleton athlete profile (returns row or null). `getRecentSessions(db, weeks)` fetches logged workouts from the last N weeks with nested exercises and sets in chronological order. Exports `RecentSession`, `RecentSessionExercise`, `RecentSessionSet` types.
 - `actions.ts` — `saveAthleteProfile()` server action with zod validation, upserts profile row, revalidates `/coaching`
-- `queries.test.ts` — unit tests for `getAthleteProfile`
+- `queries.test.ts` — unit + integration tests for profile and recent sessions queries
 - `actions.test.ts` — unit tests for `saveAthleteProfile` (insert, update, validation, nullable fields)
 
 ## Key Concepts
