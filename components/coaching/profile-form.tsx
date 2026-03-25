@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState, useTransition } from 'react'
+import { toast } from 'sonner'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -12,19 +13,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { saveAthleteProfile } from '@/lib/coaching/actions'
+import type { athlete_profile } from '@/lib/db/schema'
 
-type AthleteProfile = {
-  id: number
-  age: number | null
-  weight_kg: number | null
-  height_cm: number | null
-  gender: string | null
-  training_age_years: number | null
-  primary_goal: string | null
-  injury_history: string | null
-  created_at: Date | null
-  updated_at: Date | null
-}
+type AthleteProfile = typeof athlete_profile.$inferSelect
 
 type ProfileFormProps = {
   profile: AthleteProfile | null
@@ -57,11 +48,22 @@ export function ProfileForm({ profile }: ProfileFormProps) {
     injury_history: profile?.injury_history ?? '',
   })
 
+  // Map field names to their state setters for revert on failure
+  const setterMap: Record<string, (v: string) => void> = {
+    age: setAge,
+    weight_kg: setWeightKg,
+    height_cm: setHeightCm,
+    gender: setGender,
+    training_age_years: setTrainingAge,
+    primary_goal: setPrimaryGoal,
+    injury_history: setInjuryHistory,
+  }
+
   function saveField(field: string, rawValue: string) {
     const savedKey = field as keyof typeof savedRef.current
     if (savedRef.current[savedKey] === rawValue) return
 
-    savedRef.current[savedKey] = rawValue
+    const previousValue = savedRef.current[savedKey]
 
     const numericFields = ['age', 'weight_kg', 'height_cm', 'training_age_years']
     let value: string | number | null
@@ -72,8 +74,15 @@ export function ProfileForm({ profile }: ProfileFormProps) {
       value = rawValue || null
     }
 
-    startTransition(() => {
-      saveAthleteProfile({ [field]: value })
+    startTransition(async () => {
+      const result = await saveAthleteProfile({ [field]: value })
+      if (result.success) {
+        savedRef.current[savedKey] = rawValue
+      } else {
+        // Revert UI to last-saved value
+        setterMap[field]?.(previousValue)
+        toast.error(result.error)
+      }
     })
   }
 
@@ -120,6 +129,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
           type="number"
           min={1}
           max={300}
+          step={0.1}
           value={heightCm}
           onChange={(e) => setHeightCm(e.target.value)}
           onBlur={() => saveField('height_cm', heightCm)}

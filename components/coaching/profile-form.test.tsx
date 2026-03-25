@@ -11,21 +11,26 @@ beforeAll(() => {
   Element.prototype.scrollIntoView = () => {}
 })
 
+vi.mock('sonner', () => ({
+  toast: { error: vi.fn(), success: vi.fn() },
+}))
+
 vi.mock('@/lib/coaching/actions', () => ({
   saveAthleteProfile: vi.fn().mockResolvedValue({ success: true, data: {} }),
 }))
 
-// Stub useTransition to run callback synchronously
+// Stub useTransition to run async callback synchronously
 vi.mock('react', async () => {
   const actual = await vi.importActual<typeof import('react')>('react')
   return {
     ...actual,
-    useTransition: () => [false, (fn: () => void) => fn()],
+    useTransition: () => [false, (fn: () => void | Promise<void>) => { const r = fn(); if (r instanceof Promise) r.catch(() => {}) }],
   }
 })
 
 import { ProfileForm } from './profile-form'
 import { saveAthleteProfile } from '@/lib/coaching/actions'
+import { toast } from 'sonner'
 
 const fullProfile = {
   id: 1,
@@ -169,6 +174,22 @@ describe('ProfileForm', () => {
 
       expect(saveAthleteProfile).not.toHaveBeenCalled()
     })
+
+    it('calls saveAthleteProfile when gender select changes', async () => {
+      const user = userEvent.setup()
+      render(<ProfileForm profile={null} />)
+
+      const trigger = screen.getByTestId('gender-select')
+      await user.click(trigger)
+      const option = screen.getByRole('option', { name: 'Female' })
+      await user.click(option)
+
+      await waitFor(() => {
+        expect(saveAthleteProfile).toHaveBeenCalledWith(
+          expect.objectContaining({ gender: 'female' })
+        )
+      })
+    })
   })
 
   describe('controlled inputs', () => {
@@ -180,6 +201,32 @@ describe('ProfileForm', () => {
       await user.type(goalInput, 'Power')
 
       expect(goalInput).toHaveValue('Power')
+    })
+  })
+
+  describe('error handling', () => {
+    it('reverts field and shows toast on save failure', async () => {
+      vi.mocked(saveAthleteProfile).mockResolvedValueOnce({
+        success: false,
+        error: 'Validation failed',
+      })
+
+      const user = userEvent.setup()
+      render(<ProfileForm profile={fullProfile} />)
+
+      const goalInput = screen.getByLabelText('Primary Goal')
+      await user.clear(goalInput)
+      await user.type(goalInput, 'Bad value')
+      await user.tab()
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith('Validation failed')
+      })
+
+      // Field reverts to original saved value
+      await waitFor(() => {
+        expect(goalInput).toHaveValue('Hypertrophy')
+      })
     })
   })
 })
