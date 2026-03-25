@@ -251,11 +251,104 @@ const HR_ZONES = [1, 2, 3, 4, 5] as const
 
 type RunType = 'easy' | 'tempo' | 'interval' | 'long' | 'race'
 
+type RunningFieldsProps = {
+  idPrefix: string
+  runType: string
+  setRunType: (v: RunType | '') => void
+  targetPace: string
+  setTargetPace: (v: string) => void
+  hrZone: string
+  setHrZone: (v: string) => void
+  targetDistance: string
+  setTargetDistance: (v: string) => void
+  targetDuration: string
+  setTargetDuration: (v: string) => void
+  intervalCount: string
+  setIntervalCount: (v: string) => void
+  intervalRest: string
+  setIntervalRest: (v: string) => void
+  coachingCues: string
+  setCoachingCues: (v: string) => void
+  isInterval: boolean
+  disabled?: boolean
+}
+
+function RunningFields({ idPrefix, runType, setRunType, targetPace, setTargetPace, hrZone, setHrZone, targetDistance, setTargetDistance, targetDuration, setTargetDuration, intervalCount, setIntervalCount, intervalRest, setIntervalRest, coachingCues, setCoachingCues, isInterval, disabled }: RunningFieldsProps) {
+  const selectClass = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" + (disabled ? " disabled:opacity-50" : "")
+  return (
+    <>
+      <div className="space-y-2">
+        <Label htmlFor={`run-type-${idPrefix}`}>Run Type</Label>
+        <select id={`run-type-${idPrefix}`} value={runType} onChange={(e) => setRunType(e.target.value as RunType | '')} disabled={disabled} className={selectClass}>
+          <option value="">Select run type</option>
+          {RUN_TYPES.map((rt) => (<option key={rt.value} value={rt.value}>{rt.label}</option>))}
+        </select>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-2">
+          <Label htmlFor={`pace-${idPrefix}`}>Target Pace</Label>
+          <Input id={`pace-${idPrefix}`} value={targetPace} onChange={(e) => setTargetPace(e.target.value)} placeholder="5:30/km" disabled={disabled} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor={`hr-zone-${idPrefix}`}>HR Zone</Label>
+          <select id={`hr-zone-${idPrefix}`} value={hrZone} onChange={(e) => setHrZone(e.target.value)} disabled={disabled} className={selectClass}>
+            <option value="">—</option>
+            {HR_ZONES.map((z) => (<option key={z} value={z}>Zone {z}</option>))}
+          </select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-2">
+          <Label htmlFor={`distance-${idPrefix}`}>{isInterval ? 'Target Distance (km, per rep)' : 'Target Distance (km)'}</Label>
+          <NumericInput id={`distance-${idPrefix}`} mode="decimal" value={targetDistance} onValueChange={setTargetDistance} placeholder="e.g. 5" disabled={disabled} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor={`duration-${idPrefix}`}>{isInterval ? 'Target Duration (min, per rep)' : 'Target Duration (min)'}</Label>
+          <NumericInput id={`duration-${idPrefix}`} mode="integer" value={targetDuration} onValueChange={setTargetDuration} placeholder="e.g. 30" disabled={disabled} />
+        </div>
+      </div>
+      {isInterval && (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label htmlFor={`intervals-${idPrefix}`}>Intervals</Label>
+            <NumericInput id={`intervals-${idPrefix}`} mode="integer" value={intervalCount} onValueChange={setIntervalCount} placeholder="e.g. 6" disabled={disabled} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={`rest-${idPrefix}`}>Rest (seconds)</Label>
+            <NumericInput id={`rest-${idPrefix}`} mode="integer" value={intervalRest} onValueChange={setIntervalRest} placeholder="e.g. 90" disabled={disabled} />
+          </div>
+        </div>
+      )}
+      <div className="space-y-2">
+        <Label htmlFor={`cues-${idPrefix}`}>Coaching Cues</Label>
+        <textarea id={`cues-${idPrefix}`} value={coachingCues} onChange={(e) => setCoachingCues(e.target.value)} placeholder="Notes visible to athlete..." rows={2} disabled={disabled} className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50" />
+      </div>
+    </>
+  )
+}
+
+type MmaFieldsProps = {
+  idPrefix: string
+  plannedDuration: string
+  setPlannedDuration: (v: string) => void
+  disabled?: boolean
+}
+
+function MmaFields({ idPrefix, plannedDuration, setPlannedDuration, disabled }: MmaFieldsProps) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={`duration-${idPrefix}`}>Planned Duration (minutes)</Label>
+      <NumericInput id={`duration-${idPrefix}`} mode="integer" value={plannedDuration} onValueChange={setPlannedDuration} placeholder="e.g. 90" disabled={disabled} />
+    </div>
+  )
+}
+
 function TemplateRow({ template, slots, exercises, isCompleted, onUpdated, sections, workWeeks, hasDeload }: TemplateRowProps) {
   const [editing, setEditing] = useState(false)
   const [cascading, setCascading] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [expanded, setExpanded] = useState(false)
+  const [cascadeFromExpanded, setCascadeFromExpanded] = useState(false)
   const [name, setName] = useState(template.name)
   const [canonicalName, setCanonicalName] = useState(template.canonical_name)
   const [notes, setNotes] = useState(template.notes ?? '')
@@ -325,6 +418,14 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated, secti
       }
     }
 
+    if (isMma) {
+      const durationNum = plannedDuration ? Number(plannedDuration) : null
+      if (durationNum !== null && durationNum <= 0) {
+        setError('Duration must be positive')
+        return
+      }
+    }
+
     setError('')
     const updates = buildUpdates()
     if (Object.keys(updates).length === 0 && !canonicalChanged) {
@@ -333,9 +434,11 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated, secti
       return
     }
 
+    const wasExpanded = expanded
     setPendingUpdates(updates)
     setEditing(false)
     setExpanded(false)
+    setCascadeFromExpanded(wasExpanded)
     setCascading(true)
   }
 
@@ -347,7 +450,12 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated, secti
 
   function handleCascadeCancel() {
     setCascading(false)
-    setEditing(true)
+    if (cascadeFromExpanded) {
+      setExpanded(true)
+    } else {
+      setEditing(true)
+    }
+    setCascadeFromExpanded(false)
   }
 
   function resetFields() {
@@ -427,121 +535,11 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated, secti
         </div>
 
         {isRunning && (
-          <>
-            <div className="space-y-2">
-              <Label htmlFor={`run-type-${template.id}`}>Run Type</Label>
-              <select
-                id={`run-type-${template.id}`}
-                value={runType}
-                onChange={(e) => setRunType(e.target.value as RunType | '')}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                <option value="">Select run type</option>
-                {RUN_TYPES.map((rt) => (
-                  <option key={rt.value} value={rt.value}>{rt.label}</option>
-                ))}
-              </select>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor={`pace-${template.id}`}>Target Pace</Label>
-                <Input
-                  id={`pace-${template.id}`}
-                  value={targetPace}
-                  onChange={(e) => setTargetPace(e.target.value)}
-                  placeholder="5:30/km"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor={`hr-zone-${template.id}`}>HR Zone</Label>
-                <select
-                  id={`hr-zone-${template.id}`}
-                  value={hrZone}
-                  onChange={(e) => setHrZone(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                  <option value="">—</option>
-                  {HR_ZONES.map((z) => (
-                    <option key={z} value={z}>Zone {z}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor={`distance-${template.id}`}>
-                  {isInterval ? 'Target Distance (km, per rep)' : 'Target Distance (km)'}
-                </Label>
-                <NumericInput
-                  id={`distance-${template.id}`}
-                  mode="decimal"
-                  value={targetDistance}
-                  onValueChange={setTargetDistance}
-                  placeholder="e.g. 5"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor={`duration-edit-${template.id}`}>
-                  {isInterval ? 'Target Duration (min, per rep)' : 'Target Duration (min)'}
-                </Label>
-                <NumericInput
-                  id={`duration-edit-${template.id}`}
-                  mode="integer"
-                  value={targetDuration}
-                  onValueChange={setTargetDuration}
-                  placeholder="e.g. 30"
-                />
-              </div>
-            </div>
-            {isInterval && (
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor={`intervals-${template.id}`}>Intervals</Label>
-                  <NumericInput
-                    id={`intervals-${template.id}`}
-                    mode="integer"
-                    value={intervalCount}
-                    onValueChange={setIntervalCount}
-                    placeholder="e.g. 6"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor={`rest-${template.id}`}>Rest (seconds)</Label>
-                  <NumericInput
-                    id={`rest-${template.id}`}
-                    mode="integer"
-                    value={intervalRest}
-                    onValueChange={setIntervalRest}
-                    placeholder="e.g. 90"
-                  />
-                </div>
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor={`cues-${template.id}`}>Coaching Cues</Label>
-              <textarea
-                id={`cues-${template.id}`}
-                value={coachingCues}
-                onChange={(e) => setCoachingCues(e.target.value)}
-                placeholder="Notes visible to athlete..."
-                rows={2}
-                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              />
-            </div>
-          </>
+          <RunningFields idPrefix={`edit-${template.id}`} runType={runType} setRunType={setRunType} targetPace={targetPace} setTargetPace={setTargetPace} hrZone={hrZone} setHrZone={setHrZone} targetDistance={targetDistance} setTargetDistance={setTargetDistance} targetDuration={targetDuration} setTargetDuration={setTargetDuration} intervalCount={intervalCount} setIntervalCount={setIntervalCount} intervalRest={intervalRest} setIntervalRest={setIntervalRest} coachingCues={coachingCues} setCoachingCues={setCoachingCues} isInterval={isInterval} />
         )}
 
         {isMma && (
-          <div className="space-y-2">
-            <Label htmlFor={`duration-${template.id}`}>Planned Duration (minutes)</Label>
-            <NumericInput
-              id={`duration-${template.id}`}
-              mode="integer"
-              value={plannedDuration}
-              onValueChange={setPlannedDuration}
-              placeholder="e.g. 90"
-            />
-          </div>
+          <MmaFields idPrefix={`edit-${template.id}`} plannedDuration={plannedDuration} setPlannedDuration={setPlannedDuration} />
         )}
 
         <div className="space-y-2">
@@ -671,114 +669,7 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated, secti
       {isRunning && expanded && (
         <div className="border-t px-4 py-3 space-y-3">
           {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
-          <div className="space-y-2">
-            <Label htmlFor={`run-type-exp-${template.id}`}>Run Type</Label>
-            <select
-              id={`run-type-exp-${template.id}`}
-              value={runType}
-              onChange={(e) => setRunType(e.target.value as RunType | '')}
-              disabled={isCompleted}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
-            >
-              <option value="">Select run type</option>
-              {RUN_TYPES.map((rt) => (
-                <option key={rt.value} value={rt.value}>{rt.label}</option>
-              ))}
-            </select>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor={`pace-exp-${template.id}`}>Target Pace</Label>
-              <Input
-                id={`pace-exp-${template.id}`}
-                value={targetPace}
-                onChange={(e) => setTargetPace(e.target.value)}
-                placeholder="5:30/km"
-                disabled={isCompleted}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={`hr-zone-exp-${template.id}`}>HR Zone</Label>
-              <select
-                id={`hr-zone-exp-${template.id}`}
-                value={hrZone}
-                onChange={(e) => setHrZone(e.target.value)}
-                disabled={isCompleted}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
-              >
-                <option value="">—</option>
-                {HR_ZONES.map((z) => (
-                  <option key={z} value={z}>Zone {z}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor={`distance-exp-${template.id}`}>
-                {isInterval ? 'Target Distance (km, per rep)' : 'Target Distance (km)'}
-              </Label>
-              <NumericInput
-                id={`distance-exp-${template.id}`}
-                mode="decimal"
-                value={targetDistance}
-                onValueChange={setTargetDistance}
-                placeholder="e.g. 5"
-                disabled={isCompleted}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={`duration-exp-${template.id}`}>
-                {isInterval ? 'Target Duration (min, per rep)' : 'Target Duration (min)'}
-              </Label>
-              <NumericInput
-                id={`duration-exp-${template.id}`}
-                mode="integer"
-                value={targetDuration}
-                onValueChange={setTargetDuration}
-                placeholder="e.g. 30"
-                disabled={isCompleted}
-              />
-            </div>
-          </div>
-          {isInterval && (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor={`intervals-exp-${template.id}`}>Intervals</Label>
-                <NumericInput
-                  id={`intervals-exp-${template.id}`}
-                  mode="integer"
-                  value={intervalCount}
-                  onValueChange={setIntervalCount}
-                  placeholder="e.g. 6"
-                  disabled={isCompleted}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor={`rest-exp-${template.id}`}>Rest (seconds)</Label>
-                <NumericInput
-                  id={`rest-exp-${template.id}`}
-                  mode="integer"
-                  value={intervalRest}
-                  onValueChange={setIntervalRest}
-                  placeholder="e.g. 90"
-                  disabled={isCompleted}
-                />
-              </div>
-            </div>
-          )}
-          <div className="space-y-2">
-            <Label htmlFor={`cues-exp-${template.id}`}>Coaching Cues</Label>
-            <textarea
-              id={`cues-exp-${template.id}`}
-              value={coachingCues}
-              onChange={(e) => setCoachingCues(e.target.value)}
-              placeholder="Notes visible to athlete..."
-              rows={2}
-              disabled={isCompleted}
-              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
-            />
-          </div>
+          <RunningFields idPrefix={`exp-${template.id}`} runType={runType} setRunType={setRunType} targetPace={targetPace} setTargetPace={setTargetPace} hrZone={hrZone} setHrZone={setHrZone} targetDistance={targetDistance} setTargetDistance={setTargetDistance} targetDuration={targetDuration} setTargetDuration={setTargetDuration} intervalCount={intervalCount} setIntervalCount={setIntervalCount} intervalRest={intervalRest} setIntervalRest={setIntervalRest} coachingCues={coachingCues} setCoachingCues={setCoachingCues} isInterval={isInterval} disabled={isCompleted} />
           {!isCompleted && (
             <div className="flex gap-2">
               <Button size="sm" onClick={handleSave} disabled={isPending}>
@@ -795,17 +686,7 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated, secti
       {isMma && expanded && (
         <div className="border-t px-4 py-3 space-y-3">
           {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
-          <div className="space-y-2">
-            <Label htmlFor={`duration-exp-${template.id}`}>Planned Duration (minutes)</Label>
-            <NumericInput
-              id={`duration-exp-${template.id}`}
-              mode="integer"
-              value={plannedDuration}
-              onValueChange={setPlannedDuration}
-              placeholder="e.g. 90"
-              disabled={isCompleted}
-            />
-          </div>
+          <MmaFields idPrefix={`exp-${template.id}`} plannedDuration={plannedDuration} setPlannedDuration={setPlannedDuration} disabled={isCompleted} />
           {!isCompleted && (
             <div className="flex gap-2">
               <Button size="sm" onClick={handleSave} disabled={isPending}>
