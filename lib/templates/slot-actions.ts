@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { eq, sql, asc, and } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '@/lib/db/index'
-import { exercise_slots, workout_templates, exercises, mesocycles, template_sections } from '@/lib/db/schema'
+import { exercise_slots, workout_templates, exercises, mesocycles, template_sections, slot_week_overrides } from '@/lib/db/schema'
 
 type SlotRow = typeof exercise_slots.$inferSelect
 
@@ -164,6 +164,7 @@ const updateSlotSchema = z.object({
   rpe: rpeRange.nullable().optional(),
   rest_seconds: nonNegativeInt.nullable().optional(),
   guidelines: z.string().nullable().optional(),
+  clearOverrides: z.boolean().optional(),
 })
 
 type UpdateExerciseSlotInput = {
@@ -174,6 +175,7 @@ type UpdateExerciseSlotInput = {
   rpe?: number | null
   rest_seconds?: number | null
   guidelines?: string | null
+  clearOverrides?: boolean
 }
 
 export async function updateExerciseSlot(
@@ -184,7 +186,7 @@ export async function updateExerciseSlot(
     return { success: false, error: parsed.error.issues[0].message }
   }
 
-  const { id, sets, reps, weight, rpe, rest_seconds, guidelines } = parsed.data
+  const { id, sets, reps, weight, rpe, rest_seconds, guidelines, clearOverrides } = parsed.data
 
   // Verify slot exists
   const existing = db
@@ -221,6 +223,13 @@ export async function updateExerciseSlot(
     .where(eq(exercise_slots.id, id))
     .returning()
     .get()
+
+  // Clear week overrides when explicitly requested (T158)
+  if (clearOverrides) {
+    db.delete(slot_week_overrides)
+      .where(eq(slot_week_overrides.exercise_slot_id, id))
+      .run()
+  }
 
   revalidatePath('/mesocycles')
   return { success: true, data: updated }

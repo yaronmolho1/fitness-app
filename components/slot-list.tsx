@@ -7,6 +7,16 @@ import { Input } from '@/components/ui/input'
 import { NumericInput } from '@/components/ui/numeric-input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { cn } from '@/lib/utils'
 import { ExercisePicker } from '@/components/exercise-picker'
 import { SlotCascadeScopeSelector } from '@/components/slot-cascade-scope-selector'
@@ -724,6 +734,7 @@ function SlotRow({
 }: SlotRowProps) {
   const [mode, setMode] = useState<'display' | 'edit' | 'confirm-remove' | 'cascade-params' | 'cascade-remove'>('display')
   const [showWeekGrid, setShowWeekGrid] = useState(false)
+  const [showOverrideWarning, setShowOverrideWarning] = useState(false)
   const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
   const [pendingParamUpdates, setPendingParamUpdates] = useState<Record<string, unknown>>({})
@@ -845,7 +856,14 @@ function SlotRow({
     return { diff, setsNum, repsNum, weightNum, rpeNum, restNum, guidelinesVal }
   }
 
-  function handleSave() {
+  // Training params that week overrides can affect
+  const TRAINING_PARAM_KEYS = new Set(['sets', 'reps', 'weight', 'rpe'])
+
+  function hasTrainingParamChange(diff: Record<string, unknown>): boolean {
+    return Object.keys(diff).some(k => TRAINING_PARAM_KEYS.has(k))
+  }
+
+  function executeSave(clearOverrides?: boolean) {
     const { diff, setsNum, repsNum, weightNum, rpeNum, restNum, guidelinesVal } = computeDiff()
 
     startTransition(async () => {
@@ -857,6 +875,7 @@ function SlotRow({
         rpe: rpeNum,
         rest_seconds: restNum,
         guidelines: guidelinesVal,
+        ...(clearOverrides === true ? { clearOverrides: true } : {}),
       })
       if (result.success) {
         setError('')
@@ -871,6 +890,18 @@ function SlotRow({
         setError(result.error)
       }
     })
+  }
+
+  function handleSave() {
+    const { diff } = computeDiff()
+
+    // Show override warning if slot has overrides and training params changed
+    if ((slot.overrideCount ?? 0) > 0 && hasTrainingParamChange(diff)) {
+      setShowOverrideWarning(true)
+      return
+    }
+
+    executeSave()
   }
 
   function handleSaveForLater() {
@@ -1012,6 +1043,36 @@ function SlotRow({
             Cancel
           </Button>
         </div>
+
+        <AlertDialog open={showOverrideWarning} onOpenChange={setShowOverrideWarning}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Week overrides exist</AlertDialogTitle>
+              <AlertDialogDescription>
+                This exercise has per-week progression values. Keep existing overrides or clear them?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel
+                onClick={() => {
+                  setShowOverrideWarning(false)
+                  executeSave()
+                }}
+              >
+                Keep Overrides
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => {
+                  e.preventDefault()
+                  setShowOverrideWarning(false)
+                  executeSave(true)
+                }}
+              >
+                Clear All
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     )
   }
