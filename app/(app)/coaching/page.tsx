@@ -1,6 +1,7 @@
 import { getAthleteProfile } from '@/lib/coaching/queries'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
+import { CoachingClient } from '@/components/coaching/coaching-client'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,9 +15,7 @@ export default async function CoachingPage() {
           title="Coaching"
           description="Generate a training summary for LLM-assisted coaching"
         />
-        <div data-testid="coaching-client" data-profile={JSON.stringify(profile)}>
-          {/* T166-T169 will replace this with CoachingClient component */}
-        </div>
+        <CoachingClient profile={profile} />
       </div>
     </PageContainer>
   )

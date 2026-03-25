@@ -11,6 +11,14 @@ vi.mock('next/navigation', () => ({
   useRouter: vi.fn(() => ({ push: vi.fn(), refresh: vi.fn() })),
 }))
 
+vi.mock('@/components/coaching/coaching-client', () => ({
+  CoachingClient: ({ profile }: { profile: unknown }) => (
+    <div data-testid="coaching-client" data-profile={JSON.stringify(profile)}>
+      CoachingClient
+    </div>
+  ),
+}))
+
 import { getAthleteProfile } from '@/lib/coaching/queries'
 
 type ProfileResult = Awaited<ReturnType<typeof getAthleteProfile>> | null
