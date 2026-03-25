@@ -141,6 +141,32 @@ export const slot_week_overrides = sqliteTable(
   })
 )
 
+export const template_week_overrides = sqliteTable(
+  'template_week_overrides',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    template_id: integer('template_id')
+      .notNull()
+      .references(() => workout_templates.id, { onDelete: 'cascade' }),
+    section_id: integer('section_id')
+      .references(() => template_sections.id, { onDelete: 'cascade' }),
+    week_number: integer('week_number').notNull(),
+    distance: real('distance'),
+    duration: integer('duration'),
+    pace: text('pace'),
+    planned_duration: integer('planned_duration'),
+    is_deload: integer('is_deload').notNull().default(0),
+    created_at: integer('created_at', { mode: 'timestamp' }),
+  },
+  (t) => ({
+    uniq: uniqueIndex('template_week_overrides_tmpl_sec_week_idx').on(
+      t.template_id,
+      t.section_id,
+      t.week_number
+    ),
+  })
+)
+
 export const weekly_schedule = sqliteTable(
   'weekly_schedule',
   {

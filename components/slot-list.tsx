@@ -17,6 +17,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu'
+import { MoreHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ExercisePicker } from '@/components/exercise-picker'
 import { SlotCascadeScopeSelector } from '@/components/slot-cascade-scope-selector'
@@ -1152,54 +1160,40 @@ function SlotRow({
           <p className="mt-1 text-xs text-muted-foreground italic">{String(pendingDiff?.guidelines ?? slot.guidelines)}</p>
         )}
       </div>
-      <div className="flex items-center gap-1">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 px-2 text-xs"
-          onClick={() => openTransfer('copy')}
-        >
-          Copy to...
-        </Button>
-        {!isCompleted && (
-          <>
-            {workWeeks != null && workWeeks > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 px-2 text-xs"
-                onClick={() => setShowWeekGrid(true)}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-7 w-7">
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => openTransfer('copy')}>
+            Copy to...
+          </DropdownMenuItem>
+          {!isCompleted && (
+            <>
+              {workWeeks != null && workWeeks > 0 && (
+                <DropdownMenuItem onClick={() => setShowWeekGrid(true)}>
+                  Plan Weeks
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={() => openTransfer('move')}>
+                Move to...
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleEdit}>
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => setMode('confirm-remove')}
               >
-                Plan Weeks
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={() => openTransfer('move')}
-            >
-              Move to...
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={handleEdit}
-            >
-              Edit
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-xs text-destructive hover:text-destructive"
-              onClick={() => setMode('confirm-remove')}
-            >
-              Remove
-            </Button>
-          </>
-        )}
-      </div>
+                Remove
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       {workWeeks != null && workWeeks > 0 && (
         <WeekProgressionGrid
