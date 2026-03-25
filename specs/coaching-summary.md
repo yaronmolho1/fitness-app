@@ -33,9 +33,9 @@ As a coach/athlete, I can generate a markdown summary of my full training state 
 ### Summary Generation
 - [ ] A "Generate Summary" button triggers `POST /api/coaching/summary`
 - [ ] The request body includes the subjective state fields
-- [ ] The route handler reads profile, plan, log, and progression data server-side
-- [ ] The response is a plain markdown string (content-type `text/plain` or JSON-wrapped)
-- [ ] The markdown includes these sections in order:
+- [x] The route handler reads profile, plan, log, and progression data server-side
+- [x] The response is a plain markdown string (content-type `text/plain` or JSON-wrapped)
+- [x] The markdown includes these sections in order:
   1. **Athlete Profile** — key-value pairs from `athlete_profile` (omit null fields)
   2. **Current Plan** — active mesocycle name, start/end dates, weekly schedule with template names and exercise lists
   3. **Recent Sessions** — last 4 weeks of logged workouts: date, template name, exercises with sets/reps/weight/RPE, workout rating
