@@ -47,6 +47,7 @@ Shared React components — app-level UI and navigation.
 
 ## Subdirectories
 - `coaching/` — coaching summary UI: subjective state capture, coaching insights ([README](./coaching/README.md))
+- `coaching/` — coaching profile UI: athlete profile form with biometrics and training preferences
 - `layout/` — app shell and page layout primitives: desktop sidebar, mobile header + drawer, page container, page header, section heading ([README](./layout/README.md))
 - `schedule/` — schedule assignment UI: period selector, time slot picker ([README](./schedule/README.md))
 - `ui/` — shadcn/ui primitives ([README](./ui/README.md))
