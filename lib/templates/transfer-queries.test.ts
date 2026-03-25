@@ -171,12 +171,13 @@ describe('getTransferTargets', () => {
     expect(result[0].name).toBe('Active')
   })
 
-  it('filters to resistance and mixed templates only', () => {
+  it('filters to resistance and mixed (with resistance sections) templates only', () => {
     const meso = seedMeso({ name: 'Block', status: 'active' })
     seedTemplate(meso.id, { name: 'Push A', canonical_name: 'push-a', modality: 'resistance' })
     seedTemplate(meso.id, { name: 'Run', canonical_name: 'run', modality: 'running' })
     seedTemplate(meso.id, { name: 'MMA', canonical_name: 'mma', modality: 'mma' })
-    seedTemplate(meso.id, { name: 'Mixed', canonical_name: 'mixed', modality: 'mixed' })
+    const mixed = seedTemplate(meso.id, { name: 'Mixed', canonical_name: 'mixed', modality: 'mixed' })
+    seedSection(mixed.id, { modality: 'resistance', section_name: 'Strength', order: 1 })
 
     const result = getTransferTargets()
     expect(result).toHaveLength(1)
@@ -218,6 +219,29 @@ describe('getTransferTargets', () => {
   it('excludes mesocycles with no compatible templates', () => {
     const meso = seedMeso({ name: 'Running Only', status: 'active' })
     seedTemplate(meso.id, { name: 'Easy Run', canonical_name: 'easy-run', modality: 'running' })
+
+    const result = getTransferTargets()
+    expect(result).toEqual([])
+  })
+
+  it('excludes mixed templates with no resistance sections', () => {
+    const meso = seedMeso({ name: 'Block', status: 'active' })
+    seedTemplate(meso.id, { name: 'Push A', canonical_name: 'push-a', modality: 'resistance' })
+    const mixed = seedTemplate(meso.id, { name: 'Run Mix', canonical_name: 'run-mix', modality: 'mixed' })
+    // Only non-resistance sections
+    seedSection(mixed.id, { modality: 'running', section_name: 'Cardio', order: 1 })
+
+    const result = getTransferTargets()
+    expect(result).toHaveLength(1)
+    const templateNames = result[0].templates.map(t => t.name)
+    expect(templateNames).toContain('Push A')
+    expect(templateNames).not.toContain('Run Mix')
+  })
+
+  it('excludes mesocycle if only template is a mixed with no resistance sections', () => {
+    const meso = seedMeso({ name: 'Mixed Only', status: 'active' })
+    const mixed = seedTemplate(meso.id, { name: 'Run Mix', canonical_name: 'run-mix', modality: 'mixed' })
+    seedSection(mixed.id, { modality: 'running', section_name: 'Cardio', order: 1 })
 
     const result = getTransferTargets()
     expect(result).toEqual([])

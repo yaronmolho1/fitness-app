@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dialog'
 import type { TransferTarget, TransferTargetTemplate, TransferTargetSection } from '@/lib/templates/transfer-queries'
 
-type ConfirmPayload = {
+export type ConfirmPayload = {
   targetTemplateId: number
   targetSectionId: number | undefined
 }

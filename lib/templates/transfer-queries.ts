@@ -81,7 +81,9 @@ export function getTransferTargets(): TransferTarget[] {
         modality: t.modality,
         sections,
       }
-    })
+    }).filter(t => t.modality !== 'mixed' || t.sections.length > 0)
+
+    if (mappedTemplates.length === 0) continue
 
     results.push({
       id: meso.id,
