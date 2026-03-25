@@ -41,8 +41,8 @@ function makeCurrentPlan(overrides: Partial<CurrentPlan> = {}): CurrentPlan {
         modality: 'resistance',
         notes: null,
         exercise_slots: [
-          { id: 1, sets: 4, reps: '6-8', weight: 80, rpe: 8, rest_seconds: 120, order: 1, exercise_name: 'Bench Press' },
-          { id: 2, sets: 3, reps: '10-12', weight: 40, rpe: 7, rest_seconds: 90, order: 2, exercise_name: 'OHP' },
+          { id: 1, exercise_id: 100, sets: 4, reps: '6-8', weight: 80, rpe: 8, rest_seconds: 120, order: 1, exercise_name: 'Bench Press' },
+          { id: 2, exercise_id: 101, sets: 3, reps: '10-12', weight: 40, rpe: 7, rest_seconds: 90, order: 2, exercise_name: 'OHP' },
         ],
       },
     ],
