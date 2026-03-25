@@ -24,6 +24,7 @@ vi.mock('next/cache', () => ({
 import { copyTemplateToMesocycle } from './copy-actions'
 
 function resetTables() {
+  testDb.run(sql`DROP TABLE IF EXISTS slot_week_overrides`)
   testDb.run(sql`DROP TABLE IF EXISTS exercise_slots`)
   testDb.run(sql`DROP TABLE IF EXISTS template_sections`)
   testDb.run(sql`DROP TABLE IF EXISTS workout_templates`)
@@ -100,6 +101,20 @@ function resetTables() {
     is_main INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER
   )`)
+  testDb.run(sql`CREATE TABLE slot_week_overrides (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    exercise_slot_id INTEGER NOT NULL REFERENCES exercise_slots(id) ON DELETE CASCADE,
+    week_number INTEGER NOT NULL,
+    weight REAL,
+    reps TEXT,
+    sets INTEGER,
+    rpe REAL,
+    distance REAL,
+    duration INTEGER,
+    pace TEXT,
+    is_deload INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER
+  )`)
 }
 
 function seedMeso(overrides: Partial<{ name: string; status: string }> = {}) {
@@ -127,6 +142,7 @@ function seedExercise(name: string) {
 
 type SectionRow = typeof schema.template_sections.$inferSelect
 type SlotRow = typeof schema.exercise_slots.$inferSelect
+type OverrideRow = typeof schema.slot_week_overrides.$inferSelect
 
 describe('copyTemplateToMesocycle', () => {
   beforeEach(() => {
@@ -749,5 +765,191 @@ describe('copyTemplateToMesocycle', () => {
     const group2 = newSlots.filter((s: SlotRow) => s.group_id === groupIds[1])
     expect(group1).toHaveLength(2)
     expect(group2).toHaveLength(2)
+  })
+
+  // === T155: Week override copying (AC16) ===
+
+  it('copies slot_week_overrides with remapped slot IDs (AC16)', async () => {
+    const source = seedMeso({ name: 'Source' })
+    const target = seedMeso({ name: 'Target' })
+    const ex = seedExercise('Bench Press')
+
+    const tmpl = testDb
+      .insert(schema.workout_templates)
+      .values({
+        mesocycle_id: source.id,
+        name: 'Push A',
+        canonical_name: 'push-a',
+        modality: 'resistance',
+      })
+      .returning()
+      .get()
+
+    const slot = testDb
+      .insert(schema.exercise_slots)
+      .values({
+        template_id: tmpl.id,
+        exercise_id: ex.id,
+        sets: 3,
+        reps: '8',
+        weight: 80,
+        order: 1,
+        is_main: true,
+      })
+      .returning()
+      .get()
+
+    // Create overrides on the source slot
+    testDb
+      .insert(schema.slot_week_overrides)
+      .values([
+        { exercise_slot_id: slot.id, week_number: 2, weight: 85, is_deload: 0 },
+        { exercise_slot_id: slot.id, week_number: 3, weight: 90, reps: '6', is_deload: 0 },
+        { exercise_slot_id: slot.id, week_number: 4, weight: 48, sets: 2, is_deload: 1 },
+      ])
+      .run()
+
+    const result = await copyTemplateToMesocycle(tmpl.id, target.id)
+    expect(result.success).toBe(true)
+    if (!result.success) return
+
+    // Get the new slot
+    const newSlots = testDb
+      .select()
+      .from(schema.exercise_slots)
+      .where(sql`template_id = ${result.data.id}`)
+      .all()
+    expect(newSlots).toHaveLength(1)
+    const newSlotId = newSlots[0].id
+
+    // Overrides should be copied to the new slot
+    const newOverrides = testDb
+      .select()
+      .from(schema.slot_week_overrides)
+      .where(sql`exercise_slot_id = ${newSlotId}`)
+      .all()
+    expect(newOverrides).toHaveLength(3)
+
+    // Verify override data preserved
+    const week2 = newOverrides.find((o: OverrideRow) => o.week_number === 2)!
+    expect(week2.weight).toBe(85)
+    expect(week2.exercise_slot_id).toBe(newSlotId)
+
+    const week3 = newOverrides.find((o: OverrideRow) => o.week_number === 3)!
+    expect(week3.weight).toBe(90)
+    expect(week3.reps).toBe('6')
+
+    const week4 = newOverrides.find((o: OverrideRow) => o.week_number === 4)!
+    expect(week4.weight).toBe(48)
+    expect(week4.sets).toBe(2)
+    expect(week4.is_deload).toBe(1)
+
+    // Source overrides untouched
+    const sourceOverrides = testDb
+      .select()
+      .from(schema.slot_week_overrides)
+      .where(sql`exercise_slot_id = ${slot.id}`)
+      .all()
+    expect(sourceOverrides).toHaveLength(3)
+  })
+
+  it('copies overrides for multiple slots with correct remapping', async () => {
+    const source = seedMeso({ name: 'Source' })
+    const target = seedMeso({ name: 'Target' })
+    const ex1 = seedExercise('Bench Press')
+    const ex2 = seedExercise('OHP')
+
+    const tmpl = testDb
+      .insert(schema.workout_templates)
+      .values({
+        mesocycle_id: source.id,
+        name: 'Push',
+        canonical_name: 'push',
+        modality: 'resistance',
+      })
+      .returning()
+      .get()
+
+    const slot1 = testDb
+      .insert(schema.exercise_slots)
+      .values({ template_id: tmpl.id, exercise_id: ex1.id, sets: 3, reps: '8', order: 1, is_main: true })
+      .returning()
+      .get()
+
+    const slot2 = testDb
+      .insert(schema.exercise_slots)
+      .values({ template_id: tmpl.id, exercise_id: ex2.id, sets: 3, reps: '10', order: 2, is_main: false })
+      .returning()
+      .get()
+
+    // Override on slot1 week 2
+    testDb.insert(schema.slot_week_overrides)
+      .values({ exercise_slot_id: slot1.id, week_number: 2, weight: 85, is_deload: 0 })
+      .run()
+
+    // Override on slot2 week 2
+    testDb.insert(schema.slot_week_overrides)
+      .values({ exercise_slot_id: slot2.id, week_number: 2, weight: 45, is_deload: 0 })
+      .run()
+
+    const result = await copyTemplateToMesocycle(tmpl.id, target.id)
+    expect(result.success).toBe(true)
+    if (!result.success) return
+
+    const newSlots = testDb
+      .select()
+      .from(schema.exercise_slots)
+      .where(sql`template_id = ${result.data.id}`)
+      .all()
+    expect(newSlots).toHaveLength(2)
+
+    // Each new slot should have its own override
+    for (const newSlot of newSlots) {
+      const overrides = testDb
+        .select()
+        .from(schema.slot_week_overrides)
+        .where(sql`exercise_slot_id = ${newSlot.id}`)
+        .all()
+      expect(overrides).toHaveLength(1)
+      expect(overrides[0].week_number).toBe(2)
+    }
+  })
+
+  it('copies template with no overrides (no crash)', async () => {
+    const source = seedMeso({ name: 'Source' })
+    const target = seedMeso({ name: 'Target' })
+    const ex = seedExercise('Bench')
+
+    const tmpl = testDb
+      .insert(schema.workout_templates)
+      .values({
+        mesocycle_id: source.id,
+        name: 'Push',
+        canonical_name: 'push',
+        modality: 'resistance',
+      })
+      .returning()
+      .get()
+
+    testDb.insert(schema.exercise_slots)
+      .values({ template_id: tmpl.id, exercise_id: ex.id, sets: 3, reps: '8', order: 1, is_main: true })
+      .run()
+
+    const result = await copyTemplateToMesocycle(tmpl.id, target.id)
+    expect(result.success).toBe(true)
+    if (!result.success) return
+
+    const newSlots = testDb
+      .select()
+      .from(schema.exercise_slots)
+      .where(sql`template_id = ${result.data.id}`)
+      .all()
+
+    const newOverrides = testDb
+      .select()
+      .from(schema.slot_week_overrides)
+      .where(sql`exercise_slot_id = ${newSlots[0].id}`)
+      .all()
+    expect(newOverrides).toHaveLength(0)
   })
 })

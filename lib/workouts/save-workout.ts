@@ -1,12 +1,14 @@
-import { eq } from 'drizzle-orm'
+import { eq, and, inArray } from 'drizzle-orm'
 import type { AppDb } from '@/lib/db'
 import {
   logged_workouts,
   logged_exercises,
   logged_sets,
   workout_templates,
+  slot_week_overrides,
 } from '@/lib/db/schema'
 import { hasExistingLog } from './duplicate-check'
+import { mergeSlotWithOverride } from '@/lib/progression/week-overrides'
 
 export type SaveWorkoutSetInput = {
   reps: number | null
@@ -117,6 +119,7 @@ export async function saveWorkoutCore(
           exercise: true,
         },
       },
+      mesocycle: true,
     },
   })
 
@@ -146,26 +149,39 @@ export async function saveWorkoutCore(
     resolvedExercises.push({ ex, sets: resolved })
   }
 
+  // Compute week number from mesocycle start_date
+  const startDate = template.mesocycle?.start_date
+  const weekNumber = startDate ? getWeekNumber(startDate, input.logDate) : 1
+
+  // Fetch overrides for all slots at this week
+  const slotIds = template.exercise_slots.map((s) => s.id)
+  const overrideMap = await fetchOverrideMap(database, slotIds, weekNumber)
+
   const sortedSlots = [...template.exercise_slots].sort((a, b) => a.order - b.order)
   const templateSnapshot = {
-    version: 1 as const,
+    version: 2 as const,
+    week_number_in_meso: weekNumber,
     name: template.name,
     modality: template.modality,
     notes: template.notes,
     coaching_cues: template.coaching_cues,
-    slots: sortedSlots.map((slot) => ({
-      exercise_name: slot.exercise.name,
-      target_sets: slot.sets,
-      target_reps: slot.reps,
-      target_weight: slot.weight,
-      target_rpe: slot.rpe,
-      rest_seconds: slot.rest_seconds,
-      group_id: slot.group_id ?? null,
-      group_rest_seconds: slot.group_rest_seconds ?? null,
-      guidelines: slot.guidelines,
-      sort_order: slot.order,
-      is_main: slot.is_main,
-    })),
+    slots: sortedSlots.map((slot) => {
+      const override = overrideMap.get(slot.id) ?? null
+      const merged = mergeSlotWithOverride(slot, override)
+      return {
+        exercise_name: slot.exercise.name,
+        target_sets: merged.sets,
+        target_reps: merged.reps,
+        target_weight: merged.weight,
+        target_rpe: merged.rpe,
+        rest_seconds: merged.rest_seconds,
+        group_id: merged.group_id ?? null,
+        group_rest_seconds: merged.group_rest_seconds ?? null,
+        guidelines: merged.guidelines,
+        sort_order: slot.order,
+        is_main: slot.is_main,
+      }
+    }),
   }
 
   try {
@@ -220,5 +236,39 @@ export async function saveWorkoutCore(
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     return { success: false, error: `Failed to save workout: ${message}` }
+  }
+}
+
+// Compute 1-based week number from mesocycle start date
+function getWeekNumber(startDate: string, logDate: string): number {
+  const start = new Date(startDate + 'T00:00:00Z')
+  const current = new Date(logDate + 'T00:00:00Z')
+  const diffDays = Math.round(
+    (current.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+  )
+  return Math.floor(diffDays / 7) + 1
+}
+
+// Fetch overrides for slot IDs at a given week, returns map by slot ID
+async function fetchOverrideMap(
+  database: AppDb,
+  slotIds: number[],
+  weekNumber: number
+): Promise<Map<number, typeof slot_week_overrides.$inferSelect>> {
+  if (slotIds.length === 0) return new Map()
+  try {
+    const overrides = database
+      .select()
+      .from(slot_week_overrides)
+      .where(
+        and(
+          inArray(slot_week_overrides.exercise_slot_id, slotIds),
+          eq(slot_week_overrides.week_number, weekNumber)
+        )
+      )
+      .all()
+    return new Map(overrides.map((o) => [o.exercise_slot_id, o]))
+  } catch {
+    return new Map()
   }
 }

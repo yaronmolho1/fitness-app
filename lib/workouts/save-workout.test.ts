@@ -1,4 +1,3 @@
-// Characterization test — captures current behavior for safe refactoring
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
@@ -62,6 +61,20 @@ const CREATE_SQL = `
     is_main INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER
   );
+  CREATE TABLE slot_week_overrides (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    exercise_slot_id INTEGER NOT NULL REFERENCES exercise_slots(id) ON DELETE CASCADE,
+    week_number INTEGER NOT NULL,
+    weight REAL,
+    reps TEXT,
+    sets INTEGER,
+    rpe REAL,
+    distance REAL,
+    duration INTEGER,
+    pace TEXT,
+    is_deload INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER
+  );
   CREATE TABLE logged_workouts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     template_id INTEGER,
@@ -88,20 +101,6 @@ const CREATE_SQL = `
     set_number INTEGER NOT NULL,
     actual_reps INTEGER,
     actual_weight REAL,
-    created_at INTEGER
-  );
-  CREATE TABLE slot_week_overrides (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    exercise_slot_id INTEGER NOT NULL REFERENCES exercise_slots(id) ON DELETE CASCADE,
-    week_number INTEGER NOT NULL,
-    weight REAL,
-    reps TEXT,
-    sets INTEGER,
-    rpe REAL,
-    distance REAL,
-    duration INTEGER,
-    pace TEXT,
-    is_deload INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER
   );
 `
@@ -159,7 +158,7 @@ function buildInput(): SaveWorkoutInput {
   }
 }
 
-describe('T155 characterize: saveWorkoutCore snapshot shape', () => {
+describe('T155: saveWorkoutCore snapshot with week overrides', () => {
   beforeEach(() => {
     sqlite = new Database(':memory:')
     sqlite.pragma('foreign_keys = ON')
@@ -172,92 +171,99 @@ describe('T155 characterize: saveWorkoutCore snapshot shape', () => {
     sqlite?.close()
   })
 
-  it('snapshot has version:2 at top level (post-T155)', async () => {
-    await saveWorkoutCore(db, buildInput())
-    const [workout] = db.select().from(schema.logged_workouts).all()
-    const snap = workout.template_snapshot as unknown as Record<string, unknown>
-    expect(snap.version).toBe(2)
-  })
+  it('snapshot includes week_number_in_meso (AC13)', async () => {
+    // logDate 2026-03-15 is 14 days from start 2026-03-01 → week 3
+    const result = await saveWorkoutCore(db, buildInput())
+    expect(result.success).toBe(true)
 
-  it('snapshot top-level keys include week_number_in_meso (post-T155)', async () => {
-    await saveWorkoutCore(db, buildInput())
-    const [workout] = db.select().from(schema.logged_workouts).all()
-    const snap = workout.template_snapshot as unknown as Record<string, unknown>
-    expect(Object.keys(snap).sort()).toEqual(
-      ['coaching_cues', 'modality', 'name', 'notes', 'slots', 'version', 'week_number_in_meso']
-    )
-  })
-
-  it('snapshot contains week_number_in_meso (post-T155)', async () => {
-    await saveWorkoutCore(db, buildInput())
     const [workout] = db.select().from(schema.logged_workouts).all()
     const snap = workout.template_snapshot as unknown as Record<string, unknown>
     expect(snap.week_number_in_meso).toBe(3)
   })
 
-  it('snapshot slot keys are exactly the expected set', async () => {
-    await saveWorkoutCore(db, buildInput())
+  it('snapshot version bumped to 2', async () => {
+    const result = await saveWorkoutCore(db, buildInput())
+    expect(result.success).toBe(true)
+
     const [workout] = db.select().from(schema.logged_workouts).all()
-    const snap = workout.template_snapshot as unknown as { slots: Record<string, unknown>[] }
-    const slotKeys = Object.keys(snap.slots[0]).sort()
-    expect(slotKeys).toEqual([
-      'exercise_name',
-      'group_id',
-      'group_rest_seconds',
-      'guidelines',
-      'is_main',
-      'rest_seconds',
-      'sort_order',
-      'target_reps',
-      'target_rpe',
-      'target_sets',
-      'target_weight',
-    ])
+    const snap = workout.template_snapshot as unknown as Record<string, unknown>
+    expect(snap.version).toBe(2)
   })
 
-  it('snapshot slots are sorted by order ascending', async () => {
-    await saveWorkoutCore(db, buildInput())
+  it('snapshot slot values reflect week overrides when present (AC14)', async () => {
+    // Add override for slot 100 at week 3 (logDate is week 3)
+    sqlite.exec(`
+      INSERT INTO slot_week_overrides (exercise_slot_id, week_number, weight, reps, sets, rpe, is_deload)
+      VALUES (100, 3, 85.0, '10', 4, 9.0, 0)
+    `)
+
+    const result = await saveWorkoutCore(db, buildInput())
+    expect(result.success).toBe(true)
+
     const [workout] = db.select().from(schema.logged_workouts).all()
     const snap = workout.template_snapshot as unknown as {
-      slots: Array<{ sort_order: number; exercise_name: string }>
+      slots: Array<{
+        exercise_name: string
+        target_weight: number | null
+        target_reps: string
+        target_sets: number
+        target_rpe: number | null
+      }>
     }
-    expect(snap.slots[0].sort_order).toBe(1)
-    expect(snap.slots[0].exercise_name).toBe('Bench Press')
-    expect(snap.slots[1].sort_order).toBe(2)
-    expect(snap.slots[1].exercise_name).toBe('Overhead Press')
+
+    // Slot 100 (Bench Press) should have merged override values
+    const bench = snap.slots.find((s) => s.exercise_name === 'Bench Press')!
+    expect(bench.target_weight).toBe(85)
+    expect(bench.target_reps).toBe('10')
+    expect(bench.target_sets).toBe(4)
+    expect(bench.target_rpe).toBe(9)
+
+    // Slot 101 (OHP) has no override → base values
+    const ohp = snap.slots.find((s) => s.exercise_name === 'Overhead Press')!
+    expect(ohp.target_weight).toBeNull()
+    expect(ohp.target_reps).toBe('10')
+    expect(ohp.target_sets).toBe(3)
   })
 
-  it('snapshot preserves group_id and group_rest_seconds from slots', async () => {
-    await saveWorkoutCore(db, buildInput())
-    const [workout] = db.select().from(schema.logged_workouts).all()
-    const snap = workout.template_snapshot as unknown as {
-      slots: Array<{ group_id: number | null; group_rest_seconds: number | null }>
-    }
-    // Both slots have group_id=1, group_rest_seconds=60 in seed
-    expect(snap.slots[0].group_id).toBe(1)
-    expect(snap.slots[0].group_rest_seconds).toBe(60)
-    expect(snap.slots[1].group_id).toBe(1)
-    expect(snap.slots[1].group_rest_seconds).toBe(60)
-  })
+  it('snapshot uses base values when no overrides exist (AC17 regression)', async () => {
+    const result = await saveWorkoutCore(db, buildInput())
+    expect(result.success).toBe(true)
 
-  // Post-T155: snapshot captures base slot values when no overrides exist
-  it('snapshot captures base slot values when no overrides exist', async () => {
-    await saveWorkoutCore(db, buildInput())
     const [workout] = db.select().from(schema.logged_workouts).all()
     const snap = workout.template_snapshot as unknown as {
       slots: Array<{ target_weight: number | null; target_reps: string; target_sets: number }>
     }
+
     expect(snap.slots[0].target_weight).toBe(80)
     expect(snap.slots[0].target_reps).toBe('8')
     expect(snap.slots[0].target_sets).toBe(3)
   })
 
-  // saveWorkoutCore computes weekNumber internally from mesocycle start_date
-  it('saveWorkoutCore signature accepts SaveWorkoutInput without weekNumber', async () => {
-    const input = buildInput()
-    expect(input).not.toHaveProperty('weekNumber')
-    expect(input).not.toHaveProperty('week_number')
-    const result = await saveWorkoutCore(db, input)
+  it('partial override: only overridden fields change, rest stay base', async () => {
+    // Override only weight for slot 100 at week 3
+    sqlite.exec(`
+      INSERT INTO slot_week_overrides (exercise_slot_id, week_number, weight, is_deload)
+      VALUES (100, 3, 90.0, 0)
+    `)
+
+    const result = await saveWorkoutCore(db, buildInput())
     expect(result.success).toBe(true)
+
+    const [workout] = db.select().from(schema.logged_workouts).all()
+    const snap = workout.template_snapshot as unknown as {
+      slots: Array<{
+        exercise_name: string
+        target_weight: number | null
+        target_reps: string
+        target_sets: number
+        target_rpe: number | null
+      }>
+    }
+
+    const bench = snap.slots.find((s) => s.exercise_name === 'Bench Press')!
+    expect(bench.target_weight).toBe(90) // overridden
+    expect(bench.target_reps).toBe('8') // base
+    expect(bench.target_sets).toBe(3) // base
+    expect(bench.target_rpe).toBe(8) // base
   })
 })

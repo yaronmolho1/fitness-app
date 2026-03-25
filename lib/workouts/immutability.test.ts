@@ -62,6 +62,13 @@ const CREATE_SQL = `
     set_number INTEGER NOT NULL, actual_reps INTEGER,
     actual_weight REAL, created_at INTEGER
   );
+  CREATE TABLE slot_week_overrides (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    exercise_slot_id INTEGER NOT NULL REFERENCES exercise_slots(id) ON DELETE CASCADE,
+    week_number INTEGER NOT NULL, weight REAL, reps TEXT, sets INTEGER,
+    rpe REAL, distance REAL, duration INTEGER, pace TEXT,
+    is_deload INTEGER NOT NULL DEFAULT 0, created_at INTEGER
+  );
 `
 
 const SEED_SQL = `
@@ -256,7 +263,7 @@ describe('log immutability enforcement', () => {
 
       const [workout] = db.select().from(schema.logged_workouts).all()
       const snapshot = workout.template_snapshot as { version: number }
-      expect(snapshot.version).toBe(1)
+      expect(snapshot.version).toBe(2)
     })
 
     it('snapshot contains all exercise slot fields from the template', async () => {
@@ -284,7 +291,7 @@ describe('log immutability enforcement', () => {
       }
 
       // Template-level fields
-      expect(snapshot.version).toBe(1)
+      expect(snapshot.version).toBe(2)
       expect(snapshot.name).toBe('Push Day')
       expect(snapshot.modality).toBe('resistance')
       expect(snapshot.notes).toBe('Focus on chest')

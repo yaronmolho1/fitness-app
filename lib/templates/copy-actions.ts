@@ -9,6 +9,7 @@ import {
   mesocycles,
   exercise_slots,
   template_sections,
+  slot_week_overrides,
 } from '@/lib/db/schema'
 
 const copyTemplateSchema = z.object({
@@ -154,6 +155,9 @@ export async function copyTemplateToMesocycle(
         }
       }
 
+      // Build slot ID remap: source slot id -> new slot id
+      const slotIdMap = new Map<number, number>()
+
       for (const slot of slots) {
         const newSectionId = slot.section_id
           ? sectionIdMap.get(slot.section_id) ?? null
@@ -163,7 +167,7 @@ export async function copyTemplateToMesocycle(
           ? groupIdMap.get(slot.group_id) ?? null
           : null
 
-        tx.insert(exercise_slots)
+        const newSlot = tx.insert(exercise_slots)
           .values({
             template_id: created.id,
             exercise_id: slot.exercise_id,
@@ -180,7 +184,40 @@ export async function copyTemplateToMesocycle(
             is_main: slot.is_main,
             created_at: new Date(),
           })
-          .run()
+          .returning({ id: exercise_slots.id })
+          .get()
+
+        slotIdMap.set(slot.id, newSlot.id)
+      }
+
+      // Copy slot_week_overrides with remapped slot IDs
+      for (const slot of slots) {
+        const newSlotId = slotIdMap.get(slot.id)
+        if (!newSlotId) continue
+
+        const overrides = tx
+          .select()
+          .from(slot_week_overrides)
+          .where(eq(slot_week_overrides.exercise_slot_id, slot.id))
+          .all()
+
+        for (const override of overrides) {
+          tx.insert(slot_week_overrides)
+            .values({
+              exercise_slot_id: newSlotId,
+              week_number: override.week_number,
+              weight: override.weight,
+              reps: override.reps,
+              sets: override.sets,
+              rpe: override.rpe,
+              distance: override.distance,
+              duration: override.duration,
+              pace: override.pace,
+              is_deload: override.is_deload,
+              created_at: new Date(),
+            })
+            .run()
+        }
       }
 
       return created

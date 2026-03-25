@@ -1,14 +1,9 @@
-// Characterization test — captures current behavior for safe refactoring
+// Characterization test — updated after T155 fix for mergeSlotWithOverride
 import { describe, it, expect } from 'vitest'
 import { mergeSlotWithOverride } from './week-overrides'
 
-describe('T155 characterize: mergeSlotWithOverride — id overwrite bug', () => {
-  // NOTE: BUG — when mergeSlotWithOverride receives a full DB override row,
-  // it iterates ALL keys including id, exercise_slot_id, week_number, is_deload,
-  // created_at. These overwrite the base slot's own id field, breaking identity.
-  // T155 should fix this by filtering to only the parameter fields.
-
-  it('override.id overwrites slot.id (known bug)', () => {
+describe('T155 characterize: mergeSlotWithOverride — id overwrite bug FIXED', () => {
+  it('override.id does NOT overwrite slot.id (fixed)', () => {
     const baseSlot = {
       id: 100,
       template_id: 1,
@@ -20,7 +15,6 @@ describe('T155 characterize: mergeSlotWithOverride — id overwrite bug', () => 
       order: 1,
     }
 
-    // Simulates a full slot_week_overrides row from DB
     const overrideRow = {
       id: 5,
       exercise_slot_id: 100,
@@ -38,18 +32,13 @@ describe('T155 characterize: mergeSlotWithOverride — id overwrite bug', () => 
 
     const merged = mergeSlotWithOverride(baseSlot, overrideRow)
 
-    // BUG: override.id (5) overwrites slot.id (100)
-    expect(merged.id).toBe(5) // Should be 100 after fix
-    // BUG: exercise_slot_id leaks onto the slot
-    expect((merged as Record<string, unknown>).exercise_slot_id).toBe(100)
-    // BUG: week_number leaks onto the slot
-    expect((merged as Record<string, unknown>).week_number).toBe(2)
-    // BUG: is_deload (0 is falsy but not null/undefined) does NOT overwrite
-    // because 0 is falsy in JS — the condition `override[key] !== null && override[key] !== undefined`
-    // passes for 0, so is_deload DOES get set
-    expect((merged as Record<string, unknown>).is_deload).toBe(0)
-    // BUG: created_at from override leaks onto slot
-    expect((merged as Record<string, unknown>).created_at).toBeInstanceOf(Date)
+    // FIXED: slot.id preserved
+    expect(merged.id).toBe(100)
+    // FIXED: metadata fields do not leak
+    expect((merged as Record<string, unknown>).exercise_slot_id).toBeUndefined()
+    expect((merged as Record<string, unknown>).week_number).toBeUndefined()
+    expect((merged as Record<string, unknown>).is_deload).toBeUndefined()
+    expect((merged as Record<string, unknown>).created_at).toBeUndefined()
 
     // Weight correctly overridden
     expect(merged.weight).toBe(85)
@@ -81,12 +70,10 @@ describe('T155 characterize: mergeSlotWithOverride — id overwrite bug', () => 
     expect(merged.reps).toBe('10')
     expect(merged.sets).toBe(3)
     expect(merged.rpe).toBe(7)
-    // BUG: id leaks from override
-    expect((merged as Record<string, unknown>).id).toBe(1)
-    // BUG: exercise_slot_id leaks
-    expect((merged as Record<string, unknown>).exercise_slot_id).toBe(50)
-    // BUG: week_number leaks
-    expect((merged as Record<string, unknown>).week_number).toBe(1)
+    // FIXED: metadata does not leak
+    expect((merged as Record<string, unknown>).id).toBeUndefined()
+    expect((merged as Record<string, unknown>).exercise_slot_id).toBeUndefined()
+    expect((merged as Record<string, unknown>).week_number).toBeUndefined()
   })
 
   it('null override returns shallow copy of base (no mutation)', () => {
@@ -116,7 +103,7 @@ describe('T155 characterize: mergeSlotWithOverride — id overwrite bug', () => 
     expect(merged).toEqual(baseSlot)
   })
 
-  it('is_deload=1 (truthy) leaks onto slot', () => {
+  it('is_deload=1 does NOT leak onto slot (fixed)', () => {
     const baseSlot = { id: 100, weight: 60, sets: 3, rpe: 7 }
     const override = {
       id: 5,
@@ -134,10 +121,10 @@ describe('T155 characterize: mergeSlotWithOverride — id overwrite bug', () => 
     }
 
     const merged = mergeSlotWithOverride(baseSlot, override)
-    // BUG: is_deload leaks
-    expect((merged as Record<string, unknown>).is_deload).toBe(1)
-    // BUG: id overwritten
-    expect(merged.id).toBe(5)
+    // FIXED: is_deload does not leak
+    expect((merged as Record<string, unknown>).is_deload).toBeUndefined()
+    // FIXED: id preserved
+    expect(merged.id).toBe(100)
     // Intended overrides work
     expect(merged.weight).toBe(36)
     expect(merged.sets).toBe(2)

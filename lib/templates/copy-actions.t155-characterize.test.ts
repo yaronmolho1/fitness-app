@@ -146,8 +146,8 @@ describe('T155 characterize: copyTemplateToMesocycle', () => {
     resetTables()
   })
 
-  // NOTE: T155 will add slot_week_overrides copying. Currently they are NOT copied.
-  it('does NOT copy slot_week_overrides (pre-T155 baseline)', async () => {
+  // Post-T155: overrides ARE now copied with remapped slot IDs
+  it('copies slot_week_overrides with remapped slot IDs (post-T155)', async () => {
     const source = seedMeso({ name: 'Source' })
     const target = seedMeso({ name: 'Target' })
     const ex = seedExercise('Bench Press')
@@ -211,7 +211,7 @@ describe('T155 characterize: copyTemplateToMesocycle', () => {
       .all()
     expect(sourceOverrides).toHaveLength(2)
 
-    // No overrides on the new template's slots
+    // Overrides ARE copied to the new template's slots (post-T155)
     const newSlots = testDb
       .select()
       .from(schema.exercise_slots)
@@ -224,7 +224,7 @@ describe('T155 characterize: copyTemplateToMesocycle', () => {
       .from(schema.slot_week_overrides)
       .where(sql`exercise_slot_id = ${newSlots[0].id}`)
       .all()
-    expect(newOverrides).toHaveLength(0)
+    expect(newOverrides).toHaveLength(2)
   })
 
   it('preserves canonical_name on copy', async () => {
