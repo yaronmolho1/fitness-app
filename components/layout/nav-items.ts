@@ -5,6 +5,7 @@ import {
   CalendarDays,
   TrendingUp,
   ListChecks,
+  BrainCircuit,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -21,4 +22,5 @@ export const navItems: NavItem[] = [
   { href: '/calendar', label: 'Calendar', icon: CalendarDays },
   { href: '/progression', label: 'Progression', icon: TrendingUp },
   { href: '/routines', label: 'Routines', icon: ListChecks },
+  { href: '/coaching', label: 'Coaching', icon: BrainCircuit },
 ]
