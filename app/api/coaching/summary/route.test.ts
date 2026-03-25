@@ -70,7 +70,7 @@ describe('POST /api/coaching/summary', () => {
     mockGetAthleteProfile.mockResolvedValue(null)
     mockGetCurrentPlan.mockResolvedValue(null)
     mockGetRecentSessions.mockResolvedValue([])
-    mockGetProgressionData.mockResolvedValue({ sessions: [], phases: [] })
+    mockGetProgressionData.mockResolvedValue({ data: [], phases: [] })
     mockGetCalendarProjection.mockResolvedValue({ days: [] })
     mockGenerateCoachingSummary.mockReturnValue('# Summary')
   })
@@ -181,6 +181,39 @@ describe('POST /api/coaching/summary', () => {
     expect(mockGetAthleteProfile).toHaveBeenCalledTimes(1)
     expect(mockGetCurrentPlan).toHaveBeenCalledTimes(1)
     expect(mockGetRecentSessions).toHaveBeenCalledTimes(1)
+  })
+
+  it('queries progression per exercise with exerciseId', async () => {
+    mockGetCurrentPlan.mockResolvedValue({
+      mesocycle: { id: 1, name: 'Block A', start_date: '2026-01-01', end_date: '2026-03-01', work_weeks: 4, has_deload: true, status: 'active' },
+      templates: [
+        {
+          id: 1, name: 'Push A', canonical_name: 'push-a', modality: 'resistance', notes: null,
+          exercise_slots: [
+            { id: 10, exercise_id: 100, sets: 3, reps: '8', weight: 60, rpe: null, rest_seconds: 120, order: 0, exercise_name: 'Bench Press' },
+            { id: 11, exercise_id: 101, sets: 3, reps: '10', weight: 40, rpe: null, rest_seconds: 90, order: 1, exercise_name: 'OHP' },
+          ],
+        },
+        {
+          id: 2, name: 'Push B', canonical_name: 'push-b', modality: 'resistance', notes: null,
+          exercise_slots: [
+            { id: 20, exercise_id: 100, sets: 4, reps: '6', weight: 70, rpe: null, rest_seconds: 120, order: 0, exercise_name: 'Bench Press' },
+          ],
+        },
+      ],
+      schedule: [],
+    })
+    mockGetProgressionData.mockResolvedValue({ data: [{ date: '2026-01-15', actualWeight: 60, actualVolume: 1440 }], phases: [] })
+    mockGenerateCoachingSummary.mockReturnValue('# Summary')
+
+    const req = makeRequest(validBody, { cookie: 'valid-token' })
+    await POST(req)
+
+    // Bench Press (id 100) queried once from push-a, skipped in push-b (dedup by exercise_id)
+    // OHP (id 101) queried once from push-a
+    expect(mockGetProgressionData).toHaveBeenCalledTimes(2)
+    expect(mockGetProgressionData.mock.calls[0][1]).toEqual({ canonicalName: 'push-a', exerciseId: 100 })
+    expect(mockGetProgressionData.mock.calls[1][1]).toEqual({ canonicalName: 'push-a', exerciseId: 101 })
   })
 
   it('returns 500 on internal error', async () => {

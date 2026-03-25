@@ -60,18 +60,18 @@ export async function POST(request: NextRequest) {
       getRecentSessions(db),
     ])
 
-    // Collect progression trends for each exercise in the current plan
+    // Collect progression trends per exercise in the current plan
     const progressionTrends: ProgressionTrend[] = []
     if (currentPlan) {
-      const seen = new Set<string>()
+      const seen = new Set<number>()
       for (const template of currentPlan.templates) {
         for (const slot of template.exercise_slots) {
-          const key = slot.exercise_name
-          if (seen.has(key)) continue
-          seen.add(key)
+          if (seen.has(slot.exercise_id)) continue
+          seen.add(slot.exercise_id)
 
           const result = await getProgressionData(db, {
             canonicalName: template.canonical_name,
+            exerciseId: slot.exercise_id,
           })
           if (result.data.length > 0) {
             progressionTrends.push({

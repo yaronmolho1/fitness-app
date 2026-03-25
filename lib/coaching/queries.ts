@@ -113,6 +113,7 @@ export async function getRecentSessions(
 
 export type CurrentPlanSlot = {
   id: number
+  exercise_id: number
   sets: number
   reps: string
   weight: number | null
@@ -181,6 +182,7 @@ export async function getCurrentPlan(
       ? db
           .select({
             id: exercise_slots.id,
+            exercise_id: exercise_slots.exercise_id,
             template_id: exercise_slots.template_id,
             sets: exercise_slots.sets,
             reps: exercise_slots.reps,
@@ -203,6 +205,7 @@ export async function getCurrentPlan(
     const list = slotsByTemplate.get(slot.template_id) ?? []
     list.push({
       id: slot.id,
+      exercise_id: slot.exercise_id,
       sets: slot.sets,
       reps: slot.reps,
       weight: slot.weight,
