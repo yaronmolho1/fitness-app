@@ -68,7 +68,7 @@ erDiagram
     routine_items ||--o{ routine_logs : "tracked by"
     athlete_profile {
         integer id
-        real body_weight_kg
+        real weight_kg
         real height_cm
     }
 
