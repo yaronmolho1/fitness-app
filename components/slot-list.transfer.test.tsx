@@ -106,28 +106,32 @@ describe('SlotList — transfer actions (T149)', () => {
     vi.clearAllMocks()
   })
 
-  it('shows "Copy to..." and "Move to..." buttons in display mode for non-completed slots', () => {
+  it('shows "Copy to..." and "Move to..." menu items in dropdown for non-completed slots', async () => {
     render(<SlotList slots={[makeSlot()]} templateId={1} exercises={exercises} isCompleted={false} />)
-    expect(screen.getByRole('button', { name: /copy to/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /move to/i })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /actions/i }))
+    expect(screen.getByRole('menuitem', { name: /copy to/i })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: /move to/i })).toBeInTheDocument()
   })
 
-  it('shows copy but hides move for completed mesocycles', () => {
+  it('shows copy but hides move for completed mesocycles', async () => {
     render(<SlotList slots={[makeSlot()]} templateId={1} exercises={exercises} isCompleted={true} />)
-    expect(screen.getByRole('button', { name: /copy to/i })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /move to/i })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /actions/i }))
+    expect(screen.getByRole('menuitem', { name: /copy to/i })).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: /move to/i })).not.toBeInTheDocument()
   })
 
   it('"Copy to..." opens target picker modal', async () => {
     render(<SlotList slots={[makeSlot()]} templateId={1} exercises={exercises} isCompleted={false} />)
-    await user.click(screen.getByRole('button', { name: /copy to/i }))
+    await user.click(screen.getByRole('button', { name: /actions/i }))
+    await user.click(screen.getByRole('menuitem', { name: /copy to/i }))
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Copy to...' })).toBeInTheDocument()
   })
 
   it('"Move to..." opens target picker modal with move mode', async () => {
     render(<SlotList slots={[makeSlot()]} templateId={1} exercises={exercises} isCompleted={false} />)
-    await user.click(screen.getByRole('button', { name: /move to/i }))
+    await user.click(screen.getByRole('button', { name: /actions/i }))
+    await user.click(screen.getByRole('menuitem', { name: /move to/i }))
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Move to...' })).toBeInTheDocument()
   })
@@ -135,7 +139,8 @@ describe('SlotList — transfer actions (T149)', () => {
   it('calls copyExerciseSlots on copy confirm and shows success toast', async () => {
     render(<SlotList slots={[makeSlot()]} templateId={1} exercises={exercises} isCompleted={false} />)
 
-    await user.click(screen.getByRole('button', { name: /copy to/i }))
+    await user.click(screen.getByRole('button', { name: /actions/i }))
+    await user.click(screen.getByRole('menuitem', { name: /copy to/i }))
     // Select mesocycle
     await user.click(screen.getByText('Hypertrophy Block'))
     // Select template
@@ -158,7 +163,8 @@ describe('SlotList — transfer actions (T149)', () => {
   it('calls moveExerciseSlots on move confirm and shows success toast', async () => {
     render(<SlotList slots={[makeSlot()]} templateId={1} exercises={exercises} isCompleted={false} />)
 
-    await user.click(screen.getByRole('button', { name: /move to/i }))
+    await user.click(screen.getByRole('button', { name: /actions/i }))
+    await user.click(screen.getByRole('menuitem', { name: /move to/i }))
     await user.click(screen.getByText('Hypertrophy Block'))
     await user.click(screen.getByText('Push A'))
     await user.click(screen.getByRole('button', { name: /confirm/i }))
@@ -180,7 +186,8 @@ describe('SlotList — transfer actions (T149)', () => {
 
     render(<SlotList slots={[makeSlot()]} templateId={1} exercises={exercises} isCompleted={false} />)
 
-    await user.click(screen.getByRole('button', { name: /copy to/i }))
+    await user.click(screen.getByRole('button', { name: /actions/i }))
+    await user.click(screen.getByRole('menuitem', { name: /copy to/i }))
     await user.click(screen.getByText('Hypertrophy Block'))
     await user.click(screen.getByText('Push A'))
     await user.click(screen.getByRole('button', { name: /confirm/i }))
@@ -193,7 +200,8 @@ describe('SlotList — transfer actions (T149)', () => {
   it('passes targetSectionId for mixed templates', async () => {
     render(<SlotList slots={[makeSlot()]} templateId={1} exercises={exercises} isCompleted={false} />)
 
-    await user.click(screen.getByRole('button', { name: /copy to/i }))
+    await user.click(screen.getByRole('button', { name: /actions/i }))
+    await user.click(screen.getByRole('menuitem', { name: /copy to/i }))
     await user.click(screen.getByText('Hypertrophy Block'))
     await user.click(screen.getByText('Mixed Day'))
     // Should show section step
@@ -217,9 +225,10 @@ describe('SlotList — transfer actions (T149)', () => {
 
     render(<SlotList slots={slots} templateId={1} exercises={exercises} isCompleted={false} />)
 
-    // Find the copy button for the first slot in the superset
-    const copyButtons = screen.getAllByRole('button', { name: /copy to/i })
-    await user.click(copyButtons[0])
+    // Open the actions dropdown for the first slot in the superset
+    const actionButtons = screen.getAllByRole('button', { name: /actions/i })
+    await user.click(actionButtons[0])
+    await user.click(screen.getByRole('menuitem', { name: /copy to/i }))
 
     // Should ask about group transfer
     expect(screen.getByRole('button', { name: /entire superset/i })).toBeInTheDocument()
