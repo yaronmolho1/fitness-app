@@ -327,7 +327,7 @@ describe('getTodayWorkout — returns array (T114)', () => {
   it('returns array of 1 for single-session day', async () => {
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 2, tmpl.id) // Tuesday
+    seedSchedule(meso.id, 1, tmpl.id) // Tuesday
 
     const result = await getTodayWorkout('2026-03-10') // Tuesday
     expect(result).toHaveLength(1)
@@ -351,7 +351,7 @@ describe('getTodayWorkout — period and time_slot in response (T114)', () => {
   it('workout result includes period field', async () => {
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 2, tmpl.id, 'normal', 'morning')
+    seedSchedule(meso.id, 1, tmpl.id, 'normal', 'morning')
 
     const result = await getTodayWorkout('2026-03-10')
     expect(result[0].type).toBe('workout')
@@ -363,7 +363,7 @@ describe('getTodayWorkout — period and time_slot in response (T114)', () => {
   it('workout result includes time_slot field', async () => {
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 2, tmpl.id, 'normal', 'morning', '06:30')
+    seedSchedule(meso.id, 1, tmpl.id, 'normal', 'morning', '06:30')
 
     const result = await getTodayWorkout('2026-03-10')
     expect(result[0].type).toBe('workout')
@@ -375,7 +375,7 @@ describe('getTodayWorkout — period and time_slot in response (T114)', () => {
   it('workout result has null time_slot when not set', async () => {
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 2, tmpl.id, 'normal', 'evening')
+    seedSchedule(meso.id, 1, tmpl.id, 'normal', 'evening')
 
     const result = await getTodayWorkout('2026-03-10')
     if (result[0].type === 'workout') {
@@ -395,8 +395,8 @@ describe('getTodayWorkout — multiple sessions per day (T114)', () => {
     const easyRun = seedTemplate(meso.id, 'Easy Run', { modality: 'running' })
 
     // Two sessions on Tuesday
-    seedSchedule(meso.id, 2, pushA.id, 'normal', 'morning', '06:30')
-    seedSchedule(meso.id, 2, easyRun.id, 'normal', 'evening', '18:00')
+    seedSchedule(meso.id, 1, pushA.id, 'normal', 'morning', '06:30')
+    seedSchedule(meso.id, 1, easyRun.id, 'normal', 'evening', '18:00')
 
     const result = await getTodayWorkout('2026-03-10')
     expect(result).toHaveLength(2)
@@ -410,8 +410,8 @@ describe('getTodayWorkout — multiple sessions per day (T114)', () => {
     const tmpl2 = seedTemplate(meso.id, 'Morning Run', { modality: 'running' })
 
     // Insert evening first, morning second
-    seedSchedule(meso.id, 2, tmpl1.id, 'normal', 'evening')
-    seedSchedule(meso.id, 2, tmpl2.id, 'normal', 'morning')
+    seedSchedule(meso.id, 1, tmpl1.id, 'normal', 'evening')
+    seedSchedule(meso.id, 1, tmpl2.id, 'normal', 'morning')
 
     const result = await getTodayWorkout('2026-03-10')
     expect(result).toHaveLength(2)
@@ -431,8 +431,8 @@ describe('getTodayWorkout — multiple sessions per day (T114)', () => {
     seedSlot(pushA.id, ex1.id, 1, { is_main: true })
     seedSlot(pullA.id, ex2.id, 1, { is_main: true })
 
-    seedSchedule(meso.id, 2, pushA.id, 'normal', 'morning')
-    seedSchedule(meso.id, 2, pullA.id, 'normal', 'evening')
+    seedSchedule(meso.id, 1, pushA.id, 'normal', 'morning')
+    seedSchedule(meso.id, 1, pullA.id, 'normal', 'evening')
 
     const result = await getTodayWorkout('2026-03-10')
     expect(result).toHaveLength(2)
@@ -452,9 +452,9 @@ describe('getTodayWorkout — multiple sessions per day (T114)', () => {
     const t2 = seedTemplate(meso.id, 'Afternoon Run', { modality: 'running' })
     const t3 = seedTemplate(meso.id, 'Evening BJJ', { modality: 'mma' })
 
-    seedSchedule(meso.id, 2, t1.id, 'normal', 'morning', '06:30')
-    seedSchedule(meso.id, 2, t2.id, 'normal', 'afternoon', '13:00')
-    seedSchedule(meso.id, 2, t3.id, 'normal', 'evening', '19:00')
+    seedSchedule(meso.id, 1, t1.id, 'normal', 'morning', '06:30')
+    seedSchedule(meso.id, 1, t2.id, 'normal', 'afternoon', '13:00')
+    seedSchedule(meso.id, 1, t3.id, 'normal', 'evening', '19:00')
 
     const result = await getTodayWorkout('2026-03-10')
     expect(result).toHaveLength(3)
@@ -477,8 +477,8 @@ describe('getTodayWorkout — multiple sessions per day (T114)', () => {
     const t1 = seedTemplate(meso.id, 'Morning Lift')
     const t2 = seedTemplate(meso.id, 'Evening Run', { modality: 'running' })
 
-    seedSchedule(meso.id, 2, t1.id, 'normal', 'morning')
-    seedSchedule(meso.id, 2, t2.id, 'normal', 'evening')
+    seedSchedule(meso.id, 1, t1.id, 'normal', 'morning')
+    seedSchedule(meso.id, 1, t2.id, 'normal', 'evening')
 
     // Log only the morning session
     testDb

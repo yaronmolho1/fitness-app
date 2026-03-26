@@ -373,7 +373,7 @@ describe('getTodayWorkout — mixed template sections', () => {
     })
     const ex = seedExercise('Bench Press')
     seedSlot(tmpl.id, ex.id, 1, { section_id: sec1.id, sets: 4, reps: '8', weight: 80, is_main: true })
-    seedSchedule(meso.id, 2, tmpl.id) // Tuesday 2026-03-10
+    seedSchedule(meso.id, 1, tmpl.id) // Tuesday 2026-03-10
 
     const results = await getTodayWorkout('2026-03-10')
     const result = results[0]
@@ -391,7 +391,7 @@ describe('getTodayWorkout — mixed template sections', () => {
     // Insert in reverse order
     seedSection(tmpl.id, 'Cooldown Run', 'running', 2)
     seedSection(tmpl.id, 'Main Lift', 'resistance', 1)
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     const results = await getTodayWorkout('2026-03-10')
     const result = results[0]
@@ -410,7 +410,7 @@ describe('getTodayWorkout — mixed template sections', () => {
     seedSlot(tmpl.id, ex1.id, 1, { section_id: sec.id, sets: 4, reps: '5', weight: 100, is_main: true })
     seedSlot(tmpl.id, ex2.id, 2, { section_id: sec.id, sets: 3, reps: '10', weight: 60 })
     seedSection(tmpl.id, 'Easy Run', 'running', 2)
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     const results = await getTodayWorkout('2026-03-10')
     const result = results[0]
@@ -433,7 +433,7 @@ describe('getTodayWorkout — mixed template sections', () => {
       hr_zone: 4,
       coaching_cues: 'Stay relaxed',
     })
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     const results = await getTodayWorkout('2026-03-10')
     const result = results[0]
@@ -452,7 +452,7 @@ describe('getTodayWorkout — mixed template sections', () => {
     const tmpl = seedTemplate(meso.id, 'BJJ + Conditioning', { modality: 'mixed' })
     seedSection(tmpl.id, 'BJJ Drills', 'mma', 1, { planned_duration: 60 })
     seedSection(tmpl.id, 'Finisher', 'resistance', 2)
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     const results = await getTodayWorkout('2026-03-10')
     const result = results[0]
@@ -477,7 +477,7 @@ describe('getTodayWorkout — mixed template sections', () => {
       WHERE section_name = 'Easy Run'
     `)
     seedSection(tmpl.id, 'Lifts', 'resistance', 2)
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     const results = await getTodayWorkout('2026-03-10')
     const result = results[0]
@@ -525,7 +525,7 @@ describe('getTodayWorkout — mixed template sections', () => {
         created_at: new Date(),
       })
       .run()
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     const results = await getTodayWorkout('2026-03-10')
     const result = results[0]
@@ -540,7 +540,7 @@ describe('getTodayWorkout — mixed template sections', () => {
   it('non-mixed templates do not include sections', async () => {
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
     const tmpl = seedTemplate(meso.id, 'Push A', { modality: 'resistance' })
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     const results = await getTodayWorkout('2026-03-10')
     const result = results[0]
@@ -557,7 +557,7 @@ describe('getTodayWorkout — mixed template sections', () => {
     seedSection(tmpl.id, 'Sparring', 'mma', 3, { planned_duration: 30 })
     const ex = seedExercise('Deadlift')
     seedSlot(tmpl.id, ex.id, 1, { section_id: sec2.id, sets: 5, reps: '3', weight: 140, is_main: true })
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     const results = await getTodayWorkout('2026-03-10')
     const result = results[0]

@@ -444,7 +444,7 @@ describe('getTodayWorkout', () => {
   it('returns rest_day when no schedule entry for today', async () => {
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 1, tmpl.id) // Monday only
+    seedSchedule(meso.id, 0, tmpl.id) // Monday only
 
     // 2026-03-10 is a Tuesday (day 2)
     const results = await getTodayWorkout('2026-03-10')
@@ -456,7 +456,7 @@ describe('getTodayWorkout', () => {
   it('returns workout with template when schedule entry exists', async () => {
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 2, tmpl.id) // Tuesday
+    seedSchedule(meso.id, 1, tmpl.id) // Tuesday
 
     // 2026-03-10 is Tuesday
     const results = await getTodayWorkout('2026-03-10')
@@ -476,7 +476,7 @@ describe('getTodayWorkout', () => {
     const ex2 = seedExercise('Incline DB Press')
     seedSlot(tmpl.id, ex1.id, 1, { sets: 4, reps: '6-8', weight: 100, rpe: 8, is_main: true })
     seedSlot(tmpl.id, ex2.id, 2, { sets: 3, reps: '10-12', rest_seconds: 90, guidelines: 'Slow eccentric' })
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     const results = await getTodayWorkout('2026-03-10')
     const result = results[0]
@@ -507,7 +507,7 @@ describe('getTodayWorkout', () => {
     const ex2 = seedExercise('OHP')
     seedSlot(tmpl.id, ex2.id, 2)
     seedSlot(tmpl.id, ex1.id, 1)
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     const results = await getTodayWorkout('2026-03-10')
     const result = results[0]
@@ -527,8 +527,8 @@ describe('getTodayWorkout', () => {
     })
     const tmplNormal = seedTemplate(meso.id, 'Push Normal')
     const tmplDeload = seedTemplate(meso.id, 'Push Deload')
-    seedSchedule(meso.id, 2, tmplNormal.id, 'normal')
-    seedSchedule(meso.id, 2, tmplDeload.id, 'deload')
+    seedSchedule(meso.id, 1, tmplNormal.id, 'normal')
+    seedSchedule(meso.id, 1, tmplDeload.id, 'deload')
 
     // 2026-03-10 is Tuesday, week 2 (not deload)
     const results = await getTodayWorkout('2026-03-10')
@@ -549,8 +549,8 @@ describe('getTodayWorkout', () => {
     })
     const tmplNormal = seedTemplate(meso.id, 'Push Normal')
     const tmplDeload = seedTemplate(meso.id, 'Push Deload')
-    seedSchedule(meso.id, 2, tmplNormal.id, 'normal')
-    seedSchedule(meso.id, 2, tmplDeload.id, 'deload')
+    seedSchedule(meso.id, 1, tmplNormal.id, 'normal')
+    seedSchedule(meso.id, 1, tmplDeload.id, 'deload')
 
     // 2026-03-31 is Tuesday in deload week
     const results = await getTodayWorkout('2026-03-31')
@@ -570,7 +570,7 @@ describe('getTodayWorkout', () => {
       has_deload: false,
     })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 2, tmpl.id, 'normal')
+    seedSchedule(meso.id, 1, tmpl.id, 'normal')
 
     // 2026-03-24 is Tuesday in week 4
     const results = await getTodayWorkout('2026-03-24')
@@ -588,7 +588,7 @@ describe('getTodayWorkout', () => {
       start_date: '2026-03-01',
     })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     const results = await getTodayWorkout('2026-03-10')
     const result = results[0]
@@ -605,7 +605,7 @@ describe('getTodayWorkout', () => {
   it('returns already_logged when workout logged for today + active mesocycle', async () => {
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 2, tmpl.id) // Tuesday
+    seedSchedule(meso.id, 1, tmpl.id) // Tuesday
 
     seedLoggedWorkout(tmpl.id, '2026-03-10', 'push-a')
 
@@ -616,7 +616,7 @@ describe('getTodayWorkout', () => {
   it('returns workout when no log exists for today', async () => {
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     const results = await getTodayWorkout('2026-03-10')
     expect(results[0].type).toBe('workout')
@@ -625,7 +625,7 @@ describe('getTodayWorkout', () => {
   it('detection uses calendar date not timestamp (midnight boundary)', async () => {
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 2, tmpl.id) // Tuesday
+    seedSchedule(meso.id, 1, tmpl.id) // Tuesday
 
     seedLoggedWorkout(tmpl.id, '2026-03-09', 'push-a')
 
@@ -639,7 +639,7 @@ describe('getTodayWorkout', () => {
 
     const activeMeso = seedMesocycle({ status: 'active', start_date: '2026-03-01', name: 'New Block' })
     const activeTmpl = seedTemplate(activeMeso.id, 'Push A')
-    seedSchedule(activeMeso.id, 2, activeTmpl.id)
+    seedSchedule(activeMeso.id, 1, activeTmpl.id)
 
     seedLoggedWorkout(oldTmpl.id, '2026-03-10', 'old-push')
 
@@ -650,7 +650,7 @@ describe('getTodayWorkout', () => {
   it('already_logged response includes logged workout id and date', async () => {
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     seedLoggedWorkout(tmpl.id, '2026-03-10', 'push-a')
 
@@ -669,7 +669,7 @@ describe('getTodayWorkout', () => {
   it('already_logged includes rating and notes when present', async () => {
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     seedLoggedWorkout(tmpl.id, '2026-03-10', 'push-a', { rating: 4, notes: 'Great session' })
 
@@ -684,7 +684,7 @@ describe('getTodayWorkout', () => {
   it('already_logged includes template_snapshot', async () => {
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     seedLoggedWorkout(tmpl.id, '2026-03-10', 'push-a')
 
@@ -699,7 +699,7 @@ describe('getTodayWorkout', () => {
   it('rest day not affected by already_logged check', async () => {
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 1, tmpl.id) // Monday only
+    seedSchedule(meso.id, 0, tmpl.id) // Monday only
 
     seedLoggedWorkout(tmpl.id, '2026-03-10', 'push-a')
 
@@ -714,7 +714,7 @@ describe('getTodayWorkout', () => {
   it('rest_day includes active routine items for today', async () => {
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 1, tmpl.id) // Monday only
+    seedSchedule(meso.id, 0, tmpl.id) // Monday only
 
     seedRoutineItem({ name: 'Body Weight', scope: 'global' })
 
@@ -732,7 +732,7 @@ describe('getTodayWorkout', () => {
   it('rest_day filters out inactive routine items', async () => {
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01', end_date: '2026-03-28' })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 1, tmpl.id)
+    seedSchedule(meso.id, 0, tmpl.id)
 
     seedRoutineItem({ name: 'Body Weight', scope: 'global' })
     seedRoutineItem({ name: 'Old Routine', scope: 'date_range', start_date: '2025-01-01', end_date: '2025-12-31' })
@@ -748,7 +748,7 @@ describe('getTodayWorkout', () => {
   it('rest_day includes routine logs for the date', async () => {
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 1, tmpl.id)
+    seedSchedule(meso.id, 0, tmpl.id)
 
     const item = seedRoutineItem({ name: 'Body Weight', scope: 'global', has_weight: true })
     seedRoutineLog(item.id, '2026-03-10', 'done', { value_weight: 72.5 })
@@ -765,7 +765,7 @@ describe('getTodayWorkout', () => {
   it('rest_day with no active routines returns empty arrays', async () => {
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 1, tmpl.id)
+    seedSchedule(meso.id, 0, tmpl.id)
 
     const results = await getTodayWorkout('2026-03-10')
     const result = results[0]
@@ -797,7 +797,7 @@ describe('getTodayWorkout', () => {
       })
       .run()
     const tmpl = testDb.select({ id: schema.workout_templates.id }).from(schema.workout_templates).get()!
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     const results = await getTodayWorkout('2026-03-10')
     const result = results[0]
@@ -843,7 +843,7 @@ describe('getTodayWorkout', () => {
         created_at: new Date(),
       })
       .run()
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     const results = await getTodayWorkout('2026-03-10')
     const result = results[0]
@@ -866,7 +866,7 @@ describe('getTodayWorkout', () => {
       has_deload: true,
     })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 1, tmpl.id, 'normal')
+    seedSchedule(meso.id, 0, tmpl.id, 'normal')
 
     seedRoutineItem({ name: 'Heavy Mobility', scope: 'global', skip_on_deload: true })
     seedRoutineItem({ name: 'Body Weight', scope: 'global', skip_on_deload: false })
@@ -922,7 +922,7 @@ describe('getTodayWorkout — week override merge (T153)', () => {
     const tmpl = seedTemplate(meso.id, 'Push A')
     const ex = seedExercise('Bench Press')
     const slot = seedSlot(tmpl.id, ex.id, 1, { sets: 3, reps: '8-12', weight: 80, rpe: 7 })
-    seedSchedule(meso.id, 2, tmpl.id) // Tuesday
+    seedSchedule(meso.id, 1, tmpl.id) // Tuesday
 
     // Override for week 2: heavier weight, lower reps
     seedOverride(slot.id, 2, { weight: 90, reps: '6-8' })
@@ -950,7 +950,7 @@ describe('getTodayWorkout — week override merge (T153)', () => {
     const tmpl = seedTemplate(meso.id, 'Push A')
     const ex = seedExercise('Bench Press')
     const slot = seedSlot(tmpl.id, ex.id, 1, { sets: 3, reps: '8-12', weight: 80, rpe: 7 })
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     // Override exists for week 3, but we query week 2
     seedOverride(slot.id, 3, { weight: 100 })
@@ -976,7 +976,7 @@ describe('getTodayWorkout — week override merge (T153)', () => {
     const tmpl = seedTemplate(meso.id, 'Push A')
     const ex = seedExercise('Bench Press')
     const slot = seedSlot(tmpl.id, ex.id, 1, { sets: 4, reps: '6-8', weight: 100, rpe: 8.5 })
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     // Only override RPE for week 2
     seedOverride(slot.id, 2, { rpe: 9 })
@@ -1004,7 +1004,7 @@ describe('getTodayWorkout — week override merge (T153)', () => {
     const ex2 = seedExercise('OHP')
     const slot1 = seedSlot(tmpl.id, ex1.id, 1, { sets: 4, reps: '6', weight: 100 })
     const slot2 = seedSlot(tmpl.id, ex2.id, 2, { sets: 3, reps: '8-10', weight: 50 })
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     seedOverride(slot1.id, 2, { weight: 110 })
     seedOverride(slot2.id, 2, { sets: 4, reps: '6-8' })
@@ -1031,7 +1031,7 @@ describe('getTodayWorkout — week override merge (T153)', () => {
     const tmpl = seedTemplate(meso.id, 'Push A')
     const ex = seedExercise('Bench Press')
     const slot = seedSlot(tmpl.id, ex.id, 1, { sets: 3, reps: '10', weight: 60 })
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     seedOverride(slot.id, 1, { weight: 65 })
 
@@ -1068,7 +1068,7 @@ describe('getTodayWorkout — week override merge (T153)', () => {
     })
     // Set section_id on the slot
     testDb.run(sql`UPDATE exercise_slots SET section_id = ${sec.id} WHERE id = ${slot.id}`)
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     // Override for week 2
     seedOverride(slot.id, 2, { weight: 150, rpe: 9.5 })
