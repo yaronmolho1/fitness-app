@@ -49,7 +49,7 @@ See ADR-001 (SQLite decision) and ADR-004 (hybrid API decision).
 
 ## Data Model
 
-Thirteen tables split into three layers. See `lib/db/schema.ts` for column definitions and `lib/db/relations.ts` for Drizzle v2 `defineRelations` config. See ADR-002 (mesocycle-scoped templates) and ADR-003 (deload as separate schedule) for the structural decisions behind this schema.
+Fourteen tables split into three layers. See `lib/db/schema.ts` for column definitions and `lib/db/relations.ts` for Drizzle v2 `defineRelations` config. See ADR-002 (mesocycle-scoped templates) and ADR-003 (deload as separate schedule) for the structural decisions behind this schema.
 
 ```mermaid
 erDiagram
@@ -62,6 +62,8 @@ erDiagram
     exercises ||--o{ exercise_slots : "referenced by"
     exercise_slots ||--o{ slot_week_overrides : "per-week targets"
     weekly_schedule }o--|| workout_templates : "assigns template to day"
+    mesocycles ||--o{ schedule_week_overrides : "per-week schedule overrides"
+    schedule_week_overrides }o--o| workout_templates : "overrides template assignment"
 
     logged_workouts ||--o{ logged_exercises : "contains"
     logged_exercises ||--o{ logged_sets : "contains"
@@ -86,6 +88,7 @@ erDiagram
 | `mesocycles` | Training phases: N work weeks + optional deload week; status lifecycle (planned → active → completed) |
 | `weekly_schedule` | Day-to-template assignment grid; separate rows for normal vs deload week variants |
 | `slot_week_overrides` | Per-week overrides for exercise slot targets (sets/reps/weight/RPE); enables week-by-week periodization within a mesocycle |
+| `schedule_week_overrides` | Per-week schedule overrides for moving/removing workouts on specific weeks; links source+target via `override_group`; null `template_id` = rest/removed |
 | `routine_items` | Daily habit items with flexible scope: global, per-mesocycle, date-range, or skip-on-deload |
 
 ### Logging Layer (immutable after save)
