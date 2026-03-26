@@ -472,9 +472,9 @@ describe('saveRunningWorkoutCore', () => {
 
   it('stores interval_data as JSON array in template_snapshot for interval run', async () => {
     const intervalData = [
-      { rep_number: 1, interval_pace: '4:55/km', interval_avg_hr: 170, interval_notes: null },
-      { rep_number: 2, interval_pace: '4:50/km', interval_avg_hr: 175, interval_notes: 'legs heavy' },
-      { rep_number: 3, interval_pace: null, interval_avg_hr: null, interval_notes: null },
+      { rep_number: 1, interval_pace: '4:55/km', interval_avg_hr: 170, interval_notes: null, interval_elevation_gain: null },
+      { rep_number: 2, interval_pace: '4:50/km', interval_avg_hr: 175, interval_notes: 'legs heavy', interval_elevation_gain: null },
+      { rep_number: 3, interval_pace: null, interval_avg_hr: null, interval_notes: null, interval_elevation_gain: null },
     ]
     const result = await saveRunningWorkoutCore(
       db,
@@ -513,7 +513,7 @@ describe('saveRunningWorkoutCore', () => {
 
   it('ignores intervalData input for non-interval run types', async () => {
     const intervalData = [
-      { rep_number: 1, interval_pace: '5:00/km', interval_avg_hr: 150, interval_notes: null },
+      { rep_number: 1, interval_pace: '5:00/km', interval_avg_hr: 150, interval_notes: null, interval_elevation_gain: null },
     ]
     const result = await saveRunningWorkoutCore(
       db,
@@ -528,7 +528,7 @@ describe('saveRunningWorkoutCore', () => {
 
   it('validates interval_avg_hr must be positive integer when provided', async () => {
     const intervalData = [
-      { rep_number: 1, interval_pace: null, interval_avg_hr: 0, interval_notes: null },
+      { rep_number: 1, interval_pace: null, interval_avg_hr: 0, interval_notes: null, interval_elevation_gain: null },
     ]
     const result = await saveRunningWorkoutCore(
       db,
@@ -540,7 +540,7 @@ describe('saveRunningWorkoutCore', () => {
 
   it('validates interval_avg_hr rejects negative values', async () => {
     const intervalData = [
-      { rep_number: 1, interval_pace: null, interval_avg_hr: -5, interval_notes: null },
+      { rep_number: 1, interval_pace: null, interval_avg_hr: -5, interval_notes: null, interval_elevation_gain: null },
     ]
     const result = await saveRunningWorkoutCore(
       db,
@@ -552,7 +552,7 @@ describe('saveRunningWorkoutCore', () => {
 
   it('validates interval_avg_hr rejects non-integer values', async () => {
     const intervalData = [
-      { rep_number: 1, interval_pace: null, interval_avg_hr: 170.5, interval_notes: null },
+      { rep_number: 1, interval_pace: null, interval_avg_hr: 170.5, interval_notes: null, interval_elevation_gain: null },
     ]
     const result = await saveRunningWorkoutCore(
       db,
@@ -564,7 +564,7 @@ describe('saveRunningWorkoutCore', () => {
 
   it('allows null interval_avg_hr in interval data', async () => {
     const intervalData = [
-      { rep_number: 1, interval_pace: '4:55/km', interval_avg_hr: null, interval_notes: null },
+      { rep_number: 1, interval_pace: '4:55/km', interval_avg_hr: null, interval_notes: null, interval_elevation_gain: null },
     ]
     const result = await saveRunningWorkoutCore(
       db,
@@ -575,8 +575,8 @@ describe('saveRunningWorkoutCore', () => {
 
   it('saves successfully with all interval fields blank', async () => {
     const intervalData = [
-      { rep_number: 1, interval_pace: null, interval_avg_hr: null, interval_notes: null },
-      { rep_number: 2, interval_pace: null, interval_avg_hr: null, interval_notes: null },
+      { rep_number: 1, interval_pace: null, interval_avg_hr: null, interval_notes: null, interval_elevation_gain: null },
+      { rep_number: 2, interval_pace: null, interval_avg_hr: null, interval_notes: null, interval_elevation_gain: null },
     ]
     const result = await saveRunningWorkoutCore(
       db,
@@ -591,7 +591,7 @@ describe('saveRunningWorkoutCore', () => {
 
   it('stores interval_pace as-is (free text)', async () => {
     const intervalData = [
-      { rep_number: 1, interval_pace: 'about 5 min flat', interval_avg_hr: null, interval_notes: null },
+      { rep_number: 1, interval_pace: 'about 5 min flat', interval_avg_hr: null, interval_notes: null, interval_elevation_gain: null },
     ]
     const result = await saveRunningWorkoutCore(
       db,

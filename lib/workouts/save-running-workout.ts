@@ -8,6 +8,7 @@ export type IntervalRepData = {
   interval_pace: string | null
   interval_avg_hr: number | null
   interval_notes: string | null
+  interval_elevation_gain: number | null
 }
 
 export type SaveRunningWorkoutInput = {
@@ -18,6 +19,7 @@ export type SaveRunningWorkoutInput = {
   actualAvgHr: number | null
   rating: number | null
   notes: string | null
+  actualElevationGain?: number | null
   intervalData?: IntervalRepData[] | null
 }
 
@@ -51,11 +53,22 @@ function validateInput(input: SaveRunningWorkoutInput): string | null {
     }
   }
 
+  if (input.actualElevationGain !== null && input.actualElevationGain !== undefined) {
+    if (!Number.isInteger(input.actualElevationGain) || input.actualElevationGain < 0) {
+      return 'Elevation gain must be non-negative'
+    }
+  }
+
   if (input.intervalData) {
     for (const rep of input.intervalData) {
       if (rep.interval_avg_hr !== null && rep.interval_avg_hr !== undefined) {
         if (!Number.isInteger(rep.interval_avg_hr) || rep.interval_avg_hr <= 0) {
           return `Interval rep ${rep.rep_number}: HR must be a positive integer`
+        }
+      }
+      if (rep.interval_elevation_gain !== null && rep.interval_elevation_gain !== undefined) {
+        if (!Number.isInteger(rep.interval_elevation_gain) || rep.interval_elevation_gain < 0) {
+          return `Interval rep ${rep.rep_number}: elevation gain must be non-negative`
         }
       }
     }
@@ -110,10 +123,12 @@ export async function saveRunningWorkoutCore(
     coaching_cues: template.coaching_cues,
     target_distance: template.target_distance,
     target_duration: template.target_duration,
+    target_elevation_gain: template.target_elevation_gain ?? null,
     notes: template.notes,
     actual_distance: input.actualDistance,
     actual_avg_pace: input.actualAvgPace,
     actual_avg_hr: input.actualAvgHr,
+    actual_elevation_gain: input.actualElevationGain ?? null,
     interval_data: intervalData,
   }
 

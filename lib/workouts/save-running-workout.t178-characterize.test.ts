@@ -117,6 +117,7 @@ describe('T178 characterization: snapshot shape before elevation-gain', () => {
       'actual_avg_hr',
       'actual_avg_pace',
       'actual_distance',
+      'actual_elevation_gain',
       'coaching_cues',
       'hr_zone',
       'interval_count',
@@ -128,33 +129,35 @@ describe('T178 characterization: snapshot shape before elevation-gain', () => {
       'run_type',
       'target_distance',
       'target_duration',
+      'target_elevation_gain',
       'target_pace',
       'version',
     ])
   })
 
-  it('snapshot does NOT contain target_elevation_gain', async () => {
-    // Template 10 has target_elevation_gain=150 in DB, but snapshot omits it
+  it('snapshot contains target_elevation_gain from template', async () => {
+    // Template 10 has target_elevation_gain=150 in DB — now included in snapshot (T178)
     await saveRunningWorkoutCore(db, buildValidInput())
     const [workout] = db.select().from(schema.logged_workouts).all()
     const snapshot = workout.template_snapshot as Record<string, unknown>
 
-    expect(snapshot).not.toHaveProperty('target_elevation_gain')
+    expect(snapshot.target_elevation_gain).toBe(150)
   })
 
-  it('snapshot does NOT contain actual_elevation_gain', async () => {
+  it('snapshot contains actual_elevation_gain (null when not provided)', async () => {
     await saveRunningWorkoutCore(db, buildValidInput())
     const [workout] = db.select().from(schema.logged_workouts).all()
     const snapshot = workout.template_snapshot as Record<string, unknown>
 
-    expect(snapshot).not.toHaveProperty('actual_elevation_gain')
+    expect(snapshot).toHaveProperty('actual_elevation_gain')
+    expect(snapshot.actual_elevation_gain).toBeNull()
   })
 
   // --- IntervalRepData shape ---
 
-  it('interval_data items have exactly 4 keys (no elevation)', async () => {
+  it('interval_data items have exactly 5 keys (including elevation)', async () => {
     const intervalData: IntervalRepData[] = [
-      { rep_number: 1, interval_pace: '4:55/km', interval_avg_hr: 170, interval_notes: null },
+      { rep_number: 1, interval_pace: '4:55/km', interval_avg_hr: 170, interval_notes: null, interval_elevation_gain: null },
     ]
     await saveRunningWorkoutCore(
       db,
@@ -166,15 +169,16 @@ describe('T178 characterization: snapshot shape before elevation-gain', () => {
 
     expect(Object.keys(reps[0]).sort()).toEqual([
       'interval_avg_hr',
+      'interval_elevation_gain',
       'interval_notes',
       'interval_pace',
       'rep_number',
     ])
   })
 
-  it('interval_data items do NOT contain interval_elevation_gain', async () => {
+  it('interval_data items contain interval_elevation_gain (T178)', async () => {
     const intervalData: IntervalRepData[] = [
-      { rep_number: 1, interval_pace: null, interval_avg_hr: null, interval_notes: null },
+      { rep_number: 1, interval_pace: null, interval_avg_hr: null, interval_notes: null, interval_elevation_gain: null },
     ]
     await saveRunningWorkoutCore(
       db,
@@ -184,7 +188,8 @@ describe('T178 characterization: snapshot shape before elevation-gain', () => {
     const snapshot = workout.template_snapshot as Record<string, unknown>
     const reps = snapshot.interval_data as Array<Record<string, unknown>>
 
-    expect(reps[0]).not.toHaveProperty('interval_elevation_gain')
+    expect(reps[0]).toHaveProperty('interval_elevation_gain')
+    expect(reps[0].interval_elevation_gain).toBeNull()
   })
 
   // --- SaveRunningWorkoutInput shape ---
@@ -206,53 +211,53 @@ describe('T178 characterization: snapshot shape before elevation-gain', () => {
 
   // --- Validation boundaries (no elevation validation exists) ---
 
-  it('validation does not check for elevation-related fields', async () => {
-    // Pass an input with an extra property — validation should not reject it
-    // (JS objects allow extra props; validation only checks known fields)
-    const input = {
+  it('validation rejects negative elevation gain (T178)', async () => {
+    const input: SaveRunningWorkoutInput = {
       ...buildValidInput({ logDate: '2026-03-21' }),
-      actualElevationGain: -999, // invalid value, but no validation exists yet
-    } as SaveRunningWorkoutInput
+      actualElevationGain: -999,
+    }
     const result = await saveRunningWorkoutCore(db, input)
-    expect(result.success).toBe(true)
+    expect(result.success).toBe(false)
   })
 
   // --- Snapshot values from template with elevation in DB ---
 
-  it('template with target_elevation_gain=150 still produces snapshot without it', async () => {
+  it('template with target_elevation_gain=150 includes it in snapshot (T178)', async () => {
     // Template 10 seeded with target_elevation_gain=150
     await saveRunningWorkoutCore(db, buildValidInput())
     const [workout] = db.select().from(schema.logged_workouts).all()
     const snapshot = workout.template_snapshot as Record<string, unknown>
 
-    // Currently the snapshot code doesn't read target_elevation_gain
-    expect(snapshot).not.toHaveProperty('target_elevation_gain')
+    expect(snapshot.target_elevation_gain).toBe(150)
     // Verify other template fields are still captured
     expect(snapshot.target_distance).toBe(8.0)
     expect(snapshot.target_duration).toBe(45)
   })
 
-  it('template with null target_elevation_gain still produces snapshot without it', async () => {
+  it('template with null target_elevation_gain includes null in snapshot (T178)', async () => {
     // Template 11 has no target_elevation_gain set (null)
     await saveRunningWorkoutCore(db, buildValidInput({ templateId: 11 }))
     const [workout] = db.select().from(schema.logged_workouts).all()
     const snapshot = workout.template_snapshot as Record<string, unknown>
 
-    expect(snapshot).not.toHaveProperty('target_elevation_gain')
+    expect(snapshot).toHaveProperty('target_elevation_gain')
+    expect(snapshot.target_elevation_gain).toBeNull()
   })
 
   // --- IntervalRepData type surface (compile-time + runtime) ---
 
-  it('IntervalRepData has exactly rep_number, interval_pace, interval_avg_hr, interval_notes', () => {
+  it('IntervalRepData has exactly rep_number, interval_pace, interval_avg_hr, interval_notes, interval_elevation_gain', () => {
     // Runtime check: creating a valid IntervalRepData
     const rep: IntervalRepData = {
       rep_number: 1,
       interval_pace: '5:00/km',
       interval_avg_hr: 160,
       interval_notes: 'good',
+      interval_elevation_gain: null,
     }
     expect(Object.keys(rep).sort()).toEqual([
       'interval_avg_hr',
+      'interval_elevation_gain',
       'interval_notes',
       'interval_pace',
       'rep_number',

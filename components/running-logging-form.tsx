@@ -106,6 +106,7 @@ export function RunningLoggingForm({ data, onSaveSuccess }: { data: RunningWorko
         interval_pace: rep.pace === '' ? null : rep.pace,
         interval_avg_hr: rep.hr === '' ? null : parseInt(rep.hr, 10),
         interval_notes: rep.notes === '' ? null : rep.notes,
+        interval_elevation_gain: null,
       }))
     }
 
