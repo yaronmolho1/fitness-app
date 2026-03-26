@@ -1,4 +1,4 @@
-import { eq, and, asc, inArray, lte, gte } from 'drizzle-orm'
+import { eq, and, asc, inArray, lte, gte, isNull } from 'drizzle-orm'
 import { db } from '@/lib/db/index'
 import {
   mesocycles,
@@ -13,6 +13,7 @@ import {
   logged_exercises,
   logged_sets,
   slot_week_overrides,
+  template_week_overrides,
 } from '@/lib/db/schema'
 import { filterActiveRoutineItems } from '@/lib/routines/scope-filter'
 import { getWeeklyCompletionCounts, getStreaks } from '@/lib/routines/queries'
@@ -251,6 +252,26 @@ function applySlotsOverrides<T extends { id: number }>(
   overrideMap: Map<number, typeof slot_week_overrides.$inferSelect>
 ): T[] {
   return slots.map((slot) => mergeSlotWithOverride(slot, overrideMap.get(slot.id) ?? null))
+}
+
+// Fetch a template-level week override for running/MMA fields
+async function fetchTemplateWeekOverride(
+  templateId: number,
+  sectionId: number | null,
+  weekNumber: number
+): Promise<typeof template_week_overrides.$inferSelect | null> {
+  try {
+    const condition = and(
+      eq(template_week_overrides.template_id, templateId),
+      sectionId === null
+        ? isNull(template_week_overrides.section_id)
+        : eq(template_week_overrides.section_id, sectionId),
+      eq(template_week_overrides.week_number, weekNumber)
+    )
+    return await db.select().from(template_week_overrides).where(condition).get() ?? null
+  } catch {
+    return null
+  }
 }
 
 // Fetch active routines + logs for a given date
@@ -570,12 +591,28 @@ export async function getTodayWorkout(today: string): Promise<TodayResult[]> {
           mergedSectionSlots = applySlotsOverrides(sectionSlots, secOverrideMap) as SlotData[]
         }
 
+        // Apply section-level week overrides for running/MMA sections
+        const secOverride = (sec.modality === 'running' || sec.modality === 'mma')
+          ? await fetchTemplateWeekOverride(template.id, sec.id, weekNumber)
+          : null
+
         sections.push({
           ...sec,
+          ...(secOverride && {
+            target_pace: secOverride.pace ?? sec.target_pace,
+            interval_count: secOverride.interval_count ?? sec.interval_count,
+            interval_rest: secOverride.interval_rest ?? sec.interval_rest,
+            target_distance: secOverride.distance ?? sec.target_distance,
+            target_duration: secOverride.duration ?? sec.target_duration,
+            planned_duration: secOverride.planned_duration ?? sec.planned_duration,
+          }),
           slots: mergedSectionSlots,
         })
       }
     }
+
+    // Apply template-level week overrides (running/MMA progression fields)
+    const tplOverride = await fetchTemplateWeekOverride(template.id, null, weekNumber)
 
     const workoutResult: WorkoutResult = {
       type: 'workout',
@@ -587,14 +624,14 @@ export async function getTodayWorkout(today: string): Promise<TodayResult[]> {
         modality: template.modality,
         notes: template.notes,
         run_type: template.run_type,
-        target_pace: template.target_pace,
+        target_pace: tplOverride?.pace ?? template.target_pace,
         hr_zone: template.hr_zone,
-        interval_count: template.interval_count,
-        interval_rest: template.interval_rest,
+        interval_count: tplOverride?.interval_count ?? template.interval_count,
+        interval_rest: tplOverride?.interval_rest ?? template.interval_rest,
         coaching_cues: template.coaching_cues,
-        target_distance: template.target_distance,
-        target_duration: template.target_duration,
-        planned_duration: template.planned_duration,
+        target_distance: tplOverride?.distance ?? template.target_distance,
+        target_duration: tplOverride?.duration ?? template.target_duration,
+        planned_duration: tplOverride?.planned_duration ?? template.planned_duration,
       },
       slots: mergedSlots as SlotData[],
       period,

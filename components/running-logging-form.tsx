@@ -38,7 +38,8 @@ export function RunningLoggingForm({ data, onSaveSuccess }: { data: RunningWorko
   const config = template.run_type ? runTypeConfig[template.run_type] : null
   const isInterval = template.run_type === 'interval'
 
-  const intervalCount = isInterval && template.interval_count ? template.interval_count : 0
+  const plannedIntervalCount = isInterval && template.interval_count ? template.interval_count : 0
+  const [intervalCount, setIntervalCount] = useState(plannedIntervalCount)
 
   const [distance, setDistance] = useState('')
   const [pace, setPace] = useState('')
@@ -69,6 +70,17 @@ export function RunningLoggingForm({ data, onSaveSuccess }: { data: RunningWorko
     setIntervalReps((prev) =>
       prev.map((rep, i) => (i === index ? { ...rep, [field]: value } : rep))
     )
+  }
+
+  function addIntervalRep() {
+    setIntervalCount((prev) => prev + 1)
+    setIntervalReps((prev) => [...prev, { pace: '', hr: '', notes: '' }])
+  }
+
+  function removeIntervalRep() {
+    if (intervalCount <= 1) return
+    setIntervalCount((prev) => prev - 1)
+    setIntervalReps((prev) => prev.slice(0, -1))
   }
 
   function toggleNotes(index: number) {
@@ -307,9 +319,30 @@ export function RunningLoggingForm({ data, onSaveSuccess }: { data: RunningWorko
       {/* Interval reps — only for interval runs */}
       {isInterval && intervalCount > 0 && (
         <div data-testid="interval-section" className="rounded-xl border bg-card p-4 space-y-3">
-          <SectionHeading className="mt-0 mb-0 text-sm uppercase tracking-wider text-muted-foreground">
-            Intervals ({intervalCount})
-          </SectionHeading>
+          <div className="flex items-center justify-between">
+            <SectionHeading className="mt-0 mb-0 text-sm uppercase tracking-wider text-muted-foreground">
+              Intervals ({intervalCount})
+            </SectionHeading>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                aria-label="Remove interval"
+                disabled={intervalCount <= 1}
+                onClick={removeIntervalRep}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-input bg-background text-muted-foreground hover:border-primary hover:text-primary transition-colors disabled:opacity-30 disabled:pointer-events-none"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </button>
+              <button
+                type="button"
+                aria-label="Add interval"
+                onClick={addIntervalRep}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-input bg-background text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </button>
+            </div>
+          </div>
 
           <div className="space-y-3">
             {intervalReps.map((rep, index) => (
