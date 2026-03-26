@@ -55,7 +55,7 @@ function validateInput(input: SaveRunningWorkoutInput): string | null {
 
   if (input.actualElevationGain !== null && input.actualElevationGain !== undefined) {
     if (!Number.isInteger(input.actualElevationGain) || input.actualElevationGain < 0) {
-      return 'Elevation gain must be non-negative'
+      return 'Elevation gain must be a non-negative integer'
     }
   }
 
@@ -68,7 +68,7 @@ function validateInput(input: SaveRunningWorkoutInput): string | null {
       }
       if (rep.interval_elevation_gain !== null && rep.interval_elevation_gain !== undefined) {
         if (!Number.isInteger(rep.interval_elevation_gain) || rep.interval_elevation_gain < 0) {
-          return `Interval rep ${rep.rep_number}: elevation gain must be non-negative`
+          return `Interval rep ${rep.rep_number}: elevation gain must be a non-negative integer`
         }
       }
     }

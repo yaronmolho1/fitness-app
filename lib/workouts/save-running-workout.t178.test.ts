@@ -238,6 +238,29 @@ describe('T178: elevation gain in save + snapshot', () => {
       }
     })
 
+    it('rejects decimal actualElevationGain', async () => {
+      const result = await saveRunningWorkoutCore(db, buildValidInput({ actualElevationGain: 150.5 }))
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toMatch(/elevation gain/i)
+        expect(result.error).toMatch(/non-negative integer/i)
+      }
+    })
+
+    it('rejects decimal interval_elevation_gain', async () => {
+      const intervalData: IntervalRepData[] = [
+        { rep_number: 1, interval_pace: null, interval_avg_hr: null, interval_notes: null, interval_elevation_gain: 25.5 },
+      ]
+      const result = await saveRunningWorkoutCore(db, buildValidInput({ templateId: 11, intervalData }))
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toMatch(/elevation gain/i)
+        expect(result.error).toMatch(/non-negative integer/i)
+      }
+    })
+
     it('allows zero actualElevationGain', async () => {
       const result = await saveRunningWorkoutCore(db, buildValidInput({ actualElevationGain: 0 }))
       expect(result.success).toBe(true)
