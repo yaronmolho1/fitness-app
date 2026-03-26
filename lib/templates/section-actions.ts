@@ -498,7 +498,7 @@ const updateSectionSchema = z.object({
   hr_zone: z.number().int().min(1).max(5).nullable().optional(),
   target_distance: z.number().positive().nullable().optional(),
   target_duration: z.number().int().positive().nullable().optional(),
-  target_elevation_gain: z.number().int().min(0).nullable().optional(),
+  target_elevation_gain: z.number().int().min(0, 'Elevation gain must be non-negative').nullable().optional(),
   interval_count: z.number().int().positive().nullable().optional(),
   interval_rest: z.number().int().positive().nullable().optional(),
   coaching_cues: z.string().nullable().optional(),
