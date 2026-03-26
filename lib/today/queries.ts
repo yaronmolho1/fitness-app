@@ -1,4 +1,4 @@
-import { eq, and, asc, inArray } from 'drizzle-orm'
+import { eq, and, asc, inArray, lte, gte } from 'drizzle-orm'
 import { db } from '@/lib/db/index'
 import {
   mesocycles,
@@ -203,9 +203,10 @@ export function isDeloadWeek(
   return diffDays >= deloadStartDay
 }
 
-// Get day_of_week (0=Sunday, 6=Saturday) from a YYYY-MM-DD string
+// Get day_of_week using ISO convention (0=Monday, 6=Sunday) — matches schedule grid + calendar
 function getDayOfWeek(dateStr: string): number {
-  return new Date(dateStr + 'T00:00:00Z').getUTCDay()
+  const d = new Date(dateStr + 'T00:00:00Z')
+  return (d.getUTCDay() + 6) % 7
 }
 
 // Compute 1-based week number from mesocycle start
@@ -357,12 +358,29 @@ async function buildAlreadyLoggedResult(
 
 // Main lookup chain — returns array of sessions for the day
 export async function getTodayWorkout(today: string): Promise<TodayResult[]> {
-  // Step 1: find active mesocycle
-  const activeMeso = await db
+  // Step 1: find mesocycle covering this date (prefer active for overlaps)
+  let activeMeso = await db
     .select()
     .from(mesocycles)
-    .where(eq(mesocycles.status, 'active'))
+    .where(and(
+      eq(mesocycles.status, 'active'),
+      lte(mesocycles.start_date, today),
+      gte(mesocycles.end_date, today)
+    ))
     .get()
+
+  // Fallback: completed mesocycle covering this date (retroactive logging)
+  if (!activeMeso) {
+    activeMeso = await db
+      .select()
+      .from(mesocycles)
+      .where(and(
+        eq(mesocycles.status, 'completed'),
+        lte(mesocycles.start_date, today),
+        gte(mesocycles.end_date, today)
+      ))
+      .get()
+  }
 
   if (!activeMeso) {
     return [{ type: 'no_active_mesocycle', date: today }]

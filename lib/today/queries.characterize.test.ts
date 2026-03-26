@@ -362,7 +362,7 @@ describe('getTodayWorkout — already_logged exercises+sets (characterize)', () 
   it('already_logged includes logged exercises array', async () => {
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     const log = seedLoggedWorkout(tmpl.id, '2026-03-10', 'push-a')
     seedLoggedExercise(log.id, 'Bench Press', 1, { actual_rpe: 8 })
@@ -385,7 +385,7 @@ describe('getTodayWorkout — already_logged exercises+sets (characterize)', () 
   it('already_logged exercises are ordered by order field', async () => {
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     const log = seedLoggedWorkout(tmpl.id, '2026-03-10', 'push-a')
     seedLoggedExercise(log.id, 'OHP', 2)
@@ -405,7 +405,7 @@ describe('getTodayWorkout — already_logged exercises+sets (characterize)', () 
   it('already_logged exercises include nested sets', async () => {
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     const log = seedLoggedWorkout(tmpl.id, '2026-03-10', 'push-a')
     const ex = seedLoggedExercise(log.id, 'Bench Press', 1)
@@ -431,7 +431,7 @@ describe('getTodayWorkout — already_logged exercises+sets (characterize)', () 
   it('already_logged sets are ordered by set_number', async () => {
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     const log = seedLoggedWorkout(tmpl.id, '2026-03-10', 'push-a')
     const ex = seedLoggedExercise(log.id, 'Bench Press', 1)
@@ -452,7 +452,7 @@ describe('getTodayWorkout — already_logged exercises+sets (characterize)', () 
   it('already_logged with no exercises returns empty array', async () => {
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     seedLoggedWorkout(tmpl.id, '2026-03-10', 'push-a')
 
@@ -466,7 +466,7 @@ describe('getTodayWorkout — already_logged exercises+sets (characterize)', () 
   it('already_logged exercise with no sets returns empty sets array', async () => {
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     const log = seedLoggedWorkout(tmpl.id, '2026-03-10', 'push-a')
     seedLoggedExercise(log.id, 'Bench Press', 1)
@@ -481,7 +481,7 @@ describe('getTodayWorkout — already_logged exercises+sets (characterize)', () 
   it('already_logged sets with null reps/weight are preserved', async () => {
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     const log = seedLoggedWorkout(tmpl.id, '2026-03-10', 'push-a')
     const ex = seedLoggedExercise(log.id, 'Bench Press', 1)
@@ -512,7 +512,7 @@ describe('getTodayWorkout — running/mma template fields (characterize)', () =>
       hr_zone: 2,
       coaching_cues: 'Keep it easy',
     })
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     const results = await getTodayWorkout('2026-03-10')
     const result = results[0]
@@ -536,7 +536,7 @@ describe('getTodayWorkout — running/mma template fields (characterize)', () =>
       interval_count: 6,
       interval_rest: 90,
     })
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     const results = await getTodayWorkout('2026-03-10')
     const result = results[0]
@@ -552,7 +552,7 @@ describe('getTodayWorkout — running/mma template fields (characterize)', () =>
       modality: 'mma',
       planned_duration: 90,
     })
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     const results = await getTodayWorkout('2026-03-10')
     const result = results[0]
@@ -565,7 +565,7 @@ describe('getTodayWorkout — running/mma template fields (characterize)', () =>
   it('resistance template has null for all modality-specific fields', async () => {
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     const results = await getTodayWorkout('2026-03-10')
     const result = results[0]
@@ -583,7 +583,7 @@ describe('getTodayWorkout — running/mma template fields (characterize)', () =>
   it('template notes are included when present', async () => {
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
     const tmpl = seedTemplate(meso.id, 'Push A', { notes: 'Focus on mind-muscle connection' })
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     const results = await getTodayWorkout('2026-03-10')
     const result = results[0]
@@ -607,7 +607,7 @@ describe('getTodayWorkout — mesocycle info shape (characterize)', () => {
       has_deload: true,
     })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 2, tmpl.id, 'normal')
+    seedSchedule(meso.id, 1, tmpl.id, 'normal')
 
     const results = await getTodayWorkout('2026-03-10')
     const result = results[0]
@@ -625,7 +625,7 @@ describe('getTodayWorkout — mesocycle info shape (characterize)', () => {
       has_deload: true,
     })
     const tmpl = seedTemplate(meso.id, 'Push Deload')
-    seedSchedule(meso.id, 2, tmpl.id, 'deload')
+    seedSchedule(meso.id, 1, tmpl.id, 'deload')
 
     const results = await getTodayWorkout('2026-03-31')
     const result = results[0]
@@ -641,7 +641,7 @@ describe('getTodayWorkout — mesocycle info shape (characterize)', () => {
       end_date: '2026-03-28',
     })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     const results = await getTodayWorkout('2026-03-10')
     const result = results[0]
@@ -681,7 +681,7 @@ describe('getTodayWorkout — template-not-found fallback (characterize)', () =>
     testDb.run(sql`PRAGMA foreign_keys = OFF`)
     testDb.run(sql`
       INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-      VALUES (${meso.id}, 2, 9999, 'normal', 'morning')
+      VALUES (${meso.id}, 1, 9999, 'normal', 'morning')
     `)
     testDb.run(sql`PRAGMA foreign_keys = ON`)
 
@@ -694,7 +694,7 @@ describe('getTodayWorkout — template-not-found fallback (characterize)', () =>
 
     testDb.run(sql`
       INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-      VALUES (${meso.id}, 2, NULL, 'normal', 'morning')
+      VALUES (${meso.id}, 1, NULL, 'normal', 'morning')
     `)
 
     const results = await getTodayWorkout('2026-03-10')
@@ -707,10 +707,10 @@ describe('getTodayWorkout — day-of-week mapping (characterize)', () => {
     createTables()
   })
 
-  it('Sunday (day 0) is correctly identified', async () => {
+  it('Sunday (day 6) is correctly identified', async () => {
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
     const tmpl = seedTemplate(meso.id, 'Sunday Workout')
-    seedSchedule(meso.id, 0, tmpl.id)
+    seedSchedule(meso.id, 6, tmpl.id)
 
     const results = await getTodayWorkout('2026-03-08')
     const result = results[0]
@@ -720,10 +720,10 @@ describe('getTodayWorkout — day-of-week mapping (characterize)', () => {
     }
   })
 
-  it('Saturday (day 6) is correctly identified', async () => {
+  it('Saturday (day 5) is correctly identified', async () => {
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
     const tmpl = seedTemplate(meso.id, 'Saturday Workout')
-    seedSchedule(meso.id, 6, tmpl.id)
+    seedSchedule(meso.id, 5, tmpl.id)
 
     const results = await getTodayWorkout('2026-03-07')
     const result = results[0]
@@ -750,7 +750,7 @@ describe('getTodayWorkout — result type structure (characterize)', () => {
   it('workout result has expected keys including period and time_slot', async () => {
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     const results = await getTodayWorkout('2026-03-10')
     const result = results[0]
@@ -778,7 +778,7 @@ describe('getTodayWorkout — result type structure (characterize)', () => {
   it('already_logged result has expected keys including period and time_slot', async () => {
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
     seedLoggedWorkout(tmpl.id, '2026-03-10', 'push-a')
 
     const results = await getTodayWorkout('2026-03-10')

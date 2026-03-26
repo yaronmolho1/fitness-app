@@ -318,7 +318,7 @@ describe('getTodayWorkout — slot values are raw DB values (T153 baseline)', ()
     const tmpl = seedTemplate(meso.id, 'Push A')
     const ex = seedExercise('Bench Press')
     seedSlot(tmpl.id, ex.id, 1, { sets: 4, reps: '6-8', weight: 100, rpe: 8.5, is_main: true })
-    seedSchedule(meso.id, 2, tmpl.id) // Tuesday
+    seedSchedule(meso.id, 1, tmpl.id) // Tuesday
 
     const results = await getTodayWorkout('2026-03-10') // Week 2 Tuesday
     const result = results[0]
@@ -345,7 +345,7 @@ describe('getTodayWorkout — slot values are raw DB values (T153 baseline)', ()
     const tmpl = seedTemplate(meso.id, 'Push A')
     const ex = seedExercise('Bench Press')
     seedSlot(tmpl.id, ex.id, 1, { sets: 3, reps: '10', weight: 80, rpe: 7 })
-    seedSchedule(meso.id, 2, tmpl.id) // Tuesday
+    seedSchedule(meso.id, 1, tmpl.id) // Tuesday
 
     // Week 1 — 2026-03-03 (Tuesday)
     const week1 = await getTodayWorkout('2026-03-03')
@@ -372,7 +372,7 @@ describe('getTodayWorkout — slot values are raw DB values (T153 baseline)', ()
     const tmpl = seedTemplate(meso.id, 'Push A')
     const ex = seedExercise('Bench Press')
     const slot = seedSlot(tmpl.id, ex.id, 1, { sets: 3, reps: '10' })
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     const results = await getTodayWorkout('2026-03-10')
     if (results[0].type === 'workout') {
@@ -386,7 +386,7 @@ describe('getTodayWorkout — slot values are raw DB values (T153 baseline)', ()
     const ex = seedExercise('Bench Press')
     // No weight, rpe, rest_seconds, guidelines
     seedSlot(tmpl.id, ex.id, 1, { sets: 3, reps: '10' })
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     const results = await getTodayWorkout('2026-03-10')
     if (results[0].type === 'workout') {
@@ -409,7 +409,7 @@ describe('getTodayWorkout — slot values are raw DB values (T153 baseline)', ()
     seedSlot(tmpl.id, ex1.id, 1, { sets: 4, reps: '6', weight: 100, rpe: 9, is_main: true })
     seedSlot(tmpl.id, ex2.id, 2, { sets: 3, reps: '8-10', weight: 50, rpe: 8 })
     seedSlot(tmpl.id, ex3.id, 3, { sets: 3, reps: '12-15', weight: 10 })
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     const results = await getTodayWorkout('2026-03-10')
     if (results[0].type !== 'workout') return
@@ -493,7 +493,7 @@ describe('getTodayWorkout — week_type in mesocycle info (T153 baseline)', () =
       has_deload: true,
     })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 2, tmpl.id, 'normal')
+    seedSchedule(meso.id, 1, tmpl.id, 'normal')
 
     const results = await getTodayWorkout('2026-03-10')
     if (results[0].type === 'workout') {
@@ -510,7 +510,7 @@ describe('getTodayWorkout — week_type in mesocycle info (T153 baseline)', () =
       has_deload: true,
     })
     const tmpl = seedTemplate(meso.id, 'Push Deload')
-    seedSchedule(meso.id, 2, tmpl.id, 'deload')
+    seedSchedule(meso.id, 1, tmpl.id, 'deload')
 
     const results = await getTodayWorkout('2026-03-31')
     if (results[0].type === 'workout') {
@@ -524,7 +524,7 @@ describe('getTodayWorkout — week_type in mesocycle info (T153 baseline)', () =
       start_date: '2026-03-01',
     })
     const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     const results = await getTodayWorkout('2026-03-10')
     if (results[0].type === 'workout') {
@@ -575,7 +575,7 @@ describe('getTodayWorkout — mixed template section slots are raw DB values (T1
       rpe: 9,
       is_main: true,
     })
-    seedSchedule(meso.id, 2, tmpl.id)
+    seedSchedule(meso.id, 1, tmpl.id)
 
     const results = await getTodayWorkout('2026-03-10')
     if (results[0].type !== 'workout') return
