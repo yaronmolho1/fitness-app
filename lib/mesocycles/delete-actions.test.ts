@@ -59,6 +59,7 @@ const CREATE_WORKOUT_TEMPLATES = sql`
     coaching_cues TEXT,
     target_distance REAL,
     target_duration INTEGER,
+    target_elevation_gain INTEGER,
     planned_duration INTEGER,
     created_at INTEGER
   )
@@ -79,6 +80,7 @@ const CREATE_TEMPLATE_SECTIONS = sql`
     coaching_cues TEXT,
     target_distance REAL,
     target_duration INTEGER,
+    target_elevation_gain INTEGER,
     planned_duration INTEGER,
     created_at INTEGER
   )

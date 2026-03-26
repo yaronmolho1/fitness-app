@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
+import { getTableColumns } from 'drizzle-orm'
 import * as schema from './schema'
 import * as relationsModule from './relations'
 import type { AppDb } from '.'
@@ -28,7 +29,7 @@ const CREATE_SQL = `
     modality TEXT NOT NULL CHECK(modality IN ('resistance', 'running', 'mma', 'mixed')),
     notes TEXT, run_type TEXT, target_pace TEXT, hr_zone INTEGER,
     interval_count INTEGER, interval_rest INTEGER, coaching_cues TEXT,
-    target_distance REAL, target_duration INTEGER,
+    target_distance REAL, target_duration INTEGER, target_elevation_gain INTEGER,
     planned_duration INTEGER, created_at INTEGER
   );
   CREATE TABLE template_sections (
@@ -45,6 +46,7 @@ const CREATE_SQL = `
     coaching_cues TEXT,
     target_distance REAL,
     target_duration INTEGER,
+    target_elevation_gain INTEGER,
     planned_duration INTEGER,
     created_at INTEGER
   );
@@ -648,6 +650,36 @@ describe('T126: distance/duration + superset schema', () => {
 
     it('exercise_slots has group_rest_seconds column', () => {
       expect(schema.exercise_slots.group_rest_seconds).toBeDefined()
+    })
+  })
+
+  describe('Drizzle schema exports for T177', () => {
+    it('workout_templates has target_elevation_gain integer column', () => {
+      const cols = getTableColumns(schema.workout_templates)
+      expect(cols).toHaveProperty('target_elevation_gain')
+      expect(cols.target_elevation_gain.columnType).toBe('SQLiteInteger')
+      expect(cols.target_elevation_gain.notNull).toBe(false)
+    })
+
+    it('template_sections has target_elevation_gain integer column', () => {
+      const cols = getTableColumns(schema.template_sections)
+      expect(cols).toHaveProperty('target_elevation_gain')
+      expect(cols.target_elevation_gain.columnType).toBe('SQLiteInteger')
+      expect(cols.target_elevation_gain.notNull).toBe(false)
+    })
+
+    it('slot_week_overrides has elevation_gain integer column', () => {
+      const cols = getTableColumns(schema.slot_week_overrides)
+      expect(cols).toHaveProperty('elevation_gain')
+      expect(cols.elevation_gain.columnType).toBe('SQLiteInteger')
+      expect(cols.elevation_gain.notNull).toBe(false)
+    })
+
+    it('template_week_overrides has elevation_gain integer column', () => {
+      const cols = getTableColumns(schema.template_week_overrides)
+      expect(cols).toHaveProperty('elevation_gain')
+      expect(cols.elevation_gain.columnType).toBe('SQLiteInteger')
+      expect(cols.elevation_gain.notNull).toBe(false)
     })
   })
 })

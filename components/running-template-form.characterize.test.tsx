@@ -20,7 +20,7 @@ const mockSuccessResult = {
     modality: 'running' as const, notes: null, run_type: 'tempo' as const,
     target_pace: null, hr_zone: null, interval_count: null, interval_rest: null,
     coaching_cues: null, target_distance: null, target_duration: null,
-    planned_duration: null, created_at: null,
+    target_elevation_gain: null, planned_duration: null, created_at: null,
   },
 }
 

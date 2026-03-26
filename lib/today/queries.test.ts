@@ -71,7 +71,7 @@ function createTables() {
       interval_count INTEGER,
       interval_rest INTEGER,
       coaching_cues TEXT,
-    target_distance REAL, target_duration INTEGER,
+    target_distance REAL, target_duration INTEGER, target_elevation_gain INTEGER,
       planned_duration INTEGER,
       created_at INTEGER
     )
@@ -89,7 +89,7 @@ function createTables() {
       interval_count INTEGER,
       interval_rest INTEGER,
       coaching_cues TEXT,
-      target_distance REAL, target_duration INTEGER,
+      target_distance REAL, target_duration INTEGER, target_elevation_gain INTEGER,
       planned_duration INTEGER,
       created_at INTEGER
     )
@@ -126,7 +126,8 @@ function createTables() {
       planned_duration INTEGER,
       interval_count INTEGER,
       interval_rest INTEGER,
-      is_deload INTEGER NOT NULL DEFAULT 0,
+      elevation_gain INTEGER,
+    is_deload INTEGER NOT NULL DEFAULT 0,
       created_at INTEGER
     )
   `)

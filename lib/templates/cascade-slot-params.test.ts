@@ -175,7 +175,7 @@ function resetTables() {
       interval_count INTEGER,
       interval_rest INTEGER,
       coaching_cues TEXT,
-    target_distance REAL, target_duration INTEGER,
+    target_distance REAL, target_duration INTEGER, target_elevation_gain INTEGER,
       planned_duration INTEGER,
       created_at INTEGER
     )

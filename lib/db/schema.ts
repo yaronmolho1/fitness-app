@@ -60,6 +60,7 @@ export const workout_templates = sqliteTable('workout_templates', {
   coaching_cues: text('coaching_cues'),
   target_distance: real('target_distance'), // km, nullable
   target_duration: integer('target_duration'), // minutes, nullable
+  target_elevation_gain: integer('target_elevation_gain'), // meters, nullable
   // MMA/BJJ-specific (null for non-mma templates)
   planned_duration: integer('planned_duration'),
   created_at: integer('created_at', { mode: 'timestamp' }),
@@ -86,6 +87,7 @@ export const template_sections = sqliteTable('template_sections', {
   coaching_cues: text('coaching_cues'),
   target_distance: real('target_distance'), // km, nullable
   target_duration: integer('target_duration'), // minutes, nullable
+  target_elevation_gain: integer('target_elevation_gain'), // meters, nullable
   // MMA-specific
   planned_duration: integer('planned_duration'),
   created_at: integer('created_at', { mode: 'timestamp' }),
@@ -131,6 +133,7 @@ export const slot_week_overrides = sqliteTable(
     distance: real('distance'),
     duration: integer('duration'),
     pace: text('pace'),
+    elevation_gain: integer('elevation_gain'), // meters, nullable
     is_deload: integer('is_deload').notNull().default(0),
     created_at: integer('created_at', { mode: 'timestamp' }),
   },
@@ -158,6 +161,7 @@ export const template_week_overrides = sqliteTable(
     planned_duration: integer('planned_duration'),
     interval_count: integer('interval_count'),
     interval_rest: integer('interval_rest'),
+    elevation_gain: integer('elevation_gain'), // meters, nullable
     is_deload: integer('is_deload').notNull().default(0),
     created_at: integer('created_at', { mode: 'timestamp' }),
   },
