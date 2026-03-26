@@ -298,3 +298,60 @@ T171 → T172 → T174 → T175 → T176 (API param → page integration → ban
 | Medium | 1 | 2-4h | ~3h |
 | Large | 0 | — | — |
 | **Total** | **6** (T171-T176) | | **~9h** |
+
+---
+
+## Wave EG1: Elevation Gain — Schema + Backend
+
+> Adds elevation_gain across all running-related tables, snapshot, and per-interval data. Follows distance/duration pattern exactly.
+
+### Sub-wave EG1.1 — Schema Migration
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T177 | Elevation gain schema columns: add `target_elevation_gain` (integer, nullable) to `workout_templates` and `template_sections`. Add `elevation_gain` (integer, nullable) to `slot_week_overrides` and `template_week_overrides`. Generate + apply migration. | small | Running Templates | — | elevation-gain |
+
+### Sub-wave EG1.2 — Backend Logic
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T178 | Elevation gain in save + snapshot: add `interval_elevation_gain` (number \| null) to `IntervalRepData` type. Add `actualElevationGain` (number \| null) to `SaveRunningWorkoutInput`. Include `target_elevation_gain` from template and `actual_elevation_gain` from input in `template_snapshot` JSON. Include `interval_elevation_gain` per rep in interval data. Validate non-negative integer when provided. | small | Workout Logging | T177 | elevation-gain |
+
+## Wave EG2: Elevation Gain — UI
+
+> Template form + logging form + display. All depend on schema + backend.
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T179 | Running template form elevation gain: add "Target Elevation Gain (m)" NumericInput (integer, min 0) to running-template-form.tsx after target_duration. Initialize from template data. Include in create/update SA calls. Wire cascade for inline edits. Also add to mixed template section form for running sections. | small | Running Templates | T177 | elevation-gain |
+| T180 | Running logging form elevation gain: add "Elevation Gain (m)" NumericInput (integer, min 0) to running-logging-form.tsx after HR field. For interval runs, add per-rep "Elevation (m)" input in interval section. Pass `actualElevationGain` + per-rep `interval_elevation_gain` to save SA. Show `target_elevation_gain` in planned reference section when available. | small | Workout Logging | T178 | elevation-gain |
+| T181 | Elevation gain display in today + calendar: show target elevation gain (e.g. "200m ascent") in today's planned workout info and day detail panel running workout cards when `target_elevation_gain` is set. Follow distance display pattern. | small | Running Templates | T177 | elevation-gain |
+
+## Wave EG Dependency Graph
+
+```
+T177 (schema) → T178 (save + snapshot)
+             → T179 (template form)
+             → T181 (today + calendar display)
+T178 ────────→ T180 (logging form)
+```
+
+## Wave EG Critical Path
+
+T177 → T178 → T180 (schema → save logic → logging form, estimated: S + S + S = ~4-6h)
+
+## Wave EG Gap Analysis
+
+No gaps found. Spec follows established patterns from `run-distance-duration` (AC1-4 mirror distance/duration columns, AC5-14 mirror form + snapshot patterns). All referenced tables and components exist.
+
+## Wave EG Risk Areas
+
+- **T178 (snapshot)**: Snapshot JSON gets one more field. No `version` bump needed since field is additive and nullable. Existing logged workouts unaffected.
+- **T180 (logging form)**: Interval rep rows already have 3 inputs (pace, HR, notes). Adding elevation makes 4 — may need layout adjustment on narrow mobile screens.
+
+## Wave EG Scope Summary
+
+| Scope | Count | Est. Hours Each | Total |
+|-------|-------|-----------------|-------|
+| Small | 5 | 1-2h | ~8h |
+| **Total** | **5** (T177-T181) | | **~8h** |
