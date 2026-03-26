@@ -246,6 +246,35 @@ export const routine_items = sqliteTable('routine_items', {
   created_at: integer('created_at', { mode: 'timestamp' }),
 })
 
+export const schedule_week_overrides = sqliteTable(
+  'schedule_week_overrides',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    mesocycle_id: integer('mesocycle_id')
+      .notNull()
+      .references(() => mesocycles.id, { onDelete: 'cascade' }),
+    week_number: integer('week_number').notNull(),
+    day_of_week: integer('day_of_week').notNull(), // 0-6
+    period: text('period', {
+      enum: ['morning', 'afternoon', 'evening'],
+    }).notNull(),
+    template_id: integer('template_id').references(
+      () => workout_templates.id
+    ), // nullable — null = rest/removed
+    time_slot: text('time_slot'), // nullable, "HH:MM" format
+    override_group: text('override_group').notNull(),
+    created_at: integer('created_at', { mode: 'timestamp' }),
+  },
+  (t) => ({
+    uniq: uniqueIndex('schedule_week_overrides_meso_week_day_period_idx').on(
+      t.mesocycle_id,
+      t.week_number,
+      t.day_of_week,
+      t.period
+    ),
+  })
+)
+
 // ============================================================================
 // PROFILE LAYER (1 table) — single-row athlete profile
 // ============================================================================
@@ -304,39 +333,6 @@ export const logged_sets = sqliteTable('logged_sets', {
   actual_weight: real('actual_weight'),
   created_at: integer('created_at', { mode: 'timestamp' }),
 })
-
-export const schedule_week_overrides = sqliteTable(
-  'schedule_week_overrides',
-  {
-    id: integer('id').primaryKey({ autoIncrement: true }),
-    mesocycle_id: integer('mesocycle_id')
-      .notNull()
-      .references(() => mesocycles.id, { onDelete: 'cascade' }),
-    week_number: integer('week_number').notNull(),
-    day_of_week: integer('day_of_week').notNull(), // 0-6
-    period: text('period', {
-      enum: ['morning', 'afternoon', 'evening'],
-    }).notNull(),
-    template_id: integer('template_id').references(
-      () => workout_templates.id
-    ), // nullable — null = rest/removed
-    time_slot: text('time_slot'), // nullable, "HH:MM" format
-    override_group: text('override_group').notNull(),
-    created_at: integer('created_at', { mode: 'timestamp' }),
-  },
-  (t) => ({
-    uniq: uniqueIndex('schedule_week_overrides_meso_week_day_period_idx').on(
-      t.mesocycle_id,
-      t.week_number,
-      t.day_of_week,
-      t.period
-    ),
-  })
-)
-
-// ============================================================================
-// LOGGING LAYER (immutable)
-// ============================================================================
 
 export const routine_logs = sqliteTable(
   'routine_logs',
