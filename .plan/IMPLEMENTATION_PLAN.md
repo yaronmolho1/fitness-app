@@ -355,3 +355,90 @@ No gaps found. Spec follows established patterns from `run-distance-duration` (A
 |-------|-------|-----------------|-------|
 | Small | 5 | 1-2h | ~8h |
 | **Total** | **5** (T177-T181) | | **~8h** |
+
+---
+
+## Wave SW1: Schedule Week Overrides — Schema
+
+> New table for per-week schedule overrides. Foundation for the move-workout feature.
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T182 | `schedule_week_overrides` table: schema in lib/db/schema.ts. Columns: id (PK), mesocycle_id (FK → mesocycles, CASCADE), week_number (integer), day_of_week (integer 0-6), period (text enum morning/afternoon/evening), template_id (FK → workout_templates, nullable — null=rest/removed), time_slot (text, nullable), override_group (text, not null — links source+target of a move), created_at (timestamp). Unique on (mesocycle_id, week_number, day_of_week, period). Add defineRelations. Generate + apply migration. | small | Feature | — | schedule-week-overrides |
+
+## Wave SW2: Schedule Week Overrides — Query + Mutation Layer
+
+> Depends on SW1. Three parallel tracks.
+
+### Track A: Effective Schedule Resolution
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T183 | Effective schedule query: `getEffectiveScheduleForDay(db, mesocycleId, weekNumber, dayOfWeek, weekType)` in `lib/schedule/override-queries.ts`. Per-slot resolution: check `schedule_week_overrides` for (mesocycle, week, day, period); if override exists use it (null template_id = rest), otherwise fall back to base `weekly_schedule`. Returns array of `EffectiveScheduleEntry` with `template_id`, `period`, `time_slot`, `is_override`, `override_group`. | medium | Feature | T182 | schedule-week-overrides |
+
+### Track B: Move Action
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T186 | Move workout server action: `moveWorkout(input)` in `lib/schedule/override-actions.ts`. Validates: mesocycle not completed, source slot has a template, target slot period available, no logged workout for this template on affected dates. Scope: "this_week" creates 2 override rows (source=null, target=template_id); "remaining_weeks" creates pairs for weeks N through total_weeks, skipping weeks where the template is already logged. Groups rows with `override_group`. Single transaction. Revalidates paths. | medium | Feature | T182, T183 | schedule-week-overrides |
+
+### Track C: Undo Actions
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T187 | Undo schedule move actions: `undoScheduleMove(overrideGroup, mesocycleId)` deletes all rows matching override_group + mesocycle. `resetWeekSchedule(mesocycleId, weekNumber)` deletes all overrides for that week. Both verify mesocycle not completed. Revalidate paths. | small | Feature | T182 | schedule-week-overrides |
+
+## Wave SW3: Schedule Week Overrides — Integration
+
+> Wire effective schedule resolution into existing query paths.
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T184 | Wire effective schedule into today + day detail: Replace direct `weekly_schedule` query in `getTodayWorkout()` (lib/today/queries.ts, lines 411-425) and `getDayDetail()` (lib/calendar/day-detail.ts) with `getEffectiveScheduleForDay()`. Move `weekNumber` calculation earlier in `getTodayWorkout()`. | small | Feature | T183 | schedule-week-overrides |
+| T185 | Wire effective schedule into calendar projection: In `getCalendarProjection()` (lib/calendar/queries.ts), batch-load all `schedule_week_overrides` for overlapping mesocycles. Build `overrideLookup` (Map by `mesocycle_id-week_number-day_of_week`). In per-date loop, resolve per-slot overrides before falling back to `scheduleLookup`. | medium | Feature | T183 | schedule-week-overrides |
+
+## Wave SW4: Schedule Week Overrides — UI
+
+> Depends on SW2 + SW3. Modal + day detail panel integration.
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T188 | Move workout modal: `components/move-workout-modal.tsx`. Dialog with: 7-button day picker (Mon-Sun, source day disabled), period selector (morning/afternoon/evening, occupied periods shown with indicator), time_slot text input (pre-filled from source), scope radio ("This week only" / "This week + remaining"). Shows warning when target period has existing workout. Calls `moveWorkout()` on confirm. | medium | Feature | T186 | schedule-week-overrides |
+| T189 | Day detail panel integration: Add "Move Workout" button on projected workout cards for active/planned mesocycles. Show "Overridden" badge on entries resolved from overrides. Add "Undo Move" action on overridden entries (calls `undoScheduleMove`). Wire `MoveWorkoutModal`. Pass `is_override` + `override_group` through from query layer. | medium | Feature | T188, T184, T185, T187 | schedule-week-overrides |
+
+## Wave SW Dependency Graph
+
+```
+T182 (schema)
+├── T183 (effective schedule query)
+│   ├── T184 (wire into today + day detail)
+│   ├── T185 (wire into calendar projection)
+│   └── T186 (move action) → T188 (modal) ──┐
+└── T187 (undo actions) ────────────────────┼── T189 (day detail integration)
+                                             │
+T184 ───────────────────────────────────────┘
+T185 ───────────────────────────────────────┘
+```
+
+## Wave SW Critical Path
+
+T182 → T183 → T186 → T188 → T189 (schema → query → move action → modal → integration)
+
+## Wave SW Gap Analysis
+
+- **Retroactive logging overlap**: RL wave's T173 adds "Log Workout" button to DayDetailPanel. T189 adds "Move Workout" alongside it. If RL is not yet implemented, T189 can still proceed — the move button is independent. When both land, they'll share the projected workout card action area.
+- **Clone guard**: Clone mesocycle (T040) does not copy `schedule_week_overrides` automatically since the table didn't exist. No code change needed — just a test assertion in T182 or T189.
+
+## Wave SW Risk Areas
+
+- **T185 (calendar projection)**: Batch override loading adds complexity to already-complex `getCalendarProjection()`. Must ensure no performance regression for the common case (no overrides). Mitigated: empty override lookup is O(1) per date.
+- **T186 (move action)**: "Remaining weeks" scope with logged workout checks requires date arithmetic per week to determine if a log exists. Must calculate actual dates from mesocycle start + week_number + day_of_week.
+- **T189 (day detail integration)**: DayDetailPanel needs `is_override` and `override_group` from the query layer. This means the query response types need extending, which touches multiple files.
+
+## Wave SW Scope Summary
+
+| Scope | Count | Est. Hours Each | Total |
+|-------|-------|-----------------|-------|
+| Small | 3 | 1-2h | ~5h |
+| Medium | 5 | 3-5h | ~20h |
+| **Total** | **8** (T182-T189) | | **~25h** |
