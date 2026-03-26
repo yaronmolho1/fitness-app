@@ -258,6 +258,7 @@ describe('MixedTemplateForm — characterization', () => {
           coaching_cues: undefined,
           target_distance: null,
           target_duration: null,
+          target_elevation_gain: null,
         },
       ],
     })

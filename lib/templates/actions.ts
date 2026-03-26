@@ -152,6 +152,13 @@ const createRunningTemplateSchema = z
       .nullable()
       .optional()
       .transform((v) => v ?? null),
+    target_elevation_gain: z
+      .number()
+      .int()
+      .min(0, 'Elevation gain must be non-negative')
+      .nullable()
+      .optional()
+      .transform((v) => v ?? null),
   })
   .transform((data) => ({
     ...data,
@@ -170,6 +177,7 @@ export type CreateRunningTemplateInput = {
   coaching_cues?: string
   target_distance?: number | null
   target_duration?: number | null
+  target_elevation_gain?: number | null
 }
 
 type CreateRunningTemplateResult =
@@ -305,6 +313,7 @@ export async function createRunningTemplate(
     coaching_cues,
     target_distance,
     target_duration,
+    target_elevation_gain,
   } = parsed.data
 
   const canonicalName = generateCanonicalName(name)
@@ -366,6 +375,7 @@ export async function createRunningTemplate(
         coaching_cues,
         target_distance,
         target_duration,
+        target_elevation_gain,
         created_at: new Date(),
       })
       .returning()

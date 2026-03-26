@@ -112,20 +112,18 @@ describe('T179 characterization: createRunningTemplate input shape', () => {
     testDb.run(CREATE_TABLE_LOGGED_WORKOUTS)
   })
 
-  it('does NOT accept target_elevation_gain — field is absent from returned data', async () => {
+  it('accepts target_elevation_gain and stores it (T179)', async () => {
     const meso = seedMesocycle()
-    // Pass elevation gain via unknown extra property — schema strips it
-    const input = {
+    const input: CreateRunningTemplateInput = {
       name: 'Hill Run',
       mesocycle_id: meso.id,
-      run_type: 'long' as const,
+      run_type: 'long',
       target_elevation_gain: 350,
     }
-    const result = await createRunningTemplate(input as CreateRunningTemplateInput)
+    const result = await createRunningTemplate(input)
     expect(result.success).toBe(true)
     if (result.success) {
-      // DB column exists but action never writes it — should be null
-      expect(result.data.target_elevation_gain).toBeNull()
+      expect(result.data.target_elevation_gain).toBe(350)
     }
   })
 
@@ -227,7 +225,7 @@ describe('T179 characterization: cascade update running fields', () => {
     expect(row.hr_zone).toBe(3)
   })
 
-  it('cascade does NOT handle target_elevation_gain field', async () => {
+  it('cascade handles target_elevation_gain field (T179)', async () => {
     const meso = seedMesocycle()
     const tmpl = await createRunningTemplate({
       name: 'Hill Run',
@@ -237,19 +235,17 @@ describe('T179 characterization: cascade update running fields', () => {
     expect(tmpl.success).toBe(true)
     if (!tmpl.success) return
 
-    // Pass elevation gain as unknown field — it's not in CascadeUpdates type
-    const updates = {
+    const updates: CascadeUpdates = {
       target_elevation_gain: 500,
-    } as CascadeUpdates
+    }
     const result = await cascadeUpdateTemplates({
       templateId: tmpl.data.id,
       scope: 'this-only',
       updates,
     })
-    // With no recognized fields, returns "Nothing to update"
-    expect(result.success).toBe(false)
-    if (!result.success) {
-      expect(result.error).toBe('Nothing to update')
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.updated).toBe(1)
     }
   })
 

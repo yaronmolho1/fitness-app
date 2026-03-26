@@ -34,6 +34,7 @@ type SectionDraft = {
   coaching_cues: string
   target_distance: string
   target_duration: string
+  target_elevation_gain: string
   // MMA fields
   planned_duration: string
 }
@@ -51,6 +52,7 @@ function createEmptySection(): SectionDraft {
     coaching_cues: '',
     target_distance: '',
     target_duration: '',
+    target_elevation_gain: '',
     planned_duration: '',
   }
 }
@@ -148,6 +150,7 @@ export function MixedTemplateForm({ mesocycleId, onSuccess, onCancel }: Props) {
               coaching_cues: s.coaching_cues || undefined,
               target_distance: s.target_distance ? Number(s.target_distance) : null,
               target_duration: s.target_duration ? Number(s.target_duration) : null,
+              target_elevation_gain: s.target_elevation_gain ? Number(s.target_elevation_gain) : null,
             }
           : {}),
         ...(s.modality === 'mma'
@@ -390,6 +393,19 @@ function SectionEditor({
                 placeholder="e.g. 30"
               />
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor={`target-elevation-gain-${section.id}`}>
+              Target Elevation Gain (m)
+            </Label>
+            <NumericInput
+              id={`target-elevation-gain-${section.id}`}
+              mode="integer"
+              value={section.target_elevation_gain}
+              onValueChange={(v) => onChange({ target_elevation_gain: v })}
+              placeholder="e.g. 200"
+            />
           </div>
 
           {isInterval && (
