@@ -94,6 +94,10 @@ type ProjectedResult = {
   template: TemplateDetail
   slots: SlotDetail[]
   is_deload: boolean
+  is_override: boolean
+  override_group: string | null
+  week_number: number
+  day_of_week: number
 }
 
 type CompletedResult = {
@@ -285,6 +289,10 @@ export async function getDayDetail(
       template,
       slots,
       is_deload: isDeload,
+      is_override: entry.is_override,
+      override_group: entry.override_group,
+      week_number: weekNumber,
+      day_of_week: dow,
     })
   }
 

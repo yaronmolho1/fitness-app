@@ -16,10 +16,13 @@ import {
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Pencil, CalendarDays, Star, ChevronDown, ClipboardCheck } from 'lucide-react'
+import { Pencil, CalendarDays, Star, ChevronDown, ClipboardCheck, ArrowRightLeft, Undo2 } from 'lucide-react'
 import type { DayDetailResult, SlotDetail, LoggedExerciseDetail, TemplateSnapshot, Period } from '@/lib/calendar/day-detail'
 import { formatDateLong } from '@/lib/date-format'
 import { getModalityBadgeClasses } from '@/lib/ui/modality-colors'
+import { undoScheduleMove } from '@/lib/schedule/override-actions'
+import { MoveWorkoutModal } from '@/components/move-workout-modal'
+import type { OccupiedSlot } from '@/components/move-workout-modal'
 
 interface DayDetailPanelProps {
   date: string | null
@@ -235,14 +238,21 @@ function WorkoutCard({
   detail,
   date,
   defaultOpen,
+  onMoveWorkout,
+  onUndoMove,
 }: {
   detail: Exclude<DayDetailResult, { type: 'rest' }>
   date: string
   defaultOpen: boolean
+  onMoveWorkout?: (detail: Extract<DayDetailResult, { type: 'projected' }>) => void
+  onUndoMove?: (overrideGroup: string, mesocycleId: number) => void
 }) {
   const [open, setOpen] = useState(defaultOpen)
   const { name, modality } = getWorkoutMeta(detail)
   const showLogButton = detail.type === 'projected' && isLoggable(date)
+  const isProjected = detail.type === 'projected'
+  const canModifySchedule = isProjected && detail.mesocycle_status !== 'completed'
+  const isOverride = isProjected && 'is_override' in detail && detail.is_override === true
 
   return (
     <Collapsible open={open} onOpenChange={setOpen} data-testid="workout-card">
@@ -254,6 +264,11 @@ function WorkoutCard({
           <span className="font-semibold text-sm flex-1">{name}</span>
           {modality && <ModalityBadge modality={modality} />}
           {detail.is_deload && <Badge variant="outline">Deload</Badge>}
+          {isOverride && (
+            <Badge variant="secondary" className="text-[0.65rem] px-1.5 py-0 font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+              Overridden
+            </Badge>
+          )}
           <Badge variant="outline" className="text-[0.65rem] px-1.5 py-0 font-medium">
             {periodLabel[detail.period]}
           </Badge>
@@ -286,6 +301,35 @@ function WorkoutCard({
           </Button>
         </div>
       )}
+      {/* Move + Undo actions for projected workouts */}
+      {canModifySchedule && (
+        <div className="px-3 pt-1 pb-1 flex gap-2">
+          {isOverride && detail.type === 'projected' && detail.override_group && onUndoMove && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              data-testid="undo-move-button"
+              onClick={() => onUndoMove(detail.override_group!, detail.mesocycle_id)}
+            >
+              <Undo2 className="h-4 w-4 mr-1.5" />
+              Undo Move
+            </Button>
+          )}
+          {detail.type === 'projected' && onMoveWorkout && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              data-testid="move-workout-button"
+              onClick={() => onMoveWorkout(detail)}
+            >
+              <ArrowRightLeft className="h-4 w-4 mr-1.5" />
+              Move Workout
+            </Button>
+          )}
+        </div>
+      )}
     </Collapsible>
   )
 }
@@ -294,6 +338,7 @@ export function DayDetailPanel({ date, onClose }: DayDetailPanelProps) {
   const [details, setDetails] = useState<DayDetailResult[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [moveTarget, setMoveTarget] = useState<Extract<DayDetailResult, { type: 'projected' }> | null>(null)
 
   const fetchDetail = useCallback(async (d: string) => {
     setLoading(true)
@@ -319,6 +364,37 @@ export function DayDetailPanel({ date, onClose }: DayDetailPanelProps) {
     }
   }, [date, fetchDetail])
 
+  const handleUndoMove = useCallback(async (overrideGroup: string, mesocycleId: number) => {
+    await undoScheduleMove(overrideGroup, mesocycleId)
+    if (date) fetchDetail(date)
+  }, [date, fetchDetail])
+
+  const handleMoveWorkout = useCallback((detail: Extract<DayDetailResult, { type: 'projected' }>) => {
+    setMoveTarget(detail)
+  }, [])
+
+  const handleMoveConfirm = useCallback(async (params: {
+    targetDay: number
+    targetPeriod: 'morning' | 'afternoon' | 'evening'
+    targetTimeSlot: string | null
+    scope: 'this_week' | 'remaining_weeks'
+  }) => {
+    if (!moveTarget) return
+    const { moveWorkout } = await import('@/lib/schedule/override-actions')
+    await moveWorkout({
+      mesocycle_id: moveTarget.mesocycle_id,
+      week_number: moveTarget.week_number,
+      source_day: moveTarget.day_of_week,
+      source_period: moveTarget.period,
+      target_day: params.targetDay,
+      target_period: params.targetPeriod,
+      target_time_slot: params.targetTimeSlot,
+      scope: params.scope,
+    })
+    setMoveTarget(null)
+    if (date) fetchDetail(date)
+  }, [moveTarget, date, fetchDetail])
+
   const open = date !== null
 
   // Separate rest entries from workouts
@@ -329,6 +405,15 @@ export function DayDetailPanel({ date, onClose }: DayDetailPanelProps) {
 
   const isRestDay = details.length > 0 && workouts.length === 0
   const isSingleWorkout = workouts.length === 1
+
+  // Build occupied slots for MoveWorkoutModal
+  const occupiedSlots: OccupiedSlot[] = workouts
+    .filter((w): w is Extract<DayDetailResult, { type: 'projected' }> => w.type === 'projected' && 'day_of_week' in w)
+    .map((w) => ({
+      day: w.day_of_week,
+      period: w.period,
+      templateName: w.template.name,
+    }))
 
   // Sheet description text
   let description = ''
@@ -378,11 +463,29 @@ export function DayDetailPanel({ date, onClose }: DayDetailPanelProps) {
                   detail={w}
                   date={date!}
                   defaultOpen={isSingleWorkout}
+                  onMoveWorkout={handleMoveWorkout}
+                  onUndoMove={handleUndoMove}
                 />
               ))}
             </div>
           )}
         </div>
+
+        {/* Move Workout Modal */}
+        {moveTarget && (
+          <MoveWorkoutModal
+            open={!!moveTarget}
+            onOpenChange={(isOpen) => { if (!isOpen) setMoveTarget(null) }}
+            mesocycleId={moveTarget.mesocycle_id}
+            weekNumber={moveTarget.week_number}
+            sourceDay={moveTarget.day_of_week}
+            sourcePeriod={moveTarget.period}
+            sourceTimeSlot={null}
+            sourceTemplateName={moveTarget.template.name}
+            occupiedSlots={occupiedSlots}
+            onConfirm={handleMoveConfirm}
+          />
+        )}
       </SheetContent>
     </Sheet>
   )

@@ -41,6 +41,10 @@ const projectedResistance: DayDetailResult = {
   ],
   is_deload: false,
   period: 'morning',
+  is_override: false,
+  override_group: null,
+  week_number: 1,
+  day_of_week: 0,
 }
 
 const projectedRunning: DayDetailResult = {
@@ -63,6 +67,10 @@ const projectedRunning: DayDetailResult = {
   slots: [],
   is_deload: false,
   period: 'evening',
+  is_override: false,
+  override_group: null,
+  week_number: 1,
+  day_of_week: 0,
 }
 
 describe('DayDetailPanel', () => {
@@ -146,6 +154,10 @@ describe('DayDetailPanel', () => {
       slots: [],
       is_deload: false,
       period: 'morning',
+      is_override: false,
+      override_group: null,
+      week_number: 1,
+      day_of_week: 2,
     }
     mockFetchResponse(projected)
 
@@ -186,6 +198,10 @@ describe('DayDetailPanel', () => {
       slots: [],
       is_deload: false,
       period: 'morning',
+      is_override: false,
+      override_group: null,
+      week_number: 1,
+      day_of_week: 4,
     }
     mockFetchResponse(projected)
 
@@ -315,6 +331,10 @@ describe('DayDetailPanel', () => {
       slots: [],
       is_deload: true,
       period: 'morning',
+      is_override: false,
+      override_group: null,
+      week_number: 5,
+      day_of_week: 0,
     }
     mockFetchResponse(projected)
 
@@ -364,6 +384,10 @@ describe('DayDetailPanel', () => {
         slots: [],
         is_deload: false,
         period: 'morning',
+        is_override: false,
+        override_group: null,
+        week_number: 1,
+        day_of_week: 0,
       }
       mockFetchResponse(projected)
 
@@ -396,6 +420,10 @@ describe('DayDetailPanel', () => {
         slots: [],
         is_deload: false,
         period: 'morning',
+        is_override: false,
+        override_group: null,
+        week_number: 1,
+        day_of_week: 0,
       }
       mockFetchResponse(projected)
 
