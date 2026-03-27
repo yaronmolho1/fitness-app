@@ -58,9 +58,10 @@ export type TemplateInfo = {
   interval_count: number | null
   interval_rest: number | null
   coaching_cues: string | null
-  // Distance/duration
+  // Distance/duration/elevation
   target_distance: number | null
   target_duration: number | null
+  target_elevation_gain: number | null
   // MMA-specific
   planned_duration: number | null
 }
@@ -77,9 +78,10 @@ export type SectionData = {
   interval_count: number | null
   interval_rest: number | null
   coaching_cues: string | null
-  // Distance/duration
+  // Distance/duration/elevation
   target_distance: number | null
   target_duration: number | null
+  target_elevation_gain: number | null
   // MMA-specific
   planned_duration: number | null
   // Resistance sections carry their exercise slots
@@ -545,6 +547,7 @@ export async function getTodayWorkout(today: string): Promise<TodayResult[]> {
           coaching_cues: template_sections.coaching_cues,
           target_distance: template_sections.target_distance,
           target_duration: template_sections.target_duration,
+          target_elevation_gain: template_sections.target_elevation_gain,
           planned_duration: template_sections.planned_duration,
         })
         .from(template_sections)
@@ -604,6 +607,7 @@ export async function getTodayWorkout(today: string): Promise<TodayResult[]> {
             interval_rest: secOverride.interval_rest ?? sec.interval_rest,
             target_distance: secOverride.distance ?? sec.target_distance,
             target_duration: secOverride.duration ?? sec.target_duration,
+            target_elevation_gain: secOverride.elevation_gain ?? sec.target_elevation_gain,
             planned_duration: secOverride.planned_duration ?? sec.planned_duration,
           }),
           slots: mergedSectionSlots,
@@ -631,6 +635,7 @@ export async function getTodayWorkout(today: string): Promise<TodayResult[]> {
         coaching_cues: template.coaching_cues,
         target_distance: tplOverride?.distance ?? template.target_distance,
         target_duration: tplOverride?.duration ?? template.target_duration,
+        target_elevation_gain: tplOverride?.elevation_gain ?? template.target_elevation_gain,
         planned_duration: tplOverride?.planned_duration ?? template.planned_duration,
       },
       slots: mergedSlots as SlotData[],

@@ -20,7 +20,7 @@ function makeTemplate(overrides: Record<string, unknown> = {}) {
     hr_zone: null as number | null, interval_count: null as number | null,
     interval_rest: null as number | null, coaching_cues: null as string | null,
     planned_duration: null as number | null, target_distance: null as number | null,
-    target_duration: null as number | null, ...overrides,
+    target_duration: null as number | null, target_elevation_gain: null as number | null, ...overrides,
   }
 }
 

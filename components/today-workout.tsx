@@ -317,6 +317,9 @@ function RunningDisplay({
             {template.target_duration !== null && (
               <TargetCell label="Duration" value={`${template.target_duration}min`} />
             )}
+            {template.target_elevation_gain !== null && template.target_elevation_gain !== undefined && (
+              <TargetCell label="Elevation" value={`${template.target_elevation_gain}m ascent`} />
+            )}
             {template.target_pace && (
               <TargetCell label="Pace" value={template.target_pace} />
             )}
@@ -419,6 +422,9 @@ function SectionRunningContent({ section }: { section: SectionData }) {
           )}
           {section.target_duration !== null && (
             <TargetCell label="Duration" value={`${section.target_duration}min`} />
+          )}
+          {section.target_elevation_gain !== null && section.target_elevation_gain !== undefined && (
+            <TargetCell label="Elevation" value={`${section.target_elevation_gain}m ascent`} />
           )}
           {section.target_pace && (
             <TargetCell label="Pace" value={section.target_pace} />

@@ -121,13 +121,14 @@ function CompletedExerciseRow({ exercise, planned }: {
   )
 }
 
-function RunningDetail({ template }: { template: { run_type?: string | null; target_pace?: string | null; hr_zone?: number | null; interval_count?: number | null; interval_rest?: number | null; coaching_cues?: string | null } }) {
+function RunningDetail({ template }: { template: { run_type?: string | null; target_pace?: string | null; hr_zone?: number | null; interval_count?: number | null; interval_rest?: number | null; coaching_cues?: string | null; target_elevation_gain?: number | null } }) {
   return (
     <div className="space-y-2" data-testid="running-detail">
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
         {template.run_type && <span>Type: <strong>{template.run_type}</strong></span>}
         {template.target_pace && <span>Pace: <strong>{template.target_pace}</strong></span>}
         {template.hr_zone != null && <span>HR Zone: <strong>{template.hr_zone}</strong></span>}
+        {template.target_elevation_gain != null && <span>Elevation: <strong>{template.target_elevation_gain}m ascent</strong></span>}
         {template.interval_count != null && <span>Intervals: <strong>{template.interval_count}</strong></span>}
         {template.interval_rest != null && <span>Interval rest: <strong>{template.interval_rest}s</strong></span>}
       </div>
