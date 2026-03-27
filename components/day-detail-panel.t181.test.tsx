@@ -50,6 +50,10 @@ describe('T181: DayDetailPanel — elevation gain in projected running', () => {
       slots: [],
       is_deload: false,
       period: 'morning',
+      is_override: false,
+      override_group: null,
+      week_number: 1,
+      day_of_week: 0,
     }
     mockFetchResponse(projected)
 
@@ -74,6 +78,10 @@ describe('T181: DayDetailPanel — elevation gain in projected running', () => {
       slots: [],
       is_deload: false,
       period: 'morning',
+      is_override: false,
+      override_group: null,
+      week_number: 1,
+      day_of_week: 0,
     }
     mockFetchResponse(projected)
 
@@ -97,6 +105,10 @@ describe('T181: DayDetailPanel — elevation gain in projected running', () => {
       slots: [],
       is_deload: false,
       period: 'morning',
+      is_override: false,
+      override_group: null,
+      week_number: 1,
+      day_of_week: 0,
     }
     mockFetchResponse(projected)
 
