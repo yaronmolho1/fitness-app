@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -57,6 +57,15 @@ export function MoveWorkoutModal({
   const [targetPeriod, setTargetPeriod] = useState<Period>('morning')
   const [timeSlot, setTimeSlot] = useState(sourceTimeSlot ?? '')
   const [scope, setScope] = useState<Scope>('this_week')
+
+  useEffect(() => {
+    if (open) {
+      setTargetDay(null)
+      setTargetPeriod('morning')
+      setTimeSlot(sourceTimeSlot ?? '')
+      setScope('this_week')
+    }
+  }, [open, sourceTimeSlot])
 
   // Days where all 3 periods are occupied
   const fullyOccupiedDays = useMemo(() => {
