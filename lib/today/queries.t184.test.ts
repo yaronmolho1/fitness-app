@@ -1,5 +1,4 @@
-// Characterization test — T184: captures current schedule resolution behavior
-// before replacing direct weekly_schedule query with getEffectiveScheduleForDay()
+// T184 tests — getTodayWorkout uses getEffectiveScheduleForDay for override-aware schedule
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { sql } from 'drizzle-orm'
 import * as schema from '@/lib/db/schema'
@@ -110,7 +109,6 @@ function createTables() {
   testDb.run(
     sql`CREATE UNIQUE INDEX weekly_schedule_meso_day_type_period_idx ON weekly_schedule(mesocycle_id, day_of_week, week_type, period)`
   )
-  // schedule_week_overrides table — exists in schema but NOT consulted by current code
   testDb.run(sql`
     CREATE TABLE schedule_week_overrides (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -245,7 +243,6 @@ function createTables() {
   )
 }
 
-// Seed helpers
 function seedMesocycle(
   overrides: Partial<{
     name: string
@@ -336,118 +333,16 @@ function seedExerciseSlot(templateId: number, exerciseId: number, order: number)
 }
 
 // ============================================================================
-// Schedule resolution — base weekly_schedule query (T184 will replace)
+// T184 — getTodayWorkout respects schedule_week_overrides
 // ============================================================================
 
-describe('getTodayWorkout — schedule resolution baseline (T184 characterize)', () => {
+describe('getTodayWorkout — T184: override-aware schedule resolution', () => {
   beforeEach(() => {
     createTables()
   })
 
-  it('resolves workout from weekly_schedule for matching day_of_week + week_type', async () => {
-    // 2026-03-02 is Monday (day_of_week=0)
-    const meso = seedMesocycle({ status: 'active', start_date: '2026-03-02' })
-    const ex = seedExercise('Bench Press')
-    const tmpl = seedTemplate(meso.id, 'Push A')
-    seedExerciseSlot(tmpl.id, ex.id, 1)
-    seedSchedule(meso.id, 0, tmpl.id) // Mon, normal
-
-    const results = await getTodayWorkout('2026-03-02')
-    expect(results).toHaveLength(1)
-    expect(results[0].type).toBe('workout')
-    if (results[0].type === 'workout') {
-      expect(results[0].template.name).toBe('Push A')
-    }
-  })
-
-  it('returns rest_day when no schedule entry for day_of_week', async () => {
-    // 2026-03-03 is Tuesday (day_of_week=1), schedule only on Monday
-    const meso = seedMesocycle({ status: 'active', start_date: '2026-03-02' })
-    const tmpl = seedTemplate(meso.id, 'Push A')
-    seedSchedule(meso.id, 0, tmpl.id) // Mon only
-
-    const results = await getTodayWorkout('2026-03-03')
-    expect(results).toHaveLength(1)
-    expect(results[0].type).toBe('rest_day')
-  })
-
-  it('uses normal week_type during work weeks', async () => {
-    // 4 work weeks, has_deload. Week 1 = normal.
-    const meso = seedMesocycle({
-      status: 'active',
-      start_date: '2026-03-02',
-      end_date: '2026-04-05',
-      work_weeks: 4,
-      has_deload: true,
-    })
-    const ex = seedExercise('Squat')
-    const tmplNormal = seedTemplate(meso.id, 'Legs Normal')
-    const tmplDeload = seedTemplate(meso.id, 'Legs Deload')
-    seedExerciseSlot(tmplNormal.id, ex.id, 1)
-    seedExerciseSlot(tmplDeload.id, ex.id, 1)
-    seedSchedule(meso.id, 0, tmplNormal.id, 'normal')
-    seedSchedule(meso.id, 0, tmplDeload.id, 'deload')
-
-    // Week 1 Monday
-    const results = await getTodayWorkout('2026-03-02')
-    expect(results).toHaveLength(1)
-    if (results[0].type === 'workout') {
-      expect(results[0].template.name).toBe('Legs Normal')
-      expect(results[0].mesocycle.week_type).toBe('normal')
-    }
-  })
-
-  it('uses deload week_type during deload week', async () => {
-    // 2 work weeks + deload. Start 2026-03-02 (Mon).
-    // Week 3 starts 2026-03-16 = deload week.
-    const meso = seedMesocycle({
-      status: 'active',
-      start_date: '2026-03-02',
-      end_date: '2026-03-22',
-      work_weeks: 2,
-      has_deload: true,
-    })
-    const ex = seedExercise('Bench Press')
-    const tmplNormal = seedTemplate(meso.id, 'Push Normal')
-    const tmplDeload = seedTemplate(meso.id, 'Push Deload')
-    seedExerciseSlot(tmplNormal.id, ex.id, 1)
-    seedExerciseSlot(tmplDeload.id, ex.id, 1)
-    seedSchedule(meso.id, 0, tmplNormal.id, 'normal')
-    seedSchedule(meso.id, 0, tmplDeload.id, 'deload')
-
-    // 2026-03-16 is Monday, deload week
-    const results = await getTodayWorkout('2026-03-16')
-    expect(results).toHaveLength(1)
-    if (results[0].type === 'workout') {
-      expect(results[0].template.name).toBe('Push Deload')
-      expect(results[0].mesocycle.week_type).toBe('deload')
-    }
-  })
-
-  it('returns multiple sessions for same day with different periods', async () => {
-    const meso = seedMesocycle({ status: 'active', start_date: '2026-03-02' })
-    const ex = seedExercise('Bench Press')
-    const tmpl1 = seedTemplate(meso.id, 'Morning Push')
-    const tmpl2 = seedTemplate(meso.id, 'Evening Run', { modality: 'running' })
-    seedExerciseSlot(tmpl1.id, ex.id, 1)
-    seedSchedule(meso.id, 0, tmpl1.id, 'normal', 'morning', '07:00')
-    seedSchedule(meso.id, 0, tmpl2.id, 'normal', 'evening', '18:00')
-
-    const results = await getTodayWorkout('2026-03-02')
-    expect(results).toHaveLength(2)
-    // Sorted: morning first, evening second
-    if (results[0].type === 'workout' && results[1].type === 'workout') {
-      expect(results[0].period).toBe('morning')
-      expect(results[0].template.name).toBe('Morning Push')
-      expect(results[0].time_slot).toBe('07:00')
-      expect(results[1].period).toBe('evening')
-      expect(results[1].template.name).toBe('Evening Run')
-      expect(results[1].time_slot).toBe('18:00')
-    }
-  })
-
-  it('schedule_week_overrides swap template for the overridden week', async () => {
-    // Override swaps template — now respected via getEffectiveScheduleForDay
+  it('returns overridden template when override swaps template for the week', async () => {
+    // AC10: getTodayWorkout returns the overridden template, not the base
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-02' })
     const ex = seedExercise('Bench Press')
     const tmpl1 = seedTemplate(meso.id, 'Base Push')
@@ -456,7 +351,7 @@ describe('getTodayWorkout — schedule resolution baseline (T184 characterize)',
     seedExerciseSlot(tmpl2.id, ex.id, 1)
     seedSchedule(meso.id, 0, tmpl1.id, 'normal', 'morning')
 
-    // Insert an override for week 1, day 0, morning
+    // Override week 1, Monday morning -> template 2 with time_slot
     testDb.run(sql`
       INSERT INTO schedule_week_overrides
         (mesocycle_id, week_number, day_of_week, period, template_id, time_slot, override_group)
@@ -466,15 +361,15 @@ describe('getTodayWorkout — schedule resolution baseline (T184 characterize)',
 
     const results = await getTodayWorkout('2026-03-02')
     expect(results).toHaveLength(1)
-    // Override template is returned
+    expect(results[0].type).toBe('workout')
     if (results[0].type === 'workout') {
       expect(results[0].template.name).toBe('Override Pull')
       expect(results[0].time_slot).toBe('09:00')
     }
   })
 
-  it('schedule_week_overrides null template_id causes rest day', async () => {
-    // Override sets template_id=NULL (rest override) — now respected
+  it('returns rest day when override nullifies template for the period', async () => {
+    // Override sets template_id=NULL -> rest override for that slot
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-02' })
     const ex = seedExercise('Squat')
     const tmpl = seedTemplate(meso.id, 'Legs')
@@ -494,8 +389,8 @@ describe('getTodayWorkout — schedule resolution baseline (T184 characterize)',
     expect(results[0].type).toBe('rest_day')
   })
 
-  it('override-only entry (no base for period) now appears', async () => {
-    // Override adds a workout to evening, no base evening entry — now included
+  it('includes override-only entry when workout added to period with no base', async () => {
+    // Override adds evening workout, base only has morning
     const meso = seedMesocycle({ status: 'active', start_date: '2026-03-02' })
     const ex = seedExercise('Bench Press')
     const tmpl1 = seedTemplate(meso.id, 'Morning Push')
@@ -512,8 +407,8 @@ describe('getTodayWorkout — schedule resolution baseline (T184 characterize)',
     `)
 
     const results = await getTodayWorkout('2026-03-02')
-    // Both morning (base) and evening (override-only) appear
     expect(results).toHaveLength(2)
+    // Sorted: morning first, evening second
     if (results[0].type === 'workout' && results[1].type === 'workout') {
       expect(results[0].period).toBe('morning')
       expect(results[0].template.name).toBe('Morning Push')
@@ -523,46 +418,68 @@ describe('getTodayWorkout — schedule resolution baseline (T184 characterize)',
     }
   })
 
-  it('completed mesocycle still resolves schedule (retroactive logging)', async () => {
-    const meso = seedMesocycle({
-      status: 'completed',
-      start_date: '2026-03-02',
-    })
+  it('override only affects the specific week, not other weeks', async () => {
+    // Week 1 has override, week 2 should use base schedule
+    const meso = seedMesocycle({ status: 'active', start_date: '2026-03-02' })
     const ex = seedExercise('Bench Press')
-    const tmpl = seedTemplate(meso.id, 'Push A')
-    seedExerciseSlot(tmpl.id, ex.id, 1)
-    seedSchedule(meso.id, 0, tmpl.id)
+    const tmpl1 = seedTemplate(meso.id, 'Base Push')
+    const tmpl2 = seedTemplate(meso.id, 'Override Pull')
+    seedExerciseSlot(tmpl1.id, ex.id, 1)
+    seedExerciseSlot(tmpl2.id, ex.id, 1)
+    seedSchedule(meso.id, 0, tmpl1.id, 'normal', 'morning')
 
-    const results = await getTodayWorkout('2026-03-02')
+    // Override only week 1
+    testDb.run(sql`
+      INSERT INTO schedule_week_overrides
+        (mesocycle_id, week_number, day_of_week, period, template_id, time_slot, override_group)
+      VALUES
+        (${meso.id}, 1, 0, 'morning', ${tmpl2.id}, '09:00', 'move-test')
+    `)
+
+    // Week 2 Monday = 2026-03-09
+    const results = await getTodayWorkout('2026-03-09')
     expect(results).toHaveLength(1)
     expect(results[0].type).toBe('workout')
+    if (results[0].type === 'workout') {
+      expect(results[0].template.name).toBe('Base Push')
+      expect(results[0].time_slot).toBeNull()
+    }
   })
 
-  it('active mesocycle takes precedence over completed for same date range', async () => {
-    const completedMeso = seedMesocycle({
-      name: 'Completed',
-      status: 'completed',
-      start_date: '2026-03-02',
-      end_date: '2026-03-29',
-    })
-    const activeMeso = seedMesocycle({
-      name: 'Active',
+  it('override during deload week resolves against deload base schedule', async () => {
+    // AC12: deload week override
+    const meso = seedMesocycle({
       status: 'active',
       start_date: '2026-03-02',
-      end_date: '2026-03-29',
+      end_date: '2026-03-22',
+      work_weeks: 2,
+      has_deload: true,
     })
     const ex = seedExercise('Bench Press')
-    const tmplCompleted = seedTemplate(completedMeso.id, 'Old Push')
-    const tmplActive = seedTemplate(activeMeso.id, 'New Push')
-    seedExerciseSlot(tmplCompleted.id, ex.id, 1)
-    seedExerciseSlot(tmplActive.id, ex.id, 1)
-    seedSchedule(completedMeso.id, 0, tmplCompleted.id)
-    seedSchedule(activeMeso.id, 0, tmplActive.id)
+    const tmplNormal = seedTemplate(meso.id, 'Push Normal')
+    const tmplDeload = seedTemplate(meso.id, 'Push Deload')
+    const tmplOverride = seedTemplate(meso.id, 'Deload Override')
+    seedExerciseSlot(tmplNormal.id, ex.id, 1)
+    seedExerciseSlot(tmplDeload.id, ex.id, 1)
+    seedExerciseSlot(tmplOverride.id, ex.id, 1)
+    seedSchedule(meso.id, 0, tmplNormal.id, 'normal')
+    seedSchedule(meso.id, 0, tmplDeload.id, 'deload')
 
-    const results = await getTodayWorkout('2026-03-02')
+    // Override week 3 (deload) Monday morning
+    testDb.run(sql`
+      INSERT INTO schedule_week_overrides
+        (mesocycle_id, week_number, day_of_week, period, template_id, time_slot, override_group)
+      VALUES
+        (${meso.id}, 3, 0, 'morning', ${tmplOverride.id}, NULL, 'move-deload')
+    `)
+
+    // 2026-03-16 is Monday, week 3 = deload
+    const results = await getTodayWorkout('2026-03-16')
     expect(results).toHaveLength(1)
+    expect(results[0].type).toBe('workout')
     if (results[0].type === 'workout') {
-      expect(results[0].template.name).toBe('New Push')
+      expect(results[0].template.name).toBe('Deload Override')
+      expect(results[0].mesocycle.week_type).toBe('deload')
     }
   })
 })

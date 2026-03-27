@@ -1,5 +1,4 @@
-// Characterization test — T184: captures current schedule resolution behavior
-// before replacing direct weekly_schedule query with getEffectiveScheduleForDay()
+// T184 tests — getDayDetail uses getEffectiveScheduleForDay for override-aware schedule
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
@@ -133,7 +132,7 @@ function createTestDb() {
   return { sqlite, db }
 }
 
-describe('getDayDetail — schedule resolution baseline (T184 characterize)', () => {
+describe('getDayDetail — T184: override-aware schedule resolution', () => {
   let sqlite: Database.Database
   let db: AppDb
 
@@ -160,130 +159,7 @@ describe('getDayDetail — schedule resolution baseline (T184 characterize)', ()
     sqlite.exec('DELETE FROM mesocycles')
   })
 
-  it('resolves projected workout from weekly_schedule for matching day + week_type', async () => {
-    sqlite.exec(`
-      INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
-      VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
-      INSERT INTO exercises (id, name, modality) VALUES (1, 'Bench Press', 'resistance');
-      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
-      VALUES (1, 1, 'Push A', 'push-a', 'resistance');
-      INSERT INTO exercise_slots (template_id, exercise_id, sets, reps, "order", is_main)
-      VALUES (1, 1, 4, '6-8', 1, 1);
-      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type)
-      VALUES (1, 0, 1, 'normal');
-    `)
-
-    // 2026-03-02 is Monday (dow=0)
-    const results = await getDayDetail(db, '2026-03-02')
-    expect(results).toHaveLength(1)
-    expect(results[0].type).toBe('projected')
-    if (results[0].type === 'projected') {
-      expect(results[0].template.name).toBe('Push A')
-      expect(results[0].is_deload).toBe(false)
-    }
-  })
-
-  it('returns rest when no schedule entry for day_of_week', async () => {
-    sqlite.exec(`
-      INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
-      VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
-      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
-      VALUES (1, 1, 'Push A', 'push-a', 'resistance');
-      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type)
-      VALUES (1, 0, 1, 'normal');
-    `)
-
-    // 2026-03-03 is Tuesday (dow=1), no schedule for Tuesday
-    const results = await getDayDetail(db, '2026-03-03')
-    expect(results).toHaveLength(1)
-    expect(results[0].type).toBe('rest')
-  })
-
-  it('uses normal week_type during work weeks', async () => {
-    sqlite.exec(`
-      INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
-      VALUES (1, 'Block A', '2026-03-02', '2026-04-05', 4, 1, 'active');
-      INSERT INTO exercises (id, name, modality) VALUES (1, 'Squat', 'resistance');
-      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
-      VALUES (1, 1, 'Legs Normal', 'legs-normal', 'resistance');
-      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
-      VALUES (2, 1, 'Legs Deload', 'legs-deload', 'resistance');
-      INSERT INTO exercise_slots (template_id, exercise_id, sets, reps, "order", is_main)
-      VALUES (1, 1, 5, '5', 1, 1);
-      INSERT INTO exercise_slots (template_id, exercise_id, sets, reps, "order", is_main)
-      VALUES (2, 1, 2, '10', 1, 0);
-      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type)
-      VALUES (1, 0, 1, 'normal');
-      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type)
-      VALUES (1, 0, 2, 'deload');
-    `)
-
-    // Week 1 Monday — normal
-    const results = await getDayDetail(db, '2026-03-02')
-    expect(results).toHaveLength(1)
-    if (results[0].type === 'projected') {
-      expect(results[0].template.name).toBe('Legs Normal')
-      expect(results[0].is_deload).toBe(false)
-    }
-  })
-
-  it('uses deload week_type during deload week', async () => {
-    sqlite.exec(`
-      INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
-      VALUES (1, 'Block A', '2026-03-02', '2026-03-22', 2, 1, 'active');
-      INSERT INTO exercises (id, name, modality) VALUES (1, 'Bench', 'resistance');
-      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
-      VALUES (1, 1, 'Push Normal', 'push-normal', 'resistance');
-      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
-      VALUES (2, 1, 'Push Deload', 'push-deload', 'resistance');
-      INSERT INTO exercise_slots (template_id, exercise_id, sets, reps, "order", is_main)
-      VALUES (1, 1, 4, '6', 1, 1);
-      INSERT INTO exercise_slots (template_id, exercise_id, sets, reps, "order", is_main)
-      VALUES (2, 1, 2, '10', 1, 0);
-      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type)
-      VALUES (1, 0, 1, 'normal');
-      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type)
-      VALUES (1, 0, 2, 'deload');
-    `)
-
-    // 2026-03-16 is Monday, week 3 (deload)
-    const results = await getDayDetail(db, '2026-03-16')
-    expect(results).toHaveLength(1)
-    if (results[0].type === 'projected') {
-      expect(results[0].template.name).toBe('Push Deload')
-      expect(results[0].is_deload).toBe(true)
-    }
-  })
-
-  it('returns multiple sessions for same day with different periods', async () => {
-    sqlite.exec(`
-      INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
-      VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
-      INSERT INTO exercises (id, name, modality) VALUES (1, 'Bench', 'resistance');
-      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
-      VALUES (1, 1, 'Morning Push', 'morning-push', 'resistance');
-      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
-      VALUES (2, 1, 'Evening Run', 'evening-run', 'running');
-      INSERT INTO exercise_slots (template_id, exercise_id, sets, reps, "order", is_main)
-      VALUES (1, 1, 3, '8', 1, 1);
-      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-      VALUES (1, 0, 1, 'normal', 'morning');
-      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-      VALUES (1, 0, 2, 'normal', 'evening');
-    `)
-
-    const results = await getDayDetail(db, '2026-03-02')
-    expect(results).toHaveLength(2)
-    // Sorted: morning first, evening second
-    if (results[0].type === 'projected' && results[1].type === 'projected') {
-      expect(results[0].period).toBe('morning')
-      expect(results[0].template.name).toBe('Morning Push')
-      expect(results[1].period).toBe('evening')
-      expect(results[1].template.name).toBe('Evening Run')
-    }
-  })
-
-  it('schedule_week_overrides swap template for the overridden week', async () => {
+  it('returns overridden template when override swaps template for the week', async () => {
     sqlite.exec(`
       INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
       VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
@@ -304,13 +180,13 @@ describe('getDayDetail — schedule resolution baseline (T184 characterize)', ()
 
     const results = await getDayDetail(db, '2026-03-02')
     expect(results).toHaveLength(1)
-    // Override template is returned
+    expect(results[0].type).toBe('projected')
     if (results[0].type === 'projected') {
       expect(results[0].template.name).toBe('Override Pull')
     }
   })
 
-  it('schedule_week_overrides null template_id causes rest', async () => {
+  it('returns rest when override nullifies template for the period', async () => {
     sqlite.exec(`
       INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
       VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
@@ -327,11 +203,10 @@ describe('getDayDetail — schedule resolution baseline (T184 characterize)', ()
 
     const results = await getDayDetail(db, '2026-03-02')
     expect(results).toHaveLength(1)
-    // Null template override = rest
     expect(results[0].type).toBe('rest')
   })
 
-  it('override-only entry (no base for period) now appears', async () => {
+  it('includes override-only entry when workout added to period with no base', async () => {
     sqlite.exec(`
       INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
       VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
@@ -351,7 +226,6 @@ describe('getDayDetail — schedule resolution baseline (T184 characterize)', ()
     `)
 
     const results = await getDayDetail(db, '2026-03-02')
-    // Both morning (base) and evening (override-only) appear
     expect(results).toHaveLength(2)
     if (results[0].type === 'projected' && results[1].type === 'projected') {
       expect(results[0].period).toBe('morning')
@@ -361,41 +235,65 @@ describe('getDayDetail — schedule resolution baseline (T184 characterize)', ()
     }
   })
 
-  it('picks first mesocycle covering date (not filtered by status)', async () => {
-    // getDayDetail does NOT filter by status — it picks any mesocycle covering the date
-    sqlite.exec(`
-      INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
-      VALUES (1, 'Completed Block', '2026-03-02', '2026-03-29', 4, 0, 'completed');
-      INSERT INTO exercises (id, name, modality) VALUES (1, 'Bench', 'resistance');
-      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
-      VALUES (1, 1, 'Push A', 'push-a', 'resistance');
-      INSERT INTO exercise_slots (template_id, exercise_id, sets, reps, "order", is_main)
-      VALUES (1, 1, 3, '8', 1, 1);
-      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type)
-      VALUES (1, 0, 1, 'normal');
-    `)
-
-    const results = await getDayDetail(db, '2026-03-02')
-    expect(results).toHaveLength(1)
-    expect(results[0].type).toBe('projected')
-    if (results[0].type === 'projected') {
-      expect(results[0].mesocycle_status).toBe('completed')
-    }
-  })
-
-  it('rest result includes mesocycle_id and mesocycle_status when meso covers date', async () => {
+  it('override only affects the specific week, not other weeks', async () => {
     sqlite.exec(`
       INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
       VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
+      INSERT INTO exercises (id, name, modality) VALUES (1, 'Bench', 'resistance');
+      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+      VALUES (1, 1, 'Base Push', 'base-push', 'resistance');
+      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+      VALUES (2, 1, 'Override Pull', 'override-pull', 'resistance');
+      INSERT INTO exercise_slots (template_id, exercise_id, sets, reps, "order", is_main)
+      VALUES (1, 1, 3, '8', 1, 1);
+      INSERT INTO exercise_slots (template_id, exercise_id, sets, reps, "order", is_main)
+      VALUES (2, 1, 3, '10', 1, 1);
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
+      VALUES (1, 0, 1, 'normal', 'morning');
+      INSERT INTO schedule_week_overrides (mesocycle_id, week_number, day_of_week, period, template_id, time_slot, override_group)
+      VALUES (1, 1, 0, 'morning', 2, '09:00', 'move-test');
     `)
 
-    // No schedule → rest day
-    const results = await getDayDetail(db, '2026-03-02')
+    // Week 2 Monday = 2026-03-09 — should use base, not override
+    const results = await getDayDetail(db, '2026-03-09')
     expect(results).toHaveLength(1)
-    expect(results[0].type).toBe('rest')
-    if (results[0].type === 'rest') {
-      expect(results[0].mesocycle_id).toBe(1)
-      expect(results[0].mesocycle_status).toBe('active')
+    if (results[0].type === 'projected') {
+      expect(results[0].template.name).toBe('Base Push')
+    }
+  })
+
+  it('override during deload week resolves against deload base schedule', async () => {
+    sqlite.exec(`
+      INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
+      VALUES (1, 'Block A', '2026-03-02', '2026-03-22', 2, 1, 'active');
+      INSERT INTO exercises (id, name, modality) VALUES (1, 'Bench', 'resistance');
+      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+      VALUES (1, 1, 'Push Normal', 'push-normal', 'resistance');
+      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+      VALUES (2, 1, 'Push Deload', 'push-deload', 'resistance');
+      INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+      VALUES (3, 1, 'Deload Override', 'deload-override', 'resistance');
+      INSERT INTO exercise_slots (template_id, exercise_id, sets, reps, "order", is_main)
+      VALUES (1, 1, 4, '6', 1, 1);
+      INSERT INTO exercise_slots (template_id, exercise_id, sets, reps, "order", is_main)
+      VALUES (2, 1, 2, '10', 1, 0);
+      INSERT INTO exercise_slots (template_id, exercise_id, sets, reps, "order", is_main)
+      VALUES (3, 1, 2, '8', 1, 0);
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type)
+      VALUES (1, 0, 1, 'normal');
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type)
+      VALUES (1, 0, 2, 'deload');
+      INSERT INTO schedule_week_overrides (mesocycle_id, week_number, day_of_week, period, template_id, time_slot, override_group)
+      VALUES (1, 3, 0, 'morning', 3, NULL, 'move-deload');
+    `)
+
+    // 2026-03-16 is Monday, week 3 = deload
+    const results = await getDayDetail(db, '2026-03-16')
+    expect(results).toHaveLength(1)
+    expect(results[0].type).toBe('projected')
+    if (results[0].type === 'projected') {
+      expect(results[0].template.name).toBe('Deload Override')
+      expect(results[0].is_deload).toBe(true)
     }
   })
 })
