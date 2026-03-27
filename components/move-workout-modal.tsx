@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -44,28 +44,26 @@ export interface MoveWorkoutModalProps {
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const
 
-export function MoveWorkoutModal({
-  open,
-  onOpenChange,
+export function MoveWorkoutModal(props: MoveWorkoutModalProps) {
+  return (
+    <Dialog open={props.open} onOpenChange={props.onOpenChange}>
+      {props.open && <MoveWorkoutModalContent {...props} />}
+    </Dialog>
+  )
+}
+
+function MoveWorkoutModalContent({
   sourceDay,
   sourceTimeSlot,
   sourceTemplateName,
   occupiedSlots,
   onConfirm,
+  onOpenChange,
 }: MoveWorkoutModalProps) {
   const [targetDay, setTargetDay] = useState<number | null>(null)
   const [targetPeriod, setTargetPeriod] = useState<Period>('morning')
   const [timeSlot, setTimeSlot] = useState(sourceTimeSlot ?? '')
   const [scope, setScope] = useState<Scope>('this_week')
-
-  useEffect(() => {
-    if (open) {
-      setTargetDay(null)
-      setTargetPeriod('morning')
-      setTimeSlot(sourceTimeSlot ?? '')
-      setScope('this_week')
-    }
-  }, [open, sourceTimeSlot])
 
   // Days where all 3 periods are occupied
   const fullyOccupiedDays = useMemo(() => {
@@ -106,7 +104,6 @@ export function MoveWorkoutModal({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Move {sourceTemplateName}</DialogTitle>
@@ -243,6 +240,5 @@ export function MoveWorkoutModal({
           </Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
   )
 }
