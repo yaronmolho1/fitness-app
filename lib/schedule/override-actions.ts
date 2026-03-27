@@ -78,7 +78,7 @@ export async function moveWorkout(input: {
     return { success: false, error: 'Cannot move to the same day and period' }
   }
 
-  const result = db.transaction((tx) => {
+  const result = db.transaction((tx): MoveResult => {
     // Verify mesocycle exists and isn't completed
     const meso = tx
       .select()

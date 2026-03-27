@@ -48,7 +48,6 @@ export function MoveWorkoutModal({
   open,
   onOpenChange,
   sourceDay,
-  sourcePeriod,
   sourceTimeSlot,
   sourceTemplateName,
   occupiedSlots,
