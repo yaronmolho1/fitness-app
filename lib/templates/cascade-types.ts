@@ -14,6 +14,7 @@ export type CascadeUpdates = {
   coaching_cues?: string | null
   target_distance?: number | null
   target_duration?: number | null
+  target_elevation_gain?: number | null
   // MMA-specific
   planned_duration?: number | null
 }

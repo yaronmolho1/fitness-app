@@ -33,6 +33,7 @@ export function RunningTemplateForm({ mesocycleId, onSuccess }: Props) {
   const [intervalRest, setIntervalRest] = useState('')
   const [targetDistance, setTargetDistance] = useState('')
   const [targetDuration, setTargetDuration] = useState('')
+  const [targetElevationGain, setTargetElevationGain] = useState('')
   const [coachingCues, setCoachingCues] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -82,6 +83,12 @@ export function RunningTemplateForm({ mesocycleId, onSuccess }: Props) {
       return
     }
 
+    const elevationGainNum = targetElevationGain ? Number(targetElevationGain) : null
+    if (elevationGainNum !== null && elevationGainNum < 0) {
+      setError('Elevation gain must be non-negative')
+      return
+    }
+
     setSubmitting(true)
     try {
       const result = await createRunningTemplate({
@@ -95,6 +102,7 @@ export function RunningTemplateForm({ mesocycleId, onSuccess }: Props) {
         coaching_cues: coachingCues || undefined,
         target_distance: distanceNum,
         target_duration: durationNum,
+        target_elevation_gain: elevationGainNum,
       })
 
       if (result.success) {
@@ -106,6 +114,7 @@ export function RunningTemplateForm({ mesocycleId, onSuccess }: Props) {
         setIntervalRest('')
         setTargetDistance('')
         setTargetDuration('')
+        setTargetElevationGain('')
         setCoachingCues('')
         onSuccess?.()
       } else {
@@ -209,6 +218,18 @@ export function RunningTemplateForm({ mesocycleId, onSuccess }: Props) {
             className="h-12 md:h-10"
           />
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="running-target-elevation-gain">Target Elevation Gain (m)</Label>
+        <NumericInput
+          id="running-target-elevation-gain"
+          mode="integer"
+          value={targetElevationGain}
+          onValueChange={setTargetElevationGain}
+          placeholder="e.g. 200"
+          className="h-12 md:h-10"
+        />
       </div>
 
       <div

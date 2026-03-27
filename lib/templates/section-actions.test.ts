@@ -26,6 +26,7 @@ import {
   addSection,
   removeSection,
   reorderSections,
+  updateSection,
 } from './section-actions'
 
 const MESO_DDL = sql`
@@ -773,5 +774,50 @@ describe('reorderSections', () => {
     })
     expect(result.success).toBe(false)
     if (!result.success) expect(result.error).toMatch(/completed/i)
+  })
+})
+
+// ============================================================================
+// updateSection
+// ============================================================================
+
+describe('updateSection', () => {
+  beforeEach(seedDb)
+
+  it('updates target_elevation_gain on a section', async () => {
+    const meso = seedMesocycle()
+    const tmpl = seedMixedTemplate(meso.id)
+    const section = seedSection(tmpl.id, 'running', 1, 'Hill Run')
+
+    const result = await updateSection(section.id, { target_elevation_gain: 450 })
+    expect(result.success).toBe(true)
+
+    const row = testDb.select().from(schema.template_sections).all()
+      .find((s: typeof schema.template_sections.$inferSelect) => s.id === section.id)
+    expect(row?.target_elevation_gain).toBe(450)
+  })
+
+  it('clears target_elevation_gain to null', async () => {
+    const meso = seedMesocycle()
+    const tmpl = seedMixedTemplate(meso.id)
+    const section = seedSection(tmpl.id, 'running', 1, 'Hill Run')
+
+    await updateSection(section.id, { target_elevation_gain: 300 })
+    const result = await updateSection(section.id, { target_elevation_gain: null })
+    expect(result.success).toBe(true)
+
+    const row = testDb.select().from(schema.template_sections).all()
+      .find((s: typeof schema.template_sections.$inferSelect) => s.id === section.id)
+    expect(row?.target_elevation_gain).toBeNull()
+  })
+
+  it('rejects negative elevation gain', async () => {
+    const meso = seedMesocycle()
+    const tmpl = seedMixedTemplate(meso.id)
+    const section = seedSection(tmpl.id, 'running', 1, 'Hill Run')
+
+    const result = await updateSection(section.id, { target_elevation_gain: -5 })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error).toMatch(/elevation gain/i)
   })
 })
