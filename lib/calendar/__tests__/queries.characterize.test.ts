@@ -63,6 +63,18 @@ function createTestDb() {
       template_snapshot TEXT NOT NULL,
       created_at INTEGER
     );
+    CREATE TABLE schedule_week_overrides (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      mesocycle_id INTEGER NOT NULL REFERENCES mesocycles(id) ON DELETE CASCADE,
+      week_number INTEGER NOT NULL,
+      day_of_week INTEGER NOT NULL,
+      period TEXT NOT NULL,
+      template_id INTEGER REFERENCES workout_templates(id),
+      time_slot TEXT,
+      override_group TEXT NOT NULL,
+      created_at INTEGER
+    );
+    CREATE UNIQUE INDEX schedule_week_overrides_meso_week_day_period_idx ON schedule_week_overrides(mesocycle_id, week_number, day_of_week, period);
   `)
 
   const db = drizzle(sqlite, { schema: { ...schema, ...relationsModule } }) as AppDb
