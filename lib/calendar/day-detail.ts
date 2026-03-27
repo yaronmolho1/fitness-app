@@ -38,6 +38,7 @@ export type TemplateDetail = {
   interval_count: number | null
   interval_rest: number | null
   coaching_cues: string | null
+  target_elevation_gain: number | null
   planned_duration: number | null
 }
 
@@ -232,6 +233,7 @@ export async function getDayDetail(
         interval_count: workout_templates.interval_count,
         interval_rest: workout_templates.interval_rest,
         coaching_cues: workout_templates.coaching_cues,
+        target_elevation_gain: workout_templates.target_elevation_gain,
         planned_duration: workout_templates.planned_duration,
       })
       .from(workout_templates)
