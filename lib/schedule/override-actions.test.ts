@@ -21,7 +21,7 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
-import { moveWorkout } from './override-actions'
+import { moveWorkout, undoScheduleMove, resetWeekSchedule } from './override-actions'
 
 function createTables() {
   testDb.run(sql`DROP TABLE IF EXISTS logged_workouts`)
@@ -581,5 +581,235 @@ describe('moveWorkout', () => {
 
       expect(revalidatePath).toHaveBeenCalled()
     })
+  })
+})
+
+describe('undoScheduleMove', () => {
+  beforeEach(() => {
+    createTables()
+    vi.clearAllMocks()
+  })
+
+  it('deletes all override rows matching override_group + mesocycle', async () => {
+    const meso = seedMesocycle()
+    const tmpl = seedTemplate(meso.id)
+    seedSchedule(meso.id, 1, tmpl.id, 'morning')
+
+    const moveResult = await moveWorkout({
+      mesocycle_id: meso.id,
+      week_number: 1,
+      source_day: 1,
+      source_period: 'morning',
+      target_day: 3,
+      target_period: 'evening',
+      scope: 'this_week',
+    })
+    expect(moveResult.success).toBe(true)
+    const group = (moveResult as { success: true; override_group: string }).override_group
+
+    const result = await undoScheduleMove(group, meso.id)
+    expect(result.success).toBe(true)
+    expect((result as { success: true; deleted: number }).deleted).toBe(2)
+
+    const remaining = testDb
+      .select()
+      .from(schema.schedule_week_overrides)
+      .all()
+    expect(remaining).toHaveLength(0)
+  })
+
+  it('does not delete overrides from a different override_group', async () => {
+    const meso = seedMesocycle()
+    const tmpl = seedTemplate(meso.id)
+    seedSchedule(meso.id, 1, tmpl.id, 'morning')
+    seedSchedule(meso.id, 2, tmpl.id, 'afternoon')
+
+    const move1 = await moveWorkout({
+      mesocycle_id: meso.id,
+      week_number: 1,
+      source_day: 1,
+      source_period: 'morning',
+      target_day: 3,
+      target_period: 'evening',
+      scope: 'this_week',
+    })
+    const move2 = await moveWorkout({
+      mesocycle_id: meso.id,
+      week_number: 2,
+      source_day: 2,
+      source_period: 'afternoon',
+      target_day: 4,
+      target_period: 'morning',
+      scope: 'this_week',
+    })
+
+    const group1 = (move1 as { success: true; override_group: string }).override_group
+    await undoScheduleMove(group1, meso.id)
+
+    const remaining = testDb
+      .select()
+      .from(schema.schedule_week_overrides)
+      .all()
+    expect(remaining).toHaveLength(2)
+    expect(remaining[0].override_group).toBe(
+      (move2 as { success: true; override_group: string }).override_group
+    )
+  })
+
+  it('does not delete overrides from a different mesocycle', async () => {
+    const meso1 = seedMesocycle()
+    const meso2 = seedMesocycle({ name: 'Other Meso' })
+    const tmpl1 = seedTemplate(meso1.id)
+    const tmpl2 = seedTemplate(meso2.id, 'Pull A')
+    seedSchedule(meso1.id, 1, tmpl1.id, 'morning')
+    seedSchedule(meso2.id, 1, tmpl2.id, 'morning')
+
+    const move1 = await moveWorkout({
+      mesocycle_id: meso1.id,
+      week_number: 1,
+      source_day: 1,
+      source_period: 'morning',
+      target_day: 3,
+      target_period: 'evening',
+      scope: 'this_week',
+    })
+    await moveWorkout({
+      mesocycle_id: meso2.id,
+      week_number: 1,
+      source_day: 1,
+      source_period: 'morning',
+      target_day: 4,
+      target_period: 'afternoon',
+      scope: 'this_week',
+    })
+
+    const group1 = (move1 as { success: true; override_group: string }).override_group
+    // Try to undo group1 against meso2 — should delete nothing
+    const result = await undoScheduleMove(group1, meso2.id)
+    expect(result.success).toBe(true)
+    expect((result as { success: true; deleted: number }).deleted).toBe(0)
+
+    const all = testDb.select().from(schema.schedule_week_overrides).all()
+    expect(all).toHaveLength(4)
+  })
+
+  it('rejects completed mesocycle', async () => {
+    const meso = seedMesocycle({ status: 'completed' })
+    const result = await undoScheduleMove('some-group', meso.id)
+    expect(result.success).toBe(false)
+    expect((result as { success: false; error: string }).error).toContain('completed')
+  })
+
+  it('rejects non-existent mesocycle', async () => {
+    const result = await undoScheduleMove('some-group', 9999)
+    expect(result.success).toBe(false)
+    expect((result as { success: false; error: string }).error).toContain('not found')
+  })
+
+  it('returns deleted=0 when no matching rows', async () => {
+    const meso = seedMesocycle()
+    const result = await undoScheduleMove('nonexistent-group', meso.id)
+    expect(result.success).toBe(true)
+    expect((result as { success: true; deleted: number }).deleted).toBe(0)
+  })
+
+  it('revalidates path on success', async () => {
+    const { revalidatePath } = await import('next/cache')
+    const meso = seedMesocycle()
+    await undoScheduleMove('any-group', meso.id)
+    expect(revalidatePath).toHaveBeenCalledWith('/mesocycles', 'layout')
+  })
+})
+
+describe('resetWeekSchedule', () => {
+  beforeEach(() => {
+    createTables()
+    vi.clearAllMocks()
+  })
+
+  it('deletes all overrides for a given mesocycle + week', async () => {
+    const meso = seedMesocycle()
+    const tmpl = seedTemplate(meso.id)
+    seedSchedule(meso.id, 1, tmpl.id, 'morning')
+    seedSchedule(meso.id, 2, tmpl.id, 'afternoon')
+
+    await moveWorkout({
+      mesocycle_id: meso.id,
+      week_number: 1,
+      source_day: 1,
+      source_period: 'morning',
+      target_day: 3,
+      target_period: 'evening',
+      scope: 'this_week',
+    })
+    await moveWorkout({
+      mesocycle_id: meso.id,
+      week_number: 1,
+      source_day: 2,
+      source_period: 'afternoon',
+      target_day: 4,
+      target_period: 'morning',
+      scope: 'this_week',
+    })
+
+    const result = await resetWeekSchedule(meso.id, 1)
+    expect(result.success).toBe(true)
+    expect((result as { success: true; deleted: number }).deleted).toBe(4)
+
+    const remaining = testDb.select().from(schema.schedule_week_overrides).all()
+    expect(remaining).toHaveLength(0)
+  })
+
+  it('does not delete overrides from other weeks', async () => {
+    const meso = seedMesocycle()
+    const tmpl = seedTemplate(meso.id)
+    seedSchedule(meso.id, 1, tmpl.id, 'morning')
+
+    await moveWorkout({
+      mesocycle_id: meso.id,
+      week_number: 1,
+      source_day: 1,
+      source_period: 'morning',
+      target_day: 3,
+      target_period: 'evening',
+      scope: 'remaining_weeks',
+    })
+
+    // Should have overrides for weeks 1-4
+    const before = testDb.select().from(schema.schedule_week_overrides).all()
+    expect(before.length).toBeGreaterThan(2)
+
+    await resetWeekSchedule(meso.id, 1)
+
+    const remaining = testDb.select().from(schema.schedule_week_overrides).all()
+    expect(remaining.every((r: { week_number: number }) => r.week_number !== 1)).toBe(true)
+    expect(remaining.length).toBeGreaterThan(0)
+  })
+
+  it('rejects completed mesocycle', async () => {
+    const meso = seedMesocycle({ status: 'completed' })
+    const result = await resetWeekSchedule(meso.id, 1)
+    expect(result.success).toBe(false)
+    expect((result as { success: false; error: string }).error).toContain('completed')
+  })
+
+  it('rejects non-existent mesocycle', async () => {
+    const result = await resetWeekSchedule(9999, 1)
+    expect(result.success).toBe(false)
+    expect((result as { success: false; error: string }).error).toContain('not found')
+  })
+
+  it('returns deleted=0 when no overrides for that week', async () => {
+    const meso = seedMesocycle()
+    const result = await resetWeekSchedule(meso.id, 3)
+    expect(result.success).toBe(true)
+    expect((result as { success: true; deleted: number }).deleted).toBe(0)
+  })
+
+  it('revalidates path on success', async () => {
+    const { revalidatePath } = await import('next/cache')
+    const meso = seedMesocycle()
+    await resetWeekSchedule(meso.id, 1)
+    expect(revalidatePath).toHaveBeenCalledWith('/mesocycles', 'layout')
   })
 })
