@@ -44,6 +44,7 @@ export function RunningLoggingForm({ data, onSaveSuccess }: { data: RunningWorko
   const [distance, setDistance] = useState('')
   const [pace, setPace] = useState('')
   const [hr, setHr] = useState('')
+  const [elevationGain, setElevationGain] = useState('')
   const [rating, setRating] = useState<number | null>(null)
   const [notes, setNotes] = useState('')
   const [isPending, startTransition] = useTransition()
@@ -52,19 +53,20 @@ export function RunningLoggingForm({ data, onSaveSuccess }: { data: RunningWorko
 
   // Interval rep state — one entry per interval_count
   const [intervalReps, setIntervalReps] = useState<
-    Array<{ pace: string; hr: string; notes: string }>
+    Array<{ pace: string; hr: string; notes: string; elevation: string }>
   >(() =>
     Array.from({ length: intervalCount }, () => ({
       pace: '',
       hr: '',
       notes: '',
+      elevation: '',
     }))
   )
   const [expandedNotes, setExpandedNotes] = useState<Set<number>>(new Set())
 
   function updateIntervalRep(
     index: number,
-    field: 'pace' | 'hr' | 'notes',
+    field: 'pace' | 'hr' | 'notes' | 'elevation',
     value: string
   ) {
     setIntervalReps((prev) =>
@@ -74,7 +76,7 @@ export function RunningLoggingForm({ data, onSaveSuccess }: { data: RunningWorko
 
   function addIntervalRep() {
     setIntervalCount((prev) => prev + 1)
-    setIntervalReps((prev) => [...prev, { pace: '', hr: '', notes: '' }])
+    setIntervalReps((prev) => [...prev, { pace: '', hr: '', notes: '', elevation: '' }])
   }
 
   function removeIntervalRep() {
@@ -106,7 +108,7 @@ export function RunningLoggingForm({ data, onSaveSuccess }: { data: RunningWorko
         interval_pace: rep.pace === '' ? null : rep.pace,
         interval_avg_hr: rep.hr === '' ? null : parseInt(rep.hr, 10),
         interval_notes: rep.notes === '' ? null : rep.notes,
-        interval_elevation_gain: null, // T180: wire to UI input
+        interval_elevation_gain: rep.elevation === '' ? null : parseInt(rep.elevation, 10),
       }))
     }
 
@@ -116,6 +118,7 @@ export function RunningLoggingForm({ data, onSaveSuccess }: { data: RunningWorko
       actualDistance: distance === '' ? null : parseFloat(distance),
       actualAvgPace: pace === '' ? null : pace,
       actualAvgHr: hr === '' ? null : parseInt(hr, 10),
+      actualElevationGain: elevationGain === '' ? null : parseInt(elevationGain, 10),
       rating,
       notes: notes || null,
       intervalData,
@@ -128,6 +131,10 @@ export function RunningLoggingForm({ data, onSaveSuccess }: { data: RunningWorko
     }
     if (input.actualAvgHr !== null && (isNaN(input.actualAvgHr) || input.actualAvgHr <= 0)) {
       setError('Average HR must be a positive integer')
+      return
+    }
+    if (input.actualElevationGain !== null && input.actualElevationGain !== undefined && (isNaN(input.actualElevationGain) || input.actualElevationGain < 0)) {
+      setError('Elevation gain must be non-negative')
       return
     }
     if (intervalData) {
@@ -219,6 +226,16 @@ export function RunningLoggingForm({ data, onSaveSuccess }: { data: RunningWorko
               </div>
               <div className="mt-0.5 text-lg font-bold tabular-nums">
                 Zone {template.hr_zone}
+              </div>
+            </div>
+          )}
+          {template.target_elevation_gain !== null && template.target_elevation_gain !== undefined && (
+            <div className="rounded-md bg-muted/50 px-3 py-2 text-center">
+              <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                Elevation
+              </div>
+              <div className="mt-0.5 text-lg font-bold tabular-nums">
+                {template.target_elevation_gain}m
               </div>
             </div>
           )}
@@ -314,6 +331,24 @@ export function RunningLoggingForm({ data, onSaveSuccess }: { data: RunningWorko
               className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:h-10 md:text-sm"
             />
           </div>
+
+          <div className="space-y-1.5">
+            <label
+              htmlFor="actual-elevation-gain"
+              className="text-sm font-medium"
+            >
+              Elevation Gain (m)
+            </label>
+            <NumericInput
+              id="actual-elevation-gain"
+              data-testid="actual-elevation-gain"
+              mode="integer"
+              placeholder="e.g. 150"
+              value={elevationGain}
+              onValueChange={setElevationGain}
+              className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:h-10 md:text-sm"
+            />
+          </div>
         </div>
       </div>
 
@@ -356,7 +391,7 @@ export function RunningLoggingForm({ data, onSaveSuccess }: { data: RunningWorko
                   Rep {index + 1}
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <div className="space-y-1">
                     <label
                       htmlFor={`interval-pace-${index + 1}`}
@@ -389,6 +424,24 @@ export function RunningLoggingForm({ data, onSaveSuccess }: { data: RunningWorko
                       placeholder="bpm"
                       value={rep.hr}
                       onValueChange={(v) => updateIntervalRep(index, 'hr', v)}
+                      className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label
+                      htmlFor={`interval-elevation-${index + 1}`}
+                      className="text-xs font-medium text-muted-foreground"
+                    >
+                      Elevation (m)
+                    </label>
+                    <NumericInput
+                      id={`interval-elevation-${index + 1}`}
+                      data-testid={`interval-elevation-${index + 1}`}
+                      mode="integer"
+                      placeholder="m"
+                      value={rep.elevation}
+                      onValueChange={(v) => updateIntervalRep(index, 'elevation', v)}
                       className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     />
                   </div>

@@ -33,6 +33,7 @@ function makeTemplate(overrides: Record<string, unknown> = {}) {
     planned_duration: null as number | null,
     target_distance: null as number | null,
     target_duration: null as number | null,
+    target_elevation_gain: null as number | null,
     ...overrides,
   }
 }
@@ -63,21 +64,21 @@ describe('RunningLoggingForm — T180 characterization (elevation gain)', () => 
   // No elevation gain UI exists yet
   // ================================================================
 
-  it('does not render an elevation gain input in the actual fields section', () => {
+  // T180: elevation gain inputs now exist
+  it('renders an elevation gain input in the actual fields section', () => {
     render(<RunningLoggingForm data={makeData()} />)
-    // The form currently has 3 actual fields: distance, pace, HR
-    expect(screen.queryByLabelText(/elevation/i)).not.toBeInTheDocument()
-    expect(screen.queryByTestId('actual-elevation-gain')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Elevation Gain (m)')).toBeInTheDocument()
+    expect(screen.getByTestId('actual-elevation-gain')).toBeInTheDocument()
   })
 
-  it('actual fields section has exactly 3 inputs: distance, pace, HR', () => {
+  it('actual fields section has exactly 4 inputs: distance, pace, HR, elevation', () => {
     render(<RunningLoggingForm data={makeData()} />)
     const section = screen.getByTestId('actual-fields')
     const inputs = section.querySelectorAll('input')
-    expect(inputs.length).toBe(3)
+    expect(inputs.length).toBe(4)
   })
 
-  it('does not render elevation gain input in interval reps', () => {
+  it('renders elevation gain input in interval reps', () => {
     render(
       <RunningLoggingForm
         data={makeData({
@@ -88,13 +89,11 @@ describe('RunningLoggingForm — T180 characterization (elevation gain)', () => 
         })}
       />
     )
-    // Each interval rep currently has 2 visible inputs: pace and HR
-    expect(screen.queryByTestId('interval-elevation-1')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('interval-elevation-2')).not.toBeInTheDocument()
-    expect(screen.queryByLabelText(/elevation/i)).not.toBeInTheDocument()
+    expect(screen.getByTestId('interval-elevation-1')).toBeInTheDocument()
+    expect(screen.getByTestId('interval-elevation-2')).toBeInTheDocument()
   })
 
-  it('interval rep has exactly 2 inputs (pace + HR) when notes collapsed', () => {
+  it('interval rep has exactly 3 inputs (pace + HR + elevation) when notes collapsed', () => {
     render(
       <RunningLoggingForm
         data={makeData({
@@ -107,10 +106,10 @@ describe('RunningLoggingForm — T180 characterization (elevation gain)', () => 
     )
     const repEl = screen.getByTestId('interval-rep-1')
     const inputs = repEl.querySelectorAll('input')
-    expect(inputs.length).toBe(2)
+    expect(inputs.length).toBe(3)
   })
 
-  it('interval rep has exactly 3 inputs (pace + HR + notes) when notes expanded', async () => {
+  it('interval rep has exactly 4 inputs (pace + HR + elevation + notes) when notes expanded', async () => {
     const user = userEvent.setup()
     render(
       <RunningLoggingForm
@@ -125,23 +124,24 @@ describe('RunningLoggingForm — T180 characterization (elevation gain)', () => 
     await user.click(screen.getByTestId('interval-notes-toggle-1'))
     const repEl = screen.getByTestId('interval-rep-1')
     const inputs = repEl.querySelectorAll('input')
-    expect(inputs.length).toBe(3)
+    expect(inputs.length).toBe(4)
   })
 
   // ================================================================
   // Submission payload — non-interval run (no elevation gain)
   // ================================================================
 
-  it('non-interval save payload has no actualElevationGain field', async () => {
+  it('non-interval save payload has actualElevationGain: null when empty', async () => {
     const user = userEvent.setup()
     const mockSave = vi.mocked(saveRunningWorkout)
     mockSave.mockResolvedValueOnce({ success: true, data: { workoutId: 1 } })
 
     render(<RunningLoggingForm data={makeData()} />)
     await user.click(screen.getByTestId('save-running-btn'))
+    await screen.findByTestId('save-success')
 
     const call = mockSave.mock.calls[0][0]
-    expect(call).not.toHaveProperty('actualElevationGain')
+    expect(call.actualElevationGain).toBeNull()
   })
 
   it('non-interval save payload has intervalData: null', async () => {
@@ -236,7 +236,7 @@ describe('RunningLoggingForm — T180 characterization (elevation gain)', () => 
   // Save payload shape — full field set
   // ================================================================
 
-  it('save payload has exactly these keys (no elevation gain)', async () => {
+  it('save payload has exactly these keys (includes actualElevationGain)', async () => {
     const user = userEvent.setup()
     const mockSave = vi.mocked(saveRunningWorkout)
     mockSave.mockResolvedValueOnce({ success: true, data: { workoutId: 1 } })
@@ -252,12 +252,14 @@ describe('RunningLoggingForm — T180 characterization (elevation gain)', () => 
       />
     )
     await user.click(screen.getByTestId('save-running-btn'))
+    await screen.findByTestId('save-success')
 
     const call = mockSave.mock.calls[0][0]
     expect(Object.keys(call).sort()).toEqual([
       'actualAvgHr',
       'actualAvgPace',
       'actualDistance',
+      'actualElevationGain',
       'intervalData',
       'logDate',
       'notes',
@@ -270,7 +272,7 @@ describe('RunningLoggingForm — T180 characterization (elevation gain)', () => 
   // Interval count add/remove preserves state shape
   // ================================================================
 
-  it('adding an interval rep creates entry with empty pace/hr/notes (no elevation)', async () => {
+  it('adding an interval rep creates entry with empty pace/hr/notes/elevation', async () => {
     const user = userEvent.setup()
     const mockSave = vi.mocked(saveRunningWorkout)
     mockSave.mockResolvedValueOnce({ success: true, data: { workoutId: 1 } })
@@ -384,6 +386,7 @@ describe('RunningLoggingForm — T180 characterization (elevation gain)', () => 
       actualDistance: 6.5,
       actualAvgPace: '5:10/km',
       actualAvgHr: 160,
+      actualElevationGain: null,
       rating: 4,
       notes: null,
       intervalData: [
