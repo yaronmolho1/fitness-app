@@ -192,7 +192,7 @@ function seedLoggedWorkout(
 type OverrideRow = typeof schema.schedule_week_overrides.$inferSelect
 
 function getOverrides(): OverrideRow[] {
-  return testDb.select().from(schema.schedule_week_overrides).all()
+  return testDb.select().from(schema.schedule_week_overrides).all() as OverrideRow[]
 }
 
 beforeEach(() => {
@@ -223,7 +223,7 @@ describe('moveWorkout', () => {
 
       // Source override: nulls out the template on Monday morning
       const source = overrides.find(
-        (o) => o.day_of_week === 1 && o.period === 'morning'
+        (o: OverrideRow) => o.day_of_week === 1 && o.period === 'morning'
       )
       expect(source).toBeDefined()
       expect(source!.template_id).toBeNull()
@@ -231,7 +231,7 @@ describe('moveWorkout', () => {
 
       // Target override: places template on Wednesday evening
       const target = overrides.find(
-        (o) => o.day_of_week === 3 && o.period === 'evening'
+        (o: OverrideRow) => o.day_of_week === 3 && o.period === 'evening'
       )
       expect(target).toBeDefined()
       expect(target!.template_id).toBe(tmpl.id)
@@ -266,10 +266,10 @@ describe('moveWorkout', () => {
 
       for (const week of [2, 3, 4]) {
         const sourceRow = overrides.find(
-          (o) => o.week_number === week && o.day_of_week === 1
+          (o: OverrideRow) => o.week_number === week && o.day_of_week === 1
         )
         const targetRow = overrides.find(
-          (o) => o.week_number === week && o.day_of_week === 3
+          (o: OverrideRow) => o.week_number === week && o.day_of_week === 3
         )
         expect(sourceRow).toBeDefined()
         expect(sourceRow!.template_id).toBeNull()
@@ -303,7 +303,7 @@ describe('moveWorkout', () => {
       const overrides = getOverrides()
       // Weeks 2 and 4 only (week 3 skipped) — 2 weeks × 2 rows = 4
       expect(overrides).toHaveLength(4)
-      const weekNumbers = [...new Set(overrides.map((o) => o.week_number))]
+      const weekNumbers = [...new Set(overrides.map((o: OverrideRow) => o.week_number))]
       expect(weekNumbers.sort()).toEqual([2, 4])
     })
   })
@@ -332,7 +332,7 @@ describe('moveWorkout', () => {
       expect(overrides).toHaveLength(2)
       // No override for evening
       const eveningOverride = overrides.find(
-        (o) => o.day_of_week === 1 && o.period === 'evening'
+        (o: OverrideRow) => o.day_of_week === 1 && o.period === 'evening'
       )
       expect(eveningOverride).toBeUndefined()
     })
@@ -363,7 +363,7 @@ describe('moveWorkout', () => {
       expect(overrides).toHaveLength(2)
       // Target is Wednesday afternoon, not Wednesday morning
       const target = overrides.find(
-        (o) => o.day_of_week === 3 && o.period === 'afternoon'
+        (o: OverrideRow) => o.day_of_week === 3 && o.period === 'afternoon'
       )
       expect(target).toBeDefined()
       expect(target!.template_id).toBe(tmpl1.id)
@@ -536,7 +536,7 @@ describe('moveWorkout', () => {
 
       const overrides = getOverrides()
       expect(overrides).toHaveLength(4)
-      const groups = [...new Set(overrides.map((o) => o.override_group))]
+      const groups = [...new Set(overrides.map((o: OverrideRow) => o.override_group))]
       expect(groups).toHaveLength(2)
     })
   })
