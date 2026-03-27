@@ -32,6 +32,7 @@ function makeRunningTemplate(overrides: Record<string, unknown> = {}) {
     interval_rest: null,
     coaching_cues: null,
     planned_duration: null,
+    target_elevation_gain: null,
     ...overrides,
   }
 }

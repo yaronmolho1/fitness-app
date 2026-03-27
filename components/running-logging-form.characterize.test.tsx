@@ -31,6 +31,7 @@ function makeTemplate(overrides: Record<string, unknown> = {}) {
     planned_duration: null as number | null,
     target_distance: null as number | null,
     target_duration: null as number | null,
+    target_elevation_gain: null as number | null,
     ...overrides,
   }
 }
