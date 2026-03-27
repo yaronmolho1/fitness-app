@@ -13,9 +13,9 @@ As an athlete, I can open the app on my phone and immediately see today's planne
 - [ ] Lookup step 1: find the active mesocycle (status = `active`); if none exists, show the no-active-mesocycle state (see Edge Cases)
 - [ ] Lookup step 2: determine today's `day_of_week` (e.g. `monday`)
 - [ ] Lookup step 3: determine whether the current week is a deload week — compute week offset from mesocycle `start_date`; if the mesocycle has `has_deload = true` and the current week is the last week of the mesocycle, use the `deload` variant; otherwise use the `normal` variant (per ADR-003)
-- [ ] Lookup step 4: query `weekly_schedule` for rows matching the active mesocycle, today's `day_of_week`, and the resolved variant (`normal` | `deload`)
-- [ ] Lookup step 5: if no `weekly_schedule` row exists for today → rest day (see specs/rest-day-display.md)
-- [ ] Lookup step 6: load the `workout_template` referenced by the matching `weekly_schedule` row, including all associated `exercise_slots` (for resistance) or modality-specific fields
+- [ ] Lookup step 4: resolve effective schedule for today — base `weekly_schedule` merged with any `schedule_week_overrides` for the current week via `getEffectiveScheduleForDay()`
+- [ ] Lookup step 5: if no effective schedule entry exists for today → rest day (see specs/rest-day-display.md)
+- [ ] Lookup step 6: load the `workout_template` referenced by the effective schedule entry, including all associated `exercise_slots` (for resistance) or modality-specific fields
 
 ### Resistance Workout Display
 - [ ] Template name is shown prominently

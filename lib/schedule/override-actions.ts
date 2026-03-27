@@ -78,7 +78,7 @@ export async function moveWorkout(input: {
     return { success: false, error: 'Cannot move to the same day and period' }
   }
 
-  return db.transaction((tx) => {
+  const result = db.transaction((tx): MoveResult => {
     // Verify mesocycle exists and isn't completed
     const meso = tx
       .select()
@@ -92,6 +92,12 @@ export async function moveWorkout(input: {
 
     if (meso.status === 'completed') {
       return { success: false, error: 'Cannot modify schedule of a completed mesocycle' } as const
+    }
+
+    // Validate week_number upper bound
+    const maxWeek = meso.has_deload ? meso.work_weeks + 1 : meso.work_weeks
+    if (week_number > maxWeek) {
+      return { success: false, error: 'Invalid week number' } as const
     }
 
     // Determine week_type based on week_number vs work_weeks
@@ -211,9 +217,14 @@ export async function moveWorkout(input: {
       return { success: false, error: 'No weeks available to move (all logged)' } as const
     }
 
-    revalidatePath('/mesocycles', 'layout')
     return { success: true, override_group: overrideGroup } as const
   })
+
+  if (result.success) {
+    revalidatePath('/mesocycles', 'layout')
+  }
+
+  return result
 }
 
 type UndoResult = { success: true; deleted: number } | { success: false; error: string }

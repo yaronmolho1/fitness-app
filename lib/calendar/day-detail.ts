@@ -2,7 +2,6 @@ import { and, eq, gte, lte, asc, inArray } from 'drizzle-orm'
 import type { AppDb } from '@/lib/db'
 import {
   mesocycles,
-  weekly_schedule,
   workout_templates,
   exercise_slots,
   exercises,
@@ -12,6 +11,7 @@ import {
   slot_week_overrides,
 } from '@/lib/db/schema'
 import { mergeSlotWithOverride } from '@/lib/progression/week-overrides'
+import { getEffectiveScheduleForDay } from '@/lib/schedule/override-queries'
 
 // Slot target data from live template
 export type SlotDetail = {
@@ -157,22 +157,11 @@ export async function getDayDetail(
 
   const dow = isoDayOfWeek(date)
 
-  // Get all schedule entries for this day
-  const schedEntries = database
-    .select({
-      template_id: weekly_schedule.template_id,
-      period: weekly_schedule.period,
-    })
-    .from(weekly_schedule)
-    .where(
-      and(
-        eq(weekly_schedule.mesocycle_id, meso.id),
-        eq(weekly_schedule.day_of_week, dow),
-        eq(weekly_schedule.week_type, weekType)
-      )
-    )
-    .all()
-    .filter(e => e.template_id != null)
+  // Resolve effective schedule (base + overrides) for this day
+  const effectiveEntries = await getEffectiveScheduleForDay(
+    database, meso.id, weekNumber, dow, weekType
+  )
+  const schedEntries = effectiveEntries.filter(e => e.template_id != null)
 
   const mesoStatus = meso.status as MesocycleStatus
 

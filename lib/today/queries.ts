@@ -2,7 +2,6 @@ import { eq, and, asc, inArray, lte, gte, isNull } from 'drizzle-orm'
 import { db } from '@/lib/db/index'
 import {
   mesocycles,
-  weekly_schedule,
   workout_templates,
   template_sections,
   exercise_slots,
@@ -18,6 +17,7 @@ import {
 import { filterActiveRoutineItems } from '@/lib/routines/scope-filter'
 import { getWeeklyCompletionCounts, getStreaks } from '@/lib/routines/queries'
 import { mergeSlotWithOverride } from '@/lib/progression/week-overrides'
+import { getEffectiveScheduleForDay } from '@/lib/schedule/override-queries'
 
 // Response types
 
@@ -430,34 +430,21 @@ export async function getTodayWorkout(today: string): Promise<TodayResult[]> {
     status: activeMeso.status as 'planned' | 'active' | 'completed',
   }
 
-  // Step 4: query all schedule entries for this day
-  const scheduleRows = await db
-    .select({
-      template_id: weekly_schedule.template_id,
-      period: weekly_schedule.period,
-      time_slot: weekly_schedule.time_slot,
-    })
-    .from(weekly_schedule)
-    .where(
-      and(
-        eq(weekly_schedule.mesocycle_id, activeMeso.id),
-        eq(weekly_schedule.day_of_week, dayOfWeek),
-        eq(weekly_schedule.week_type, weekType)
-      )
-    )
-    .all()
+  // Step 4: compute week number and resolve effective schedule (base + overrides)
+  const weekNumber = getWeekNumber(activeMeso.start_date, today)
 
-  // Filter to rows with valid template_id
-  const validRows = scheduleRows.filter((r) => r.template_id !== null)
+  const effectiveEntries = await getEffectiveScheduleForDay(
+    db, activeMeso.id, weekNumber, dayOfWeek, weekType
+  )
+
+  // Filter to entries with valid template_id
+  const validRows = effectiveEntries.filter((e) => e.template_id !== null)
 
   // Step 5: no schedule = rest day
   if (validRows.length === 0) {
     const routines = await getRestDayRoutines(today)
     return [{ type: 'rest_day', date: today, mesocycle: mesoInfo, routines }]
   }
-
-  // Step 5b: compute week number for override lookup
-  const weekNumber = getWeekNumber(activeMeso.start_date, today)
 
   // Step 6: build result for each scheduled session
   const results: TodayResult[] = []
