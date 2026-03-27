@@ -40,8 +40,8 @@ function makeSection(overrides: Partial<SectionData> & { id: number; section_nam
     coaching_cues: null,
     target_distance: null,
     target_duration: null,
-    planned_duration: null,
     target_elevation_gain: null,
+    planned_duration: null,
     ...overrides,
   }
 }
@@ -70,8 +70,8 @@ function makeData(overrides: Record<string, unknown> = {}) {
       coaching_cues: null,
       target_distance: null,
       target_duration: null,
-      planned_duration: null,
       target_elevation_gain: null,
+      planned_duration: null,
     },
     sections: [
       makeSection({

@@ -518,6 +518,7 @@ describe('RunningLoggingForm — characterization', () => {
       actualDistance: null,
       actualAvgPace: null,
       actualAvgHr: null,
+      actualElevationGain: null,
       rating: null,
       notes: null,
       intervalData: null,

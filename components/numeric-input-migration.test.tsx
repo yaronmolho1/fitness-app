@@ -121,8 +121,8 @@ function makeRunningData(): RunningWorkoutData {
       coaching_cues: null,
       target_distance: 8,
       target_duration: 45,
-      planned_duration: null,
       target_elevation_gain: null,
+      planned_duration: null,
     },
   }
 }
@@ -180,8 +180,8 @@ function makeMmaData(): MmaWorkoutData {
       coaching_cues: null,
       target_distance: null,
       target_duration: null,
-      planned_duration: 90,
       target_elevation_gain: null,
+      planned_duration: 90,
     },
   }
 }
