@@ -5,6 +5,7 @@ import {
   weekly_schedule,
   workout_templates,
   logged_workouts,
+  schedule_week_overrides,
 } from '@/lib/db/schema'
 
 export type CalendarDay = {
@@ -73,6 +74,17 @@ type ScheduleRow = {
   time_slot: string | null
 }
 
+type OverrideRow = {
+  mesocycle_id: number
+  week_number: number
+  day_of_week: number
+  period: string
+  template_id: number | null
+  template_name: string | null
+  modality: string | null
+  time_slot: string | null
+}
+
 export async function getCalendarProjection(
   database: AppDb,
   month: string
@@ -129,6 +141,35 @@ export async function getCalendarProjection(
     }
   }
 
+  // Batch-load schedule_week_overrides for overlapping mesocycles
+  // Key: `${mesocycle_id}-${week_number}-${day_of_week}-${period}`
+  const overrideLookup = new Map<string, OverrideRow>()
+
+  if (mesoRows.length > 0) {
+    const mesoIds = mesoRows.map((m) => m.id)
+
+    const overrideRows = database
+      .select({
+        mesocycle_id: schedule_week_overrides.mesocycle_id,
+        week_number: schedule_week_overrides.week_number,
+        day_of_week: schedule_week_overrides.day_of_week,
+        period: schedule_week_overrides.period,
+        template_id: schedule_week_overrides.template_id,
+        template_name: workout_templates.name,
+        modality: workout_templates.modality,
+        time_slot: schedule_week_overrides.time_slot,
+      })
+      .from(schedule_week_overrides)
+      .leftJoin(workout_templates, eq(schedule_week_overrides.template_id, workout_templates.id))
+      .where(inArray(schedule_week_overrides.mesocycle_id, mesoIds))
+      .all() as OverrideRow[]
+
+    for (const row of overrideRows) {
+      const key = `${row.mesocycle_id}-${row.week_number}-${row.day_of_week}-${row.period}`
+      overrideLookup.set(key, row)
+    }
+  }
+
   // Fetch logged workout dates in this month
   const loggedRows = database
     .select({ log_date: logged_workouts.log_date })
@@ -167,12 +208,56 @@ export async function getCalendarProjection(
     const isDeload = hasDeload && weekNumber > meso.work_weeks
     const weekType = isDeload ? 'deload' : 'normal'
 
-    // Look up schedule entries for this day (may be multiple)
+    // Look up base schedule entries for this day (may be multiple)
     const dow = isoDayOfWeek(date)
     const schedMap = scheduleLookup.get(meso.id)
-    const schedEntries = schedMap?.get(`${dow}-${weekType}`)
+    const baseEntries = schedMap?.get(`${dow}-${weekType}`) ?? []
 
-    if (!schedEntries || schedEntries.length === 0) {
+    // Merge base schedule with per-week overrides
+    const periods = ['morning', 'afternoon', 'evening'] as const
+    type ResolvedEntry = { template_name: string | null; modality: string | null; period: string; time_slot: string | null }
+    const resolved: ResolvedEntry[] = []
+    const seenPeriods = new Set<string>()
+
+    // Process base entries, applying overrides where they exist
+    for (const entry of baseEntries) {
+      seenPeriods.add(entry.period)
+      const overrideKey = `${meso.id}-${weekNumber}-${dow}-${entry.period}`
+      const override = overrideLookup.get(overrideKey)
+
+      if (override) {
+        resolved.push({
+          template_name: override.template_name ?? null,
+          modality: override.modality ?? null,
+          period: override.period,
+          time_slot: override.time_slot,
+        })
+      } else {
+        resolved.push({
+          template_name: entry.template_name ?? null,
+          modality: entry.modality ?? null,
+          period: entry.period,
+          time_slot: entry.time_slot,
+        })
+      }
+    }
+
+    // Add override-only entries (periods with no base schedule)
+    for (const period of periods) {
+      if (seenPeriods.has(period)) continue
+      const overrideKey = `${meso.id}-${weekNumber}-${dow}-${period}`
+      const override = overrideLookup.get(overrideKey)
+      if (override) {
+        resolved.push({
+          template_name: override.template_name ?? null,
+          modality: override.modality ?? null,
+          period: override.period,
+          time_slot: override.time_slot,
+        })
+      }
+    }
+
+    if (resolved.length === 0) {
       return [{
         date,
         template_name: null,
@@ -186,7 +271,7 @@ export async function getCalendarProjection(
     }
 
     // Sort by period order: morning → afternoon → evening
-    const sorted = [...schedEntries].sort(
+    const sorted = resolved.sort(
       (a, b) => (PERIOD_ORDER[a.period] ?? 99) - (PERIOD_ORDER[b.period] ?? 99)
     )
 
