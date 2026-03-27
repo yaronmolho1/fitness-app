@@ -8,5 +8,5 @@ Server Actions for the `weekly_schedule` table — assign and remove workout tem
 - `queries.ts` — `getScheduleForMesocycle` (weekly_schedule rows joined with template names), `getTemplatesForMesocycle` (templates for picker); exports `ScheduleEntry` and `TemplateOption` types
 - `queries.test.ts` — unit tests for both queries covering empty results, joined data, and week_type filtering
 - `override-queries.ts` — `getEffectiveScheduleForDay` resolves a day's schedule by merging base `weekly_schedule` with `schedule_week_overrides`; exports `EffectiveScheduleEntry` type
-- `override-actions.ts` — `moveWorkout` server action: moves a workout from one day to another within a specific week by creating `schedule_week_overrides` entries (source removal + target assignment); validates mesocycle status, day bounds, and template ownership
-- `override-actions.test.ts` — integration tests for `moveWorkout` covering validation errors, active-mesocycle guard, day bounds, duplicate moves, and successful move scenarios
+- `override-actions.ts` — `moveWorkout` (move workout between days/periods via override pairs), `undoScheduleMove` (delete overrides by override_group + mesocycle), `resetWeekSchedule` (delete all overrides for a mesocycle + week); all validate mesocycle not completed; revalidate paths
+- `override-actions.test.ts` — tests for moveWorkout, undoScheduleMove, resetWeekSchedule covering validation, scoping isolation, completed-mesocycle guard, and idempotent no-ops

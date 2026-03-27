@@ -215,3 +215,81 @@ export async function moveWorkout(input: {
     return { success: true, override_group: overrideGroup } as const
   })
 }
+
+type UndoResult = { success: true; deleted: number } | { success: false; error: string }
+
+/** Deletes all override rows matching an override_group within a mesocycle. */
+export async function undoScheduleMove(
+  overrideGroup: string,
+  mesocycleId: number
+): Promise<UndoResult> {
+  if (!overrideGroup || !mesocycleId) {
+    return { success: false, error: 'Missing override_group or mesocycle_id' }
+  }
+
+  return db.transaction((tx) => {
+    const meso = tx
+      .select()
+      .from(mesocycles)
+      .where(eq(mesocycles.id, mesocycleId))
+      .get()
+
+    if (!meso) {
+      return { success: false, error: 'Mesocycle not found' } as const
+    }
+    if (meso.status === 'completed') {
+      return { success: false, error: 'Cannot modify schedule of a completed mesocycle' } as const
+    }
+
+    const result = tx
+      .delete(schedule_week_overrides)
+      .where(
+        and(
+          eq(schedule_week_overrides.override_group, overrideGroup),
+          eq(schedule_week_overrides.mesocycle_id, mesocycleId)
+        )
+      )
+      .run()
+
+    revalidatePath('/mesocycles', 'layout')
+    return { success: true, deleted: result.changes } as const
+  })
+}
+
+/** Deletes all override rows for a given mesocycle + week number. */
+export async function resetWeekSchedule(
+  mesocycleId: number,
+  weekNumber: number
+): Promise<UndoResult> {
+  if (!mesocycleId || !weekNumber) {
+    return { success: false, error: 'Missing mesocycle_id or week_number' }
+  }
+
+  return db.transaction((tx) => {
+    const meso = tx
+      .select()
+      .from(mesocycles)
+      .where(eq(mesocycles.id, mesocycleId))
+      .get()
+
+    if (!meso) {
+      return { success: false, error: 'Mesocycle not found' } as const
+    }
+    if (meso.status === 'completed') {
+      return { success: false, error: 'Cannot modify schedule of a completed mesocycle' } as const
+    }
+
+    const result = tx
+      .delete(schedule_week_overrides)
+      .where(
+        and(
+          eq(schedule_week_overrides.mesocycle_id, mesocycleId),
+          eq(schedule_week_overrides.week_number, weekNumber)
+        )
+      )
+      .run()
+
+    revalidatePath('/mesocycles', 'layout')
+    return { success: true, deleted: result.changes } as const
+  })
+}
