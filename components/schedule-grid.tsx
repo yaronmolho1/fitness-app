@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import { assignTemplate, removeAssignment } from '@/lib/schedule/actions'
 import type { ScheduleEntry, TemplateOption } from '@/lib/schedule/queries'
 import { DAY_NAMES, displayToInternal } from '@/lib/day-mapping'
-import { derivePeriod, checkOverlap } from '@/lib/schedule/time-utils'
+import { derivePeriod, checkOverlap, timeSlotSchema } from '@/lib/schedule/time-utils'
 
 const PERIOD_LABELS: Record<string, string> = {
   morning: 'Morning',
@@ -15,6 +15,7 @@ const PERIOD_LABELS: Record<string, string> = {
   evening: 'Evening',
 }
 
+const DEFAULT_TIME_SLOT = '07:00'
 const DEFAULT_DURATION = 90
 
 type Props = {
@@ -44,6 +45,7 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
   const [schedule, setSchedule] = useState(initialSchedule)
   const [form, setForm] = useState<FormState>(null)
   const [error, setError] = useState<string | null>(null)
+  const [formError, setFormError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   function getAssignments(day: number): ScheduleEntry[] {
@@ -54,7 +56,8 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
 
   function handleAddClick(day: number) {
     setError(null)
-    setForm({ day, selectedTemplateId: null, timeSlot: '07:00', duration: String(DEFAULT_DURATION) })
+    setFormError(null)
+    setForm({ day, selectedTemplateId: null, timeSlot: DEFAULT_TIME_SLOT, duration: String(DEFAULT_DURATION) })
   }
 
   function handleTemplateSelect(templateId: number) {
@@ -66,14 +69,26 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
 
   function handleCancel() {
     setForm(null)
+    setFormError(null)
   }
 
   function handleConfirm() {
     if (!form || !form.selectedTemplateId) return
     const { day, selectedTemplateId, timeSlot } = form
-    const duration = parseInt(form.duration, 10)
-    if (isNaN(duration) || duration <= 0) return
 
+    const timeResult = timeSlotSchema.safeParse(timeSlot)
+    if (!timeResult.success) {
+      setFormError('Invalid time format. Use HH:MM (00:00-23:59)')
+      return
+    }
+
+    const duration = parseInt(form.duration, 10)
+    if (isNaN(duration) || duration <= 0) {
+      setFormError('Duration must be a positive number')
+      return
+    }
+
+    setFormError(null)
     setForm(null)
 
     startTransition(async () => {
@@ -271,6 +286,16 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
                           className="h-8 text-xs"
                         />
                       </div>
+
+                      {/* Form validation error */}
+                      {formError && (
+                        <p
+                          data-testid="form-error"
+                          className="text-xs text-destructive"
+                        >
+                          {formError}
+                        </p>
+                      )}
 
                       {/* Overlap warning */}
                       {hasOverlap() && (

@@ -911,4 +911,120 @@ describe('ScheduleGrid', () => {
       expect(within(mondayCell).getByText('Strength + Cardio')).toBeInTheDocument()
     })
   })
+
+  describe('client-side validation', () => {
+    it('shows error for invalid time format on confirm', async () => {
+      const user = userEvent.setup()
+      render(
+        <ScheduleGrid
+          mesocycleId={1}
+          templates={mockTemplates}
+          schedule={[]}
+          isCompleted={false}
+          variant="normal"
+        />
+      )
+
+      const mondayCell = screen.getByTestId('day-cell-0')
+      await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
+
+      const form = within(mondayCell).getByTestId('add-workout-form')
+      await user.click(within(form).getByText('Push A'))
+
+      const timeInput = within(form).getByLabelText(/time/i)
+      await user.clear(timeInput)
+      await user.type(timeInput, 'abc')
+
+      await user.click(within(form).getByRole('button', { name: /confirm/i }))
+
+      expect(within(form).getByTestId('form-error')).toHaveTextContent('Invalid time format')
+      // Form stays open
+      expect(within(mondayCell).getByTestId('add-workout-form')).toBeInTheDocument()
+    })
+
+    it('shows error for zero duration on confirm', async () => {
+      const user = userEvent.setup()
+      render(
+        <ScheduleGrid
+          mesocycleId={1}
+          templates={mockTemplates}
+          schedule={[]}
+          isCompleted={false}
+          variant="normal"
+        />
+      )
+
+      const mondayCell = screen.getByTestId('day-cell-0')
+      await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
+
+      const form = within(mondayCell).getByTestId('add-workout-form')
+      await user.click(within(form).getByText('Push A'))
+
+      const durationInput = within(form).getByLabelText(/duration/i)
+      await user.clear(durationInput)
+      await user.type(durationInput, '0')
+
+      await user.click(within(form).getByRole('button', { name: /confirm/i }))
+
+      expect(within(form).getByTestId('form-error')).toHaveTextContent('Duration must be a positive number')
+      expect(within(mondayCell).getByTestId('add-workout-form')).toBeInTheDocument()
+    })
+
+    it('shows error for non-numeric duration on confirm', async () => {
+      const user = userEvent.setup()
+      render(
+        <ScheduleGrid
+          mesocycleId={1}
+          templates={mockTemplates}
+          schedule={[]}
+          isCompleted={false}
+          variant="normal"
+        />
+      )
+
+      const mondayCell = screen.getByTestId('day-cell-0')
+      await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
+
+      const form = within(mondayCell).getByTestId('add-workout-form')
+      await user.click(within(form).getByText('Push A'))
+
+      const durationInput = within(form).getByLabelText(/duration/i)
+      await user.clear(durationInput)
+      await user.type(durationInput, 'abc')
+
+      await user.click(within(form).getByRole('button', { name: /confirm/i }))
+
+      expect(within(form).getByTestId('form-error')).toHaveTextContent('Duration must be a positive number')
+    })
+
+    it('clears form error on cancel', async () => {
+      const user = userEvent.setup()
+      render(
+        <ScheduleGrid
+          mesocycleId={1}
+          templates={mockTemplates}
+          schedule={[]}
+          isCompleted={false}
+          variant="normal"
+        />
+      )
+
+      const mondayCell = screen.getByTestId('day-cell-0')
+      await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
+
+      const form = within(mondayCell).getByTestId('add-workout-form')
+      await user.click(within(form).getByText('Push A'))
+
+      const timeInput = within(form).getByLabelText(/time/i)
+      await user.clear(timeInput)
+      await user.type(timeInput, 'bad')
+      await user.click(within(form).getByRole('button', { name: /confirm/i }))
+
+      expect(within(form).getByTestId('form-error')).toBeInTheDocument()
+
+      await user.click(within(form).getByRole('button', { name: /cancel/i }))
+
+      expect(screen.queryByTestId('form-error')).not.toBeInTheDocument()
+    })
+  })
 })
