@@ -36,10 +36,13 @@ const periodLabel: Record<Period, string> = {
   evening: 'EVE',
 }
 
-const periodOrder: Record<Period, number> = {
-  morning: 0,
-  afternoon: 1,
-  evening: 2,
+// Format time badge: prefer "HH:MM — Xmin", fall back to period label
+function formatTimeBadge(detail: Exclude<DayDetailResult, { type: 'rest' }>): string {
+  const timeSlot = 'time_slot' in detail ? detail.time_slot : null
+  const duration = 'duration' in detail ? detail.duration : null
+  if (timeSlot && duration) return `${timeSlot} — ${duration} min`
+  if (timeSlot) return timeSlot
+  return periodLabel[detail.period]
 }
 
 function ModalityBadge({ modality }: { modality: string }) {
@@ -271,7 +274,7 @@ function WorkoutCard({
             </Badge>
           )}
           <Badge variant="outline" className="text-[0.65rem] px-1.5 py-0 font-medium">
-            {periodLabel[detail.period]}
+            {formatTimeBadge(detail)}
           </Badge>
           <ChevronDown
             className={`h-4 w-4 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`}
@@ -417,7 +420,11 @@ export function DayDetailPanel({ date, onClose, onMutate }: DayDetailPanelProps)
   const restEntry = details.find((d) => d.type === 'rest')
   const workouts = details
     .filter((d): d is Exclude<DayDetailResult, { type: 'rest' }> => d.type !== 'rest')
-    .sort((a, b) => periodOrder[a.period] - periodOrder[b.period])
+    .sort((a, b) => {
+      const aSlot = ('time_slot' in a ? a.time_slot : null) ?? ''
+      const bSlot = ('time_slot' in b ? b.time_slot : null) ?? ''
+      return aSlot.localeCompare(bSlot)
+    })
 
   const isRestDay = details.length > 0 && workouts.length === 0
   const isSingleWorkout = workouts.length === 1

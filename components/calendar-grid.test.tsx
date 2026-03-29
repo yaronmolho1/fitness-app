@@ -612,7 +612,7 @@ describe('CalendarGrid – multi-workout pills (T115)', () => {
     expect(dayCell).toHaveTextContent('5K Run')
   })
 
-  it('each pill shows the period label', async () => {
+  it('each pill shows the time slot', async () => {
     render(<CalendarGrid initialMonth="2026-03" />)
 
     await waitFor(() => {
@@ -620,9 +620,9 @@ describe('CalendarGrid – multi-workout pills (T115)', () => {
     })
 
     const dayCell = screen.getByTestId('calendar-day-2026-03-02')
-    // Period labels abbreviated: AM / PM / EVE (or Morning / Evening)
-    expect(dayCell).toHaveTextContent(/AM/i)
-    expect(dayCell).toHaveTextContent(/EVE/i)
+    // T203: shows HH:MM time prefix instead of period labels
+    expect(dayCell).toHaveTextContent('07:00')
+    expect(dayCell).toHaveTextContent('18:00')
   })
 
   it('single workout day renders one pill', async () => {

@@ -1,7 +1,7 @@
-// Characterization tests — capture current display behavior before T203 modifies it
+// T203: Time display across views — tests for new behavior
 // @vitest-environment jsdom
 import { render, screen, cleanup, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import type { CalendarDay } from '@/lib/calendar/queries'
 
 // ============================================================================
@@ -69,23 +69,27 @@ function mockTodayFetch(data: unknown) {
   })
 }
 
+function makeRestDays(count: number, startDate: string): CalendarDay[] {
+  return Array.from({ length: count }, (_, i) => {
+    const day = i + 1
+    const date = `${startDate.slice(0, 8)}${String(day).padStart(2, '0')}`
+    return { date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest' as const, period: null, time_slot: null, duration: null }
+  })
+}
+
 // ============================================================================
-// A. Calendar Grid Pills — current period label behavior
+// A. Calendar Grid — AC1: pill shows "HH:MM Template Name"
 // ============================================================================
 
-describe('CalendarGrid pills — post-T203 time display', () => {
+describe('CalendarGrid pills — T203 time prefix', () => {
   afterEach(() => {
     cleanup()
     vi.restoreAllMocks()
   })
 
-  it('single workout pill shows HH:MM time prefix when time_slot present', async () => {
-    const days: CalendarDay[] = Array.from({ length: 31 }, (_, i) => {
-      const day = i + 1
-      const date = `2026-03-${String(day).padStart(2, '0')}`
-      if (day === 2) return { date, template_name: 'Push A', modality: 'resistance' as const, mesocycle_id: 1, is_deload: false, status: 'projected' as const, period: 'morning' as const, time_slot: '07:00', duration: 90 }
-      return { date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest' as const, period: null, time_slot: null, duration: null }
-    })
+  it('AC1: single workout pill shows time prefix "07:00" instead of "AM"', async () => {
+    const days: CalendarDay[] = makeRestDays(31, '2026-03-01')
+    days[1] = { date: '2026-03-02', template_name: 'Push A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'morning', time_slot: '07:00', duration: 90 }
     mockCalendarFetch({ '2026-03': days })
     render(<CalendarGrid initialMonth="2026-03" />)
 
@@ -94,18 +98,15 @@ describe('CalendarGrid pills — post-T203 time display', () => {
     })
 
     const pill = screen.getByTestId('calendar-day-2026-03-02').querySelector('[data-testid="workout-pill"]')!
-    // T203: shows "07:00 Push A" via time_slot
     expect(pill).toHaveTextContent('07:00')
     expect(pill).toHaveTextContent('Push A')
+    // Should NOT show old period label
+    expect(pill.textContent).not.toMatch(/\bAM\b/)
   })
 
-  it('single workout pill does NOT show duration (kept compact)', async () => {
-    const days: CalendarDay[] = Array.from({ length: 31 }, (_, i) => {
-      const day = i + 1
-      const date = `2026-03-${String(day).padStart(2, '0')}`
-      if (day === 2) return { date, template_name: 'Push A', modality: 'resistance' as const, mesocycle_id: 1, is_deload: false, status: 'projected' as const, period: 'morning' as const, time_slot: '07:00', duration: 90 }
-      return { date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest' as const, period: null, time_slot: null, duration: null }
-    })
+  it('AC1: afternoon workout shows "14:00" instead of "PM"', async () => {
+    const days: CalendarDay[] = makeRestDays(31, '2026-03-01')
+    days[1] = { date: '2026-03-02', template_name: 'Tempo Run', modality: 'running', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'afternoon', time_slot: '14:00', duration: 60 }
     mockCalendarFetch({ '2026-03': days })
     render(<CalendarGrid initialMonth="2026-03" />)
 
@@ -114,41 +115,18 @@ describe('CalendarGrid pills — post-T203 time display', () => {
     })
 
     const pill = screen.getByTestId('calendar-day-2026-03-02').querySelector('[data-testid="workout-pill"]')!
-    // Pills are compact — no duration in calendar grid
-    expect(pill.textContent).not.toContain('90')
-    expect(pill.textContent).not.toContain('min')
+    expect(pill).toHaveTextContent('14:00')
+    expect(pill.textContent).not.toMatch(/\bPM\b/)
   })
 
-  it('single workout with null period but time_slot shows time prefix', async () => {
-    const days: CalendarDay[] = Array.from({ length: 31 }, (_, i) => {
-      const day = i + 1
-      const date = `2026-03-${String(day).padStart(2, '0')}`
-      if (day === 2) return { date, template_name: 'Push A', modality: 'resistance' as const, mesocycle_id: 1, is_deload: false, status: 'projected' as const, period: null, time_slot: '07:00', duration: 90 }
-      return { date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest' as const, period: null, time_slot: null, duration: null }
-    })
-    mockCalendarFetch({ '2026-03': days })
-    render(<CalendarGrid initialMonth="2026-03" />)
-
-    await waitFor(() => {
-      expect(screen.getByTestId('calendar-day-2026-03-02')).toBeInTheDocument()
-    })
-
-    const pill = screen.getByTestId('calendar-day-2026-03-02').querySelector('[data-testid="workout-pill"]')!
-    // T203: time_slot present, so show it even without period
-    expect(pill.textContent).not.toMatch(/AM|PM|EVE/)
-    expect(pill).toHaveTextContent('07:00')
-  })
-
-  it('multi-workout pills show HH:MM time prefix', async () => {
-    const days: CalendarDay[] = Array.from({ length: 31 }, (_, i) => {
-      const day = i + 1
-      const date = `2026-03-${String(day).padStart(2, '0')}`
-      if (day === 2) return [
-        { date, template_name: 'Push A', modality: 'resistance' as const, mesocycle_id: 1, is_deload: false, status: 'projected' as const, period: 'morning' as const, time_slot: '07:00', duration: 90 },
-        { date, template_name: '5K Run', modality: 'running' as const, mesocycle_id: 1, is_deload: false, status: 'projected' as const, period: 'evening' as const, time_slot: '18:00', duration: 45 },
+  it('AC2: multi-workout pills sorted chronologically by time_slot', async () => {
+    const days: CalendarDay[] = makeRestDays(31, '2026-03-01').flatMap((d, i) => {
+      if (i === 1) return [
+        { date: '2026-03-02', template_name: '5K Run', modality: 'running' as const, mesocycle_id: 1, is_deload: false, status: 'projected' as const, period: 'evening' as const, time_slot: '18:00', duration: 45 },
+        { date: '2026-03-02', template_name: 'Push A', modality: 'resistance' as const, mesocycle_id: 1, is_deload: false, status: 'projected' as const, period: 'morning' as const, time_slot: '07:00', duration: 90 },
       ]
-      return [{ date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest' as const, period: null, time_slot: null, duration: null }]
-    }).flat()
+      return [d]
+    })
     mockCalendarFetch({ '2026-03': days })
     render(<CalendarGrid initialMonth="2026-03" />)
 
@@ -159,23 +137,36 @@ describe('CalendarGrid pills — post-T203 time display', () => {
     const dayCell = screen.getByTestId('calendar-day-2026-03-02')
     const pills = dayCell.querySelectorAll('[data-testid="workout-pill"]')
     expect(pills).toHaveLength(2)
-    // T203: shows HH:MM time, sorted chronologically
+    // First pill should be 07:00 (earlier), second 18:00
     expect(pills[0]).toHaveTextContent('07:00')
     expect(pills[0]).toHaveTextContent('Push A')
     expect(pills[1]).toHaveTextContent('18:00')
     expect(pills[1]).toHaveTextContent('5K Run')
   })
 
-  it('multi-workout pills show HH:MM time values', async () => {
-    const days: CalendarDay[] = Array.from({ length: 31 }, (_, i) => {
-      const day = i + 1
-      const date = `2026-03-${String(day).padStart(2, '0')}`
-      if (day === 2) return [
-        { date, template_name: 'Push A', modality: 'resistance' as const, mesocycle_id: 1, is_deload: false, status: 'projected' as const, period: 'morning' as const, time_slot: '07:00', duration: 90 },
-        { date, template_name: '5K Run', modality: 'running' as const, mesocycle_id: 1, is_deload: false, status: 'projected' as const, period: 'evening' as const, time_slot: '18:00', duration: 45 },
+  it('AC1: null time_slot falls back to period label', async () => {
+    const days: CalendarDay[] = makeRestDays(31, '2026-03-01')
+    days[1] = { date: '2026-03-02', template_name: 'Push A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'morning', time_slot: null, duration: null }
+    mockCalendarFetch({ '2026-03': days })
+    render(<CalendarGrid initialMonth="2026-03" />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('calendar-day-2026-03-02')).toBeInTheDocument()
+    })
+
+    const pill = screen.getByTestId('calendar-day-2026-03-02').querySelector('[data-testid="workout-pill"]')!
+    // Falls back to period label when no time_slot
+    expect(pill).toHaveTextContent('AM')
+  })
+
+  it('edge: same start time — sorted by template name as tiebreaker', async () => {
+    const days: CalendarDay[] = makeRestDays(31, '2026-03-01').flatMap((d, i) => {
+      if (i === 1) return [
+        { date: '2026-03-02', template_name: 'Yoga', modality: 'mma' as const, mesocycle_id: 1, is_deload: false, status: 'projected' as const, period: 'morning' as const, time_slot: '07:00', duration: 60 },
+        { date: '2026-03-02', template_name: 'Abs', modality: 'resistance' as const, mesocycle_id: 1, is_deload: false, status: 'projected' as const, period: 'morning' as const, time_slot: '07:00', duration: 30 },
       ]
-      return [{ date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest' as const, period: null, time_slot: null, duration: null }]
-    }).flat()
+      return [d]
+    })
     mockCalendarFetch({ '2026-03': days })
     render(<CalendarGrid initialMonth="2026-03" />)
 
@@ -185,77 +176,24 @@ describe('CalendarGrid pills — post-T203 time display', () => {
 
     const dayCell = screen.getByTestId('calendar-day-2026-03-02')
     const pills = dayCell.querySelectorAll('[data-testid="workout-pill"]')
-    // T203: time_slot values shown in pills
-    expect(pills[0].textContent).toContain('07:00')
-    expect(pills[1].textContent).toContain('18:00')
-  })
-
-  it('afternoon time_slot shows HH:MM on pill', async () => {
-    const days: CalendarDay[] = Array.from({ length: 31 }, (_, i) => {
-      const day = i + 1
-      const date = `2026-03-${String(day).padStart(2, '0')}`
-      if (day === 2) return { date, template_name: 'Tempo Run', modality: 'running' as const, mesocycle_id: 1, is_deload: false, status: 'projected' as const, period: 'afternoon' as const, time_slot: '14:00', duration: 60 }
-      return { date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest' as const, period: null, time_slot: null, duration: null }
-    })
-    mockCalendarFetch({ '2026-03': days })
-    render(<CalendarGrid initialMonth="2026-03" />)
-
-    await waitFor(() => {
-      expect(screen.getByTestId('calendar-day-2026-03-02')).toBeInTheDocument()
-    })
-
-    const pill = screen.getByTestId('calendar-day-2026-03-02').querySelector('[data-testid="workout-pill"]')!
-    expect(pill).toHaveTextContent('14:00')
+    expect(pills).toHaveLength(2)
+    // "Abs" < "Yoga" alphabetically
+    expect(pills[0]).toHaveTextContent('Abs')
+    expect(pills[1]).toHaveTextContent('Yoga')
   })
 })
 
 // ============================================================================
-// B. Day Detail Panel — current period badge and sort behavior
+// B. Day Detail Panel — AC3-4: "HH:MM — Xmin" and chronological sort
 // ============================================================================
 
-describe('DayDetailPanel — post-T203 time display', () => {
+describe('DayDetailPanel — T203 time + duration display', () => {
   afterEach(() => {
     cleanup()
     vi.restoreAllMocks()
   })
 
-  it('workout card header shows "HH:MM — Xmin" time badge', async () => {
-    const projected: DayDetailResult = {
-      type: 'projected',
-      date: '2026-03-02',
-      mesocycle_id: 1,
-      mesocycle_status: 'active',
-      template: {
-        id: 1, name: 'Push A', modality: 'resistance', notes: null,
-        run_type: null, target_pace: null, hr_zone: null,
-        interval_count: null, interval_rest: null, coaching_cues: null,
-        planned_duration: null, target_elevation_gain: null,
-      },
-      slots: [],
-      is_deload: false,
-      period: 'morning',
-      time_slot: '07:00',
-      duration: 90,
-      schedule_entry_id: 1,
-      is_override: false,
-      override_group: null,
-      week_number: 1,
-      day_of_week: 0,
-    }
-    mockDayDetailFetch([projected])
-    render(<DayDetailPanel date="2026-03-02" onClose={() => {}} />)
-
-    await waitFor(() => {
-      expect(screen.getByText('Push A')).toBeInTheDocument()
-    })
-
-    // T203: badge shows "07:00 — 90 min"
-    const card = screen.getByTestId('workout-card')
-    expect(card.textContent).toContain('07:00')
-    expect(card.textContent).toContain('90 min')
-  })
-
-  it('workout card shows duration in trigger', async () => {
+  it('AC3: workout card shows "07:00 — 90 min" instead of "AM" badge', async () => {
     const projected: DayDetailResult = {
       type: 'projected',
       date: '2026-03-02',
@@ -286,11 +224,48 @@ describe('DayDetailPanel — post-T203 time display', () => {
     })
 
     const trigger = screen.getByTestId('workout-card-trigger')
-    // T203: duration shown in trigger badge
+    expect(trigger.textContent).toContain('07:00')
     expect(trigger.textContent).toContain('90 min')
+    // No old period badge
+    expect(trigger.textContent).not.toMatch(/\bAM\b/)
   })
 
-  it('multi-workout cards sorted chronologically by time_slot', async () => {
+  it('AC3: null time_slot falls back to period label, no duration shown', async () => {
+    const projected: DayDetailResult = {
+      type: 'projected',
+      date: '2026-03-02',
+      mesocycle_id: 1,
+      mesocycle_status: 'active',
+      template: {
+        id: 1, name: 'Push A', modality: 'resistance', notes: null,
+        run_type: null, target_pace: null, hr_zone: null,
+        interval_count: null, interval_rest: null, coaching_cues: null,
+        planned_duration: null, target_elevation_gain: null,
+      },
+      slots: [],
+      is_deload: false,
+      period: 'morning',
+      time_slot: null,
+      duration: null,
+      schedule_entry_id: 1,
+      is_override: false,
+      override_group: null,
+      week_number: 1,
+      day_of_week: 0,
+    }
+    mockDayDetailFetch([projected])
+    render(<DayDetailPanel date="2026-03-02" onClose={() => {}} />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Push A')).toBeInTheDocument()
+    })
+
+    const trigger = screen.getByTestId('workout-card-trigger')
+    // Falls back to period label
+    expect(trigger.textContent).toContain('AM')
+  })
+
+  it('AC4: multi-workout cards sorted by time_slot, not period order', async () => {
     const evening: DayDetailResult = {
       type: 'projected',
       date: '2026-03-02',
@@ -335,7 +310,7 @@ describe('DayDetailPanel — post-T203 time display', () => {
       week_number: 1,
       day_of_week: 0,
     }
-    // Send evening first — should still render morning first (chronological by time_slot)
+    // Send evening first — should still render morning first (chronological)
     mockDayDetailFetch([evening, morning])
     render(<DayDetailPanel date="2026-03-02" onClose={() => {}} />)
 
@@ -349,72 +324,19 @@ describe('DayDetailPanel — post-T203 time display', () => {
     expect(cards[1]).toHaveTextContent('18:00')
     expect(cards[1]).toHaveTextContent('Evening Run')
   })
-
-  it('sheet description says "N workouts" for multi-workout day, no times', async () => {
-    const morning: DayDetailResult = {
-      type: 'projected',
-      date: '2026-03-02',
-      mesocycle_id: 1,
-      mesocycle_status: 'active',
-      template: {
-        id: 1, name: 'Push A', modality: 'resistance', notes: null,
-        run_type: null, target_pace: null, hr_zone: null,
-        interval_count: null, interval_rest: null, coaching_cues: null,
-        planned_duration: null, target_elevation_gain: null,
-      },
-      slots: [],
-      is_deload: false,
-      period: 'morning',
-      time_slot: '07:00',
-      duration: 90,
-      schedule_entry_id: 1,
-      is_override: false,
-      override_group: null,
-      week_number: 1,
-      day_of_week: 0,
-    }
-    const evening: DayDetailResult = {
-      type: 'projected',
-      date: '2026-03-02',
-      mesocycle_id: 1,
-      mesocycle_status: 'active',
-      template: {
-        id: 2, name: 'Run', modality: 'running', notes: null,
-        run_type: null, target_pace: null, hr_zone: null,
-        interval_count: null, interval_rest: null, coaching_cues: null,
-        planned_duration: null, target_elevation_gain: null,
-      },
-      slots: [],
-      is_deload: false,
-      period: 'evening',
-      time_slot: '18:00',
-      duration: 45,
-      schedule_entry_id: 2,
-      is_override: false,
-      override_group: null,
-      week_number: 1,
-      day_of_week: 0,
-    }
-    mockDayDetailFetch([morning, evening])
-    render(<DayDetailPanel date="2026-03-02" onClose={() => {}} />)
-
-    await waitFor(() => {
-      expect(screen.getByText('2 workouts')).toBeInTheDocument()
-    })
-  })
 })
 
 // ============================================================================
-// C. Today View — formatPeriodLabel behavior
+// C. Today View — AC5-7: time + duration display
 // ============================================================================
 
-describe('TodayWorkout — post-T203 formatPeriodLabel and time display', () => {
+describe('TodayWorkout — T203 time + duration display', () => {
   afterEach(() => {
     cleanup()
     vi.restoreAllMocks()
   })
 
-  it('multi-session with null time_slot shows period name (Morning/Evening)', async () => {
+  it('AC5: multi-session period label shows "07:00 — 90 min"', async () => {
     mockTodayFetch([
       {
         type: 'workout',
@@ -423,7 +345,8 @@ describe('TodayWorkout — post-T203 formatPeriodLabel and time display', () => 
         template: { id: 1, name: 'Push A', modality: 'resistance', notes: null, run_type: null, target_pace: null, hr_zone: null, interval_count: null, interval_rest: null, coaching_cues: null, planned_duration: null },
         slots: [],
         period: 'morning',
-        time_slot: null,
+        time_slot: '07:00',
+        duration: 90,
       },
       {
         type: 'workout',
@@ -432,7 +355,8 @@ describe('TodayWorkout — post-T203 formatPeriodLabel and time display', () => 
         template: { id: 2, name: 'Run', modality: 'running', notes: null, run_type: 'easy', target_pace: null, hr_zone: null, interval_count: null, interval_rest: null, coaching_cues: null, planned_duration: null },
         slots: [],
         period: 'evening',
-        time_slot: null,
+        time_slot: '18:00',
+        duration: 45,
       },
     ])
     render(<TodayWorkout />)
@@ -443,12 +367,13 @@ describe('TodayWorkout — post-T203 formatPeriodLabel and time display', () => 
 
     const labels = screen.getAllByTestId('period-label')
     expect(labels).toHaveLength(2)
-    // formatPeriodLabel: time_slot is null => PERIOD_LABELS[period]
-    expect(labels[0]).toHaveTextContent('Morning')
-    expect(labels[1]).toHaveTextContent('Evening')
+    expect(labels[0]).toHaveTextContent('07:00')
+    expect(labels[0]).toHaveTextContent('90 min')
+    expect(labels[1]).toHaveTextContent('18:00')
+    expect(labels[1]).toHaveTextContent('45 min')
   })
 
-  it('multi-session with time_slot shows time_slot string instead of period name', async () => {
+  it('AC5: null time_slot falls back to period name, no duration', async () => {
     mockTodayFetch([
       {
         type: 'workout',
@@ -457,7 +382,8 @@ describe('TodayWorkout — post-T203 formatPeriodLabel and time display', () => 
         template: { id: 1, name: 'Push A', modality: 'resistance', notes: null, run_type: null, target_pace: null, hr_zone: null, interval_count: null, interval_rest: null, coaching_cues: null, planned_duration: null },
         slots: [],
         period: 'morning',
-        time_slot: '07:00',
+        time_slot: null,
+        duration: null,
       },
       {
         type: 'workout',
@@ -466,7 +392,8 @@ describe('TodayWorkout — post-T203 formatPeriodLabel and time display', () => 
         template: { id: 2, name: 'Run', modality: 'running', notes: null, run_type: 'easy', target_pace: null, hr_zone: null, interval_count: null, interval_rest: null, coaching_cues: null, planned_duration: null },
         slots: [],
         period: 'evening',
-        time_slot: '18:00',
+        time_slot: null,
+        duration: null,
       },
     ])
     render(<TodayWorkout />)
@@ -476,12 +403,11 @@ describe('TodayWorkout — post-T203 formatPeriodLabel and time display', () => 
     })
 
     const labels = screen.getAllByTestId('period-label')
-    // formatPeriodLabel: time_slot truthy => returns time_slot as-is
-    expect(labels[0]).toHaveTextContent('07:00')
-    expect(labels[1]).toHaveTextContent('18:00')
+    expect(labels[0]).toHaveTextContent('Morning')
+    expect(labels[1]).toHaveTextContent('Evening')
   })
 
-  it('single session does not show period label at all', async () => {
+  it('AC7: single session shows time + duration info', async () => {
     mockTodayFetch([{
       type: 'workout',
       date: '2026-03-15',
@@ -490,6 +416,7 @@ describe('TodayWorkout — post-T203 formatPeriodLabel and time display', () => 
       slots: [],
       period: 'morning',
       time_slot: '07:00',
+      duration: 90,
     }])
     render(<TodayWorkout />)
 
@@ -497,32 +424,12 @@ describe('TodayWorkout — post-T203 formatPeriodLabel and time display', () => 
       expect(screen.getByTestId('workout-display')).toBeInTheDocument()
     })
 
-    // Single session: no period label, no time shown
-    expect(screen.queryByTestId('period-label')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('multi-session-view')).not.toBeInTheDocument()
+    // Single session should still show time info (AC7: no special case hiding)
+    expect(screen.getByTestId('time-info')).toHaveTextContent('07:00')
+    expect(screen.getByTestId('time-info')).toHaveTextContent('90 min')
   })
 
-  it('single session does not display duration anywhere in header', async () => {
-    mockTodayFetch([{
-      type: 'workout',
-      date: '2026-03-15',
-      mesocycle: { id: 1, name: 'Block A', start_date: '2026-03-01', end_date: '2026-04-01', week_type: 'normal' },
-      template: { id: 1, name: 'Push A', modality: 'resistance', notes: null, run_type: null, target_pace: null, hr_zone: null, interval_count: null, interval_rest: null, coaching_cues: null, planned_duration: null },
-      slots: [],
-      period: 'morning',
-      time_slot: '07:00',
-    }])
-    render(<TodayWorkout />)
-
-    await waitFor(() => {
-      expect(screen.getByTestId('workout-display')).toBeInTheDocument()
-    })
-
-    // No schedule duration in current UI (planned_duration is template-level for MMA)
-    expect(screen.queryByText(/90 min/)).not.toBeInTheDocument()
-  })
-
-  it('already_logged in multi-session shows period label from formatPeriodLabel', async () => {
+  it('AC5: formatPeriodLabel with time_slot and duration shows both', async () => {
     mockTodayFetch([
       {
         type: 'already_logged',
@@ -535,7 +442,8 @@ describe('TodayWorkout — post-T203 formatPeriodLabel and time display', () => 
           exercises: [],
         },
         period: 'morning',
-        time_slot: null,
+        time_slot: '07:00',
+        duration: 90,
       },
       {
         type: 'workout',
@@ -544,7 +452,8 @@ describe('TodayWorkout — post-T203 formatPeriodLabel and time display', () => 
         template: { id: 2, name: 'Run', modality: 'running', notes: null, run_type: 'easy', target_pace: null, hr_zone: null, interval_count: null, interval_rest: null, coaching_cues: null, planned_duration: null },
         slots: [],
         period: 'evening',
-        time_slot: null,
+        time_slot: '18:00',
+        duration: 45,
       },
     ])
     render(<TodayWorkout />)
@@ -554,39 +463,7 @@ describe('TodayWorkout — post-T203 formatPeriodLabel and time display', () => 
     })
 
     const labels = screen.getAllByTestId('period-label')
-    // already_logged session also uses formatPeriodLabel
-    expect(labels[0]).toHaveTextContent('Morning')
-    expect(labels[1]).toHaveTextContent('Evening')
-  })
-
-  it('afternoon period shows "Afternoon" in multi-session label', async () => {
-    mockTodayFetch([
-      {
-        type: 'workout',
-        date: '2026-03-15',
-        mesocycle: { id: 1, name: 'Block A', start_date: '2026-03-01', end_date: '2026-04-01', week_type: 'normal' },
-        template: { id: 1, name: 'Push A', modality: 'resistance', notes: null, run_type: null, target_pace: null, hr_zone: null, interval_count: null, interval_rest: null, coaching_cues: null, planned_duration: null },
-        slots: [],
-        period: 'morning',
-        time_slot: null,
-      },
-      {
-        type: 'workout',
-        date: '2026-03-15',
-        mesocycle: { id: 1, name: 'Block A', start_date: '2026-03-01', end_date: '2026-04-01', week_type: 'normal' },
-        template: { id: 2, name: 'BJJ', modality: 'mma', notes: null, run_type: null, target_pace: null, hr_zone: null, interval_count: null, interval_rest: null, coaching_cues: null, planned_duration: 60 },
-        slots: [],
-        period: 'afternoon',
-        time_slot: null,
-      },
-    ])
-    render(<TodayWorkout />)
-
-    await waitFor(() => {
-      expect(screen.getByTestId('multi-session-view')).toBeInTheDocument()
-    })
-
-    const labels = screen.getAllByTestId('period-label')
-    expect(labels[1]).toHaveTextContent('Afternoon')
+    expect(labels[0]).toHaveTextContent('07:00')
+    expect(labels[0]).toHaveTextContent('90 min')
   })
 })

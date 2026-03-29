@@ -224,7 +224,8 @@ describe('DayDetailPanel', () => {
     })
 
     expect(screen.getByTestId('mma-detail')).toBeInTheDocument()
-    expect(screen.getByText(/90 min/)).toBeInTheDocument()
+    // Duration appears in both the time badge and MMA detail
+    expect(screen.getAllByText(/90 min/).length).toBeGreaterThanOrEqual(1)
   })
 
   // ============================================================================
@@ -587,7 +588,7 @@ describe('DayDetailPanel', () => {
       })
     })
 
-    it('card header shows template name, modality badge, and period label', async () => {
+    it('card header shows template name, modality badge, and time badge', async () => {
       mockFetchResponse([projectedResistance, projectedRunning])
 
       render(<DayDetailPanel date="2026-03-02" onClose={() => {}} />)
@@ -596,9 +597,10 @@ describe('DayDetailPanel', () => {
         expect(screen.getByText('Push A')).toBeInTheDocument()
       })
 
-      // Period labels
-      expect(screen.getByText('AM')).toBeInTheDocument()
-      expect(screen.getByText('EVE')).toBeInTheDocument()
+      // T203: time badges instead of period labels
+      const cards = screen.getAllByTestId('workout-card')
+      expect(cards[0].textContent).toContain('07:00')
+      expect(cards[0].textContent).toContain('90 min')
 
       // Modality badges
       expect(screen.getByText('resistance')).toBeInTheDocument()
@@ -671,10 +673,12 @@ describe('DayDetailPanel', () => {
       })
     })
 
-    it('afternoon period shows PM label', async () => {
+    it('afternoon workout shows time badge with time_slot', async () => {
       const afternoon: DayDetailResult = {
         ...projectedResistance,
         period: 'afternoon',
+        time_slot: '14:00',
+        duration: 60,
         template: { ...projectedResistance.template, id: 10, name: 'Afternoon Push' },
       } as DayDetailResult
       mockFetchResponse([afternoon])
@@ -682,7 +686,7 @@ describe('DayDetailPanel', () => {
       render(<DayDetailPanel date="2026-03-02" onClose={() => {}} />)
 
       await waitFor(() => {
-        expect(screen.getByText('PM')).toBeInTheDocument()
+        expect(screen.getByText('14:00 — 60 min')).toBeInTheDocument()
       })
     })
 
@@ -723,16 +727,20 @@ describe('DayDetailPanel', () => {
       expect(screen.getByText('Evening Run')).toBeInTheDocument()
     })
 
-    it('renders cards in period order: morning, afternoon, evening', async () => {
+    it('renders cards sorted chronologically by time_slot', async () => {
       const eveningFirst: DayDetailResult = {
         ...projectedRunning,
         period: 'evening',
+        time_slot: '18:00',
+        duration: 45,
       } as DayDetailResult
       const morningSecond: DayDetailResult = {
         ...projectedResistance,
         period: 'morning',
+        time_slot: '07:00',
+        duration: 90,
       } as DayDetailResult
-      // Send evening first, morning second — should render morning first
+      // Send evening first, morning second — should render morning first (chronological)
       mockFetchResponse([eveningFirst, morningSecond])
 
       render(<DayDetailPanel date="2026-03-02" onClose={() => {}} />)
@@ -742,8 +750,10 @@ describe('DayDetailPanel', () => {
       })
 
       const cards = screen.getAllByTestId('workout-card')
-      expect(cards[0]).toHaveTextContent('AM')
-      expect(cards[1]).toHaveTextContent('EVE')
+      expect(cards[0]).toHaveTextContent('07:00')
+      expect(cards[0]).toHaveTextContent('Push A')
+      expect(cards[1]).toHaveTextContent('18:00')
+      expect(cards[1]).toHaveTextContent('Evening Run')
     })
   })
 
