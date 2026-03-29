@@ -40,6 +40,7 @@ export interface MoveWorkoutModalProps {
     targetPeriod: Period
     targetTimeSlot: string | null
     scope: Scope
+    targetWeekOffset: number
   }) => void
 }
 
@@ -63,6 +64,7 @@ function MoveWorkoutModalContent({
   const [targetPeriod, setTargetPeriod] = useState<Period>('morning')
   const [timeSlot, setTimeSlot] = useState(sourceTimeSlot ?? '')
   const [scope, setScope] = useState<Scope>('this_week')
+  const [weekOffset, setWeekOffset] = useState(0)
 
   // Days where all 3 periods are occupied (keyed by internal day)
   const fullyOccupiedDays = useMemo(() => {
@@ -94,6 +96,7 @@ function MoveWorkoutModalContent({
       targetPeriod,
       targetTimeSlot: timeSlot || null,
       scope,
+      targetWeekOffset: weekOffset,
     })
   }
 
@@ -112,14 +115,36 @@ function MoveWorkoutModalContent({
         </DialogHeader>
 
         <div className="space-y-5">
+          {/* Week offset toggle */}
+          <div className="space-y-2">
+            <Label>Target week</Label>
+            <div className="flex gap-1">
+              {([
+                { offset: -1, label: '← Prev week' },
+                { offset: 0, label: 'This week' },
+                { offset: 1, label: 'Next week →' },
+              ] as const).map(({ offset, label }) => (
+                <Button
+                  key={offset}
+                  variant={weekOffset === offset ? 'default' : 'outline'}
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => { setWeekOffset(offset); setTargetDay(null) }}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
           {/* Day picker */}
           <div className="space-y-2">
             <Label>Target day</Label>
             <div className="flex gap-1">
               {DAY_LABELS.map((label, displayIdx) => {
                 const internalDay = displayToInternal(displayIdx)
-                const isSource = internalDay === sourceDay
-                const isFullyOccupied = fullyOccupiedDays.has(internalDay)
+                const isSource = weekOffset === 0 && internalDay === sourceDay
+                const isFullyOccupied = weekOffset === 0 && fullyOccupiedDays.has(internalDay)
                 const isSelected = targetDay === internalDay
                 return (
                   <Button
