@@ -1,6 +1,6 @@
 // Characterization test — captures current behavior for safe refactoring
 // @vitest-environment jsdom
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, afterEach, vi } from 'vitest'
 
@@ -723,9 +723,10 @@ describe('MixedLoggingForm — characterization', () => {
     vi.mocked(saveMixedWorkout).mockResolvedValueOnce({ success: true, data: { workoutId: 1 } })
     render(<MixedLoggingForm data={make3SectionData()} />)
     await user.click(screen.getByTestId('save-mixed-btn'))
-    await screen.findByTestId('save-success')
+    await waitFor(() => {
+      expect(screen.getByTestId('save-mixed-btn')).toHaveTextContent('Saved')
+    })
     expect(screen.getByTestId('save-mixed-btn')).toBeDisabled()
-    expect(screen.getByTestId('save-mixed-btn')).toHaveTextContent('Saved')
   })
 
   it('shows error message on failed save', async () => {
