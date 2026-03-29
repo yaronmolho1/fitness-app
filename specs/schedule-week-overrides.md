@@ -2,7 +2,7 @@
 
 ## Description
 
-Move a scheduled workout from one day/period to another for a specific week (or all remaining weeks) within a mesocycle. The source slot becomes empty; the target slot gains the workout. Supports undo.
+Move a scheduled workout from one day/time to another for a specific week (or all remaining weeks) within a mesocycle. The source slot becomes empty; the target slot gains the workout. Supports undo.
 
 ## Acceptance Criteria
 
@@ -12,7 +12,7 @@ Move a scheduled workout from one day/period to another for a specific week (or 
 
 3. **Given** a day with two sessions (morning + evening), **When** the user moves only the morning workout, **Then** the evening workout remains on that day.
 
-4. **Given** a target day that already has a morning workout, **When** the user moves a workout there and selects "afternoon," **Then** both workouts appear on the target day in their respective periods.
+4. **Given** a target day that already has a workout at 07:00, **When** the user moves a workout there with a different time, **Then** both workouts appear on the target day at their respective times.
 
 5. **Given** a completed mesocycle, **When** the user attempts to move a workout, **Then** the action is rejected with an error.
 
@@ -50,8 +50,8 @@ Move a scheduled workout from one day/period to another for a specific week (or 
 ## Test Requirements
 
 - AC1-2: integration — moveWorkout action creates correct override rows for single/remaining scope
-- AC3: integration — moving one period doesn't affect other periods on same day
-- AC4: integration — target day can accumulate sessions across different periods
+- AC3: integration — moving one workout doesn't affect other workouts on same day
+- AC4: integration — target day can accumulate sessions at different times
 - AC5: integration — completed mesocycle guard rejects move
 - AC6: integration — logged workout guard rejects move
 - AC7-8: integration — undoScheduleMove / resetWeekSchedule delete correct rows
@@ -60,12 +60,12 @@ Move a scheduled workout from one day/period to another for a specific week (or 
 - AC11: integration — getCalendarProjection reflects overrides
 - AC12: integration — deload week overrides resolve against deload base schedule
 - AC13: component — day detail panel shows override indicator + undo action
-- AC14: component — move modal disables fully-occupied target days
+- AC14: superseded — see `specs/move-workout-time-aware.md` AC11
 
 ## Dependencies
 
 - `specs/7-day-assignment-grid.md` — base schedule structure
-- `specs/workout-time-slots.md` — period/time_slot on schedule entries
+- `specs/time-based-scheduling.md` — time_slot/duration on schedule entries
 - `specs/normal-vs-deload-tabs.md` — week_type variants
 - `specs/retroactive-workout-logging.md` — reserves "Move Workout" action slot
 - `specs/view-todays-planned-workout.md` — getTodayWorkout lookup chain
