@@ -72,6 +72,8 @@ function ResistanceSectionInputs({
   onRemoveSet,
   onUpdateRpe,
   onResetToPlanned,
+  set1Edited,
+  onCopyDown,
 }: {
   sectionIndex: number
   resistanceIdx: number
@@ -83,6 +85,8 @@ function ResistanceSectionInputs({
   onRemoveSet: (slotIndex: number, setIndex: number) => void
   onUpdateRpe: (slotIndex: number, value: number | null) => void
   onResetToPlanned: (slotIndex: number) => void
+  set1Edited: boolean[]
+  onCopyDown: (slotIndex: number) => void
 }) {
   return (
     <div className="space-y-3">
@@ -141,31 +145,30 @@ function ResistanceSectionInputs({
           {/* Set rows */}
           <div className="space-y-1.5 px-4 pb-2">
             {sets[slotIndex]?.map((setData, setIndex) => (
-              <div
-                key={setIndex}
-                data-testid="set-row"
-                className="grid grid-cols-[2rem_1fr_1fr_2.75rem] gap-2 items-center"
-              >
+              <div key={setIndex}>
                 <div
-                  data-testid="set-number-label"
-                  className="flex min-h-[44px] items-center justify-center text-sm font-bold tabular-nums text-muted-foreground"
+                  data-testid="set-row"
+                  className="grid grid-cols-[2rem_1fr_1fr_2.75rem] gap-2 items-center"
                 >
-                  {setIndex + 1}
-                </div>
+                  <div
+                    data-testid="set-number-label"
+                    className="flex min-h-[44px] items-center justify-center text-sm font-bold tabular-nums text-muted-foreground"
+                  >
+                    {setIndex + 1}
+                  </div>
 
-                <NumericInput
-                  data-testid={`weight-input-${sectionIndex}-${slotIndex}-${setIndex}`}
-                  aria-label={`Actual weight for set ${setIndex + 1}`}
-                  mode="decimal"
-                  placeholder={slot.weight !== null ? String(slot.weight) : '\u2014'}
-                  value={setData.weight}
-                  onValueChange={(v) =>
-                    onUpdateSet(slotIndex, setIndex, 'weight', v)
-                  }
-                  className="min-h-[44px] w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                />
+                  <NumericInput
+                    data-testid={`weight-input-${sectionIndex}-${slotIndex}-${setIndex}`}
+                    aria-label={`Actual weight for set ${setIndex + 1}`}
+                    mode="decimal"
+                    placeholder={slot.weight !== null ? String(slot.weight) : '\u2014'}
+                    value={setData.weight}
+                    onValueChange={(v) =>
+                      onUpdateSet(slotIndex, setIndex, 'weight', v)
+                    }
+                    className="min-h-[44px] w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  />
 
-                <div>
                   <NumericInput
                     data-testid={`reps-input-${sectionIndex}-${slotIndex}-${setIndex}`}
                     aria-label={`Actual reps for set ${setIndex + 1}`}
@@ -177,22 +180,31 @@ function ResistanceSectionInputs({
                     }
                     className="min-h-[44px] w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   />
-                  {(isRepsRange(slot.reps) || (parseRepsLowerBound(slot.reps) === null && slot.reps !== '')) && (
-                    <span className="block text-center text-[10px] text-muted-foreground mt-0.5">
-                      Target: {slot.reps}
-                    </span>
-                  )}
+
+                  <button
+                    type="button"
+                    aria-label={`Remove set ${setIndex + 1}`}
+                    disabled={sets[slotIndex].length <= 1}
+                    onClick={() => onRemoveSet(slotIndex, setIndex)}
+                    className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
                 </div>
 
-                <button
-                  type="button"
-                  aria-label={`Remove set ${setIndex + 1}`}
-                  disabled={sets[slotIndex].length <= 1}
-                  onClick={() => onRemoveSet(slotIndex, setIndex)}
-                  className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-30 disabled:pointer-events-none"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
+                {/* Copy-down button: after set 1, when 2+ sets and set 1 edited */}
+                {setIndex === 0 && (sets[slotIndex]?.length ?? 0) >= 2 && set1Edited[slotIndex] && (
+                  <div className="flex justify-end mt-1 mb-0.5">
+                    <button
+                      type="button"
+                      data-testid={`copy-down-resistance-${resistanceIdx}-${slotIndex}`}
+                      onClick={() => onCopyDown(slotIndex)}
+                      className="rounded-full border border-primary/30 bg-primary/5 px-2.5 py-0.5 text-xs font-medium text-primary transition-colors hover:bg-primary/10 active:scale-95"
+                    >
+                      Copy down
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -470,18 +482,18 @@ export function MixedLoggingForm({ data, onSaveSuccess }: { data: MixedWorkoutDa
 
   // State per section: resistance has sets + rpe, running has distance/pace/hr, mma has duration/feeling
   const [resistanceState, setResistanceState] = useState(() => {
-    const state: { sets: SetFormData[][]; rpe: (number | null)[] }[] = []
+    const state: { sets: SetFormData[][]; rpe: (number | null)[]; set1Edited: boolean[]; initialSet1: SetFormData[] }[] = []
     for (const section of sections) {
       if (section.modality === 'resistance') {
         const slots = [...(section.slots ?? [])].sort((a, b) => a.order - b.order)
+        const initialSets = slots.map((slot) =>
+          Array.from({ length: slot.sets }, () => ({ weight: '', reps: '' }))
+        )
         state.push({
-          sets: slots.map((slot) => {
-            const weight = slot.weight != null && slot.weight !== 0 ? String(slot.weight) : ''
-            const lowerBound = parseRepsLowerBound(slot.reps)
-            const reps = lowerBound !== null ? String(lowerBound) : ''
-            return Array.from({ length: slot.sets }, () => ({ weight, reps }))
-          }),
+          sets: initialSets,
           rpe: slots.map(() => null),
+          set1Edited: slots.map(() => false),
+          initialSet1: initialSets.map((s) => ({ ...s[0] })),
         })
       }
     }
@@ -655,6 +667,20 @@ export function MixedLoggingForm({ data, onSaveSuccess }: { data: MixedWorkoutDa
                   return next
                 })
               }}
+              set1Edited={state.set1Edited}
+              onCopyDown={(slotIndex) => {
+                setResistanceState((prev) => {
+                  const next = [...prev]
+                  const sectionState = { ...next[idx] }
+                  sectionState.sets = sectionState.sets.map((s) => s.map((r) => ({ ...r })))
+                  const source = sectionState.sets[slotIndex][0]
+                  for (let i = 1; i < sectionState.sets[slotIndex].length; i++) {
+                    sectionState.sets[slotIndex][i] = { weight: source.weight, reps: source.reps }
+                  }
+                  next[idx] = sectionState
+                  return next
+                })
+              }}
               onUpdateSet={(slotIndex, setIndex, field, value) => {
                 markModified()
                 setResistanceState((prev) => {
@@ -662,6 +688,15 @@ export function MixedLoggingForm({ data, onSaveSuccess }: { data: MixedWorkoutDa
                   const sectionState = { ...next[idx] }
                   sectionState.sets = sectionState.sets.map((s) => s.map((r) => ({ ...r })))
                   sectionState.sets[slotIndex][setIndex][field] = value
+                  // Track set-1 edits for copy-down
+                  if (setIndex === 0) {
+                    const initVal = sectionState.initialSet1[slotIndex]
+                    const updated = { ...sectionState.sets[slotIndex][0], [field]: value }
+                    if (updated.weight !== initVal.weight || updated.reps !== initVal.reps) {
+                      sectionState.set1Edited = [...sectionState.set1Edited]
+                      sectionState.set1Edited[slotIndex] = true
+                    }
+                  }
                   next[idx] = sectionState
                   return next
                 })
