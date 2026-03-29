@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { NumericInput } from '@/components/ui/numeric-input'
 import { Badge } from '@/components/ui/badge'
-import { Flame } from 'lucide-react'
+import { ChevronRight, Flame } from 'lucide-react'
 import { markRoutineDone, markRoutineSkipped } from '@/lib/routines/actions'
 
 type RoutineLogRow = {
@@ -95,6 +95,7 @@ function RoutineCheckOffCard({
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({})
+  const [expanded, setExpanded] = useState(false)
 
   const activeFields = getActiveFields(item)
 
@@ -155,33 +156,35 @@ function RoutineCheckOffCard({
     const isDone = log.status === 'done'
     return (
       <div
-        className={`rounded-xl border p-4 ${isDone ? 'border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950' : 'border-muted bg-muted/30'}`}
+        className={`rounded-lg border px-3 py-2.5 ${isDone ? 'border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950' : 'border-muted bg-muted/30'}`}
         data-testid={`routine-card-${item.id}`}
       >
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <span className="font-medium">{item.name}</span>
+              <span className="text-sm font-medium">{item.name}</span>
               {item.category && (
-                <Badge variant="secondary" className="text-xs">
+                <Badge variant="secondary" className="text-[11px] px-1.5 py-0">
                   {item.category}
                 </Badge>
               )}
             </div>
-            <div className="mt-1 text-sm text-muted-foreground">
-              {isDone ? formatLoggedValues(log, item) || 'Completed' : 'Skipped'}
-            </div>
-            <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-              <span>{item.weeklyCount} / {item.frequency_target} this week</span>
+            <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
+              <span>{isDone ? formatLoggedValues(log, item) || 'Completed' : 'Skipped'}</span>
+              <span className="text-muted-foreground/40">·</span>
+              <span>{item.weeklyCount}/{item.frequency_target} this week</span>
               {item.streak > 0 && (
-                <span className="inline-flex items-center gap-0.5 text-orange-600 dark:text-orange-400" data-testid={`streak-${item.id}`}>
-                  <Flame className="h-3 w-3" />
-                  {item.streak}-day streak
-                </span>
+                <>
+                  <span className="text-muted-foreground/40">·</span>
+                  <span className="inline-flex items-center gap-0.5 text-orange-600 dark:text-orange-400" data-testid={`streak-${item.id}`}>
+                    <Flame className="h-3 w-3" />
+                    {item.streak}
+                  </span>
+                </>
               )}
             </div>
           </div>
-          <Badge variant={isDone ? 'default' : 'outline'}>
+          <Badge variant={isDone ? 'default' : 'outline'} className="text-[11px] shrink-0">
             {isDone ? 'Done' : 'Skipped'}
           </Badge>
         </div>
@@ -189,79 +192,93 @@ function RoutineCheckOffCard({
     )
   }
 
-  // Pending — show input form
+  // Pending — compact row, expands on click
   return (
     <div
-      className="rounded-xl border p-4"
+      className="rounded-lg border"
       data-testid={`routine-card-${item.id}`}
     >
-      <div className="flex items-center gap-2">
-        <span className="font-medium">{item.name}</span>
-        {item.category && (
-          <Badge variant="secondary" className="text-xs">
-            {item.category}
-          </Badge>
-        )}
-      </div>
-      <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-        <span>{item.weeklyCount} / {item.frequency_target} this week</span>
-        {item.streak > 0 && (
-          <span className="inline-flex items-center gap-0.5 text-orange-600 dark:text-orange-400" data-testid={`streak-${item.id}`}>
-            <Flame className="h-3 w-3" />
-            {item.streak}-day streak
-          </span>
-        )}
-      </div>
-
-      <div className="mt-3 flex flex-wrap gap-2">
-        {activeFields.map((field) => (
-          <div key={field.key} className="flex items-center gap-1.5">
-            <label
-              htmlFor={`${item.id}-${field.key}`}
-              className="text-sm text-muted-foreground"
-            >
-              {field.label}
-            </label>
-            <div className="flex items-center gap-1">
-              <NumericInput
-                id={`${item.id}-${field.key}`}
-                mode={field.step === '1' ? 'integer' : 'decimal'}
-                className="h-10 w-20"
-                placeholder="0"
-                value={fieldValues[field.key] ?? ''}
-                onValueChange={(v) => updateField(field.key, v)}
-                disabled={isPending}
-              />
-              {field.unit && (
-                <span className="text-xs text-muted-foreground">{field.unit}</span>
-              )}
-            </div>
+      <button
+        type="button"
+        className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left"
+        onClick={() => setExpanded((v) => !v)}
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">{item.name}</span>
+            {item.category && (
+              <Badge variant="secondary" className="text-[11px] px-1.5 py-0">
+                {item.category}
+              </Badge>
+            )}
           </div>
-        ))}
-      </div>
+          <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
+            <span>{item.weeklyCount}/{item.frequency_target} this week</span>
+            {item.streak > 0 && (
+              <>
+                <span className="text-muted-foreground/40">·</span>
+                <span className="inline-flex items-center gap-0.5 text-orange-600 dark:text-orange-400" data-testid={`streak-${item.id}`}>
+                  <Flame className="h-3 w-3" />
+                  {item.streak}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+        <ChevronRight className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${expanded ? 'rotate-90' : ''}`} />
+      </button>
 
-      {error && (
-        <p className="mt-2 text-sm text-destructive" role="alert">{error}</p>
+      {expanded && (
+        <div className="border-t px-3 pb-3 pt-2.5">
+          <div className="flex flex-wrap gap-x-4 gap-y-2">
+            {activeFields.map((field) => (
+              <div key={field.key} className="flex items-center gap-1.5">
+                <label
+                  htmlFor={`${item.id}-${field.key}`}
+                  className="text-xs text-muted-foreground"
+                >
+                  {field.label}
+                </label>
+                <NumericInput
+                  id={`${item.id}-${field.key}`}
+                  mode={field.step === '1' ? 'integer' : 'decimal'}
+                  className="h-8 w-18"
+                  placeholder="0"
+                  value={fieldValues[field.key] ?? ''}
+                  onValueChange={(v) => updateField(field.key, v)}
+                  disabled={isPending}
+                />
+                {field.unit && (
+                  <span className="text-xs text-muted-foreground">{field.unit}</span>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {error && (
+            <p className="mt-2 text-sm text-destructive" role="alert">{error}</p>
+          )}
+
+          <div className="mt-2.5 flex gap-2">
+            <Button
+              onClick={handleDone}
+              disabled={isPending}
+              className="flex-1"
+              size="sm"
+            >
+              {isPending ? 'Saving...' : 'Done'}
+            </Button>
+            <Button
+              onClick={handleSkip}
+              disabled={isPending}
+              variant="outline"
+              size="sm"
+            >
+              Skip
+            </Button>
+          </div>
+        </div>
       )}
-
-      <div className="mt-3 flex gap-2">
-        <Button
-          onClick={handleDone}
-          disabled={isPending}
-          className="flex-1"
-          size="lg"
-        >
-          {isPending ? 'Saving...' : 'Done'}
-        </Button>
-        <Button
-          onClick={handleSkip}
-          disabled={isPending}
-          variant="outline"
-          size="lg"
-        >
-          Skip
-        </Button>
-      </div>
     </div>
   )
 }

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { render, screen, cleanup, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 vi.mock('next/navigation', () => ({
@@ -97,8 +98,9 @@ describe('TodayWorkout', () => {
     await waitFor(() => {
       expect(screen.getByTestId('rest-day')).toBeInTheDocument()
     })
-    // Routine check-off section present
+    // Routine check-off section present (collapsed by default)
     expect(screen.getByText('Body Weight')).toBeInTheDocument()
+    await userEvent.click(screen.getByText('Body Weight'))
     expect(screen.getByRole('button', { name: /done/i })).toBeInTheDocument()
   })
 

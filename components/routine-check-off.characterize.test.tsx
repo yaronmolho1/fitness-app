@@ -58,45 +58,59 @@ describe('RoutineCheckOff number inputs — characterization', () => {
   afterEach(() => cleanup())
 
   describe('single field item — Weight input attributes', () => {
-    it('renders with type="text"', () => {
+    it('renders with type="text"', async () => {
+      const user = userEvent.setup()
       render(<RoutineCheckOff items={[makeItem()]} logs={[]} logDate="2026-03-15" />)
+      await user.click(screen.getByText('Body Weight'))
       const input = screen.getByLabelText('Weight') as HTMLInputElement
       expect(input.type).toBe('text')
     })
 
-    it('has inputMode="decimal"', () => {
+    it('has inputMode="decimal"', async () => {
+      const user = userEvent.setup()
       render(<RoutineCheckOff items={[makeItem()]} logs={[]} logDate="2026-03-15" />)
+      await user.click(screen.getByText('Body Weight'))
       const input = screen.getByLabelText('Weight') as HTMLInputElement
       expect(input.inputMode).toBe('decimal')
     })
 
-    it('has placeholder="0"', () => {
+    it('has placeholder="0"', async () => {
+      const user = userEvent.setup()
       render(<RoutineCheckOff items={[makeItem()]} logs={[]} logDate="2026-03-15" />)
+      await user.click(screen.getByText('Body Weight'))
       const input = screen.getByLabelText('Weight') as HTMLInputElement
       expect(input.placeholder).toBe('0')
     })
 
-    it('shows unit label "kg" beside input', () => {
+    it('shows unit label "kg" beside input', async () => {
+      const user = userEvent.setup()
       render(<RoutineCheckOff items={[makeItem()]} logs={[]} logDate="2026-03-15" />)
+      await user.click(screen.getByText('Body Weight'))
       expect(screen.getByText('kg')).toBeInTheDocument()
     })
 
-    it('starts with empty value', () => {
+    it('starts with empty value', async () => {
+      const user = userEvent.setup()
       render(<RoutineCheckOff items={[makeItem()]} logs={[]} logDate="2026-03-15" />)
+      await user.click(screen.getByText('Body Weight'))
       const input = screen.getByLabelText('Weight') as HTMLInputElement
       expect(input.value).toBe('')
     })
 
-    it('has w-20 width class', () => {
+    it('has w-18 width class', async () => {
+      const user = userEvent.setup()
       render(<RoutineCheckOff items={[makeItem()]} logs={[]} logDate="2026-03-15" />)
+      await user.click(screen.getByText('Body Weight'))
       const input = screen.getByLabelText('Weight') as HTMLInputElement
-      expect(input.className).toContain('w-20')
+      expect(input.className).toContain('w-18')
     })
   })
 
   describe('multi field item — Duration/Sets/Reps inputs', () => {
-    it('renders all active fields with type="text"', () => {
+    it('renders all active fields with type="text"', async () => {
+      const user = userEvent.setup()
       render(<RoutineCheckOff items={[makeMultiFieldItem()]} logs={[]} logDate="2026-03-15" />)
+      await user.click(screen.getByText('Shoulder Mobility'))
 
       const duration = screen.getByLabelText('Duration') as HTMLInputElement
       const sets = screen.getByLabelText('Sets') as HTMLInputElement
@@ -107,13 +121,17 @@ describe('RoutineCheckOff number inputs — characterization', () => {
       expect(reps.type).toBe('text')
     })
 
-    it('shows unit for duration (min) but not for sets/reps', () => {
+    it('shows unit for duration (min) but not for sets/reps', async () => {
+      const user = userEvent.setup()
       render(<RoutineCheckOff items={[makeMultiFieldItem()]} logs={[]} logDate="2026-03-15" />)
+      await user.click(screen.getByText('Shoulder Mobility'))
       expect(screen.getByText('min')).toBeInTheDocument()
     })
 
-    it('duration has inputMode="decimal", sets/reps have inputMode="numeric"', () => {
+    it('duration has inputMode="decimal", sets/reps have inputMode="numeric"', async () => {
+      const user = userEvent.setup()
       render(<RoutineCheckOff items={[makeMultiFieldItem()]} logs={[]} logDate="2026-03-15" />)
+      await user.click(screen.getByText('Shoulder Mobility'))
 
       const duration = screen.getByLabelText('Duration') as HTMLInputElement
       const sets = screen.getByLabelText('Sets') as HTMLInputElement
@@ -129,6 +147,7 @@ describe('RoutineCheckOff number inputs — characterization', () => {
     it('typing a value stores the raw string from e.target.value', async () => {
       const user = userEvent.setup()
       render(<RoutineCheckOff items={[makeItem()]} logs={[]} logDate="2026-03-15" />)
+      await user.click(screen.getByText('Body Weight'))
 
       const input = screen.getByLabelText('Weight') as HTMLInputElement
       await user.type(input, '72.5')
@@ -138,6 +157,7 @@ describe('RoutineCheckOff number inputs — characterization', () => {
     it('clearing leaves empty string', async () => {
       const user = userEvent.setup()
       render(<RoutineCheckOff items={[makeItem()]} logs={[]} logDate="2026-03-15" />)
+      await user.click(screen.getByText('Body Weight'))
 
       const input = screen.getByLabelText('Weight') as HTMLInputElement
       await user.type(input, '72.5')
@@ -148,6 +168,7 @@ describe('RoutineCheckOff number inputs — characterization', () => {
     it('typing after clearing gives clean value (no leading zeros from Number())', async () => {
       const user = userEvent.setup()
       render(<RoutineCheckOff items={[makeItem()]} logs={[]} logDate="2026-03-15" />)
+      await user.click(screen.getByText('Body Weight'))
 
       const input = screen.getByLabelText('Weight') as HTMLInputElement
       await user.type(input, '65')
