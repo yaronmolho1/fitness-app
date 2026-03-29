@@ -129,18 +129,16 @@ export function WorkoutLoggingForm({ data, onSaveSuccess }: { data: WorkoutData;
     // Track set-1 edits for copy-down
     if (setIndex === 0) {
       const initVal = initialSet1[slotIndex]
-      // Check if the new value differs from initial
       const currentSet = sets[slotIndex]?.[0]
       if (currentSet) {
         const updated = { ...currentSet, [field]: value }
-        if (updated.weight !== initVal.weight || updated.reps !== initVal.reps) {
-          setSet1Edited((prev) => {
-            if (prev[slotIndex]) return prev
-            const next = [...prev]
-            next[slotIndex] = true
-            return next
-          })
-        }
+        const edited = updated.weight !== initVal.weight || updated.reps !== initVal.reps
+        setSet1Edited((prev) => {
+          if (prev[slotIndex] === edited) return prev
+          const next = [...prev]
+          next[slotIndex] = edited
+          return next
+        })
       }
     }
   }
@@ -164,6 +162,12 @@ export function WorkoutLoggingForm({ data, onSaveSuccess }: { data: WorkoutData;
     setSets((prev) => {
       const next = prev.map((s) => s.map((r) => ({ ...r })))
       next[slotIndex] = Array.from({ length: slot.sets }, () => ({ weight, reps }))
+      return next
+    })
+    setSet1Edited((prev) => {
+      if (!prev[slotIndex]) return prev
+      const next = [...prev]
+      next[slotIndex] = false
       return next
     })
   }

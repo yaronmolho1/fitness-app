@@ -673,6 +673,8 @@ export function MixedLoggingForm({ data, onSaveSuccess }: { data: MixedWorkoutDa
                   const sectionState = { ...next[idx] }
                   sectionState.sets = sectionState.sets.map((s) => s.map((r) => ({ ...r })))
                   sectionState.sets[slotIndex] = Array.from({ length: slot.sets }, () => ({ weight, reps }))
+                  sectionState.set1Edited = [...sectionState.set1Edited]
+                  sectionState.set1Edited[slotIndex] = false
                   next[idx] = sectionState
                   return next
                 })
@@ -702,9 +704,10 @@ export function MixedLoggingForm({ data, onSaveSuccess }: { data: MixedWorkoutDa
                   if (setIndex === 0) {
                     const initVal = sectionState.initialSet1[slotIndex]
                     const updated = { ...sectionState.sets[slotIndex][0], [field]: value }
-                    if (updated.weight !== initVal.weight || updated.reps !== initVal.reps) {
+                    const edited = updated.weight !== initVal.weight || updated.reps !== initVal.reps
+                    if (sectionState.set1Edited[slotIndex] !== edited) {
                       sectionState.set1Edited = [...sectionState.set1Edited]
-                      sectionState.set1Edited[slotIndex] = true
+                      sectionState.set1Edited[slotIndex] = edited
                     }
                   }
                   next[idx] = sectionState
