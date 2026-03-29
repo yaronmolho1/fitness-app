@@ -142,11 +142,11 @@
 | T132 | Superset SA: create/break/updateGroupRest | F5.3 | [x] | feat/task-132-superset-sa | | 2026-03-21 | |
 | T133 | Superset UI: grouping, selection, CRUD | F5.4 | [x] | feat/task-133-superset-ui | | 2026-03-21 | |
 | T134 | Superset display in logging + today + snapshot | F5.5 | [x] | feat/task-134-superset-display | | 2026-03-21 | |
-| T135 | Number input zero fix | P1 | [ ] | | | | |
-| T136 | Cascade toast notification | P1 | [ ] | | | | |
-| T137 | Template copy server action | P1 | [ ] | | | | |
-| T138 | Template add picker + copy browse UI | P2 | [ ] | | | | |
-| T139 | Batch cascade scope (SA + UI) | P2 | [ ] | | | | |
+| T135 | Number input zero fix | P1 | [x] | | | | |
+| T136 | Cascade toast notification | P1 | [x] | | | | |
+| T137 | Template copy server action | P1 | [x] | | | | |
+| T138 | Template add picker + copy browse UI | P2 | [x] | | | | |
+| T139 | Batch cascade scope (SA + UI) | P2 | [x] | | | | |
 | T140 | Mixed template plumbing fixes | P3.1 | [x] | feat/task-140-mixed-plumbing | | 2026-03-22 | merged via PR #289 |
 | T143 | Mixed template section editing UI | P3.2 | [x] | feat/task-143-section-editing | | 2026-03-22 | merged via PR #296 |
 | T144 | Day detail multi-workout query + API | P3.3 | [x] | feat/task-144-day-detail-multi | | 2026-03-22 | merged via PR #300 |
@@ -160,16 +160,56 @@
 | T153 | Week override merge — today + calendar | P3.5b | [x] | feat/task-153-override-merge | | 2026-03-25 | merged via PR #343 |
 | T155 | Snapshot week_number + template copy overrides | P3.5b | [x] | feat/task-155-snapshot-overrides | | 2026-03-25 | merged via PR #344 |
 | T157 | Plan Weeks grid UI | P3.5c | [x] | feat/task-157-plan-weeks-grid | | 2026-03-25 | merged via PR #342 |
-| T158 | Cascade override warning | P3.5c | [ ] | | | | |
-| T159 | `athlete_profile` schema + migration | CS1.1 | [ ] | | | | |
-| T160 | Profile queries + actions | CS1.1 | [ ] | | | | |
-| T161 | Active mesocycle query (coaching) | CS1.2 | [ ] | | | | |
-| T162 | Recent sessions query (coaching) | CS1.2 | [ ] | | | | |
-| T163 | Summary generator | CS1.2 | [ ] | | | | |
-| T164 | Summary route handler | CS1.3 | [ ] | | | | |
-| T165 | Coaching page (server component) | CS2 | [ ] | | | | |
-| T166 | Profile form component | CS2 | [ ] | | | | |
-| T167 | Subjective state form component | CS2 | [ ] | | | | |
-| T168 | Summary preview component | CS2 | [ ] | | | | |
-| T169 | Client orchestrator component | CS2 | [ ] | | | | |
-| T170 | Nav link (coaching) | CS2 | [ ] | | | | |
+| T158 | Cascade override warning | P3.5c | [x] | | | | |
+| T159 | `athlete_profile` schema + migration | CS1.1 | [x] | | | | |
+| T160 | Profile queries + actions | CS1.1 | [x] | | | | |
+| T161 | Active mesocycle query (coaching) | CS1.2 | [x] | | | | |
+| T162 | Recent sessions query (coaching) | CS1.2 | [x] | | | | |
+| T163 | Summary generator | CS1.2 | [x] | | | | |
+| T164 | Summary route handler | CS1.3 | [x] | | | | |
+| T165 | Coaching page (server component) | CS2 | [x] | | | | |
+| T166 | Profile form component | CS2 | [x] | | | | |
+| T167 | Subjective state form component | CS2 | [x] | | | | |
+| T168 | Summary preview component | CS2 | [x] | | | | |
+| T169 | Client orchestrator component | CS2 | [x] | | | | |
+| T170 | Nav link (coaching) | CS2 | [x] | | | | |
+| T171 | Today API date param | RL1 | [x] | | | | |
+| T172 | Today page searchParams | RL1 | [x] | | | | |
+| T173 | DayDetailPanel "Log Workout" button | RL1 | [x] | | | | |
+| T174 | Retroactive date banner | RL2 | [x] | | | | |
+| T175 | Post-save redirect | RL2 | [x] | | | | |
+| T176 | E2E: retroactive logging flow | RL2 | [x] | | | | |
+| T177 | Elevation gain schema columns | EG1.1 | [x] | | | | |
+| T178 | Elevation gain in save + snapshot | EG1.2 | [x] | | | | |
+| T179 | Running template form elevation gain | EG2 | [x] | | | | |
+| T180 | Running logging form elevation gain | EG2 | [x] | | | | |
+| T181 | Elevation gain display in today + calendar | EG2 | [x] | | | | |
+| T182 | `schedule_week_overrides` schema | SW1 | [x] | | | | |
+| T183 | Effective schedule query | SW2 | [x] | | | | |
+| T184 | Wire effective schedule into today + day detail | SW3 | [x] | | | | |
+| T185 | Wire effective schedule into calendar projection | SW3 | [x] | | | | |
+| T186 | Move workout server action | SW2 | [x] | | | | |
+| T187 | Undo schedule move actions | SW2 | [x] | | | | |
+| T188 | Move workout modal | SW4 | [x] | | | | |
+| T189 | Day detail panel integration | SW4 | [x] | | | | |
+| T190 | Resistance autofill on load + reps parsing | AL1 | [x] | | | | |
+| T191 | Running + MMA autofill on load | AL1 | [x] | | | | |
+| T192 | Mixed modality autofill on load | AL2 | [x] | | | | |
+| T193 | "Log as Planned" whole-workout button | AL2 | [x] | | | | |
+| T194 | Per-exercise "As Planned" button | AL2 | [x] | | | | |
+| T195 | Copy-down button | AL2 | [x] | | | | |
+| T196 | Time utilities (derivePeriod, getEndTime, checkOverlap) | TS1 | [ ] | | | | |
+| T197 | Schema migration (3-phase: add columns, backfill, enforce) | TS1 | [ ] | | | | |
+| T198 | Refactor assignTemplate + removeAssignment (time-first, row-ID) | TS2 | [ ] | | | | |
+| T199 | Refactor moveWorkout (time-first, row-ID source) | TS2 | [ ] | | | | |
+| T200 | Refactor schedule queries (time-first sorting, duration) | TS2 | [ ] | | | | |
+| T201 | Schedule grid time-first UI | TS3 | [ ] | | | | |
+| T202 | Move modal time-first UI | TS3 | [ ] | | | | |
+| T203 | Time display across views (calendar, today, detail) | TS3 | [ ] | | | | |
+| T204 | Google OAuth route handlers + client | GC1 | [ ] | | | | |
+| T205 | Google credential queries + disconnect | GC1 | [ ] | | | | |
+| T206 | Settings page (GCal connect/disconnect) | GC1 | [ ] | | | | |
+| T207 | Sync orchestration layer + event builder | GC2 | [ ] | | | | |
+| T208 | Sync hooks in schedule actions | GC2 | [ ] | | | | |
+| T209 | Completion sync on workout logging | GC2 | [ ] | | | | |
+| T210 | Re-sync + sync status display | GC2 | [ ] | | | | |

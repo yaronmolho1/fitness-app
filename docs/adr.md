@@ -12,6 +12,8 @@ Architecture decisions for the fitness tracking app. Each ADR captures the conte
 | [006](adrs/006-canonical-name.md) | canonical_name for Cross-Phase Template Linking | Accepted |
 | [007](adrs/007-drizzle-v2-define-relations.md) | Drizzle v2 defineRelations API | Accepted |
 | [008](adrs/008-modular-architecture.md) | Modular Architecture for Ecosystem Extensibility | Accepted |
+| [009](adrs/009-time-slot-first-scheduling.md) | Time-Slot-First Scheduling (Replacing Period-Based Keying) | Accepted |
+| [010](adrs/010-google-calendar-one-way-push.md) | Google Calendar Integration — One-Way Push with OAuth | Accepted |
 
 ## Reading Order
 

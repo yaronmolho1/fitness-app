@@ -1,5 +1,6 @@
 # Workout Time Slots
-**Status:** in-progress
+**Status:** superseded
+**Superseded by:** specs/time-based-scheduling.md, specs/schedule-time-display.md, specs/time-scheduling-migration.md
 **Epic:** Schedule & Calendar
 **Depends:** specs/7-day-assignment-grid.md, specs/projected-calendar.md
 

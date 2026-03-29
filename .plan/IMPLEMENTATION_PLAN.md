@@ -1,7 +1,7 @@
 # Implementation Plan
 
-> 164 tasks across 32 waves. Completed waves (0–14, UI-1–3, R1–3, F1–F5) archived in [ARCHIVE_COMPLETED.md](ARCHIVE_COMPLETED.md).
-> Active: P1–P2, P3, CS, RL, EG, SW, AL waves below. Each task = one TDD cycle.
+> 179 tasks across 37 waves. Completed waves (0–14, UI-1–3, R1–3, F1–F5) archived in [ARCHIVE_COMPLETED.md](ARCHIVE_COMPLETED.md).
+> Active: P1–P2, P3, CS, RL, EG, SW, AL, TS, GC waves below. Each task = one TDD cycle.
 
 ## Archived Waves (134 tasks, all complete)
 
@@ -504,3 +504,127 @@ T190 → T193 (resistance autofill → log as planned button, estimated: M + M =
 | Small | 3 | 1-2h | ~5h |
 | Medium | 2 | 3-5h | ~8h |
 | **Total** | **6** (T190-T195) | | **~13h** |
+
+---
+
+## Wave TS1: Time Scheduling — Foundation
+
+> Schema migration + shared utilities. Everything downstream depends on this wave.
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T196 | Time utilities: create `lib/schedule/time-utils.ts` with `derivePeriod(timeSlot)` (hour < 12 = morning, 12-16 = afternoon, 17+ = evening), `getEndTime(timeSlot, duration)` (returns HH:MM), `checkOverlap(entries, newTime, newDuration)` (range overlap detection). Export `Period` type. Update `timeSlotSchema` validation to be reusable. Unit tests for all functions including edge cases (midnight crossing, boundary hours 12:00/17:00). | small | Time Scheduling | — | time-based-scheduling |
+| T197 | Schema migration (3-phase): Phase 1 — add `duration INTEGER` (nullable) to `weekly_schedule` + `schedule_week_overrides`, add `estimated_duration INTEGER` to `workout_templates`, add `timezone TEXT DEFAULT 'UTC'` to `athlete_profile`, create `google_credentials` + `google_calendar_events` tables. Phase 2 — backfill: time_slot from period (morning→07:00, afternoon→13:00, evening→18:00) where null, duration from template modality (resistance/mixed=90, running=target_duration or 60, MMA=planned_duration or 90). Phase 3 — table recreation: `time_slot` NOT NULL, `duration` NOT NULL, drop old unique indexes, create new `(mesocycle_id, day_of_week, week_type, time_slot, template_id)` + equivalent for overrides. Single Drizzle migration file with hand-edited backfill SQL. | medium | Time Scheduling | — | time-scheduling-migration |
+
+## Wave TS2: Time Scheduling — Backend Refactor
+
+> Refactor all schedule actions and queries from period-based to time-first model. Three parallel tracks.
+
+### Track A: Schedule Actions
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T198 | Refactor `assignTemplate` + `removeAssignment` in `lib/schedule/actions.ts`: `assignTemplate` takes required `time_slot` (HH:MM) and `duration` (minutes), derives `period` via `derivePeriod()` before write, upserts on new unique constraint `(meso, day, weekType, time_slot, template_id)`. Remove `period` from input schema. `removeAssignment` takes row ID (integer) instead of composite key `(meso, day, weekType, period)`. Update Zod schemas, guards, and return types. | medium | Time Scheduling | T196, T197 | time-based-scheduling |
+
+### Track B: Override Actions
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T199 | Refactor `moveWorkout` in `lib/schedule/override-actions.ts`: source identified by schedule entry row ID (not day+period). Target takes `time_slot` + `duration` (required) instead of `period`. Derive period for override rows. `undoScheduleMove` and `resetWeekSchedule` unchanged (operate on override_group/week — not affected by keying change). Update Zod schema: replace `source_day`+`source_period` with `schedule_id`, replace `target_period` with `target_time_slot`+`target_duration`. | medium | Time Scheduling | T196, T197 | move-workout-time-aware |
+
+### Track C: Queries
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T200 | Refactor schedule queries for time-first model: (a) `getEffectiveScheduleForDay` — change override matching from period-key to time_slot-key, add `duration` to `EffectiveScheduleEntry` type, sort results by `time_slot` ascending (not period order). (b) `getCalendarProjection` — include `time_slot` + `duration` in `CalendarDay` type, override lookup key changes from `meso-week-day-period` to `meso-week-day-time_slot`, sort per-day entries by time_slot. (c) `getTodayWorkout` — sort results by `time_slot` ascending, include duration in response. (d) `getScheduleForMesocycle` — order by `time_slot` instead of period. | medium | Time Scheduling | T197 | schedule-time-display |
+
+## Wave TS3: Time Scheduling — UI
+
+> Replace period-based UI with time-based inputs and display. Three parallel tracks.
+
+### Track A: Schedule Grid
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T201 | Schedule grid time-first UI: replace 3 period buttons ("+ Morning/Afternoon/Evening") per day with single "+ Add Workout" button. On click: show inline form with template picker + time input (HH:MM, 24h) + duration input (minutes). Duration pre-fills from template's `estimated_duration`/`target_duration`/`planned_duration` (90min default for resistance). Show entries sorted chronologically with period section headers (derived). Overlap warning (yellow) when new entry's time range intersects existing entries. Remove `PERIODS` constant and `PERIOD_ORDER` from grid logic. | large | Time Scheduling | T198 | time-based-scheduling |
+
+### Track B: Move Modal
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T202 | Move modal time-first UI: replace period radio selector with time input (HH:MM) + duration input (minutes). Pre-fill both from source workout's current values. Remove "target period occupied" / "all periods full" restrictions. Add overlap warning (non-blocking) when target time range intersects existing entries on target day. Wire to refactored `moveWorkout` SA (passes time_slot + duration instead of period). | medium | Time Scheduling | T199 | move-workout-time-aware |
+
+### Track C: Display Views
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T203 | Time display across views: (a) Calendar grid pills — prefix with "HH:MM" (e.g., "07:00 Push A"), sort chronologically. (b) Day detail panel — show "HH:MM — Xmin" on each workout card, sort chronologically. (c) Today view — show start time + duration per session, sort chronologically (use `time_slot` from API), keep period group headers as visual separators. (d) `formatPeriodLabel` already handles time_slot — update to also show duration. | medium | Time Scheduling | T200 | schedule-time-display |
+
+## Wave GC1: Google Calendar — OAuth + Connect
+
+> Google OAuth flow + credential storage + settings page. Can run in parallel with TS2/TS3 (only depends on T197 schema).
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T204 | Google OAuth route handlers + client: create `lib/google/client.ts` with `createOAuth2Client()` and `getAuthenticatedClient()` (loads credentials from DB, sets up token refresh listener to persist new tokens). Create `GET /api/auth/google/route.ts` — generates CSRF state token (stored in httpOnly cookie), redirects to Google OAuth consent with `calendar` scope + `access_type=offline` + `prompt=consent`. Create `GET /api/auth/google/callback/route.ts` — validates state, exchanges code for tokens, reads primary calendar timezone via `CalendarList.get('primary')`, creates "Fitness" calendar via `Calendars.insert`, stores credentials + calendar_id in `google_credentials`, updates `athlete_profile.timezone`, redirects to `/settings`. Install `@googleapis/calendar` + `google-auth-library`. Add `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` env vars. | large | Google Calendar | T197 | google-calendar-connect |
+| T205 | Google credential queries + disconnect: create `lib/google/queries.ts` with `getGoogleCredentials()`, `isGoogleConnected()`, `getEventMapping(mesoId, templateId, date)`, `getEventsByMesocycle(mesoId)`. Create `lib/google/actions.ts` with `disconnectGoogle()` Server Action — deletes credentials row, optionally deletes Fitness calendar via API. Create `POST /api/google/disconnect/route.ts` as alternative endpoint. | small | Google Calendar | T204 | google-calendar-connect |
+| T206 | Settings page: create `app/(app)/settings/page.tsx`. Google Calendar section: if disconnected, show "Connect Google Calendar" button (links to `/api/auth/google`). If connected, show: green connected badge, timezone (from athlete_profile), "Disconnect" button with confirmation dialog. Add settings link to nav. | medium | Google Calendar | T204, T205 | google-calendar-connect |
+
+## Wave GC2: Google Calendar — Sync Layer
+
+> Push sync layer + hooks into schedule actions + completion sync. Depends on GC1 + TS2.
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T207 | Sync orchestration layer: create `lib/google/sync.ts` with `syncMesocycle(mesoId)` (project all workouts, batch-insert events), `syncScheduleChange(action, mesoId, affectedDates)` (diff existing mappings, insert/update/delete), `syncCompletion(mesoId, templateId, date)` (update event title with checkmark). Create `lib/google/types.ts` with `GCalEventParams`, `SyncResult`. Create event builder: `buildEventBody(params)` — sets title "{name} — Week N", start/end from time_slot+duration+timezone, description with exercise list + deep links (`{APP_URL}/?date=X` and `?date=X&action=log`), modality color, extendedProperties.private with mapping IDs. Use `@googleapis/calendar` for API calls. Batch insert (up to 50) for bulk operations. Handle 404/410 on update by recreating. | large | Google Calendar | T205 | google-calendar-sync |
+| T208 | Sync hooks in schedule actions: after successful local write in `assignTemplate`, `removeAssignment`, `moveWorkout`, `undoScheduleMove`, `resetWeekSchedule` — call `syncScheduleChange()` fire-and-forget (`.catch(() => {})`). In mesocycle create/clone actions — call `syncMesocycle()`. In mesocycle delete — call batch delete for all mapped events. `projectAffectedDates(mesoId, dayOfWeek, weekType)` helper computes which dates are affected by a base schedule change. Never block the local mutation on sync failure. | medium | Google Calendar | T207, T198, T199 | google-calendar-sync |
+| T209 | Completion sync: in the workout logging action (where `logged_workouts` INSERT happens), after successful save, call `syncCompletion(mesoId, templateId, logDate)`. Looks up `google_calendar_events` mapping for that template+date. If found and Google connected, updates event title to "✅ {name} — Week N". If mapping not found or Google not connected, skip silently. | small | Google Calendar | T207 | google-calendar-sync |
+| T210 | Re-sync + status display: create `POST /api/google/sync/route.ts` — calls `retryFailedSyncs()` which queries all `sync_status='failed'` mappings and retries. Create `GET /api/google/status/route.ts` — returns connection status + counts of synced/pending/failed events + last sync timestamp. Add re-sync button + status display to settings page (extends T206). | small | Google Calendar | T207, T206 | google-calendar-sync |
+
+## Wave TS+GC Dependency Graph
+
+```
+T196 (time utils) ─────────────────────────── T198 (assign/remove refactor) → T201 (schedule grid UI)
+                                            ├── T199 (move refactor) ────────→ T202 (move modal UI)
+T197 (schema migration) ─┬── T200 (query refactor) ────────────────────────→ T203 (display views)
+                          │
+                          └── T204 (OAuth routes + client)
+                              └── T205 (queries + disconnect) → T206 (settings page)
+                                  └── T207 (sync layer) ──┬── T208 (sync hooks in actions)
+                                                           ├── T209 (completion sync)
+                                                           └── T210 (re-sync + status)
+```
+
+## Wave TS+GC Critical Path
+
+T197 → T204 → T205 → T207 → T208 (schema → OAuth → queries → sync → hooks)
+Estimated: M + L + S + L + M = ~20-30h
+
+Alternative path (time scheduling only):
+T197 → T198 → T201 (schema → action refactor → grid UI)
+Estimated: M + M + L = ~12-18h
+
+## Wave TS+GC Gap Analysis
+
+1. **Existing `workout-time-slots.md` superseded**: Marked as superseded in spec file. Existing implementation (period selector, period column, 3-per-day constraint) is replaced by the new time-first model. No conflict — the new specs build on the foundation the old spec created.
+2. **SW wave (T182-T189) completed with period-based keying**: T198-T200 refactor the code those tasks created. Dependency is sequential — T182-T189 must be complete before T198-T200 run. Confirmed complete per git log.
+3. **CS wave `athlete_profile` (T159)**: T197 adds `timezone` column to `athlete_profile`. If T159 hasn't run yet, T197's migration must include the full table (not just ALTER). Current schema shows the table exists, so T159 is effectively complete.
+4. **`estimated_duration` on resistance templates**: No UI for editing this field in template forms yet. T201 uses it for duration pre-fill but doesn't require it — defaults to 90min when null. Template form update can be a follow-up or folded into T201.
+5. **`action=log` query param**: The today page doesn't currently handle an `action=log` param. T203 or a separate task should add this for the GCal deep link to work. Flagged as implementation detail in T203.
+
+## Wave TS+GC Risk Areas
+
+- **T197 (schema migration)**: Highest risk. SQLite table recreation required for NOT NULL enforcement. Hand-editing Drizzle's generated migration SQL is error-prone. Must test with a copy of production data. Backup DB before running.
+- **T201 (schedule grid UI)**: Largest UI change. Replacing 3 period buttons with time/duration form in every day cell. `schedule-grid.tsx` is already a complex component. May need to extract `ScheduleEntryForm` sub-component.
+- **T204 (OAuth)**: First external integration. Requires Google Cloud Console setup (manual step). Testing requires a real Google account. E2E testing of OAuth flow is inherently difficult — recommend manual testing + integration tests for token exchange logic.
+- **T207 (sync layer)**: Must handle Google API errors gracefully without blocking local operations. Batch insert for mesocycle creation (potentially 30+ events) needs rate limit awareness. `@googleapis/calendar` handles some of this, but edge cases (partial batch failure) need careful handling.
+- **T208 (sync hooks)**: Touches every schedule action. Must ensure fire-and-forget pattern doesn't introduce unhandled promise rejections. Async hooks in synchronous Server Actions need careful wiring.
+
+## Wave TS+GC Scope Summary
+
+| Scope | Count | Est. Hours Each | Total |
+|-------|-------|-----------------|-------|
+| Small | 4 (T196, T205, T209, T210) | 1-3h | ~8h |
+| Medium | 7 (T197, T198, T199, T200, T202, T203, T206, T208) | 3-6h | ~32h |
+| Large | 3 (T201, T204, T207) | 6-10h | ~24h |
+| **Total** | **15** (T196-T210) | | **~64h** |
