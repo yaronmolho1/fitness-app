@@ -1,5 +1,5 @@
 import { google } from 'googleapis'
-import { OAuth2Client } from 'google-auth-library'
+import { OAuth2Client, Credentials } from 'google-auth-library'
 import { eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { google_credentials, athlete_profile } from '@/lib/db/schema'
@@ -125,7 +125,7 @@ export async function getAuthenticatedClient(): Promise<OAuth2Client | null> {
   })
 
   // Persist refreshed tokens automatically
-  client.on('tokens', async (tokens) => {
+  client.on('tokens', async (tokens: Credentials) => {
     const updates: Record<string, unknown> = { updated_at: new Date() }
     if (tokens.access_token) updates.access_token = tokens.access_token
     if (tokens.expiry_date) updates.expiry_date = new Date(tokens.expiry_date)

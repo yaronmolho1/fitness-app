@@ -30,8 +30,7 @@ describe('GET /api/auth/google', () => {
 
   it('redirects to Google OAuth consent URL', async () => {
     const { GET } = await import('./route')
-    const req = new Request('http://localhost:3000/api/auth/google')
-    const res = await GET(req)
+    const res = await GET()
     // NextResponse.redirect uses 307 by default
     expect([302, 307]).toContain(res.status)
     const location = res.headers.get('location')
@@ -40,8 +39,7 @@ describe('GET /api/auth/google', () => {
 
   it('sets a google-oauth-state httpOnly cookie with the CSRF state', async () => {
     const { GET } = await import('./route')
-    const req = new Request('http://localhost:3000/api/auth/google')
-    const res = await GET(req)
+    const res = await GET()
     const cookies = res.headers.getSetCookie()
     const stateCookie = cookies.find((c: string) => c.startsWith('google-oauth-state='))
     expect(stateCookie).toBeDefined()
@@ -51,8 +49,7 @@ describe('GET /api/auth/google', () => {
 
   it('sets cookie with SameSite=Lax for OAuth redirect flow', async () => {
     const { GET } = await import('./route')
-    const req = new Request('http://localhost:3000/api/auth/google')
-    const res = await GET(req)
+    const res = await GET()
     const cookies = res.headers.getSetCookie()
     const stateCookie = cookies.find((c: string) => c.startsWith('google-oauth-state='))
     // Next.js serializes SameSite as lowercase
