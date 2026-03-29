@@ -41,8 +41,10 @@ export function RunningLoggingForm({ data, onSaveSuccess }: { data: RunningWorko
   const plannedIntervalCount = isInterval && template.interval_count ? template.interval_count : 0
   const [intervalCount, setIntervalCount] = useState(plannedIntervalCount)
 
-  const [distance, setDistance] = useState('')
-  const [pace, setPace] = useState('')
+  const [distance, setDistance] = useState(
+    template.target_distance !== null ? String(template.target_distance) : ''
+  )
+  const [pace, setPace] = useState(template.target_pace ?? '')
   const [hr, setHr] = useState('')
   const [elevationGain, setElevationGain] = useState('')
   const [rating, setRating] = useState<number | null>(null)

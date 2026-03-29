@@ -137,6 +137,7 @@ describe('T135 — numeric input migration: running-logging-form', () => {
     render(<RunningLoggingForm data={makeRunningData()} />)
 
     const input = screen.getByTestId('actual-distance') as HTMLInputElement
+    await user.clear(input)
     await user.type(input, '8abc.5')
     expect(input.value).toBe('8.5')
   })
@@ -196,6 +197,7 @@ describe('T135 — numeric input migration: mma-logging-form', () => {
     render(<MmaLoggingForm data={makeMmaData()} />)
 
     const input = screen.getByTestId('actual-duration') as HTMLInputElement
+    await user.clear(input)
     await user.type(input, '9a0.5')
     expect(input.value).toBe('905')
   })
