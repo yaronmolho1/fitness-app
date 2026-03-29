@@ -365,7 +365,11 @@ export function DayDetailPanel({ date, onClose }: DayDetailPanelProps) {
   }, [date, fetchDetail])
 
   const handleUndoMove = useCallback(async (overrideGroup: string, mesocycleId: number) => {
-    await undoScheduleMove(overrideGroup, mesocycleId)
+    const result = await undoScheduleMove(overrideGroup, mesocycleId)
+    if (!result.success) {
+      setError(result.error)
+      return
+    }
     if (date) fetchDetail(date)
   }, [date, fetchDetail])
 
@@ -380,19 +384,27 @@ export function DayDetailPanel({ date, onClose }: DayDetailPanelProps) {
     scope: 'this_week' | 'remaining_weeks'
   }) => {
     if (!moveTarget) return
-    const { moveWorkout } = await import('@/lib/schedule/override-actions')
-    await moveWorkout({
-      mesocycle_id: moveTarget.mesocycle_id,
-      week_number: moveTarget.week_number,
-      source_day: moveTarget.day_of_week,
-      source_period: moveTarget.period,
-      target_day: params.targetDay,
-      target_period: params.targetPeriod,
-      target_time_slot: params.targetTimeSlot,
-      scope: params.scope,
-    })
-    setMoveTarget(null)
-    if (date) fetchDetail(date)
+    try {
+      const { moveWorkout } = await import('@/lib/schedule/override-actions')
+      const result = await moveWorkout({
+        mesocycle_id: moveTarget.mesocycle_id,
+        week_number: moveTarget.week_number,
+        source_day: moveTarget.day_of_week,
+        source_period: moveTarget.period,
+        target_day: params.targetDay,
+        target_period: params.targetPeriod,
+        target_time_slot: params.targetTimeSlot,
+        scope: params.scope,
+      })
+      if (!result.success) {
+        setError(result.error)
+        return
+      }
+      setMoveTarget(null)
+      if (date) fetchDetail(date)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to move workout')
+    }
   }, [moveTarget, date, fetchDetail])
 
   const open = date !== null
