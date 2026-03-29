@@ -33,12 +33,13 @@ export interface MoveWorkoutModalProps {
   sourceDay: number // internal convention (0=Mon)
   sourcePeriod: Period
   sourceTimeSlot: string | null
+  sourceDuration: number | null
   sourceTemplateName: string
   occupiedSlots: OccupiedSlot[]
   onConfirm: (params: {
     targetDay: number // internal convention (0=Mon)
-    targetPeriod: Period
-    targetTimeSlot: string | null
+    targetTimeSlot: string
+    targetDuration: number
     scope: Scope
     targetWeekOffset: number
   }) => void
@@ -55,6 +56,7 @@ export function MoveWorkoutModal(props: MoveWorkoutModalProps) {
 function MoveWorkoutModalContent({
   sourceDay,
   sourceTimeSlot,
+  sourceDuration,
   sourceTemplateName,
   occupiedSlots,
   onConfirm,
@@ -62,7 +64,8 @@ function MoveWorkoutModalContent({
 }: MoveWorkoutModalProps) {
   const [targetDay, setTargetDay] = useState<number | null>(null)
   const [targetPeriod, setTargetPeriod] = useState<Period>('morning')
-  const [timeSlot, setTimeSlot] = useState(sourceTimeSlot ?? '')
+  const [timeSlot, setTimeSlot] = useState(sourceTimeSlot ?? '07:00')
+  const [duration, setDuration] = useState(sourceDuration ?? 60)
   const [scope, setScope] = useState<Scope>('this_week')
   const [weekOffset, setWeekOffset] = useState(0)
 
@@ -87,14 +90,14 @@ function MoveWorkoutModalContent({
     ) ?? null
   }, [targetDay, targetPeriod, occupiedSlots])
 
-  const canConfirm = targetDay !== null
+  const canConfirm = targetDay !== null && !!timeSlot && duration > 0
 
   function handleConfirm() {
-    if (targetDay === null) return
+    if (targetDay === null || !timeSlot) return
     onConfirm({
       targetDay,
-      targetPeriod,
-      targetTimeSlot: timeSlot || null,
+      targetTimeSlot: timeSlot,
+      targetDuration: duration,
       scope,
       targetWeekOffset: weekOffset,
     })

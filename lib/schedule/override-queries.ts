@@ -5,9 +5,11 @@ import { weekly_schedule, schedule_week_overrides } from '@/lib/db/schema'
 type Period = 'morning' | 'afternoon' | 'evening'
 
 export type EffectiveScheduleEntry = {
+  schedule_entry_id: number | null
   template_id: number | null
   period: Period
   time_slot: string | null
+  duration: number | null
   is_override: boolean
   override_group: string | null
 }
@@ -32,9 +34,11 @@ export async function getEffectiveScheduleForDay(
   // Fetch base schedule entries for this day
   const baseRows = database
     .select({
+      id: weekly_schedule.id,
       template_id: weekly_schedule.template_id,
       period: weekly_schedule.period,
       time_slot: weekly_schedule.time_slot,
+      duration: weekly_schedule.duration,
     })
     .from(weekly_schedule)
     .where(
@@ -52,6 +56,7 @@ export async function getEffectiveScheduleForDay(
       template_id: schedule_week_overrides.template_id,
       period: schedule_week_overrides.period,
       time_slot: schedule_week_overrides.time_slot,
+      duration: schedule_week_overrides.duration,
       override_group: schedule_week_overrides.override_group,
     })
     .from(schedule_week_overrides)
@@ -81,17 +86,21 @@ export async function getEffectiveScheduleForDay(
 
     if (override) {
       entries.push({
+        schedule_entry_id: base.id,
         template_id: override.template_id,
         period: override.period as Period,
         time_slot: override.time_slot,
+        duration: override.duration,
         is_override: true,
         override_group: override.override_group,
       })
     } else {
       entries.push({
+        schedule_entry_id: base.id,
         template_id: base.template_id,
         period: base.period as Period,
         time_slot: base.time_slot,
+        duration: base.duration,
         is_override: false,
         override_group: null,
       })
@@ -102,9 +111,11 @@ export async function getEffectiveScheduleForDay(
   for (const ov of overrideRows) {
     if (!seenPeriods.has(ov.period)) {
       entries.push({
+        schedule_entry_id: null,
         template_id: ov.template_id,
         period: ov.period as Period,
         time_slot: ov.time_slot,
+        duration: ov.duration,
         is_override: true,
         override_group: ov.override_group,
       })

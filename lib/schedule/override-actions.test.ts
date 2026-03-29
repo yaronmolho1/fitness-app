@@ -155,7 +155,8 @@ function seedSchedule(
   templateId: number,
   period: 'morning' | 'afternoon' | 'evening' = 'morning',
   weekType: 'normal' | 'deload' = 'normal',
-  timeSlot?: string
+  timeSlot?: string,
+  duration?: number
 ) {
   const resolvedTimeSlot = timeSlot ?? (
     period === 'morning' ? '07:00' : period === 'afternoon' ? '13:00' : '18:00'
@@ -169,6 +170,7 @@ function seedSchedule(
       week_type: weekType,
       period,
       time_slot: resolvedTimeSlot,
+      duration: duration ?? 90,
       created_at: new Date(),
     })
     .returning()
@@ -209,16 +211,15 @@ describe('moveWorkout', () => {
     it('creates source=null and target=template_id override rows', async () => {
       const meso = seedMesocycle()
       const tmpl = seedTemplate(meso.id, 'Push A')
-      // Monday morning has Push A
-      seedSchedule(meso.id, 1, tmpl.id, 'morning')
+      const entry = seedSchedule(meso.id, 1, tmpl.id, 'morning', 'normal', '07:00', 90)
 
       const result = await moveWorkout({
         mesocycle_id: meso.id,
         week_number: 3,
-        source_day: 1,
-        source_period: 'morning',
+        schedule_id: entry.id,
         target_day: 3, // Wednesday
-        target_period: 'evening',
+        target_time_slot: '18:00',
+        target_duration: 60,
         scope: 'this_week',
       })
 
@@ -226,21 +227,24 @@ describe('moveWorkout', () => {
       const overrides = getOverrides()
       expect(overrides).toHaveLength(2)
 
-      // Source override: nulls out the template on Monday morning
+      // Source override: nulls out the template on Monday
       const source = overrides.find(
-        (o: OverrideRow) => o.day_of_week === 1 && o.period === 'morning'
+        (o: OverrideRow) => o.day_of_week === 1 && o.template_id === null
       )
       expect(source).toBeDefined()
-      expect(source!.template_id).toBeNull()
       expect(source!.week_number).toBe(3)
+      expect(source!.time_slot).toBe('07:00')
+      expect(source!.period).toBe('morning')
 
       // Target override: places template on Wednesday evening
       const target = overrides.find(
-        (o: OverrideRow) => o.day_of_week === 3 && o.period === 'evening'
+        (o: OverrideRow) => o.day_of_week === 3 && o.template_id === tmpl.id
       )
       expect(target).toBeDefined()
-      expect(target!.template_id).toBe(tmpl.id)
       expect(target!.week_number).toBe(3)
+      expect(target!.time_slot).toBe('18:00')
+      expect(target!.duration).toBe(60)
+      expect(target!.period).toBe('evening')
 
       // Both share same override_group
       expect(source!.override_group).toBe(target!.override_group)
@@ -252,21 +256,21 @@ describe('moveWorkout', () => {
     it('creates override pairs for all remaining weeks', async () => {
       const meso = seedMesocycle({ work_weeks: 4 })
       const tmpl = seedTemplate(meso.id, 'Push A')
-      seedSchedule(meso.id, 1, tmpl.id, 'morning')
+      const entry = seedSchedule(meso.id, 1, tmpl.id, 'morning', 'normal', '07:00', 90)
 
       const result = await moveWorkout({
         mesocycle_id: meso.id,
         week_number: 2,
-        source_day: 1,
-        source_period: 'morning',
+        schedule_id: entry.id,
         target_day: 3,
-        target_period: 'evening',
+        target_time_slot: '18:00',
+        target_duration: 60,
         scope: 'remaining_weeks',
       })
 
       expect(result.success).toBe(true)
       const overrides = getOverrides()
-      // Weeks 2, 3, 4 — 3 weeks × 2 rows = 6
+      // Weeks 2, 3, 4 — 3 weeks * 2 rows = 6
       expect(overrides).toHaveLength(6)
 
       for (const week of [2, 3, 4]) {
@@ -289,7 +293,7 @@ describe('moveWorkout', () => {
         start_date: '2026-03-02',
       })
       const tmpl = seedTemplate(meso.id, 'Push A')
-      seedSchedule(meso.id, 1, tmpl.id, 'morning') // Monday morning
+      const entry = seedSchedule(meso.id, 1, tmpl.id, 'morning', 'normal', '07:00', 90)
 
       // Log Push A on week 3 Tuesday (2026-03-02 + 14 + 1 = 2026-03-17)
       seedLoggedWorkout(tmpl.id, 'push-a', '2026-03-17')
@@ -297,43 +301,43 @@ describe('moveWorkout', () => {
       const result = await moveWorkout({
         mesocycle_id: meso.id,
         week_number: 2,
-        source_day: 1,
-        source_period: 'morning',
+        schedule_id: entry.id,
         target_day: 3,
-        target_period: 'evening',
+        target_time_slot: '18:00',
+        target_duration: 60,
         scope: 'remaining_weeks',
       })
 
       expect(result.success).toBe(true)
       const overrides = getOverrides()
-      // Weeks 2 and 4 only (week 3 skipped) — 2 weeks × 2 rows = 4
+      // Weeks 2 and 4 only (week 3 skipped) — 2 weeks * 2 rows = 4
       expect(overrides).toHaveLength(4)
       const weekNumbers = [...new Set(overrides.map((o: OverrideRow) => o.week_number))]
       expect(weekNumbers.sort()).toEqual([2, 4])
     })
   })
 
-  describe('AC3: moving one period does not affect other periods', () => {
-    it('preserves other periods on the source day', async () => {
+  describe('AC3: moving does not affect other schedule entries', () => {
+    it('preserves other entries on the source day', async () => {
       const meso = seedMesocycle()
       const tmplMorning = seedTemplate(meso.id, 'Push A')
       const tmplEvening = seedTemplate(meso.id, 'Cardio')
-      seedSchedule(meso.id, 1, tmplMorning.id, 'morning')
-      seedSchedule(meso.id, 1, tmplEvening.id, 'evening')
+      const entry = seedSchedule(meso.id, 1, tmplMorning.id, 'morning', 'normal', '07:00', 90)
+      seedSchedule(meso.id, 1, tmplEvening.id, 'evening', 'normal', '18:00', 60)
 
       const result = await moveWorkout({
         mesocycle_id: meso.id,
         week_number: 2,
-        source_day: 1,
-        source_period: 'morning',
+        schedule_id: entry.id,
         target_day: 3,
-        target_period: 'afternoon',
+        target_time_slot: '14:00',
+        target_duration: 90,
         scope: 'this_week',
       })
 
       expect(result.success).toBe(true)
       const overrides = getOverrides()
-      // Only 2 overrides — source morning null, target afternoon push-a
+      // Only 2 overrides — source null, target place
       expect(overrides).toHaveLength(2)
       // No override for evening
       const eveningOverride = overrides.find(
@@ -343,35 +347,32 @@ describe('moveWorkout', () => {
     })
   })
 
-  describe('AC4: target day can accumulate sessions across periods', () => {
-    it('allows moving to a day that already has a workout in a different period', async () => {
+  describe('AC4: target day can accumulate sessions', () => {
+    it('allows moving to a day that already has a workout', async () => {
       const meso = seedMesocycle()
       const tmpl1 = seedTemplate(meso.id, 'Push A')
       const tmpl2 = seedTemplate(meso.id, 'Cardio')
-      // Monday morning: Push A, Wednesday morning: Cardio
-      seedSchedule(meso.id, 1, tmpl1.id, 'morning')
-      seedSchedule(meso.id, 3, tmpl2.id, 'morning')
+      const entry = seedSchedule(meso.id, 1, tmpl1.id, 'morning', 'normal', '07:00', 90)
+      seedSchedule(meso.id, 3, tmpl2.id, 'morning', 'normal', '07:00', 60)
 
-      // Move Push A from Mon morning → Wed afternoon
       const result = await moveWorkout({
         mesocycle_id: meso.id,
         week_number: 2,
-        source_day: 1,
-        source_period: 'morning',
+        schedule_id: entry.id,
         target_day: 3,
-        target_period: 'afternoon',
+        target_time_slot: '14:00',
+        target_duration: 90,
         scope: 'this_week',
       })
 
       expect(result.success).toBe(true)
       const overrides = getOverrides()
       expect(overrides).toHaveLength(2)
-      // Target is Wednesday afternoon, not Wednesday morning
       const target = overrides.find(
-        (o: OverrideRow) => o.day_of_week === 3 && o.period === 'afternoon'
+        (o: OverrideRow) => o.day_of_week === 3 && o.template_id === tmpl1.id
       )
       expect(target).toBeDefined()
-      expect(target!.template_id).toBe(tmpl1.id)
+      expect(target!.time_slot).toBe('14:00')
     })
   })
 
@@ -379,15 +380,15 @@ describe('moveWorkout', () => {
     it('rejects move on completed mesocycle', async () => {
       const meso = seedMesocycle({ status: 'completed' })
       const tmpl = seedTemplate(meso.id, 'Push A')
-      seedSchedule(meso.id, 1, tmpl.id, 'morning')
+      const entry = seedSchedule(meso.id, 1, tmpl.id, 'morning')
 
       const result = await moveWorkout({
         mesocycle_id: meso.id,
         week_number: 1,
-        source_day: 1,
-        source_period: 'morning',
+        schedule_id: entry.id,
         target_day: 3,
-        target_period: 'evening',
+        target_time_slot: '18:00',
+        target_duration: 60,
         scope: 'this_week',
       })
 
@@ -400,7 +401,7 @@ describe('moveWorkout', () => {
     it('rejects move when source template already logged on that date', async () => {
       const meso = seedMesocycle({ start_date: '2026-03-02' })
       const tmpl = seedTemplate(meso.id, 'Push A')
-      seedSchedule(meso.id, 1, tmpl.id, 'morning')
+      const entry = seedSchedule(meso.id, 1, tmpl.id, 'morning', 'normal', '07:00', 90)
 
       // Log Push A on week 1 Monday (2026-03-02 + day 1 = 2026-03-03)
       seedLoggedWorkout(tmpl.id, 'push-a', '2026-03-03')
@@ -408,10 +409,10 @@ describe('moveWorkout', () => {
       const result = await moveWorkout({
         mesocycle_id: meso.id,
         week_number: 1,
-        source_day: 1,
-        source_period: 'morning',
+        schedule_id: entry.id,
         target_day: 3,
-        target_period: 'evening',
+        target_time_slot: '18:00',
+        target_duration: 60,
         scope: 'this_week',
       })
 
@@ -420,19 +421,19 @@ describe('moveWorkout', () => {
     })
   })
 
-  describe('edge: same day different period', () => {
-    it('allows moving to same day with different period', async () => {
+  describe('edge: same day different time', () => {
+    it('allows moving to same day with different time', async () => {
       const meso = seedMesocycle()
       const tmpl = seedTemplate(meso.id, 'Push A')
-      seedSchedule(meso.id, 1, tmpl.id, 'morning')
+      const entry = seedSchedule(meso.id, 1, tmpl.id, 'morning', 'normal', '07:00', 90)
 
       const result = await moveWorkout({
         mesocycle_id: meso.id,
         week_number: 2,
-        source_day: 1,
-        source_period: 'morning',
+        schedule_id: entry.id,
         target_day: 1,
-        target_period: 'evening',
+        target_time_slot: '18:00',
+        target_duration: 60,
         scope: 'this_week',
       })
 
@@ -442,19 +443,19 @@ describe('moveWorkout', () => {
     })
   })
 
-  describe('edge: same day same period', () => {
-    it('rejects moving to same day and same period (no-op)', async () => {
+  describe('edge: same day same time', () => {
+    it('rejects moving to same day and same time (no-op)', async () => {
       const meso = seedMesocycle()
       const tmpl = seedTemplate(meso.id, 'Push A')
-      seedSchedule(meso.id, 1, tmpl.id, 'morning')
+      const entry = seedSchedule(meso.id, 1, tmpl.id, 'morning', 'normal', '07:00', 90)
 
       const result = await moveWorkout({
         mesocycle_id: meso.id,
         week_number: 2,
-        source_day: 1,
-        source_period: 'morning',
+        schedule_id: entry.id,
         target_day: 1,
-        target_period: 'morning',
+        target_time_slot: '07:00',
+        target_duration: 60,
         scope: 'this_week',
       })
 
@@ -468,43 +469,41 @@ describe('moveWorkout', () => {
       const result = await moveWorkout({
         mesocycle_id: 999,
         week_number: 1,
-        source_day: 1,
-        source_period: 'morning',
+        schedule_id: 1,
         target_day: 3,
-        target_period: 'evening',
+        target_time_slot: '18:00',
+        target_duration: 60,
         scope: 'this_week',
       })
       expect(result.success).toBe(false)
       if (!result.success) expect(result.error).toMatch(/mesocycle/i)
     })
 
-    it('rejects when source slot has no template', async () => {
+    it('rejects when source schedule entry has no template', async () => {
       const meso = seedMesocycle()
-      // No schedule entry for day 1 morning
 
       const result = await moveWorkout({
         mesocycle_id: meso.id,
         week_number: 1,
-        source_day: 1,
-        source_period: 'morning',
+        schedule_id: 9999,
         target_day: 3,
-        target_period: 'evening',
+        target_time_slot: '18:00',
+        target_duration: 60,
         scope: 'this_week',
       })
 
       expect(result.success).toBe(false)
-      if (!result.success) expect(result.error).toMatch(/template/i)
+      if (!result.success) expect(result.error).toMatch(/source/i)
     })
 
     it('rejects invalid day_of_week values', async () => {
-      const meso = seedMesocycle()
       const result = await moveWorkout({
-        mesocycle_id: meso.id,
+        mesocycle_id: 1,
         week_number: 1,
-        source_day: 7,
-        source_period: 'morning',
-        target_day: 3,
-        target_period: 'evening',
+        schedule_id: 1,
+        target_day: 7,
+        target_time_slot: '18:00',
+        target_duration: 60,
         scope: 'this_week',
       })
       expect(result.success).toBe(false)
@@ -516,26 +515,26 @@ describe('moveWorkout', () => {
       const meso = seedMesocycle()
       const tmpl1 = seedTemplate(meso.id, 'Push A')
       const tmpl2 = seedTemplate(meso.id, 'Pull A')
-      seedSchedule(meso.id, 1, tmpl1.id, 'morning')
-      seedSchedule(meso.id, 3, tmpl2.id, 'morning')
+      const entry1 = seedSchedule(meso.id, 1, tmpl1.id, 'morning', 'normal', '07:00', 90)
+      const entry2 = seedSchedule(meso.id, 3, tmpl2.id, 'morning', 'normal', '07:00', 90)
 
       await moveWorkout({
         mesocycle_id: meso.id,
         week_number: 1,
-        source_day: 1,
-        source_period: 'morning',
+        schedule_id: entry1.id,
         target_day: 2,
-        target_period: 'morning',
+        target_time_slot: '07:00',
+        target_duration: 90,
         scope: 'this_week',
       })
 
       await moveWorkout({
         mesocycle_id: meso.id,
         week_number: 1,
-        source_day: 3,
-        source_period: 'morning',
+        schedule_id: entry2.id,
         target_day: 4,
-        target_period: 'morning',
+        target_time_slot: '07:00',
+        target_duration: 90,
         scope: 'this_week',
       })
 
@@ -550,15 +549,15 @@ describe('moveWorkout', () => {
     it('does not create partial overrides on validation failure', async () => {
       const meso = seedMesocycle({ status: 'completed' })
       const tmpl = seedTemplate(meso.id, 'Push A')
-      seedSchedule(meso.id, 1, tmpl.id, 'morning')
+      const entry = seedSchedule(meso.id, 1, tmpl.id, 'morning')
 
       await moveWorkout({
         mesocycle_id: meso.id,
         week_number: 1,
-        source_day: 1,
-        source_period: 'morning',
+        schedule_id: entry.id,
         target_day: 3,
-        target_period: 'evening',
+        target_time_slot: '18:00',
+        target_duration: 60,
         scope: 'this_week',
       })
 
@@ -572,15 +571,15 @@ describe('moveWorkout', () => {
       const { revalidatePath } = await import('next/cache')
       const meso = seedMesocycle()
       const tmpl = seedTemplate(meso.id, 'Push A')
-      seedSchedule(meso.id, 1, tmpl.id, 'morning')
+      const entry = seedSchedule(meso.id, 1, tmpl.id, 'morning', 'normal', '07:00', 90)
 
       await moveWorkout({
         mesocycle_id: meso.id,
         week_number: 2,
-        source_day: 1,
-        source_period: 'morning',
+        schedule_id: entry.id,
         target_day: 3,
-        target_period: 'evening',
+        target_time_slot: '18:00',
+        target_duration: 60,
         scope: 'this_week',
       })
 
@@ -598,15 +597,15 @@ describe('undoScheduleMove', () => {
   it('deletes all override rows matching override_group + mesocycle', async () => {
     const meso = seedMesocycle()
     const tmpl = seedTemplate(meso.id)
-    seedSchedule(meso.id, 1, tmpl.id, 'morning')
+    const entry = seedSchedule(meso.id, 1, tmpl.id, 'morning', 'normal', '07:00', 90)
 
     const moveResult = await moveWorkout({
       mesocycle_id: meso.id,
       week_number: 1,
-      source_day: 1,
-      source_period: 'morning',
+      schedule_id: entry.id,
       target_day: 3,
-      target_period: 'evening',
+      target_time_slot: '18:00',
+      target_duration: 60,
       scope: 'this_week',
     })
     expect(moveResult.success).toBe(true)
@@ -626,25 +625,25 @@ describe('undoScheduleMove', () => {
   it('does not delete overrides from a different override_group', async () => {
     const meso = seedMesocycle()
     const tmpl = seedTemplate(meso.id)
-    seedSchedule(meso.id, 1, tmpl.id, 'morning')
-    seedSchedule(meso.id, 2, tmpl.id, 'afternoon')
+    const entry1 = seedSchedule(meso.id, 1, tmpl.id, 'morning', 'normal', '07:00', 90)
+    const entry2 = seedSchedule(meso.id, 2, tmpl.id, 'afternoon', 'normal', '13:00', 90)
 
     const move1 = await moveWorkout({
       mesocycle_id: meso.id,
       week_number: 1,
-      source_day: 1,
-      source_period: 'morning',
+      schedule_id: entry1.id,
       target_day: 3,
-      target_period: 'evening',
+      target_time_slot: '18:00',
+      target_duration: 60,
       scope: 'this_week',
     })
     const move2 = await moveWorkout({
       mesocycle_id: meso.id,
       week_number: 2,
-      source_day: 2,
-      source_period: 'afternoon',
+      schedule_id: entry2.id,
       target_day: 4,
-      target_period: 'morning',
+      target_time_slot: '07:00',
+      target_duration: 60,
       scope: 'this_week',
     })
 
@@ -666,25 +665,25 @@ describe('undoScheduleMove', () => {
     const meso2 = seedMesocycle({ name: 'Other Meso' })
     const tmpl1 = seedTemplate(meso1.id)
     const tmpl2 = seedTemplate(meso2.id, 'Pull A')
-    seedSchedule(meso1.id, 1, tmpl1.id, 'morning')
-    seedSchedule(meso2.id, 1, tmpl2.id, 'morning')
+    const entry1 = seedSchedule(meso1.id, 1, tmpl1.id, 'morning', 'normal', '07:00', 90)
+    const entry2 = seedSchedule(meso2.id, 1, tmpl2.id, 'morning', 'normal', '07:00', 90)
 
     const move1 = await moveWorkout({
       mesocycle_id: meso1.id,
       week_number: 1,
-      source_day: 1,
-      source_period: 'morning',
+      schedule_id: entry1.id,
       target_day: 3,
-      target_period: 'evening',
+      target_time_slot: '18:00',
+      target_duration: 60,
       scope: 'this_week',
     })
     await moveWorkout({
       mesocycle_id: meso2.id,
       week_number: 1,
-      source_day: 1,
-      source_period: 'morning',
+      schedule_id: entry2.id,
       target_day: 4,
-      target_period: 'afternoon',
+      target_time_slot: '14:00',
+      target_duration: 60,
       scope: 'this_week',
     })
 
@@ -735,25 +734,25 @@ describe('resetWeekSchedule', () => {
   it('deletes all overrides for a given mesocycle + week', async () => {
     const meso = seedMesocycle()
     const tmpl = seedTemplate(meso.id)
-    seedSchedule(meso.id, 1, tmpl.id, 'morning')
-    seedSchedule(meso.id, 2, tmpl.id, 'afternoon')
+    const entry1 = seedSchedule(meso.id, 1, tmpl.id, 'morning', 'normal', '07:00', 90)
+    const entry2 = seedSchedule(meso.id, 2, tmpl.id, 'afternoon', 'normal', '13:00', 90)
 
     await moveWorkout({
       mesocycle_id: meso.id,
       week_number: 1,
-      source_day: 1,
-      source_period: 'morning',
+      schedule_id: entry1.id,
       target_day: 3,
-      target_period: 'evening',
+      target_time_slot: '18:00',
+      target_duration: 60,
       scope: 'this_week',
     })
     await moveWorkout({
       mesocycle_id: meso.id,
       week_number: 1,
-      source_day: 2,
-      source_period: 'afternoon',
+      schedule_id: entry2.id,
       target_day: 4,
-      target_period: 'morning',
+      target_time_slot: '07:00',
+      target_duration: 60,
       scope: 'this_week',
     })
 
@@ -768,15 +767,15 @@ describe('resetWeekSchedule', () => {
   it('does not delete overrides from other weeks', async () => {
     const meso = seedMesocycle()
     const tmpl = seedTemplate(meso.id)
-    seedSchedule(meso.id, 1, tmpl.id, 'morning')
+    const entry = seedSchedule(meso.id, 1, tmpl.id, 'morning', 'normal', '07:00', 90)
 
     await moveWorkout({
       mesocycle_id: meso.id,
       week_number: 1,
-      source_day: 1,
-      source_period: 'morning',
+      schedule_id: entry.id,
       target_day: 3,
-      target_period: 'evening',
+      target_time_slot: '18:00',
+      target_duration: 60,
       scope: 'remaining_weeks',
     })
 

@@ -381,22 +381,21 @@ export function DayDetailPanel({ date, onClose, onMutate }: DayDetailPanelProps)
 
   const handleMoveConfirm = useCallback(async (params: {
     targetDay: number
-    targetPeriod: 'morning' | 'afternoon' | 'evening'
-    targetTimeSlot: string | null
+    targetTimeSlot: string
+    targetDuration: number
     scope: 'this_week' | 'remaining_weeks'
     targetWeekOffset: number
   }) => {
-    if (!moveTarget) return
+    if (!moveTarget || !moveTarget.schedule_entry_id) return
     try {
       const { moveWorkout } = await import('@/lib/schedule/override-actions')
       const result = await moveWorkout({
         mesocycle_id: moveTarget.mesocycle_id,
         week_number: moveTarget.week_number,
-        source_day: moveTarget.day_of_week,
-        source_period: moveTarget.period,
+        schedule_id: moveTarget.schedule_entry_id,
         target_day: params.targetDay,
-        target_period: params.targetPeriod,
         target_time_slot: params.targetTimeSlot,
+        target_duration: params.targetDuration,
         scope: params.scope,
         target_week_offset: params.targetWeekOffset,
       })
@@ -497,7 +496,8 @@ export function DayDetailPanel({ date, onClose, onMutate }: DayDetailPanelProps)
             weekNumber={moveTarget.week_number}
             sourceDay={moveTarget.day_of_week}
             sourcePeriod={moveTarget.period}
-            sourceTimeSlot={null}
+            sourceTimeSlot={moveTarget.time_slot}
+            sourceDuration={moveTarget.duration}
             sourceTemplateName={moveTarget.template.name}
             occupiedSlots={occupiedSlots}
             onConfirm={handleMoveConfirm}

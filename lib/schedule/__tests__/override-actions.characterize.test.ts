@@ -1,5 +1,5 @@
 // Characterization test — captures current behavior for safe refactoring
-// T199: moveWorkout, undoScheduleMove, resetWeekSchedule
+// T199: moveWorkout (time-aware), undoScheduleMove, resetWeekSchedule
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Mock next/cache before imports
@@ -76,16 +76,16 @@ beforeEach(() => {
   })
 })
 
-// ---------- moveWorkout ----------
+// ---------- moveWorkout (time-aware) ----------
 
 describe('moveWorkout', () => {
   const validInput = {
     mesocycle_id: 1,
     week_number: 1,
-    source_day: 0,
-    source_period: 'morning' as const,
+    schedule_id: 1,
     target_day: 2,
-    target_period: 'evening' as const,
+    target_time_slot: '18:00',
+    target_duration: 60,
     scope: 'this_week' as const,
   }
 
@@ -121,18 +121,8 @@ describe('moveWorkout', () => {
       expect(result).toEqual({ success: false, error: 'Invalid mesocycle ID' })
     })
 
-    it('rejects source_day > 6', async () => {
-      const result = await moveWorkout({ ...validInput, source_day: 7 })
-      expect(result).toEqual({ success: false, error: 'source_day must be 0-6' })
-    })
-
     it('rejects target_day > 6', async () => {
       const result = await moveWorkout({ ...validInput, target_day: 7 })
-      expect(result.success).toBe(false)
-    })
-
-    it('rejects invalid period', async () => {
-      const result = await moveWorkout({ ...validInput, source_period: 'night' as 'morning' })
       expect(result.success).toBe(false)
     })
 
@@ -151,6 +141,16 @@ describe('moveWorkout', () => {
       expect(result.success).toBe(false)
     })
 
+    it('rejects invalid time_slot format', async () => {
+      const result = await moveWorkout({ ...validInput, target_time_slot: '25:00' })
+      expect(result.success).toBe(false)
+    })
+
+    it('rejects non-positive duration', async () => {
+      const result = await moveWorkout({ ...validInput, target_duration: 0 })
+      expect(result.success).toBe(false)
+    })
+
     it('defaults target_week_offset to 0', async () => {
       const tx = buildTx({ meso: activeMeso, sourceSlot, logged: undefined })
       setupTx(tx)
@@ -160,23 +160,43 @@ describe('moveWorkout', () => {
   })
 
   describe('same-slot no-op guard', () => {
-    it('returns error when source and target are identical (offset=0)', async () => {
-      const result = await moveWorkout({
-        mesocycle_id: 1, week_number: 1,
-        source_day: 0, source_period: 'morning',
-        target_day: 0, target_period: 'morning',
-        scope: 'this_week',
-      })
-      expect(result).toEqual({ success: false, error: 'Cannot move to the same day and period' })
-    })
-
-    it('allows same day+period if target_week_offset != 0', async () => {
+    it('returns error when source day+time and target day+time are identical (offset=0)', async () => {
       const tx = buildTx({ meso: activeMeso, sourceSlot, logged: undefined })
       setupTx(tx)
       const result = await moveWorkout({
         mesocycle_id: 1, week_number: 1,
-        source_day: 0, source_period: 'morning',
-        target_day: 0, target_period: 'morning',
+        schedule_id: 1,
+        target_day: 0, // same as source day_of_week
+        target_time_slot: '07:00', // same as source time_slot
+        target_duration: 60,
+        scope: 'this_week',
+      })
+      expect(result).toEqual({ success: false, error: 'Cannot move to the same day and time' })
+    })
+
+    it('allows same day if target_time_slot differs', async () => {
+      const tx = buildTx({ meso: activeMeso, sourceSlot, logged: undefined })
+      setupTx(tx)
+      const result = await moveWorkout({
+        mesocycle_id: 1, week_number: 1,
+        schedule_id: 1,
+        target_day: 0,
+        target_time_slot: '18:00',
+        target_duration: 60,
+        scope: 'this_week',
+      })
+      expect(result.success).toBe(true)
+    })
+
+    it('allows same day+time if target_week_offset != 0', async () => {
+      const tx = buildTx({ meso: activeMeso, sourceSlot, logged: undefined })
+      setupTx(tx)
+      const result = await moveWorkout({
+        mesocycle_id: 1, week_number: 1,
+        schedule_id: 1,
+        target_day: 0,
+        target_time_slot: '07:00',
+        target_duration: 60,
         scope: 'this_week',
         target_week_offset: 1,
       })
@@ -235,14 +255,14 @@ describe('moveWorkout', () => {
       const tx = buildTx({ meso: activeMeso, sourceSlot: undefined, logged: undefined })
       setupTx(tx)
       const result = await moveWorkout(validInput)
-      expect(result).toEqual({ success: false, error: 'Source slot has no template assigned' })
+      expect(result).toEqual({ success: false, error: 'Source schedule entry not found or has no template' })
     })
 
     it('returns error if source slot has null template_id', async () => {
       const tx = buildTx({ meso: activeMeso, sourceSlot: { ...sourceSlot, template_id: null }, logged: undefined })
       setupTx(tx)
       const result = await moveWorkout(validInput)
-      expect(result).toEqual({ success: false, error: 'Source slot has no template assigned' })
+      expect(result).toEqual({ success: false, error: 'Source schedule entry not found or has no template' })
     })
   })
 
