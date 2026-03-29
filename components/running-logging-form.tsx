@@ -9,6 +9,7 @@ import type { SaveRunningWorkoutInput, IntervalRepData } from '@/lib/workouts/ac
 import type { MesocycleInfo, TemplateInfo } from '@/lib/today/queries'
 import { SectionHeading } from '@/components/layout/section-heading'
 import { formatDateWithWeekday } from '@/lib/date-format'
+import { useLogAsPlanned } from '@/lib/use-log-as-planned'
 
 export type RunningWorkoutData = {
   date: string
@@ -52,6 +53,7 @@ export function RunningLoggingForm({ data, onSaveSuccess }: { data: RunningWorko
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+  const { showButton: showLogAsPlanned, markModified, handleLogAsPlanned } = useLogAsPlanned({ saved })
 
   // Interval rep state — one entry per interval_count
   const [intervalReps, setIntervalReps] = useState<
@@ -65,6 +67,23 @@ export function RunningLoggingForm({ data, onSaveSuccess }: { data: RunningWorko
     }))
   )
   const [expandedNotes, setExpandedNotes] = useState<Set<number>>(new Set())
+
+  function setDistanceModified(v: string) {
+    markModified()
+    setDistance(v)
+  }
+  function setPaceModified(v: string) {
+    markModified()
+    setPace(v)
+  }
+  function setHrModified(v: string) {
+    markModified()
+    setHr(v)
+  }
+  function setElevationModified(v: string) {
+    markModified()
+    setElevationGain(v)
+  }
 
   function updateIntervalRep(
     index: number,
@@ -184,6 +203,18 @@ export function RunningLoggingForm({ data, onSaveSuccess }: { data: RunningWorko
         )}
       </div>
 
+      {/* Log as Planned button */}
+      {showLogAsPlanned && (
+        <button
+          type="button"
+          data-testid="log-as-planned-btn"
+          onClick={handleLogAsPlanned}
+          className="w-full rounded-xl border-2 border-primary/30 bg-primary/5 py-3 text-base font-semibold text-primary transition-colors hover:bg-primary/10 active:scale-[0.98]"
+        >
+          Log as Planned
+        </button>
+      )}
+
       {/* Planned reference (read-only) */}
       <div data-testid="planned-reference" className={cn('rounded-xl border border-l-4 bg-card p-4 space-y-3', getModalityAccentClass('running'))}>
         <SectionHeading className="mt-0 mb-0 text-sm uppercase tracking-wider text-muted-foreground">
@@ -293,7 +324,7 @@ export function RunningLoggingForm({ data, onSaveSuccess }: { data: RunningWorko
               mode="decimal"
               placeholder="e.g. 8.5"
               value={distance}
-              onValueChange={setDistance}
+              onValueChange={setDistanceModified}
               className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:h-10 md:text-sm"
             />
           </div>
@@ -311,7 +342,7 @@ export function RunningLoggingForm({ data, onSaveSuccess }: { data: RunningWorko
               type="text"
               placeholder="e.g. 5:45/km"
               value={pace}
-              onChange={(e) => setPace(e.target.value)}
+              onChange={(e) => setPaceModified(e.target.value)}
               className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base font-medium placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:h-10 md:text-sm"
             />
           </div>
@@ -329,7 +360,7 @@ export function RunningLoggingForm({ data, onSaveSuccess }: { data: RunningWorko
               mode="integer"
               placeholder="e.g. 155"
               value={hr}
-              onValueChange={setHr}
+              onValueChange={setHrModified}
               className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:h-10 md:text-sm"
             />
           </div>
@@ -347,7 +378,7 @@ export function RunningLoggingForm({ data, onSaveSuccess }: { data: RunningWorko
               mode="integer"
               placeholder="e.g. 150"
               value={elevationGain}
-              onValueChange={setElevationGain}
+              onValueChange={setElevationModified}
               className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:h-10 md:text-sm"
             />
           </div>
