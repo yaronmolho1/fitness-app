@@ -49,7 +49,7 @@ See ADR-001 (SQLite decision) and ADR-004 (hybrid API decision).
 
 ## Data Model
 
-Fourteen tables split into three layers. See `lib/db/schema.ts` for column definitions and `lib/db/relations.ts` for Drizzle v2 `defineRelations` config. See ADR-002 (mesocycle-scoped templates) and ADR-003 (deload as separate schedule) for the structural decisions behind this schema.
+Sixteen tables split into four layers. See `lib/db/schema.ts` for column definitions and `lib/db/relations.ts` for Drizzle v2 `defineRelations` config. See ADR-002 (mesocycle-scoped templates) and ADR-003 (deload as separate schedule) for the structural decisions behind this schema.
 
 ```mermaid
 erDiagram
@@ -72,7 +72,11 @@ erDiagram
         integer id
         real weight_kg
         real height_cm
+        text timezone
     }
+
+    google_credentials ||--o{ google_calendar_events : "owns"
+    mesocycles ||--o{ google_calendar_events : "synced events"
 
     workout_templates }|..o{ logged_workouts : "canonical_name link (string, not FK)"
 ```
@@ -86,7 +90,7 @@ erDiagram
 | `template_sections` | Ordered sections within a mixed-modality template; each section has its own modality (resistance/running/mma) and modality-specific fields |
 | `workout_templates` | Named workout plans (e.g. Push A, Easy Run) scoped to a mesocycle; carry a `canonical_name` slug for cross-phase linking |
 | `mesocycles` | Training phases: N work weeks + optional deload week; status lifecycle (planned → active → completed) |
-| `weekly_schedule` | Day-to-template assignment grid; separate rows for normal vs deload week variants |
+| `weekly_schedule` | Day-to-template assignment grid; keyed by `(mesocycle_id, day_of_week, week_type, time_slot, template_id)`; `time_slot` (HH:MM) + `duration` (minutes) are NOT NULL with defaults |
 | `slot_week_overrides` | Per-week overrides for exercise slot targets (sets/reps/weight/RPE); enables week-by-week periodization within a mesocycle |
 | `schedule_week_overrides` | Per-week schedule overrides for moving/removing workouts on specific weeks; links source+target via `override_group`; null `template_id` = rest/removed |
 | `routine_items` | Daily habit items with flexible scope: global, per-mesocycle, date-range, or skip-on-deload |
@@ -104,7 +108,14 @@ erDiagram
 
 | Table | Purpose |
 |-------|---------|
-| `athlete_profile` | Single-row athlete configuration: body weight, height, date of birth, sex, training start date; used for progression calculations and bodyweight-relative metrics |
+| `athlete_profile` | Single-row athlete configuration: body weight, height, date of birth, sex, training start date, timezone; used for progression calculations, bodyweight-relative metrics, and Google Calendar sync |
+
+### Google Calendar Layer (external sync)
+
+| Table | Purpose |
+|-------|---------|
+| `google_credentials` | OAuth2 tokens for Google Calendar API access; single row per user with access/refresh tokens, expiry, and calendar ID |
+| `google_calendar_events` | Mapping between schedule entries and Google Calendar events; tracks sync state (pending/synced/deleted) per mesocycle+template+date |
 
 **Cross-layer link**: `workout_templates.canonical_name` ↔ `logged_workouts.canonical_name` — string slug match, not a foreign key. See ADR-006.
 
