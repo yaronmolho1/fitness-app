@@ -43,7 +43,9 @@ Shared React components — app-level UI and navigation.
 - `target-picker-modal.tsx` — `TargetPickerModal` 3-step dialog for selecting copy/move target: mesocycle → template → section (mixed only); exports `ConfirmPayload` type
 - `template-browse-dialog.tsx` — `TemplateBrowseDialog` searchable dialog listing templates from other mesocycles grouped by mesocycle, with copy button per template
 - `superset-transfer-prompt.tsx` — `SupersetTransferPrompt` dialog for copy/move of superset slots: prompts user to transfer single slot or entire superset group
-- `move-workout-modal.tsx` — `MoveWorkoutModal` dialog for moving a scheduled workout to a different day/period/time slot; shows 7-day grid with occupied-slot warnings, period selector, optional time slot, scope toggle (this week / remaining weeks); exports `OccupiedSlot` type
+- `move-workout-modal.tsx` — `MoveWorkoutModal` dialog for moving a scheduled workout to a different day/time; shows 7-day grid, time slot + duration inputs with overlap detection against existing workouts, scope toggle (this week / remaining weeks); exports `OccupiedSlot` type
+- `move-workout-modal.test.tsx` — unit tests for `MoveWorkoutModal` (time-first move flow)
+- `move-workout-modal.characterize.test.tsx` — characterization tests capturing pre-refactor behavior of `MoveWorkoutModal`
 - `week-progression-grid.tsx` — `WeekProgressionGrid` dialog with per-week override grid (rows = weeks + optional deload, columns = modality-specific fields); pre-fills base values, deload defaults (60% weight, 50% sets, RPE−2); saves via `upsertWeekOverrideAction`/`deleteWeekOverrideAction`; read-only when mesocycle is completed
 
 ## Subdirectories

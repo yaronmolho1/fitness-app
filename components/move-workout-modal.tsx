@@ -12,16 +12,15 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { cn } from '@/lib/utils'
 import { AlertTriangle } from 'lucide-react'
 import { DAY_LABELS, internalToDisplay, displayToInternal } from '@/lib/day-mapping'
 
-type Period = 'morning' | 'afternoon' | 'evening'
 type Scope = 'this_week' | 'remaining_weeks'
 
 export interface OccupiedSlot {
   day: number // internal convention (0=Mon)
-  period: Period
+  timeSlot: string // "HH:MM"
+  duration: number // minutes
   templateName: string
 }
 
@@ -31,7 +30,6 @@ export interface MoveWorkoutModalProps {
   mesocycleId: number
   weekNumber: number
   sourceDay: number // internal convention (0=Mon)
-  sourcePeriod: Period
   sourceTimeSlot: string | null
   sourceDuration: number | null
   sourceTemplateName: string
@@ -43,6 +41,22 @@ export interface MoveWorkoutModalProps {
     scope: Scope
     targetWeekOffset: number
   }) => void
+}
+
+// Convert "HH:MM" to total minutes from midnight
+function timeToMinutes(t: string): number {
+  const [h, m] = t.split(':').map(Number)
+  return h * 60 + m
+}
+
+// Check if two time ranges overlap
+function rangesOverlap(
+  startA: number, durationA: number,
+  startB: number, durationB: number
+): boolean {
+  const endA = startA + durationA
+  const endB = startB + durationB
+  return startA < endB && startB < endA
 }
 
 export function MoveWorkoutModal(props: MoveWorkoutModalProps) {
@@ -63,32 +77,19 @@ function MoveWorkoutModalContent({
   onOpenChange,
 }: MoveWorkoutModalProps) {
   const [targetDay, setTargetDay] = useState<number | null>(null)
-  const [targetPeriod, setTargetPeriod] = useState<Period>('morning')
   const [timeSlot, setTimeSlot] = useState(sourceTimeSlot ?? '07:00')
   const [duration, setDuration] = useState(sourceDuration ?? 60)
   const [scope, setScope] = useState<Scope>('this_week')
   const [weekOffset, setWeekOffset] = useState(0)
 
-  // Days where all 3 periods are occupied (keyed by internal day)
-  const fullyOccupiedDays = useMemo(() => {
-    const counts = new Map<number, number>()
-    for (const slot of occupiedSlots) {
-      counts.set(slot.day, (counts.get(slot.day) ?? 0) + 1)
-    }
-    const result = new Set<number>()
-    for (const [day, count] of counts) {
-      if (count >= 3) result.add(day)
-    }
-    return result
-  }, [occupiedSlots])
-
-  // Check if current target selection has existing workout (targetDay is internal)
-  const targetOccupied = useMemo(() => {
-    if (targetDay === null) return null
-    return occupiedSlots.find(
-      (s) => s.day === targetDay && s.period === targetPeriod
-    ) ?? null
-  }, [targetDay, targetPeriod, occupiedSlots])
+  // Find overlapping workouts on the target day
+  const overlappingWorkouts = useMemo(() => {
+    if (targetDay === null || !timeSlot || weekOffset !== 0) return []
+    const targetStart = timeToMinutes(timeSlot)
+    return occupiedSlots.filter(
+      (s) => s.day === targetDay && rangesOverlap(targetStart, duration, timeToMinutes(s.timeSlot), s.duration)
+    )
+  }, [targetDay, timeSlot, duration, occupiedSlots, weekOffset])
 
   const canConfirm = targetDay !== null && !!timeSlot && duration > 0
 
@@ -103,17 +104,12 @@ function MoveWorkoutModalContent({
     })
   }
 
-  function getOccupiedTemplate(day: number, period: Period): string | null {
-    const slot = occupiedSlots.find((s) => s.day === day && s.period === period)
-    return slot?.templateName ?? null
-  }
-
   return (
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Move {sourceTemplateName}</DialogTitle>
           <DialogDescription>
-            Choose a new day, period, and time for this workout.
+            Choose a new day and time for this workout.
           </DialogDescription>
         </DialogHeader>
 
@@ -147,14 +143,13 @@ function MoveWorkoutModalContent({
               {DAY_LABELS.map((label, displayIdx) => {
                 const internalDay = displayToInternal(displayIdx)
                 const isSource = weekOffset === 0 && internalDay === sourceDay
-                const isFullyOccupied = weekOffset === 0 && fullyOccupiedDays.has(internalDay)
                 const isSelected = targetDay === internalDay
                 return (
                   <Button
                     key={label}
                     variant={isSelected ? 'default' : 'outline'}
                     size="sm"
-                    disabled={isSource || isFullyOccupied}
+                    disabled={isSource}
                     onClick={() => setTargetDay(internalDay)}
                     className="flex-1 px-0"
                   >
@@ -165,53 +160,9 @@ function MoveWorkoutModalContent({
             </div>
           </div>
 
-          {/* Period + time + scope only shown after day selection */}
+          {/* Time + duration + scope shown after day selection */}
           {targetDay !== null && (
             <>
-              {/* Period selector */}
-              <fieldset className="space-y-2">
-                <Label asChild><legend>Period</legend></Label>
-                <div className="flex flex-col gap-2">
-                  {(['morning', 'afternoon', 'evening'] as const).map((period) => {
-                    const occupied = getOccupiedTemplate(targetDay, period)
-                    return (
-                      <label
-                        key={period}
-                        className={cn(
-                          'flex items-center gap-3 rounded-lg border px-3 py-2 cursor-pointer transition-colors',
-                          targetPeriod === period && 'border-primary bg-primary/5'
-                        )}
-                      >
-                        <input
-                          type="radio"
-                          name="period"
-                          role="radio"
-                          aria-label={period}
-                          value={period}
-                          checked={targetPeriod === period}
-                          onChange={() => setTargetPeriod(period)}
-                          className="accent-primary"
-                        />
-                        <span className="capitalize text-sm font-medium">{period}</span>
-                        {occupied && (
-                          <span className="ml-auto text-xs text-muted-foreground">
-                            occupied — {occupied}
-                          </span>
-                        )}
-                      </label>
-                    )
-                  })}
-                </div>
-              </fieldset>
-
-              {/* Warning for occupied target */}
-              {targetOccupied && (
-                <div className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
-                  <AlertTriangle className="h-4 w-4 shrink-0" />
-                  This period already has a workout ({targetOccupied.templateName}). Both will appear on this day.
-                </div>
-              )}
-
               {/* Time slot input */}
               <div className="space-y-2">
                 <Label htmlFor="move-time-slot">Time</Label>
@@ -222,6 +173,26 @@ function MoveWorkoutModalContent({
                   placeholder="e.g. 07:00"
                 />
               </div>
+
+              {/* Duration input */}
+              <div className="space-y-2">
+                <Label htmlFor="move-duration">Duration (min)</Label>
+                <Input
+                  id="move-duration"
+                  type="number"
+                  min={1}
+                  value={duration}
+                  onChange={(e) => setDuration(Number(e.target.value) || 0)}
+                />
+              </div>
+
+              {/* Overlap warning (non-blocking) */}
+              {overlappingWorkouts.length > 0 && (
+                <div className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
+                  <AlertTriangle className="h-4 w-4 shrink-0" />
+                  Time overlap with {overlappingWorkouts.map((w) => w.templateName).join(', ')}. Both will appear on this day.
+                </div>
+              )}
 
               {/* Scope radio */}
               <fieldset className="space-y-2">

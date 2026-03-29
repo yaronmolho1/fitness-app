@@ -427,7 +427,8 @@ export function DayDetailPanel({ date, onClose, onMutate }: DayDetailPanelProps)
     .filter((w): w is Extract<DayDetailResult, { type: 'projected' }> => w.type === 'projected' && 'day_of_week' in w)
     .map((w) => ({
       day: w.day_of_week,
-      period: w.period,
+      timeSlot: w.time_slot ?? '07:00',
+      duration: w.duration ?? 60,
       templateName: w.template.name,
     }))
 
@@ -495,7 +496,6 @@ export function DayDetailPanel({ date, onClose, onMutate }: DayDetailPanelProps)
             mesocycleId={moveTarget.mesocycle_id}
             weekNumber={moveTarget.week_number}
             sourceDay={moveTarget.day_of_week}
-            sourcePeriod={moveTarget.period}
             sourceTimeSlot={moveTarget.time_slot}
             sourceDuration={moveTarget.duration}
             sourceTemplateName={moveTarget.template.name}
