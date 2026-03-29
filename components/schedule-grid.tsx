@@ -2,35 +2,20 @@
 
 import { useState, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { assignTemplate, removeAssignment } from '@/lib/schedule/actions'
 import type { ScheduleEntry, TemplateOption } from '@/lib/schedule/queries'
 import { DAY_NAMES, displayToInternal } from '@/lib/day-mapping'
+import { derivePeriod, checkOverlap } from '@/lib/schedule/time-utils'
 
-const PERIODS = ['morning', 'afternoon', 'evening'] as const
-type Period = (typeof PERIODS)[number]
-
-const PERIOD_LABELS: Record<Period, string> = {
+const PERIOD_LABELS: Record<string, string> = {
   morning: 'Morning',
   afternoon: 'Afternoon',
   evening: 'Evening',
 }
 
-// Default time_slot for each period (used when UI still picks by period)
-const PERIOD_DEFAULT_TIME: Record<Period, string> = {
-  morning: '07:00',
-  afternoon: '13:00',
-  evening: '18:00',
-}
-
 const DEFAULT_DURATION = 90
-
-// Stable sort order for period display
-const PERIOD_ORDER: Record<Period, number> = {
-  morning: 0,
-  afternoon: 1,
-  evening: 2,
-}
 
 type Props = {
   mesocycleId: number
@@ -40,57 +25,75 @@ type Props = {
   variant: 'normal' | 'deload'
 }
 
-type PickerState = {
+type FormState = {
   day: number
-  period: Period
+  selectedTemplateId: number | null
+  timeSlot: string
+  duration: string
 } | null
+
+// Get duration from template fields: estimated_duration > target_duration > planned_duration > 90
+function getTemplateDuration(tmpl: TemplateOption): number {
+  if (tmpl.estimated_duration) return tmpl.estimated_duration
+  if (tmpl.target_duration) return tmpl.target_duration
+  if (tmpl.planned_duration) return tmpl.planned_duration
+  return DEFAULT_DURATION
+}
 
 export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule, isCompleted, variant }: Props) {
   const [schedule, setSchedule] = useState(initialSchedule)
-  const [picker, setPicker] = useState<PickerState>(null)
+  const [form, setForm] = useState<FormState>(null)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   function getAssignments(day: number): ScheduleEntry[] {
     return schedule
       .filter((s) => s.day_of_week === day)
-      .sort((a, b) => PERIOD_ORDER[a.period] - PERIOD_ORDER[b.period])
+      .sort((a, b) => a.time_slot.localeCompare(b.time_slot))
   }
 
-  function getUsedPeriods(day: number): Set<Period> {
-    return new Set(schedule.filter((s) => s.day_of_week === day).map((s) => s.period))
-  }
-
-  function handleAddClick(day: number, period: Period) {
+  function handleAddClick(day: number) {
     setError(null)
-    setPicker({ day, period })
+    setForm({ day, selectedTemplateId: null, timeSlot: '07:00', duration: String(DEFAULT_DURATION) })
   }
 
-  function handleTemplatePick(templateId: number) {
-    if (!picker) return
-    const { day, period } = picker
-    setPicker(null)
+  function handleTemplateSelect(templateId: number) {
+    if (!form) return
+    const tmpl = templates.find((t) => t.id === templateId)
+    const duration = tmpl ? getTemplateDuration(tmpl) : DEFAULT_DURATION
+    setForm({ ...form, selectedTemplateId: templateId, duration: String(duration) })
+  }
 
-    const timeSlot = PERIOD_DEFAULT_TIME[period]
+  function handleCancel() {
+    setForm(null)
+  }
+
+  function handleConfirm() {
+    if (!form || !form.selectedTemplateId) return
+    const { day, selectedTemplateId, timeSlot } = form
+    const duration = parseInt(form.duration, 10)
+    if (isNaN(duration) || duration <= 0) return
+
+    setForm(null)
 
     startTransition(async () => {
       const result = await assignTemplate({
         mesocycle_id: mesocycleId,
         day_of_week: day,
-        template_id: templateId,
+        template_id: selectedTemplateId,
         week_type: variant,
         time_slot: timeSlot,
-        duration: DEFAULT_DURATION,
+        duration,
       })
 
       if (result.success) {
-        const tmpl = templates.find((t) => t.id === templateId)
+        const tmpl = templates.find((t) => t.id === selectedTemplateId)
         setSchedule((prev) => [
           ...prev,
           {
             id: result.data.id,
             day_of_week: day,
-            template_id: templateId,
+            template_id: selectedTemplateId,
             template_name: tmpl?.name ?? 'Unknown',
             period: result.data.period,
             time_slot: result.data.time_slot,
@@ -119,6 +122,17 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
     })
   }
 
+  // Check overlap for the current form state
+  function hasOverlap(): boolean {
+    if (!form || !form.selectedTemplateId || !form.timeSlot) return false
+    const duration = parseInt(form.duration, 10)
+    if (isNaN(duration) || duration <= 0) return false
+    const existing = schedule
+      .filter((s) => s.day_of_week === form.day)
+      .map((s) => ({ time_slot: s.time_slot, duration: s.duration }))
+    return checkOverlap(existing, form.timeSlot, duration)
+  }
+
   return (
     <div className="space-y-4">
       {error && (
@@ -129,9 +143,7 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
         {DAY_NAMES.map((dayName, displayIdx) => {
           const internalDay = displayToInternal(displayIdx)
           const assignments = getAssignments(internalDay)
-          const usedPeriods = getUsedPeriods(internalDay)
           const hasAssignments = assignments.length > 0
-          const unusedPeriods = PERIODS.filter((p) => !usedPeriods.has(p))
 
           return (
             <div
@@ -148,7 +160,7 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
                 {dayName}
               </p>
 
-              {/* Existing entries stacked by period */}
+              {/* Entries sorted chronologically */}
               {assignments.map((entry) => (
                 <div
                   key={entry.id}
@@ -159,8 +171,14 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
                     data-testid="period-label"
                     className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground"
                   >
-                    {PERIOD_LABELS[entry.period]}
+                    {PERIOD_LABELS[derivePeriod(entry.time_slot)] ?? entry.period}
                   </p>
+                  <span
+                    data-testid="time-display"
+                    className="text-[10px] font-mono text-muted-foreground"
+                  >
+                    {entry.time_slot}
+                  </span>
                   <p className="text-sm font-semibold">{entry.template_name}</p>
                   {!isCompleted && (
                     <div className="flex gap-1">
@@ -184,37 +202,110 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
                 <p className="text-sm italic text-muted-foreground" data-testid="rest-label">Rest</p>
               )}
 
-              {/* Add buttons for unused period slots */}
-              {!isCompleted && unusedPeriods.length > 0 && (
-                <div className="mt-1 space-y-1">
-                  {unusedPeriods.map((period) => (
-                    <Button
-                      key={period}
-                      variant="outline"
-                      size="sm"
-                      className="h-7 w-full text-xs"
-                      onClick={() => handleAddClick(internalDay, period)}
-                      disabled={isPending}
-                      aria-label={`Add ${period}`}
-                    >
-                      + {PERIOD_LABELS[period]}
-                    </Button>
-                  ))}
+              {/* Single add button (unlimited per day) */}
+              {!isCompleted && (
+                <div className="mt-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 w-full text-xs"
+                    onClick={() => handleAddClick(internalDay)}
+                    disabled={isPending || form?.day === internalDay}
+                    aria-label="Add workout"
+                  >
+                    + Add Workout
+                  </Button>
                 </div>
               )}
 
-              {/* Template picker for the active slot */}
-              {picker?.day === internalDay && (
-                <div className="mt-2 rounded-md border bg-background p-2 shadow-md">
-                  {templates.map((tmpl) => (
-                    <div
-                      key={tmpl.id}
-                      className="cursor-pointer rounded px-2 py-1.5 text-sm transition-colors duration-150 hover:bg-accent"
-                      onClick={() => handleTemplatePick(tmpl.id)}
-                    >
-                      {tmpl.name}
+              {/* Inline add workout form */}
+              {form?.day === internalDay && (
+                <div className="mt-2 rounded-md border bg-background p-2 shadow-md" data-testid="add-workout-form">
+                  {/* Template picker */}
+                  {!form.selectedTemplateId && (
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Select template</p>
+                      {templates.map((tmpl) => (
+                        <div
+                          key={tmpl.id}
+                          className="cursor-pointer rounded px-2 py-1.5 text-sm transition-colors duration-150 hover:bg-accent"
+                          onClick={() => handleTemplateSelect(tmpl.id)}
+                        >
+                          {tmpl.name}
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
+
+                  {/* Time + duration inputs (shown after template selected) */}
+                  {form.selectedTemplateId && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold">
+                        {templates.find((t) => t.id === form.selectedTemplateId)?.name}
+                      </p>
+
+                      <div>
+                        <label htmlFor={`time-${internalDay}`} className="text-xs text-muted-foreground">
+                          Time
+                        </label>
+                        <Input
+                          id={`time-${internalDay}`}
+                          type="text"
+                          placeholder="HH:MM"
+                          value={form.timeSlot}
+                          onChange={(e) => setForm({ ...form, timeSlot: e.target.value })}
+                          className="h-8 text-xs"
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor={`duration-${internalDay}`} className="text-xs text-muted-foreground">
+                          Duration (min)
+                        </label>
+                        <Input
+                          id={`duration-${internalDay}`}
+                          type="number"
+                          min={1}
+                          value={form.duration}
+                          onChange={(e) => setForm({ ...form, duration: e.target.value })}
+                          className="h-8 text-xs"
+                        />
+                      </div>
+
+                      {/* Overlap warning */}
+                      {hasOverlap() && (
+                        <p
+                          data-testid="overlap-warning"
+                          className="text-xs text-yellow-600 bg-yellow-50 rounded px-2 py-1"
+                        >
+                          This time overlaps with an existing workout
+                        </p>
+                      )}
+
+                      <div className="flex gap-1">
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={handleConfirm}
+                          disabled={isPending}
+                          aria-label="Confirm"
+                        >
+                          Confirm
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={handleCancel}
+                          disabled={isPending}
+                          aria-label="Cancel"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

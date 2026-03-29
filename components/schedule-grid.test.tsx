@@ -12,13 +12,14 @@ import { ScheduleGrid } from './schedule-grid'
 import { assignTemplate, removeAssignment } from '@/lib/schedule/actions'
 import type { ScheduleEntry } from '@/lib/schedule/queries'
 
-const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-
 const mockTemplates = [
   { id: 1, name: 'Push A', canonical_name: 'push-a', modality: 'resistance' as const },
   { id: 2, name: 'Pull A', canonical_name: 'pull-a', modality: 'resistance' as const },
   { id: 3, name: 'Legs A', canonical_name: 'legs-a', modality: 'resistance' as const },
   { id: 4, name: 'Strength + Cardio', canonical_name: 'strength-cardio', modality: 'mixed' as const },
+  { id: 5, name: 'Easy Run', canonical_name: 'easy-run', modality: 'running' as const, target_duration: 45 },
+  { id: 6, name: 'MMA Sparring', canonical_name: 'mma-sparring', modality: 'mma' as const, planned_duration: 60 },
+  { id: 7, name: 'Upper Body', canonical_name: 'upper-body', modality: 'resistance' as const, estimated_duration: 75 },
 ]
 
 let nextId = 1
@@ -47,6 +48,7 @@ function buildSchedule(
 describe('ScheduleGrid', () => {
   afterEach(() => {
     cleanup()
+    vi.clearAllMocks()
     vi.restoreAllMocks()
     nextId = 1
   })
@@ -62,7 +64,8 @@ describe('ScheduleGrid', () => {
       />
     )
 
-    for (const day of DAY_NAMES) {
+    const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    for (const day of dayNames) {
       expect(screen.getByText(day)).toBeInTheDocument()
     }
   })
@@ -155,48 +158,57 @@ describe('ScheduleGrid', () => {
       />
     )
 
-    expect(screen.queryByRole('button', { name: /assign/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /add workout/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /remove/i })).not.toBeInTheDocument()
   })
 
-  it('displays error when assignTemplate fails', async () => {
-    const user = userEvent.setup()
-    vi.mocked(assignTemplate).mockResolvedValue({
-      success: false,
-      error: 'Template not found',
-    })
+  it('day cell has assigned styling when at least one entry exists', () => {
+    const schedule = buildSchedule([
+      { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning', time_slot: '07:00' },
+    ])
 
     render(
       <ScheduleGrid
         mesocycleId={1}
         templates={mockTemplates}
-        schedule={[]}
+        schedule={schedule}
         isCompleted={false}
         variant="normal"
       />
     )
 
-    // Click add button for morning on Monday
     const mondayCell = screen.getByTestId('day-cell-0')
-    const addBtn = within(mondayCell).getByRole('button', { name: /add morning/i })
-    await user.click(addBtn)
-
-    // Select a template from the picker
-    const templateOption = screen.getByText(/push a/i)
-    await user.click(templateOption)
-
-    await waitFor(() => {
-      expect(screen.getByText(/template not found/i)).toBeInTheDocument()
-    })
+    expect(mondayCell.className).not.toContain('border-dashed')
   })
 
-  // ===== T113: Multiple entries per day =====
+  // ===== T201: Time-first UI =====
 
-  describe('multiple entries per day', () => {
-    it('renders multiple entries stacked within a day cell', () => {
+  describe('single add workout button', () => {
+    it('shows single "+ Add Workout" button per day instead of 3 period buttons', () => {
+      render(
+        <ScheduleGrid
+          mesocycleId={1}
+          templates={mockTemplates}
+          schedule={[]}
+          isCompleted={false}
+          variant="normal"
+        />
+      )
+
+      const mondayCell = screen.getByTestId('day-cell-0')
+      // Should have single add button
+      expect(within(mondayCell).getByRole('button', { name: /add workout/i })).toBeInTheDocument()
+      // Should NOT have period-specific buttons
+      expect(within(mondayCell).queryByRole('button', { name: /add morning/i })).not.toBeInTheDocument()
+      expect(within(mondayCell).queryByRole('button', { name: /add afternoon/i })).not.toBeInTheDocument()
+      expect(within(mondayCell).queryByRole('button', { name: /add evening/i })).not.toBeInTheDocument()
+    })
+
+    it('still shows "+ Add Workout" when day already has entries (unlimited)', () => {
       const schedule = buildSchedule([
-        { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning', time_slot: '07:00' },
-        { day_of_week: 0, template_id: 2, template_name: 'Pull A', period: 'evening', time_slot: '18:00' },
+        { day_of_week: 0, template_id: 1, template_name: 'Push A', time_slot: '07:00' },
+        { day_of_week: 0, template_id: 2, template_name: 'Pull A', time_slot: '13:00' },
+        { day_of_week: 0, template_id: 3, template_name: 'Legs A', time_slot: '18:00' },
       ])
 
       render(
@@ -210,11 +222,317 @@ describe('ScheduleGrid', () => {
       )
 
       const mondayCell = screen.getByTestId('day-cell-0')
-      expect(within(mondayCell).getByText('Push A')).toBeInTheDocument()
-      expect(within(mondayCell).getByText('Pull A')).toBeInTheDocument()
+      expect(within(mondayCell).getByRole('button', { name: /add workout/i })).toBeInTheDocument()
     })
 
-    it('orders entries by period: morning -> afternoon -> evening', () => {
+    it('no add button when completed', () => {
+      render(
+        <ScheduleGrid
+          mesocycleId={1}
+          templates={mockTemplates}
+          schedule={[]}
+          isCompleted={true}
+          variant="normal"
+        />
+      )
+
+      const mondayCell = screen.getByTestId('day-cell-0')
+      expect(within(mondayCell).queryByRole('button', { name: /add workout/i })).not.toBeInTheDocument()
+    })
+  })
+
+  describe('inline form', () => {
+    it('clicking "+ Add Workout" opens inline form with template picker, then time/duration after selection', async () => {
+      const user = userEvent.setup()
+      render(
+        <ScheduleGrid
+          mesocycleId={1}
+          templates={mockTemplates}
+          schedule={[]}
+          isCompleted={false}
+          variant="normal"
+        />
+      )
+
+      const mondayCell = screen.getByTestId('day-cell-0')
+      await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
+
+      // Form should appear with template picker
+      const form = within(mondayCell).getByTestId('add-workout-form')
+      expect(form).toBeInTheDocument()
+      expect(within(form).getByText('Push A')).toBeInTheDocument()
+
+      // Select template to see time/duration inputs
+      await user.click(within(form).getByText('Push A'))
+      expect(within(form).getByLabelText(/time/i)).toBeInTheDocument()
+      expect(within(form).getByLabelText(/duration/i)).toBeInTheDocument()
+    })
+
+    it('selecting template with no duration defaults to 90 min for resistance', async () => {
+      const user = userEvent.setup()
+      render(
+        <ScheduleGrid
+          mesocycleId={1}
+          templates={mockTemplates}
+          schedule={[]}
+          isCompleted={false}
+          variant="normal"
+        />
+      )
+
+      const mondayCell = screen.getByTestId('day-cell-0')
+      await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
+
+      const form = within(mondayCell).getByTestId('add-workout-form')
+      // Click Push A (resistance, no duration fields)
+      await user.click(within(form).getByText('Push A'))
+
+      const durationInput = within(form).getByLabelText(/duration/i) as HTMLInputElement
+      expect(durationInput.value).toBe('90')
+    })
+
+    it('selecting running template pre-fills target_duration', async () => {
+      const user = userEvent.setup()
+      render(
+        <ScheduleGrid
+          mesocycleId={1}
+          templates={mockTemplates}
+          schedule={[]}
+          isCompleted={false}
+          variant="normal"
+        />
+      )
+
+      const mondayCell = screen.getByTestId('day-cell-0')
+      await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
+
+      const form = within(mondayCell).getByTestId('add-workout-form')
+      await user.click(within(form).getByText('Easy Run'))
+
+      const durationInput = within(form).getByLabelText(/duration/i) as HTMLInputElement
+      expect(durationInput.value).toBe('45')
+    })
+
+    it('selecting MMA template pre-fills planned_duration', async () => {
+      const user = userEvent.setup()
+      render(
+        <ScheduleGrid
+          mesocycleId={1}
+          templates={mockTemplates}
+          schedule={[]}
+          isCompleted={false}
+          variant="normal"
+        />
+      )
+
+      const mondayCell = screen.getByTestId('day-cell-0')
+      await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
+
+      const form = within(mondayCell).getByTestId('add-workout-form')
+      await user.click(within(form).getByText('MMA Sparring'))
+
+      const durationInput = within(form).getByLabelText(/duration/i) as HTMLInputElement
+      expect(durationInput.value).toBe('60')
+    })
+
+    it('selecting resistance template with estimated_duration pre-fills it', async () => {
+      const user = userEvent.setup()
+      render(
+        <ScheduleGrid
+          mesocycleId={1}
+          templates={mockTemplates}
+          schedule={[]}
+          isCompleted={false}
+          variant="normal"
+        />
+      )
+
+      const mondayCell = screen.getByTestId('day-cell-0')
+      await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
+
+      const form = within(mondayCell).getByTestId('add-workout-form')
+      await user.click(within(form).getByText('Upper Body'))
+
+      const durationInput = within(form).getByLabelText(/duration/i) as HTMLInputElement
+      expect(durationInput.value).toBe('75')
+    })
+
+    it('submits form with time and duration to assignTemplate', async () => {
+      const user = userEvent.setup()
+      vi.mocked(assignTemplate).mockResolvedValue({
+        success: true,
+        data: {
+          id: 10,
+          mesocycle_id: 1,
+          day_of_week: 0,
+          template_id: 1,
+          week_type: 'normal',
+          period: 'morning',
+          time_slot: '08:30',
+          duration: 90,
+          created_at: new Date(),
+        },
+      })
+
+      render(
+        <ScheduleGrid
+          mesocycleId={1}
+          templates={mockTemplates}
+          schedule={[]}
+          isCompleted={false}
+          variant="normal"
+        />
+      )
+
+      const mondayCell = screen.getByTestId('day-cell-0')
+      await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
+
+      const form = within(mondayCell).getByTestId('add-workout-form')
+      // Select template
+      await user.click(within(form).getByText('Push A'))
+
+      // Set time
+      const timeInput = within(form).getByLabelText(/time/i)
+      await user.clear(timeInput)
+      await user.type(timeInput, '08:30')
+
+      // Duration should be pre-filled to 90
+      // Submit
+      await user.click(within(form).getByRole('button', { name: /confirm/i }))
+
+      await waitFor(() => {
+        expect(assignTemplate).toHaveBeenCalledWith({
+          mesocycle_id: 1,
+          day_of_week: 0,
+          template_id: 1,
+          week_type: 'normal',
+          time_slot: '08:30',
+          duration: 90,
+        })
+      })
+    })
+
+    it('submits form with custom duration', async () => {
+      const user = userEvent.setup()
+      vi.mocked(assignTemplate).mockResolvedValue({
+        success: true,
+        data: {
+          id: 10,
+          mesocycle_id: 1,
+          day_of_week: 0,
+          template_id: 5,
+          week_type: 'normal',
+          period: 'morning',
+          time_slot: '06:00',
+          duration: 30,
+          created_at: new Date(),
+        },
+      })
+
+      render(
+        <ScheduleGrid
+          mesocycleId={1}
+          templates={mockTemplates}
+          schedule={[]}
+          isCompleted={false}
+          variant="normal"
+        />
+      )
+
+      const mondayCell = screen.getByTestId('day-cell-0')
+      await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
+
+      const form = within(mondayCell).getByTestId('add-workout-form')
+      await user.click(within(form).getByText('Easy Run'))
+
+      const timeInput = within(form).getByLabelText(/time/i)
+      await user.clear(timeInput)
+      await user.type(timeInput, '06:00')
+
+      // Change duration from pre-filled 45 to 30
+      const durationInput = within(form).getByLabelText(/duration/i)
+      await user.clear(durationInput)
+      await user.type(durationInput, '30')
+
+      await user.click(within(form).getByRole('button', { name: /confirm/i }))
+
+      await waitFor(() => {
+        expect(assignTemplate).toHaveBeenCalledWith({
+          mesocycle_id: 1,
+          day_of_week: 0,
+          template_id: 5,
+          week_type: 'normal',
+          time_slot: '06:00',
+          duration: 30,
+        })
+      })
+    })
+
+    it('displays error when assignTemplate fails', async () => {
+      const user = userEvent.setup()
+      vi.mocked(assignTemplate).mockResolvedValue({
+        success: false,
+        error: 'Template not found',
+      })
+
+      render(
+        <ScheduleGrid
+          mesocycleId={1}
+          templates={mockTemplates}
+          schedule={[]}
+          isCompleted={false}
+          variant="normal"
+        />
+      )
+
+      const mondayCell = screen.getByTestId('day-cell-0')
+      await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
+
+      const form = within(mondayCell).getByTestId('add-workout-form')
+      await user.click(within(form).getByText('Push A'))
+
+      const timeInput = within(form).getByLabelText(/time/i)
+      await user.clear(timeInput)
+      await user.type(timeInput, '07:00')
+
+      await user.click(within(form).getByRole('button', { name: /confirm/i }))
+
+      await waitFor(() => {
+        expect(screen.getByText(/template not found/i)).toBeInTheDocument()
+      })
+    })
+
+    it('cancel button closes the form without submitting', async () => {
+      const user = userEvent.setup()
+
+      render(
+        <ScheduleGrid
+          mesocycleId={1}
+          templates={mockTemplates}
+          schedule={[]}
+          isCompleted={false}
+          variant="normal"
+        />
+      )
+
+      const mondayCell = screen.getByTestId('day-cell-0')
+      await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
+
+      expect(within(mondayCell).getByTestId('add-workout-form')).toBeInTheDocument()
+
+      // Select a template first to get to the cancel button
+      const form = within(mondayCell).getByTestId('add-workout-form')
+      await user.click(within(form).getByText('Push A'))
+
+      await user.click(within(mondayCell).getByRole('button', { name: /cancel/i }))
+
+      expect(within(mondayCell).queryByTestId('add-workout-form')).not.toBeInTheDocument()
+      expect(assignTemplate).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('chronological sorting', () => {
+    it('orders entries by time_slot chronologically', () => {
       const schedule = buildSchedule([
         { day_of_week: 0, template_id: 3, template_name: 'Legs A', period: 'evening', time_slot: '18:00' },
         { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning', time_slot: '07:00' },
@@ -239,10 +557,35 @@ describe('ScheduleGrid', () => {
       expect(within(entries[2]).getByText('Legs A')).toBeInTheDocument()
     })
 
-    it('shows period label on each entry', () => {
+    it('sorts entries within same period by time', () => {
       const schedule = buildSchedule([
-        { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning', time_slot: '07:00' },
-        { day_of_week: 0, template_id: 2, template_name: 'Pull A', period: 'evening', time_slot: '18:00' },
+        { day_of_week: 0, template_id: 2, template_name: 'Pull A', time_slot: '09:00', period: 'morning' },
+        { day_of_week: 0, template_id: 1, template_name: 'Push A', time_slot: '06:30', period: 'morning' },
+      ])
+
+      render(
+        <ScheduleGrid
+          mesocycleId={1}
+          templates={mockTemplates}
+          schedule={schedule}
+          isCompleted={false}
+          variant="normal"
+        />
+      )
+
+      const mondayCell = screen.getByTestId('day-cell-0')
+      const entries = within(mondayCell).getAllByTestId('schedule-entry')
+      expect(entries).toHaveLength(2)
+      expect(within(entries[0]).getByText('Push A')).toBeInTheDocument()
+      expect(within(entries[1]).getByText('Pull A')).toBeInTheDocument()
+    })
+  })
+
+  describe('derived period headers', () => {
+    it('shows period label derived from time_slot', () => {
+      const schedule = buildSchedule([
+        { day_of_week: 0, template_id: 1, template_name: 'Push A', time_slot: '07:00', period: 'morning' },
+        { day_of_week: 0, template_id: 2, template_name: 'Pull A', time_slot: '18:00', period: 'evening' },
       ])
 
       render(
@@ -261,8 +604,143 @@ describe('ScheduleGrid', () => {
       expect(within(entries[1]).getByTestId('period-label')).toHaveTextContent('Evening')
     })
 
-    it('shows add button for each unused period slot', () => {
-      // Morning and evening assigned, afternoon should have add button
+    it('displays time alongside period label', () => {
+      const schedule = buildSchedule([
+        { day_of_week: 0, template_id: 1, template_name: 'Push A', time_slot: '08:30', period: 'morning' },
+      ])
+
+      render(
+        <ScheduleGrid
+          mesocycleId={1}
+          templates={mockTemplates}
+          schedule={schedule}
+          isCompleted={false}
+          variant="normal"
+        />
+      )
+
+      const mondayCell = screen.getByTestId('day-cell-0')
+      const entry = within(mondayCell).getByTestId('schedule-entry')
+      // Should display the time
+      expect(within(entry).getByTestId('time-display')).toHaveTextContent('08:30')
+    })
+  })
+
+  describe('overlap warning', () => {
+    it('shows overlap warning when new entry time range intersects existing', async () => {
+      const user = userEvent.setup()
+      const schedule = buildSchedule([
+        { day_of_week: 0, template_id: 1, template_name: 'Push A', time_slot: '07:00', duration: 90 },
+      ])
+
+      render(
+        <ScheduleGrid
+          mesocycleId={1}
+          templates={mockTemplates}
+          schedule={schedule}
+          isCompleted={false}
+          variant="normal"
+        />
+      )
+
+      const mondayCell = screen.getByTestId('day-cell-0')
+      await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
+
+      const form = within(mondayCell).getByTestId('add-workout-form')
+      await user.click(within(form).getByText('Pull A'))
+
+      // Set time that overlaps with 07:00-08:30
+      const timeInput = within(form).getByLabelText(/time/i)
+      await user.clear(timeInput)
+      await user.type(timeInput, '08:00')
+
+      // Warning should appear
+      expect(within(form).getByTestId('overlap-warning')).toBeInTheDocument()
+    })
+
+    it('no overlap warning when time ranges do not intersect', async () => {
+      const user = userEvent.setup()
+      const schedule = buildSchedule([
+        { day_of_week: 0, template_id: 1, template_name: 'Push A', time_slot: '07:00', duration: 90 },
+      ])
+
+      render(
+        <ScheduleGrid
+          mesocycleId={1}
+          templates={mockTemplates}
+          schedule={schedule}
+          isCompleted={false}
+          variant="normal"
+        />
+      )
+
+      const mondayCell = screen.getByTestId('day-cell-0')
+      await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
+
+      const form = within(mondayCell).getByTestId('add-workout-form')
+      await user.click(within(form).getByText('Pull A'))
+
+      const timeInput = within(form).getByLabelText(/time/i)
+      await user.clear(timeInput)
+      await user.type(timeInput, '10:00')
+
+      expect(within(form).queryByTestId('overlap-warning')).not.toBeInTheDocument()
+    })
+
+    it('overlap warning is non-blocking (can still submit)', async () => {
+      const user = userEvent.setup()
+      vi.mocked(assignTemplate).mockResolvedValue({
+        success: true,
+        data: {
+          id: 10,
+          mesocycle_id: 1,
+          day_of_week: 0,
+          template_id: 2,
+          week_type: 'normal',
+          period: 'morning',
+          time_slot: '08:00',
+          duration: 90,
+          created_at: new Date(),
+        },
+      })
+
+      const schedule = buildSchedule([
+        { day_of_week: 0, template_id: 1, template_name: 'Push A', time_slot: '07:00', duration: 90 },
+      ])
+
+      render(
+        <ScheduleGrid
+          mesocycleId={1}
+          templates={mockTemplates}
+          schedule={schedule}
+          isCompleted={false}
+          variant="normal"
+        />
+      )
+
+      const mondayCell = screen.getByTestId('day-cell-0')
+      await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
+
+      const form = within(mondayCell).getByTestId('add-workout-form')
+      await user.click(within(form).getByText('Pull A'))
+
+      const timeInput = within(form).getByLabelText(/time/i)
+      await user.clear(timeInput)
+      await user.type(timeInput, '08:00')
+
+      // Confirm button should still be enabled
+      const confirmBtn = within(form).getByRole('button', { name: /confirm/i })
+      expect(confirmBtn).not.toBeDisabled()
+      await user.click(confirmBtn)
+
+      await waitFor(() => {
+        expect(assignTemplate).toHaveBeenCalled()
+      })
+    })
+  })
+
+  describe('multiple entries per day', () => {
+    it('renders multiple entries stacked within a day cell', () => {
       const schedule = buildSchedule([
         { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning', time_slot: '07:00' },
         { day_of_week: 0, template_id: 2, template_name: 'Pull A', period: 'evening', time_slot: '18:00' },
@@ -279,26 +757,8 @@ describe('ScheduleGrid', () => {
       )
 
       const mondayCell = screen.getByTestId('day-cell-0')
-      expect(within(mondayCell).getByRole('button', { name: /add afternoon/i })).toBeInTheDocument()
-      expect(within(mondayCell).queryByRole('button', { name: /add morning/i })).not.toBeInTheDocument()
-      expect(within(mondayCell).queryByRole('button', { name: /add evening/i })).not.toBeInTheDocument()
-    })
-
-    it('empty day shows add buttons for all 3 periods', () => {
-      render(
-        <ScheduleGrid
-          mesocycleId={1}
-          templates={mockTemplates}
-          schedule={[]}
-          isCompleted={false}
-          variant="normal"
-        />
-      )
-
-      const mondayCell = screen.getByTestId('day-cell-0')
-      expect(within(mondayCell).getByRole('button', { name: /add morning/i })).toBeInTheDocument()
-      expect(within(mondayCell).getByRole('button', { name: /add afternoon/i })).toBeInTheDocument()
-      expect(within(mondayCell).getByRole('button', { name: /add evening/i })).toBeInTheDocument()
+      expect(within(mondayCell).getByText('Push A')).toBeInTheDocument()
+      expect(within(mondayCell).getByText('Pull A')).toBeInTheDocument()
     })
 
     it('remove works for individual entries', async () => {
@@ -322,130 +782,12 @@ describe('ScheduleGrid', () => {
 
       const mondayCell = screen.getByTestId('day-cell-0')
       const entries = within(mondayCell).getAllByTestId('schedule-entry')
-
-      // Remove the morning entry
       const removeBtn = within(entries[0]).getByRole('button', { name: /remove/i })
       await user.click(removeBtn)
 
       await waitFor(() => {
-        expect(removeAssignment).toHaveBeenCalledWith({
-          id: schedule[0].id,
-        })
+        expect(removeAssignment).toHaveBeenCalledWith({ id: schedule[0].id })
       })
-    })
-
-    it('assigns template with correct time_slot and duration when using add button', async () => {
-      const user = userEvent.setup()
-      vi.mocked(assignTemplate).mockResolvedValue({
-        success: true,
-        data: {
-          id: 10,
-          mesocycle_id: 1,
-          day_of_week: 0,
-          template_id: 2,
-          week_type: 'normal',
-          period: 'afternoon',
-          time_slot: '13:00',
-          duration: 90,
-          created_at: new Date(),
-        },
-      })
-
-      const schedule = buildSchedule([
-        { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning', time_slot: '07:00' },
-      ])
-
-      render(
-        <ScheduleGrid
-          mesocycleId={1}
-          templates={mockTemplates}
-          schedule={schedule}
-          isCompleted={false}
-          variant="normal"
-        />
-      )
-
-      const mondayCell = screen.getByTestId('day-cell-0')
-      const addBtn = within(mondayCell).getByRole('button', { name: /add afternoon/i })
-      await user.click(addBtn)
-
-      const templateOption = screen.getByText(/pull a/i)
-      await user.click(templateOption)
-
-      await waitFor(() => {
-        expect(assignTemplate).toHaveBeenCalledWith({
-          mesocycle_id: 1,
-          day_of_week: 0,
-          template_id: 2,
-          week_type: 'normal',
-          time_slot: '13:00',
-          duration: 90,
-        })
-      })
-    })
-
-    it('no add buttons when all 3 periods assigned', () => {
-      const schedule = buildSchedule([
-        { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning', time_slot: '07:00' },
-        { day_of_week: 0, template_id: 2, template_name: 'Pull A', period: 'afternoon', time_slot: '13:00' },
-        { day_of_week: 0, template_id: 3, template_name: 'Legs A', period: 'evening', time_slot: '18:00' },
-      ])
-
-      render(
-        <ScheduleGrid
-          mesocycleId={1}
-          templates={mockTemplates}
-          schedule={schedule}
-          isCompleted={false}
-          variant="normal"
-        />
-      )
-
-      const mondayCell = screen.getByTestId('day-cell-0')
-      expect(within(mondayCell).queryByRole('button', { name: /add morning/i })).not.toBeInTheDocument()
-      expect(within(mondayCell).queryByRole('button', { name: /add afternoon/i })).not.toBeInTheDocument()
-      expect(within(mondayCell).queryByRole('button', { name: /add evening/i })).not.toBeInTheDocument()
-    })
-
-    it('no add or remove buttons when completed with multiple entries', () => {
-      const schedule = buildSchedule([
-        { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning', time_slot: '07:00' },
-        { day_of_week: 0, template_id: 2, template_name: 'Pull A', period: 'evening', time_slot: '18:00' },
-      ])
-
-      render(
-        <ScheduleGrid
-          mesocycleId={1}
-          templates={mockTemplates}
-          schedule={schedule}
-          isCompleted={true}
-          variant="normal"
-        />
-      )
-
-      const mondayCell = screen.getByTestId('day-cell-0')
-      expect(within(mondayCell).getByText('Push A')).toBeInTheDocument()
-      expect(within(mondayCell).getByText('Pull A')).toBeInTheDocument()
-      expect(within(mondayCell).queryByRole('button')).not.toBeInTheDocument()
-    })
-
-    it('day cell has assigned styling when at least one entry exists', () => {
-      const schedule = buildSchedule([
-        { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning', time_slot: '07:00' },
-      ])
-
-      render(
-        <ScheduleGrid
-          mesocycleId={1}
-          templates={mockTemplates}
-          schedule={schedule}
-          isCompleted={false}
-          variant="normal"
-        />
-      )
-
-      const mondayCell = screen.getByTestId('day-cell-0')
-      expect(mondayCell.className).not.toContain('border-dashed')
     })
 
     it('optimistically adds entry after successful assignment', async () => {
@@ -480,11 +822,16 @@ describe('ScheduleGrid', () => {
       )
 
       const mondayCell = screen.getByTestId('day-cell-0')
-      const addBtn = within(mondayCell).getByRole('button', { name: /add evening/i })
-      await user.click(addBtn)
+      await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
 
-      const templateOption = screen.getByText(/pull a/i)
-      await user.click(templateOption)
+      const form = within(mondayCell).getByTestId('add-workout-form')
+      await user.click(within(form).getByText('Pull A'))
+
+      const timeInput = within(form).getByLabelText(/time/i)
+      await user.clear(timeInput)
+      await user.type(timeInput, '18:00')
+
+      await user.click(within(form).getByRole('button', { name: /confirm/i }))
 
       await waitFor(() => {
         expect(within(mondayCell).getByText('Push A')).toBeInTheDocument()
@@ -492,10 +839,10 @@ describe('ScheduleGrid', () => {
       })
     })
 
-    // T123: mixed template in schedule grid
-    it('renders mixed template name in schedule entry', () => {
+    it('no add or remove buttons when completed with multiple entries', () => {
       const schedule = buildSchedule([
-        { day_of_week: 0, template_id: 4, template_name: 'Strength + Cardio', period: 'morning', time_slot: '07:00' },
+        { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning', time_slot: '07:00' },
+        { day_of_week: 0, template_id: 2, template_name: 'Pull A', period: 'evening', time_slot: '18:00' },
       ])
 
       render(
@@ -503,78 +850,15 @@ describe('ScheduleGrid', () => {
           mesocycleId={1}
           templates={mockTemplates}
           schedule={schedule}
-          isCompleted={false}
+          isCompleted={true}
           variant="normal"
         />
       )
 
       const mondayCell = screen.getByTestId('day-cell-0')
-      expect(within(mondayCell).getByText('Strength + Cardio')).toBeInTheDocument()
-    })
-
-    it('mixed template appears in picker alongside other modalities', async () => {
-      const user = userEvent.setup()
-      render(
-        <ScheduleGrid
-          mesocycleId={1}
-          templates={mockTemplates}
-          schedule={[]}
-          isCompleted={false}
-          variant="normal"
-        />
-      )
-
-      const mondayCell = screen.getByTestId('day-cell-0')
-      const addBtn = within(mondayCell).getByRole('button', { name: /add morning/i })
-      await user.click(addBtn)
-
-      expect(screen.getByText('Strength + Cardio')).toBeInTheDocument()
-    })
-
-    it('assigns mixed template via picker', async () => {
-      const user = userEvent.setup()
-      vi.mocked(assignTemplate).mockResolvedValue({
-        success: true,
-        data: {
-          id: 10,
-          mesocycle_id: 1,
-          day_of_week: 0,
-          template_id: 4,
-          week_type: 'normal',
-          period: 'morning',
-          time_slot: '07:00',
-          duration: 90,
-          created_at: new Date(),
-        },
-      })
-
-      render(
-        <ScheduleGrid
-          mesocycleId={1}
-          templates={mockTemplates}
-          schedule={[]}
-          isCompleted={false}
-          variant="normal"
-        />
-      )
-
-      const mondayCell = screen.getByTestId('day-cell-0')
-      const addBtn = within(mondayCell).getByRole('button', { name: /add morning/i })
-      await user.click(addBtn)
-
-      const templateOption = screen.getByText('Strength + Cardio')
-      await user.click(templateOption)
-
-      await waitFor(() => {
-        expect(assignTemplate).toHaveBeenCalledWith({
-          mesocycle_id: 1,
-          day_of_week: 0,
-          template_id: 4,
-          week_type: 'normal',
-          time_slot: '07:00',
-          duration: 90,
-        })
-      })
+      expect(within(mondayCell).getByText('Push A')).toBeInTheDocument()
+      expect(within(mondayCell).getByText('Pull A')).toBeInTheDocument()
+      expect(within(mondayCell).queryByRole('button')).not.toBeInTheDocument()
     })
 
     it('optimistically removes single entry without affecting others', async () => {
@@ -605,6 +889,26 @@ describe('ScheduleGrid', () => {
         expect(within(mondayCell).queryByText('Push A')).not.toBeInTheDocument()
         expect(within(mondayCell).getByText('Pull A')).toBeInTheDocument()
       })
+    })
+
+    // T123: mixed template in schedule grid
+    it('renders mixed template name in schedule entry', () => {
+      const schedule = buildSchedule([
+        { day_of_week: 0, template_id: 4, template_name: 'Strength + Cardio', period: 'morning', time_slot: '07:00' },
+      ])
+
+      render(
+        <ScheduleGrid
+          mesocycleId={1}
+          templates={mockTemplates}
+          schedule={schedule}
+          isCompleted={false}
+          variant="normal"
+        />
+      )
+
+      const mondayCell = screen.getByTestId('day-cell-0')
+      expect(within(mondayCell).getByText('Strength + Cardio')).toBeInTheDocument()
     })
   })
 })
