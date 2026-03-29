@@ -38,8 +38,8 @@ Move a scheduled workout from one day/period to another for a specific week (or 
 
 | Scenario | Expected Behavior |
 |----------|-------------------|
-| Move to same day, different period | Allowed — effectively changes the period for that week |
-| Move to same day, same period | Rejected — no-op |
+| Move to same day, different time slot | Allowed — effectively changes the time for that week |
+| Move to same day, same time slot | Rejected — no-op |
 | Source slot already overridden by prior move | New move reads effective schedule (includes prior override), creates/updates override rows |
 | `work_weeks` reduced after overrides exist | Overrides for weeks beyond new `work_weeks` are orphaned but harmless (no matching dates) |
 | Target day is in a different week_type (normal day to deload day) | N/A — move is within same week, week_type is fixed per week_number |
