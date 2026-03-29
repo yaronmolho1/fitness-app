@@ -139,26 +139,24 @@ describe('assignTemplate — time-first API', () => {
     it('rejects missing time_slot', async () => {
       const meso = seedMesocycle()
       const tmpl = seedTemplate(meso.id)
-      // @ts-expect-error — intentionally omitting required field for test
       const result = await assignTemplate({
         mesocycle_id: meso.id,
         day_of_week: 0,
         template_id: tmpl.id,
         duration: 60,
-      })
+      } as unknown as Parameters<typeof assignTemplate>[0])
       expect(result.success).toBe(false)
     })
 
     it('rejects missing duration', async () => {
       const meso = seedMesocycle()
       const tmpl = seedTemplate(meso.id)
-      // @ts-expect-error — intentionally omitting required field for test
       const result = await assignTemplate({
         mesocycle_id: meso.id,
         day_of_week: 0,
         template_id: tmpl.id,
         time_slot: '07:00',
-      })
+      } as unknown as Parameters<typeof assignTemplate>[0])
       expect(result.success).toBe(false)
     })
   })
