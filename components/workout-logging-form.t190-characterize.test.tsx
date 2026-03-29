@@ -1,5 +1,4 @@
-// Characterization test — captures current behavior for safe refactoring
-// Focus: buildInitialSets() and set initialization logic for T190
+// Characterization test — updated post-T190 to reflect autofill behavior
 // @vitest-environment jsdom
 import { render, screen, within, cleanup } from '@testing-library/react'
 import { describe, it, expect, afterEach } from 'vitest'
@@ -51,8 +50,8 @@ describe('buildInitialSets — characterization for T190', () => {
     cleanup()
   })
 
-  describe('all weight inputs start empty regardless of slot.weight', () => {
-    it('slot with weight=80 → all weight inputs empty string', () => {
+  describe('weight inputs autofilled from slot.weight', () => {
+    it('slot with weight=80 → all weight inputs show "80"', () => {
       const data = makeWorkoutData({
         slots: [makeSlot({ sets: 3, weight: 80 })],
       })
@@ -60,7 +59,7 @@ describe('buildInitialSets — characterization for T190', () => {
 
       for (let i = 0; i < 3; i++) {
         const input = screen.getByTestId(`weight-input-0-${i}`) as HTMLInputElement
-        expect(input.value).toBe('')
+        expect(input.value).toBe('80')
       }
     })
 
@@ -87,8 +86,8 @@ describe('buildInitialSets — characterization for T190', () => {
     })
   })
 
-  describe('all reps inputs start empty regardless of slot.reps', () => {
-    it('slot with reps="8" → all reps inputs empty string', () => {
+  describe('reps inputs autofilled from slot.reps', () => {
+    it('slot with reps="8" → all reps inputs show "8"', () => {
       const data = makeWorkoutData({
         slots: [makeSlot({ sets: 3, reps: '8' })],
       })
@@ -96,11 +95,11 @@ describe('buildInitialSets — characterization for T190', () => {
 
       for (let i = 0; i < 3; i++) {
         const input = screen.getByTestId(`reps-input-0-${i}`) as HTMLInputElement
-        expect(input.value).toBe('')
+        expect(input.value).toBe('8')
       }
     })
 
-    it('slot with reps="10-12" → all reps inputs empty string', () => {
+    it('slot with reps="10-12" → all reps inputs show "10" (lower bound)', () => {
       const data = makeWorkoutData({
         slots: [makeSlot({ sets: 2, reps: '10-12' })],
       })
@@ -108,7 +107,7 @@ describe('buildInitialSets — characterization for T190', () => {
 
       for (let i = 0; i < 2; i++) {
         const input = screen.getByTestId(`reps-input-0-${i}`) as HTMLInputElement
-        expect(input.value).toBe('')
+        expect(input.value).toBe('10')
       }
     })
 
@@ -123,55 +122,25 @@ describe('buildInitialSets — characterization for T190', () => {
     })
   })
 
-  describe('placeholder behavior (not autofill)', () => {
-    it('weight placeholder shows slot.weight as string', () => {
+  describe('no placeholders (replaced by autofill)', () => {
+    it('weight input has no placeholder when autofilled', () => {
       const data = makeWorkoutData({
         slots: [makeSlot({ sets: 1, weight: 80 })],
       })
       render(<WorkoutLoggingForm data={data} />)
 
       const input = screen.getByTestId('weight-input-0-0') as HTMLInputElement
-      expect(input.placeholder).toBe('80')
+      expect(input.placeholder).toBe('')
     })
 
-    it('weight placeholder shows em-dash when weight is null', () => {
-      const data = makeWorkoutData({
-        slots: [makeSlot({ sets: 1, weight: null })],
-      })
-      render(<WorkoutLoggingForm data={data} />)
-
-      const input = screen.getByTestId('weight-input-0-0') as HTMLInputElement
-      expect(input.placeholder).toBe('\u2014')
-    })
-
-    it('reps placeholder shows slot.reps value', () => {
+    it('reps input has no placeholder when autofilled', () => {
       const data = makeWorkoutData({
         slots: [makeSlot({ sets: 1, reps: '8' })],
       })
       render(<WorkoutLoggingForm data={data} />)
 
       const input = screen.getByTestId('reps-input-0-0') as HTMLInputElement
-      expect(input.placeholder).toBe('8')
-    })
-
-    it('reps placeholder shows range string as-is', () => {
-      const data = makeWorkoutData({
-        slots: [makeSlot({ sets: 1, reps: '10-12' })],
-      })
-      render(<WorkoutLoggingForm data={data} />)
-
-      const input = screen.getByTestId('reps-input-0-0') as HTMLInputElement
-      expect(input.placeholder).toBe('10-12')
-    })
-
-    it('reps placeholder shows em-dash when reps is empty string', () => {
-      const data = makeWorkoutData({
-        slots: [makeSlot({ sets: 1, reps: '' })],
-      })
-      render(<WorkoutLoggingForm data={data} />)
-
-      const input = screen.getByTestId('reps-input-0-0') as HTMLInputElement
-      expect(input.placeholder).toBe('\u2014')
+      expect(input.placeholder).toBe('')
     })
   })
 
@@ -211,7 +180,7 @@ describe('buildInitialSets — characterization for T190', () => {
   })
 
   describe('multiple slots initialization', () => {
-    it('each slot gets independent empty sets', () => {
+    it('each slot gets independently autofilled sets', () => {
       const data = makeWorkoutData({
         slots: [
           makeSlot({ id: 1, sets: 2, weight: 80, reps: '8', order: 1 }),
@@ -220,20 +189,20 @@ describe('buildInitialSets — characterization for T190', () => {
       })
       render(<WorkoutLoggingForm data={data} />)
 
-      // Slot 0: 2 sets, all empty
+      // Slot 0: weight=80, reps=8
       for (let i = 0; i < 2; i++) {
         const w = screen.getByTestId(`weight-input-0-${i}`) as HTMLInputElement
         const r = screen.getByTestId(`reps-input-0-${i}`) as HTMLInputElement
-        expect(w.value).toBe('')
-        expect(r.value).toBe('')
+        expect(w.value).toBe('80')
+        expect(r.value).toBe('8')
       }
 
-      // Slot 1: 3 sets, all empty
+      // Slot 1: weight=60, reps=12
       for (let i = 0; i < 3; i++) {
         const w = screen.getByTestId(`weight-input-1-${i}`) as HTMLInputElement
         const r = screen.getByTestId(`reps-input-1-${i}`) as HTMLInputElement
-        expect(w.value).toBe('')
-        expect(r.value).toBe('')
+        expect(w.value).toBe('60')
+        expect(r.value).toBe('12')
       }
     })
 
@@ -249,8 +218,8 @@ describe('buildInitialSets — characterization for T190', () => {
       // After sorting, Bench (order 1) is index 0, OHP (order 2) is index 1
       const w0 = screen.getByTestId('weight-input-0-0') as HTMLInputElement
       const w1 = screen.getByTestId('weight-input-1-0') as HTMLInputElement
-      expect(w0.placeholder).toBe('80') // Bench
-      expect(w1.placeholder).toBe('60') // OHP
+      expect(w0.value).toBe('80') // Bench
+      expect(w1.value).toBe('60') // OHP
     })
   })
 

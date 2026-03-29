@@ -8,6 +8,7 @@ import { groupSlotsByGroupId, getGroupLabel, formatRest as formatRestSeconds } f
 import { formatDateWithWeekday } from '@/lib/date-format'
 import { saveWorkout } from '@/lib/workouts/actions'
 import type { SaveWorkoutInput } from '@/lib/workouts/actions'
+import { parseRepsLowerBound, isRepsRange } from '@/lib/reps-parsing'
 
 export type SlotData = {
   id: number
@@ -49,12 +50,12 @@ type SetFormData = {
 }
 
 function buildInitialSets(slots: SlotData[]): SetFormData[][] {
-  return slots.map((slot) =>
-    Array.from({ length: slot.sets }, () => ({
-      weight: '',
-      reps: '',
-    }))
-  )
+  return slots.map((slot) => {
+    const weight = slot.weight != null && slot.weight !== 0 ? String(slot.weight) : ''
+    const lowerBound = parseRepsLowerBound(slot.reps)
+    const reps = lowerBound !== null ? String(lowerBound) : ''
+    return Array.from({ length: slot.sets }, () => ({ weight, reps }))
+  })
 }
 
 export function WorkoutLoggingForm({ data, onSaveSuccess }: { data: WorkoutData; onSaveSuccess?: () => void }) {
@@ -224,7 +225,6 @@ export function WorkoutLoggingForm({ data, onSaveSuccess }: { data: WorkoutData;
                         data-testid={`weight-input-${slotIndex}-${setIndex}`}
                         aria-label={`Actual weight for set ${setIndex + 1}`}
                         mode="decimal"
-                        placeholder={slot.weight !== null ? String(slot.weight) : '\u2014'}
                         value={setData.weight}
                         onValueChange={(v) =>
                           updateSet(slotIndex, setIndex, 'weight', v)
@@ -232,17 +232,23 @@ export function WorkoutLoggingForm({ data, onSaveSuccess }: { data: WorkoutData;
                         className="min-h-[44px] w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       />
 
-                      <NumericInput
-                        data-testid={`reps-input-${slotIndex}-${setIndex}`}
-                        aria-label={`Actual reps for set ${setIndex + 1}`}
-                        mode="integer"
-                        placeholder={slot.reps || '\u2014'}
-                        value={setData.reps}
-                        onValueChange={(v) =>
-                          updateSet(slotIndex, setIndex, 'reps', v)
-                        }
-                        className="min-h-[44px] w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      />
+                      <div>
+                        <NumericInput
+                          data-testid={`reps-input-${slotIndex}-${setIndex}`}
+                          aria-label={`Actual reps for set ${setIndex + 1}`}
+                          mode="integer"
+                          value={setData.reps}
+                          onValueChange={(v) =>
+                            updateSet(slotIndex, setIndex, 'reps', v)
+                          }
+                          className="min-h-[44px] w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        />
+                        {(isRepsRange(slot.reps) || (parseRepsLowerBound(slot.reps) === null && slot.reps !== '')) && (
+                          <span className="block text-center text-[10px] text-muted-foreground mt-0.5">
+                            Target: {slot.reps}
+                          </span>
+                        )}
+                      </div>
 
                       <button
                         type="button"
