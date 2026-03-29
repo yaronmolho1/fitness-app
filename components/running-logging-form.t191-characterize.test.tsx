@@ -62,24 +62,24 @@ describe('RunningLoggingForm — T191 autofill characterization', () => {
   // Planned values are displayed read-only but NOT pre-filled into inputs
   // ================================================================
 
-  it('distance input starts empty even when target_distance is set', () => {
+  it('distance input is prefilled from target_distance', () => {
     render(
       <RunningLoggingForm
         data={makeData({ template: makeTemplate({ target_distance: 10 }) })}
       />
     )
     const input = screen.getByTestId('actual-distance') as HTMLInputElement
-    expect(input.value).toBe('')
+    expect(input.value).toBe('10')
   })
 
-  it('pace input starts empty even when target_pace is set', () => {
+  it('pace input is prefilled from target_pace', () => {
     render(
       <RunningLoggingForm
         data={makeData({ template: makeTemplate({ target_pace: '5:30/km' }) })}
       />
     )
     const input = screen.getByTestId('actual-avg-pace') as HTMLInputElement
-    expect(input.value).toBe('')
+    expect(input.value).toBe('5:30/km')
   })
 
   it('HR input starts empty even when hr_zone is set', () => {
@@ -102,7 +102,7 @@ describe('RunningLoggingForm — T191 autofill characterization', () => {
     expect(input.value).toBe('')
   })
 
-  it('all actual inputs start empty with all planned values present', () => {
+  it('distance and pace prefilled, HR and elevation empty with all planned values present', () => {
     render(
       <RunningLoggingForm
         data={makeData({
@@ -116,8 +116,8 @@ describe('RunningLoggingForm — T191 autofill characterization', () => {
         })}
       />
     )
-    expect((screen.getByTestId('actual-distance') as HTMLInputElement).value).toBe('')
-    expect((screen.getByTestId('actual-avg-pace') as HTMLInputElement).value).toBe('')
+    expect((screen.getByTestId('actual-distance') as HTMLInputElement).value).toBe('8.5')
+    expect((screen.getByTestId('actual-avg-pace') as HTMLInputElement).value).toBe('5:00/km')
     expect((screen.getByTestId('actual-avg-hr') as HTMLInputElement).value).toBe('')
     expect((screen.getByTestId('actual-elevation-gain') as HTMLInputElement).value).toBe('')
   })

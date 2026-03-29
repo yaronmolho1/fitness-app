@@ -19,7 +19,9 @@ export type MmaWorkoutData = {
 export function MmaLoggingForm({ data, onSaveSuccess }: { data: MmaWorkoutData; onSaveSuccess?: () => void }) {
   const { template } = data
 
-  const [duration, setDuration] = useState('')
+  const [duration, setDuration] = useState(
+    template.planned_duration !== null ? String(template.planned_duration) : ''
+  )
   const [feeling, setFeeling] = useState<number | null>(null)
   const [notes, setNotes] = useState('')
   const [isPending, startTransition] = useTransition()

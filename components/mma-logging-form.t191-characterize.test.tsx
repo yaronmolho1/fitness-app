@@ -64,14 +64,14 @@ describe('MmaLoggingForm — T191 autofill characterization', () => {
   // planned_duration is displayed read-only but NOT pre-filled
   // ================================================================
 
-  it('duration input starts empty even when planned_duration is set', () => {
+  it('duration input is prefilled from planned_duration', () => {
     render(
       <MmaLoggingForm
         data={makeData({ template: makeTemplate({ planned_duration: 90 }) })}
       />
     )
     const input = screen.getByTestId('actual-duration') as HTMLInputElement
-    expect(input.value).toBe('')
+    expect(input.value).toBe('90')
   })
 
   it('duration input starts empty when planned_duration is null', () => {
