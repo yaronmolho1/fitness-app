@@ -152,6 +152,7 @@ describe('MoveWorkoutModal', () => {
         targetPeriod: 'evening',
         targetTimeSlot: '07:00',
         scope: 'this_week',
+        targetWeekOffset: 0,
       })
     })
 

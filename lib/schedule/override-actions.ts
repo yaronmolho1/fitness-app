@@ -26,6 +26,7 @@ const moveWorkoutSchema = z.object({
   target_period: periodEnum,
   scope: z.enum(['this_week', 'remaining_weeks']),
   target_time_slot: z.string().nullish(),
+  target_week_offset: z.number().int().min(-1).max(1).default(0),
 })
 
 /**
@@ -56,6 +57,7 @@ export async function moveWorkout(input: {
   target_period: 'morning' | 'afternoon' | 'evening'
   scope: 'this_week' | 'remaining_weeks'
   target_time_slot?: string | null
+  target_week_offset?: number
 }): Promise<MoveResult> {
   const parsed = moveWorkoutSchema.safeParse(input)
   if (!parsed.success) {
@@ -71,10 +73,11 @@ export async function moveWorkout(input: {
     target_period,
     scope,
     target_time_slot,
+    target_week_offset,
   } = parsed.data
 
-  // Same day + same period = no-op
-  if (source_day === target_day && source_period === target_period) {
+  // Same day + same period + same week = no-op
+  if (target_week_offset === 0 && source_day === target_day && source_period === target_period) {
     return { success: false, error: 'Cannot move to the same day and period' }
   }
 
@@ -133,6 +136,16 @@ export async function moveWorkout(input: {
     // For each target week, check logged workout guard and create override pairs
     let createdAny = false
     for (const wk of weeks) {
+      const targetWk = wk + target_week_offset
+
+      // Skip if target week falls outside mesocycle bounds
+      if (targetWk < 1 || targetWk > maxWeek) {
+        if (scope === 'this_week') {
+          return { success: false, error: 'Target week is outside the mesocycle' } as const
+        }
+        continue
+      }
+
       const sourceDate = getDateForWeekDay(meso.start_date, wk, source_day)
 
       // Check if this template is already logged on the source date
@@ -183,11 +196,11 @@ export async function moveWorkout(input: {
         })
         .run()
 
-      // Insert target override (place template on target slot)
+      // Insert target override (place template on target slot, possibly different week)
       tx.insert(schedule_week_overrides)
         .values({
           mesocycle_id,
-          week_number: wk,
+          week_number: targetWk,
           day_of_week: target_day,
           period: target_period,
           template_id: templateId,
