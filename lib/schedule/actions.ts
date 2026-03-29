@@ -1,11 +1,11 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { eq, and } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '@/lib/db/index'
 import { weekly_schedule, workout_templates, mesocycles } from '@/lib/db/schema'
-import { timeSlotSchema } from '@/lib/schedule/time-utils'
+import { derivePeriod, timeSlotSchema, durationSchema } from '@/lib/schedule/time-utils'
 
 type ScheduleRow = typeof weekly_schedule.$inferSelect
 
@@ -17,31 +17,26 @@ type RemoveResult =
   | { success: true }
   | { success: false; error: string }
 
-const periodEnum = z.enum(['morning', 'afternoon', 'evening'])
-
 const assignSchema = z.object({
   mesocycle_id: z.number().int().positive('Invalid mesocycle ID'),
   day_of_week: z.number().int().min(0).max(6, 'day_of_week must be 0-6'),
   template_id: z.number().int().positive('Invalid template ID'),
   week_type: z.enum(['normal', 'deload']).default('normal'),
-  period: periodEnum,
-  time_slot: timeSlotSchema.nullish(),
+  time_slot: timeSlotSchema,
+  duration: durationSchema,
 })
 
 const removeSchema = z.object({
-  mesocycle_id: z.number().int().positive('Invalid mesocycle ID'),
-  day_of_week: z.number().int().min(0).max(6, 'day_of_week must be 0-6'),
-  week_type: z.enum(['normal', 'deload']).default('normal'),
-  period: periodEnum,
+  id: z.number().int().positive('Invalid schedule entry ID'),
 })
 
 export async function assignTemplate(input: {
   mesocycle_id: number
   day_of_week: number
   template_id: number
-  period: 'morning' | 'afternoon' | 'evening'
+  time_slot: string
+  duration: number
   week_type?: 'normal' | 'deload'
-  time_slot?: string | null
 }): Promise<AssignResult> {
   const parsed = assignSchema.safeParse(input)
   if (!parsed.success) {
@@ -49,7 +44,10 @@ export async function assignTemplate(input: {
     return { success: false, error: firstError.message }
   }
 
-  const { mesocycle_id, day_of_week, template_id, week_type, period, time_slot } = parsed.data
+  const { mesocycle_id, day_of_week, template_id, week_type, time_slot, duration } = parsed.data
+
+  // Derive period from time_slot
+  const period = derivePeriod(time_slot)
 
   // Verify mesocycle exists and isn't completed
   const meso = db
@@ -85,11 +83,6 @@ export async function assignTemplate(input: {
     return { success: false, error: 'Template does not belong to this mesocycle' }
   }
 
-  // Derive time_slot from period if not provided
-  const resolvedTimeSlot = time_slot ?? (
-    period === 'morning' ? '07:00' : period === 'afternoon' ? '13:00' : '18:00'
-  )
-
   // Upsert via unique index (mesocycle_id, day_of_week, week_type, time_slot, template_id)
   const row = db
     .insert(weekly_schedule)
@@ -99,13 +92,13 @@ export async function assignTemplate(input: {
       template_id,
       week_type,
       period,
-      time_slot: resolvedTimeSlot,
-      duration: 90, // default, will be refined by time-scheduling feature
+      time_slot,
+      duration,
       created_at: new Date(),
     })
     .onConflictDoUpdate({
       target: [weekly_schedule.mesocycle_id, weekly_schedule.day_of_week, weekly_schedule.week_type, weekly_schedule.time_slot, weekly_schedule.template_id],
-      set: { template_id, time_slot: resolvedTimeSlot },
+      set: { period, duration },
     })
     .returning()
     .get()
@@ -115,10 +108,7 @@ export async function assignTemplate(input: {
 }
 
 export async function removeAssignment(input: {
-  mesocycle_id: number
-  day_of_week: number
-  period: 'morning' | 'afternoon' | 'evening'
-  week_type?: 'normal' | 'deload'
+  id: number
 }): Promise<RemoveResult> {
   const parsed = removeSchema.safeParse(input)
   if (!parsed.success) {
@@ -126,13 +116,26 @@ export async function removeAssignment(input: {
     return { success: false, error: firstError.message }
   }
 
-  const { mesocycle_id, day_of_week, week_type, period } = parsed.data
+  const { id } = parsed.data
 
-  // Verify mesocycle exists and isn't completed
+  // Look up the row to check mesocycle guard
+  const entry = db
+    .select({ mesocycle_id: weekly_schedule.mesocycle_id })
+    .from(weekly_schedule)
+    .where(eq(weekly_schedule.id, id))
+    .get()
+
+  if (!entry) {
+    // Idempotent — row already gone
+    revalidatePath('/mesocycles', 'layout')
+    return { success: true }
+  }
+
+  // Verify mesocycle isn't completed
   const meso = db
     .select()
     .from(mesocycles)
-    .where(eq(mesocycles.id, mesocycle_id))
+    .where(eq(mesocycles.id, entry.mesocycle_id))
     .get()
 
   if (!meso) {
@@ -143,20 +146,8 @@ export async function removeAssignment(input: {
     return { success: false, error: 'Cannot modify schedule of a completed mesocycle' }
   }
 
-  if (week_type === 'deload' && !meso.has_deload) {
-    return { success: false, error: 'Mesocycle does not have a deload week' }
-  }
-
-  // Delete the specific period entry (idempotent)
   db.delete(weekly_schedule)
-    .where(
-      and(
-        eq(weekly_schedule.mesocycle_id, mesocycle_id),
-        eq(weekly_schedule.day_of_week, day_of_week),
-        eq(weekly_schedule.week_type, week_type),
-        eq(weekly_schedule.period, period)
-      )
-    )
+    .where(eq(weekly_schedule.id, id))
     .run()
 
   revalidatePath('/mesocycles', 'layout')

@@ -16,6 +16,15 @@ const PERIOD_LABELS: Record<Period, string> = {
   evening: 'Evening',
 }
 
+// Default time_slot for each period (used when UI still picks by period)
+const PERIOD_DEFAULT_TIME: Record<Period, string> = {
+  morning: '07:00',
+  afternoon: '13:00',
+  evening: '18:00',
+}
+
+const DEFAULT_DURATION = 90
+
 // Stable sort order for period display
 const PERIOD_ORDER: Record<Period, number> = {
   morning: 0,
@@ -62,13 +71,16 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
     const { day, period } = picker
     setPicker(null)
 
+    const timeSlot = PERIOD_DEFAULT_TIME[period]
+
     startTransition(async () => {
       const result = await assignTemplate({
         mesocycle_id: mesocycleId,
         day_of_week: day,
         template_id: templateId,
         week_type: variant,
-        period,
+        time_slot: timeSlot,
+        duration: DEFAULT_DURATION,
       })
 
       if (result.success) {
@@ -76,11 +88,13 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
         setSchedule((prev) => [
           ...prev,
           {
+            id: result.data.id,
             day_of_week: day,
             template_id: templateId,
             template_name: tmpl?.name ?? 'Unknown',
-            period,
-            time_slot: null,
+            period: result.data.period,
+            time_slot: result.data.time_slot,
+            duration: result.data.duration,
           },
         ])
         setError(null)
@@ -90,19 +104,14 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
     })
   }
 
-  function handleRemove(day: number, period: Period) {
+  function handleRemove(entry: ScheduleEntry) {
     setError(null)
     startTransition(async () => {
-      const result = await removeAssignment({
-        mesocycle_id: mesocycleId,
-        day_of_week: day,
-        week_type: variant,
-        period,
-      })
+      const result = await removeAssignment({ id: entry.id })
 
       if (result.success) {
         setSchedule((prev) =>
-          prev.filter((s) => !(s.day_of_week === day && s.period === period))
+          prev.filter((s) => s.id !== entry.id)
         )
       } else {
         setError(result.error)
@@ -142,7 +151,7 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
               {/* Existing entries stacked by period */}
               {assignments.map((entry) => (
                 <div
-                  key={entry.period}
+                  key={entry.id}
                   data-testid="schedule-entry"
                   className="mb-2 space-y-1"
                 >
@@ -159,7 +168,7 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
                         variant="ghost"
                         size="sm"
                         className="h-7 px-2 text-xs text-destructive hover:text-destructive"
-                        onClick={() => handleRemove(internalDay, entry.period)}
+                        onClick={() => handleRemove(entry)}
                         disabled={isPending}
                         aria-label="Remove assignment"
                       >
