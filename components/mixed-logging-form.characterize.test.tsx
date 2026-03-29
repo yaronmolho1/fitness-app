@@ -198,18 +198,16 @@ describe('MixedLoggingForm — characterization', () => {
     expect(labels.map((l) => l.textContent)).toEqual(['1', '2', '3', '1', '2'])
   })
 
-  it('resistance: weight inputs start empty with planned value as placeholder', () => {
+  it('resistance: weight inputs autofilled with planned value (T192)', () => {
     render(<MixedLoggingForm data={make3SectionData()} />)
     const weightInput = screen.getByTestId('weight-input-0-0-0') as HTMLInputElement
-    expect(weightInput.value).toBe('')
-    expect(weightInput.placeholder).toBe('100')
+    expect(weightInput.value).toBe('100')
   })
 
-  it('resistance: reps inputs start empty with planned value as placeholder', () => {
+  it('resistance: reps inputs autofilled with planned value (T192)', () => {
     render(<MixedLoggingForm data={make3SectionData()} />)
     const repsInput = screen.getByTestId('reps-input-0-0-0') as HTMLInputElement
-    expect(repsInput.value).toBe('')
-    expect(repsInput.placeholder).toBe('5')
+    expect(repsInput.value).toBe('5')
   })
 
   it('resistance: weight placeholder is em-dash when null', () => {
@@ -262,6 +260,7 @@ describe('MixedLoggingForm — characterization', () => {
     const user = userEvent.setup()
     render(<MixedLoggingForm data={make3SectionData()} />)
     const input = screen.getByTestId('weight-input-0-0-0') as HTMLInputElement
+    await user.clear(input)
     await user.type(input, '105')
     expect(input.value).toBe('105')
   })
@@ -270,6 +269,7 @@ describe('MixedLoggingForm — characterization', () => {
     const user = userEvent.setup()
     render(<MixedLoggingForm data={make3SectionData()} />)
     const input = screen.getByTestId('reps-input-0-0-0') as HTMLInputElement
+    await user.clear(input)
     await user.type(input, '6')
     expect(input.value).toBe('6')
   })
@@ -321,9 +321,13 @@ describe('MixedLoggingForm — characterization', () => {
       }),
     ])
     render(<MixedLoggingForm data={data} />)
-    // Type into the first set
-    await user.type(screen.getByTestId('weight-input-0-0-0'), '90')
-    await user.type(screen.getByTestId('reps-input-0-0-0'), '5')
+    // Clear autofilled values and type new ones
+    const weightInput = screen.getByTestId('weight-input-0-0-0')
+    const repsInput = screen.getByTestId('reps-input-0-0-0')
+    await user.clear(weightInput)
+    await user.type(weightInput, '90')
+    await user.clear(repsInput)
+    await user.type(repsInput, '5')
     // Add set
     await user.click(screen.getByText('+ Add Set'))
     // New set should have same values
@@ -409,11 +413,11 @@ describe('MixedLoggingForm — characterization', () => {
     expect(screen.queryByText('Coaching Cues')).not.toBeInTheDocument()
   })
 
-  it('running: actual inputs start empty', () => {
+  it('running: actual inputs autofilled from planned targets, HR empty (T192)', () => {
     render(<MixedLoggingForm data={make3SectionData()} />)
-    // Running is section index 1 (0-based in render)
+    // Running is section index 1 (0-based in render); fixture has target_pace='6:00/km', no target_distance
     expect((screen.getByTestId('actual-distance-1') as HTMLInputElement).value).toBe('')
-    expect((screen.getByTestId('actual-avg-pace-1') as HTMLInputElement).value).toBe('')
+    expect((screen.getByTestId('actual-avg-pace-1') as HTMLInputElement).value).toBe('6:00/km')
     expect((screen.getByTestId('actual-avg-hr-1') as HTMLInputElement).value).toBe('')
   })
 
@@ -459,6 +463,7 @@ describe('MixedLoggingForm — characterization', () => {
     const user = userEvent.setup()
     render(<MixedLoggingForm data={make3SectionData()} />)
     const input = screen.getByTestId('actual-avg-pace-1') as HTMLInputElement
+    await user.clear(input)
     await user.type(input, '5:45/km')
     expect(input.value).toBe('5:45/km')
   })
@@ -494,10 +499,10 @@ describe('MixedLoggingForm — characterization', () => {
     expect(screen.getByText('No planned duration set')).toBeInTheDocument()
   })
 
-  it('mma: actual duration input starts empty', () => {
+  it('mma: actual duration input autofilled from planned_duration (T192)', () => {
     render(<MixedLoggingForm data={make3SectionData()} />)
     const input = screen.getByTestId('actual-duration-2') as HTMLInputElement
-    expect(input.value).toBe('')
+    expect(input.value).toBe('60')
   })
 
   it('mma: feeling buttons 1-5 rendered', () => {
@@ -522,6 +527,7 @@ describe('MixedLoggingForm — characterization', () => {
     const user = userEvent.setup()
     render(<MixedLoggingForm data={make3SectionData()} />)
     const input = screen.getByTestId('actual-duration-2') as HTMLInputElement
+    await user.clear(input)
     await user.type(input, '45')
     expect(input.value).toBe('45')
   })
@@ -595,7 +601,7 @@ describe('MixedLoggingForm — characterization', () => {
     expect(btn.getAttribute('type')).toBe('button')
   })
 
-  it('save calls saveMixedWorkout with correct structure for empty form', async () => {
+  it('save calls saveMixedWorkout with autofilled values (T192)', async () => {
     const user = userEvent.setup()
     const mockSave = vi.mocked(saveMixedWorkout)
     mockSave.mockResolvedValueOnce({ success: true, data: { workoutId: 1 } })
@@ -609,7 +615,7 @@ describe('MixedLoggingForm — characterization', () => {
       rating: null,
       notes: null,
       sections: [
-        // Resistance section
+        // Resistance section — autofilled from slots
         expect.objectContaining({
           sectionId: 1,
           modality: 'resistance',
@@ -618,24 +624,24 @@ describe('MixedLoggingForm — characterization', () => {
               exerciseName: 'Squat',
               rpe: null,
               sets: expect.arrayContaining([
-                { weight: null, reps: null },
+                { weight: 100, reps: 5 },
               ]),
             }),
           ]),
         }),
-        // Running section
+        // Running section — pace autofilled, distance null (fixture has no target_distance)
         expect.objectContaining({
           sectionId: 2,
           modality: 'running',
           actualDistance: null,
-          actualAvgPace: null,
+          actualAvgPace: '6:00/km',
           actualAvgHr: null,
         }),
-        // MMA section
+        // MMA section — duration autofilled
         expect.objectContaining({
           sectionId: 3,
           modality: 'mma',
-          actualDurationMinutes: null,
+          actualDurationMinutes: 60,
           feeling: null,
         }),
       ],
@@ -649,17 +655,25 @@ describe('MixedLoggingForm — characterization', () => {
 
     render(<MixedLoggingForm data={make3SectionData()} />)
 
-    // Fill resistance
-    await user.type(screen.getByTestId('weight-input-0-0-0'), '100')
-    await user.type(screen.getByTestId('reps-input-0-0-0'), '5')
+    // Clear autofilled values then type new ones
+    const weightInput = screen.getByTestId('weight-input-0-0-0')
+    const repsInput = screen.getByTestId('reps-input-0-0-0')
+    await user.clear(weightInput)
+    await user.type(weightInput, '100')
+    await user.clear(repsInput)
+    await user.type(repsInput, '5')
 
-    // Fill running
+    // Running — pace is autofilled, clear and retype; distance has no target in fixture
+    const paceInput = screen.getByTestId('actual-avg-pace-1')
     await user.type(screen.getByTestId('actual-distance-1'), '5')
-    await user.type(screen.getByTestId('actual-avg-pace-1'), '6:00/km')
+    await user.clear(paceInput)
+    await user.type(paceInput, '6:00/km')
     await user.type(screen.getByTestId('actual-avg-hr-1'), '140')
 
-    // Fill MMA
-    await user.type(screen.getByTestId('actual-duration-2'), '45')
+    // MMA — duration is autofilled, clear and retype
+    const durationInput = screen.getByTestId('actual-duration-2')
+    await user.clear(durationInput)
+    await user.type(durationInput, '45')
 
     // Rate and note
     await user.click(screen.getByRole('button', { name: 'Rate 4' }))
@@ -802,26 +816,30 @@ describe('MixedLoggingForm — characterization', () => {
         section_name: 'Upper',
         modality: 'resistance',
         order: 1,
-        slots: [makeSlot({ id: 1, exercise_name: 'Bench', sets: 2 })],
+        slots: [makeSlot({ id: 1, exercise_name: 'Bench', sets: 2, weight: 60 })],
       }),
       makeSection({
         id: 2,
         section_name: 'Lower',
         modality: 'resistance',
         order: 2,
-        slots: [makeSlot({ id: 3, exercise_name: 'Squat', sets: 2, order: 1 })],
+        slots: [makeSlot({ id: 3, exercise_name: 'Squat', sets: 2, weight: 100, order: 1 })],
       }),
     ])
     render(<MixedLoggingForm data={data} />)
 
-    // Section 0 has exercise in slot 0; section 1 has exercise in slot 0
-    // Testid format: weight-input-{sectionIndex}-{slotIndex}-{setIndex}
+    // Both sections autofilled independently (T192)
     const upperWeight = screen.getByTestId('weight-input-0-0-0') as HTMLInputElement
     const lowerWeight = screen.getByTestId('weight-input-1-0-0') as HTMLInputElement
 
-    await user.type(upperWeight, '80')
-    expect(upperWeight.value).toBe('80')
-    expect(lowerWeight.value).toBe('')
+    expect(upperWeight.value).toBe('60')
+    expect(lowerWeight.value).toBe('100')
+
+    // Clearing and typing into upper doesn't affect lower
+    await user.clear(upperWeight)
+    await user.type(upperWeight, '65')
+    expect(upperWeight.value).toBe('65')
+    expect(lowerWeight.value).toBe('100')
   })
 
   // ================================================================

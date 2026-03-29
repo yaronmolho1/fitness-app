@@ -468,9 +468,12 @@ export function MixedLoggingForm({ data, onSaveSuccess }: { data: MixedWorkoutDa
       if (section.modality === 'resistance') {
         const slots = [...(section.slots ?? [])].sort((a, b) => a.order - b.order)
         state.push({
-          sets: slots.map((slot) =>
-            Array.from({ length: slot.sets }, () => ({ weight: '', reps: '' }))
-          ),
+          sets: slots.map((slot) => {
+            const weight = slot.weight != null && slot.weight !== 0 ? String(slot.weight) : ''
+            const lowerBound = parseRepsLowerBound(slot.reps)
+            const reps = lowerBound !== null ? String(lowerBound) : ''
+            return Array.from({ length: slot.sets }, () => ({ weight, reps }))
+          }),
           rpe: slots.map(() => null),
         })
       }
@@ -481,13 +484,20 @@ export function MixedLoggingForm({ data, onSaveSuccess }: { data: MixedWorkoutDa
   const [runningState, setRunningState] = useState<RunningSectionState[]>(() => {
     return sections
       .filter((s) => s.modality === 'running')
-      .map(() => ({ distance: '', pace: '', hr: '' }))
+      .map((s) => ({
+        distance: s.target_distance !== null ? String(s.target_distance) : '',
+        pace: s.target_pace ?? '',
+        hr: '',
+      }))
   })
 
   const [mmaState, setMmaState] = useState<MmaSectionState[]>(() => {
     return sections
       .filter((s) => s.modality === 'mma')
-      .map(() => ({ duration: '', feeling: null }))
+      .map((s) => ({
+        duration: s.planned_duration !== null ? String(s.planned_duration) : '',
+        feeling: null,
+      }))
   })
 
   const [rating, setRating] = useState<number | null>(null)
