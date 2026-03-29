@@ -9,6 +9,7 @@ import type { SaveMixedWorkoutInput, MixedSectionInput } from '@/lib/workouts/sa
 import type { MesocycleInfo, TemplateInfo, SectionData, SlotData } from '@/lib/today/queries'
 import { SectionHeading } from '@/components/layout/section-heading'
 import { formatDateWithWeekday } from '@/lib/date-format'
+import { useLogAsPlanned } from '@/lib/use-log-as-planned'
 
 export type MixedWorkoutData = {
   date: string
@@ -451,6 +452,8 @@ export function MixedLoggingForm({ data, onSaveSuccess }: { data: MixedWorkoutDa
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+  const hasSections = sections.length > 0
+  const { showButton: showLogAsPlanned, markModified, handleLogAsPlanned } = useLogAsPlanned({ saved })
 
   // Track index offsets for each modality across sections
   let resistanceIdx = 0
@@ -550,6 +553,18 @@ export function MixedLoggingForm({ data, onSaveSuccess }: { data: MixedWorkoutDa
         </h1>
       </div>
 
+      {/* Log as Planned button */}
+      {hasSections && showLogAsPlanned && (
+        <button
+          type="button"
+          data-testid="log-as-planned-btn"
+          onClick={handleLogAsPlanned}
+          className="w-full rounded-xl border-2 border-primary/30 bg-primary/5 py-3 text-base font-semibold text-primary transition-colors hover:bg-primary/10 active:scale-[0.98]"
+        >
+          Log as Planned
+        </button>
+      )}
+
       {/* Sections */}
       {sections.map((section, sectionIndex) => {
         let content: React.ReactNode = null
@@ -566,6 +581,7 @@ export function MixedLoggingForm({ data, onSaveSuccess }: { data: MixedWorkoutDa
               sets={state.sets}
               exerciseRpe={state.rpe}
               onUpdateSet={(slotIndex, setIndex, field, value) => {
+                markModified()
                 setResistanceState((prev) => {
                   const next = [...prev]
                   const sectionState = { ...next[idx] }
@@ -621,6 +637,7 @@ export function MixedLoggingForm({ data, onSaveSuccess }: { data: MixedWorkoutDa
               section={section}
               state={runningState[idx]}
               onUpdate={(field, value) => {
+                markModified()
                 setRunningState((prev) => {
                   const next = [...prev]
                   next[idx] = { ...next[idx], [field]: value }
@@ -637,6 +654,7 @@ export function MixedLoggingForm({ data, onSaveSuccess }: { data: MixedWorkoutDa
               section={section}
               state={mmaState[idx]}
               onUpdate={(field, value) => {
+                markModified()
                 setMmaState((prev) => {
                   const next = [...prev]
                   if (field === 'duration') {

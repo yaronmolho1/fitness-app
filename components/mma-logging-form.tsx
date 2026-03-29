@@ -9,6 +9,7 @@ import type { SaveMmaWorkoutInput } from '@/lib/workouts/actions'
 import type { MesocycleInfo, TemplateInfo } from '@/lib/today/queries'
 import { SectionHeading } from '@/components/layout/section-heading'
 import { formatDateWithWeekday } from '@/lib/date-format'
+import { useLogAsPlanned } from '@/lib/use-log-as-planned'
 
 export type MmaWorkoutData = {
   date: string
@@ -27,6 +28,15 @@ export function MmaLoggingForm({ data, onSaveSuccess }: { data: MmaWorkoutData; 
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+  const { showButton: showLogAsPlanned, markModified, handleLogAsPlanned } = useLogAsPlanned({
+    saved,
+    scrollSelector: '[data-testid="feeling-notes-section"]',
+  })
+
+  function setDurationModified(v: string) {
+    markModified()
+    setDuration(v)
+  }
 
   async function handleSave() {
     setError(null)
@@ -81,6 +91,18 @@ export function MmaLoggingForm({ data, onSaveSuccess }: { data: MmaWorkoutData; 
         </span>
       </div>
 
+      {/* Log as Planned button */}
+      {showLogAsPlanned && (
+        <button
+          type="button"
+          data-testid="log-as-planned-btn"
+          onClick={handleLogAsPlanned}
+          className="w-full rounded-xl border-2 border-primary/30 bg-primary/5 py-3 text-base font-semibold text-primary transition-colors hover:bg-primary/10 active:scale-[0.98]"
+        >
+          Log as Planned
+        </button>
+      )}
+
       {/* Planned reference (read-only) */}
       <div data-testid="planned-reference" className={cn('rounded-xl border border-l-4 bg-card p-4 space-y-3', getModalityAccentClass('mma'))}>
         <SectionHeading className="mt-0 mb-0 text-sm uppercase tracking-wider text-muted-foreground">
@@ -124,7 +146,7 @@ export function MmaLoggingForm({ data, onSaveSuccess }: { data: MmaWorkoutData; 
             mode="integer"
             placeholder="e.g. 90"
             value={duration}
-            onValueChange={setDuration}
+            onValueChange={setDurationModified}
             className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:h-10 md:text-sm"
           />
         </div>

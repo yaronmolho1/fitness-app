@@ -9,6 +9,7 @@ import { formatDateWithWeekday } from '@/lib/date-format'
 import { saveWorkout } from '@/lib/workouts/actions'
 import type { SaveWorkoutInput } from '@/lib/workouts/actions'
 import { parseRepsLowerBound, isRepsRange } from '@/lib/reps-parsing'
+import { useLogAsPlanned } from '@/lib/use-log-as-planned'
 
 export type SlotData = {
   id: number
@@ -71,6 +72,8 @@ export function WorkoutLoggingForm({ data, onSaveSuccess }: { data: WorkoutData;
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+  const hasSlots = sortedSlots.length > 0
+  const { showButton: showLogAsPlanned, markModified, handleLogAsPlanned } = useLogAsPlanned({ saved })
 
   async function handleSave() {
     setError(null)
@@ -109,6 +112,7 @@ export function WorkoutLoggingForm({ data, onSaveSuccess }: { data: WorkoutData;
     field: keyof SetFormData,
     value: string
   ) {
+    markModified()
     setSets((prev) => {
       const next = prev.map((s) => s.map((r) => ({ ...r })))
       next[slotIndex][setIndex][field] = value
@@ -154,6 +158,18 @@ export function WorkoutLoggingForm({ data, onSaveSuccess }: { data: WorkoutData;
           {data.template.name}
         </h1>
       </div>
+
+      {/* Log as Planned button */}
+      {hasSlots && showLogAsPlanned && (
+        <button
+          type="button"
+          data-testid="log-as-planned-btn"
+          onClick={handleLogAsPlanned}
+          className="w-full rounded-xl border-2 border-primary/30 bg-primary/5 py-3 text-base font-semibold text-primary transition-colors hover:bg-primary/10 active:scale-[0.98]"
+        >
+          Log as Planned
+        </button>
+      )}
 
       {/* Exercise sections */}
       {sortedSlots.length > 0 ? (

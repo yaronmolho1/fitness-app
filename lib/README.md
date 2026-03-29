@@ -7,6 +7,7 @@ Server-side business logic, database, and auth.
 - `date-format.ts` — shared date display formatting: `formatDateDisplay()` (dd/mm/yyyy), `formatDateWithWeekday()`, `formatDateLong()`, `formatDateBanner()`, `formatDateToast()`
 - `post-save-redirect.ts` — `handlePostSaveRedirect()`: after retroactive workout save, shows toast and navigates to calendar
 - `reps-parsing.ts` — reps string parsing: `parseRepsLowerBound()` (extracts lower bound from range like "8-12"), `isRepsRange()` (checks if reps string is a range)
+- `use-log-as-planned.ts` — `useLogAsPlanned()` hook: tracks `isModified` state for autofilled forms, controls "Log as Planned" button visibility, scrolls to rating/notes on tap
 
 ## Subdirectories
 - `auth/` — JWT authentication, credentials, logout ([README](./auth/README.md))
