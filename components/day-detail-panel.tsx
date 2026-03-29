@@ -27,6 +27,7 @@ import type { OccupiedSlot } from '@/components/move-workout-modal'
 interface DayDetailPanelProps {
   date: string | null
   onClose: () => void
+  onMutate?: () => void
 }
 
 const periodLabel: Record<Period, string> = {
@@ -334,7 +335,7 @@ function WorkoutCard({
   )
 }
 
-export function DayDetailPanel({ date, onClose }: DayDetailPanelProps) {
+export function DayDetailPanel({ date, onClose, onMutate }: DayDetailPanelProps) {
   const [details, setDetails] = useState<DayDetailResult[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -371,7 +372,8 @@ export function DayDetailPanel({ date, onClose }: DayDetailPanelProps) {
       return
     }
     if (date) fetchDetail(date)
-  }, [date, fetchDetail])
+    onMutate?.()
+  }, [date, fetchDetail, onMutate])
 
   const handleMoveWorkout = useCallback((detail: Extract<DayDetailResult, { type: 'projected' }>) => {
     setMoveTarget(detail)
@@ -402,10 +404,11 @@ export function DayDetailPanel({ date, onClose }: DayDetailPanelProps) {
       }
       setMoveTarget(null)
       if (date) fetchDetail(date)
+      onMutate?.()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to move workout')
     }
-  }, [moveTarget, date, fetchDetail])
+  }, [moveTarget, date, fetchDetail, onMutate])
 
   const open = date !== null
 

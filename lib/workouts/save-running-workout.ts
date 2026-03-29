@@ -102,9 +102,9 @@ export async function saveRunningWorkoutCore(
     return { success: false, error: 'Template is not a running workout' }
   }
 
-  const duplicate = await hasExistingLog(database, input.logDate, template.mesocycle_id)
+  const duplicate = await hasExistingLog(database, input.logDate, input.templateId)
   if (duplicate) {
-    return { success: false, error: 'Workout already logged for this date and mesocycle' }
+    return { success: false, error: 'This workout is already logged for this date' }
   }
 
   // Only store interval data for interval run types

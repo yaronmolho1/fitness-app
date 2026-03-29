@@ -7,8 +7,9 @@ import type { CalendarDay } from '@/lib/calendar/queries'
 import { DayDetailPanel } from '@/components/day-detail-panel'
 import { SectionHeading } from '@/components/layout/section-heading'
 import { getModalityClasses, getModalityBadgeClasses } from '@/lib/ui/modality-colors'
+import { DAY_LABELS } from '@/lib/day-mapping'
 
-const DAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+const DAY_HEADERS = DAY_LABELS
 
 // Ring-only treatment avoids bg-* conflicts with modality colors and bg-card
 const DELOAD_RING = 'ring-2 ring-inset ring-purple-400 dark:ring-purple-500'
@@ -34,10 +35,9 @@ function monthLabel(year: number, month: number): string {
   return date.toLocaleString('en-US', { month: 'long', year: 'numeric' })
 }
 
-// 0=Mon..6=Sun for a given date
-function isoDow(year: number, month: number, day: number): number {
-  const d = new Date(year, month - 1, day)
-  return (d.getDay() + 6) % 7
+// 0=Sun..6=Sat for grid offset (matches Sun-start display)
+function gridDow(year: number, month: number, day: number): number {
+  return new Date(year, month - 1, day).getDay()
 }
 
 // Group flat CalendarDay[] into one group per unique date, preserving order
@@ -55,9 +55,11 @@ function groupByDate(days: CalendarDay[]): DayGroup[] {
 interface CalendarGridProps {
   /** Override initial month for testing (YYYY-MM) */
   initialMonth?: string
+  /** Bump to trigger a refetch (e.g. after logging/moving workouts) */
+  refreshKey?: number
 }
 
-export function CalendarGrid({ initialMonth }: CalendarGridProps = {}) {
+export function CalendarGrid({ initialMonth, refreshKey }: CalendarGridProps = {}) {
   const now = new Date()
   const initYear = initialMonth ? parseInt(initialMonth.split('-')[0], 10) : now.getFullYear()
   const initMonth = initialMonth ? parseInt(initialMonth.split('-')[1], 10) : now.getMonth() + 1
@@ -82,7 +84,7 @@ export function CalendarGrid({ initialMonth }: CalendarGridProps = {}) {
 
   useEffect(() => {
     fetchMonth(year, month)
-  }, [year, month, fetchMonth])
+  }, [year, month, fetchMonth, refreshKey])
 
   function goPrev() {
     if (month === 1) {
@@ -108,7 +110,7 @@ export function CalendarGrid({ initialMonth }: CalendarGridProps = {}) {
   const dayGroups = useMemo(() => groupByDate(days), [days])
 
   // Build grid: pad leading empty cells for days before first of month
-  const firstDow = isoDow(year, month, 1)
+  const firstDow = gridDow(year, month, 1)
   const gridCells: (DayGroup | null)[] = []
   for (let i = 0; i < firstDow; i++) {
     gridCells.push(null)
@@ -241,7 +243,7 @@ export function CalendarGrid({ initialMonth }: CalendarGridProps = {}) {
       )}
 
       {/* Day detail panel */}
-      <DayDetailPanel date={selectedDate} onClose={() => setSelectedDate(null)} />
+      <DayDetailPanel date={selectedDate} onClose={() => setSelectedDate(null)} onMutate={() => fetchMonth(year, month)} />
     </div>
   )
 }
