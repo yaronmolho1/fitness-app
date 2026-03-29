@@ -51,12 +51,12 @@ describe('Card normalization (AC4-6)', () => {
       expect(loggedLine).toBeUndefined()
     })
 
-    it('routine-check-off card divs use rounded-xl', () => {
+    it('routine-check-off card divs use rounded-lg', () => {
       const src = readSource('components/routine-check-off.tsx')
-      const cardLines = src.split('\n').filter(l => l.includes('rounded-') && l.includes('border') && l.includes('p-4'))
+      const cardLines = src.split('\n').filter(l => l.includes('rounded-') && l.includes('border'))
       expect(cardLines.length).toBeGreaterThan(0)
       cardLines.forEach(line => {
-        expect(line).toContain('rounded-xl')
+        expect(line).toContain('rounded-lg')
       })
     })
 

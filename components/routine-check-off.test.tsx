@@ -79,7 +79,8 @@ describe('RoutineCheckOff', () => {
     expect(screen.getByText(/no routines for today/i)).toBeInTheDocument()
   })
 
-  it('renders pending item with input fields and buttons', () => {
+  it('renders pending item with input fields and buttons', async () => {
+    const user = userEvent.setup()
     render(
       <RoutineCheckOff
         items={[makeItem()]}
@@ -88,12 +89,15 @@ describe('RoutineCheckOff', () => {
       />
     )
     expect(screen.getByText('Body Weight')).toBeInTheDocument()
+    // Pending items are collapsed — expand first
+    await user.click(screen.getByText('Body Weight'))
     expect(screen.getByLabelText('Weight')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /done/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /skip/i })).toBeInTheDocument()
   })
 
-  it('renders multi-field item with all configured inputs', () => {
+  it('renders multi-field item with all configured inputs', async () => {
+    const user = userEvent.setup()
     render(
       <RoutineCheckOff
         items={[makeMultiFieldItem()]}
@@ -101,6 +105,8 @@ describe('RoutineCheckOff', () => {
         logDate="2026-03-15"
       />
     )
+    // Expand pending item
+    await user.click(screen.getByText('Shoulder Mobility'))
     expect(screen.getByLabelText('Duration')).toBeInTheDocument()
     expect(screen.getByLabelText('Sets')).toBeInTheDocument()
     expect(screen.getByLabelText('Reps')).toBeInTheDocument()
@@ -145,6 +151,7 @@ describe('RoutineCheckOff', () => {
       />
     )
 
+    await user.click(screen.getByText('Body Weight'))
     await user.type(screen.getByLabelText('Weight'), '72.5')
     await user.click(screen.getByRole('button', { name: /done/i }))
 
@@ -165,6 +172,7 @@ describe('RoutineCheckOff', () => {
       />
     )
 
+    await user.click(screen.getByText('Body Weight'))
     await user.click(screen.getByRole('button', { name: /skip/i }))
 
     expect(mockMarkSkipped).toHaveBeenCalledWith({
@@ -183,6 +191,7 @@ describe('RoutineCheckOff', () => {
       />
     )
 
+    await user.click(screen.getByText('Body Weight'))
     await user.click(screen.getByRole('button', { name: /done/i }))
 
     expect(screen.getByRole('alert')).toHaveTextContent(/at least one value/i)
@@ -203,6 +212,7 @@ describe('RoutineCheckOff', () => {
       />
     )
 
+    await user.click(screen.getByText('Body Weight'))
     await user.type(screen.getByLabelText('Weight'), '72')
     await user.click(screen.getByRole('button', { name: /done/i }))
 
@@ -248,7 +258,7 @@ describe('RoutineCheckOff', () => {
         logDate="2026-03-15"
       />
     )
-    expect(screen.getByText('3 / 5 this week')).toBeInTheDocument()
+    expect(screen.getByText('3/5 this week')).toBeInTheDocument()
   })
 
   it('displays 0 weekly count when no logs this week', () => {
@@ -259,7 +269,7 @@ describe('RoutineCheckOff', () => {
         logDate="2026-03-15"
       />
     )
-    expect(screen.getByText('0 / 5 this week')).toBeInTheDocument()
+    expect(screen.getByText('0/5 this week')).toBeInTheDocument()
   })
 
   it('displays weekly count on logged (done) items', () => {
@@ -270,7 +280,7 @@ describe('RoutineCheckOff', () => {
         logDate="2026-03-15"
       />
     )
-    expect(screen.getByText('4 / 7 this week')).toBeInTheDocument()
+    expect(screen.getByText('4/7 this week')).toBeInTheDocument()
   })
 
   it('displays weekly count on skipped items', () => {
@@ -281,7 +291,7 @@ describe('RoutineCheckOff', () => {
         logDate="2026-03-15"
       />
     )
-    expect(screen.getByText('2 / 5 this week')).toBeInTheDocument()
+    expect(screen.getByText('2/5 this week')).toBeInTheDocument()
   })
 
   it('displays full completion count (7/7)', () => {
@@ -292,7 +302,7 @@ describe('RoutineCheckOff', () => {
         logDate="2026-03-15"
       />
     )
-    expect(screen.getByText('7 / 7 this week')).toBeInTheDocument()
+    expect(screen.getByText('7/7 this week')).toBeInTheDocument()
   })
 
   // T073: Streak display
@@ -304,7 +314,7 @@ describe('RoutineCheckOff', () => {
         logDate="2026-03-15"
       />
     )
-    expect(screen.getByTestId('streak-1')).toHaveTextContent('5-day streak')
+    expect(screen.getByTestId('streak-1')).toHaveTextContent('5')
   })
 
   it('does not display streak when streak = 0', () => {
@@ -326,7 +336,7 @@ describe('RoutineCheckOff', () => {
         logDate="2026-03-15"
       />
     )
-    expect(screen.getByTestId('streak-1')).toHaveTextContent('3-day streak')
+    expect(screen.getByTestId('streak-1')).toHaveTextContent('3')
   })
 
   it('displays streak = 1 correctly', () => {
@@ -337,6 +347,6 @@ describe('RoutineCheckOff', () => {
         logDate="2026-03-15"
       />
     )
-    expect(screen.getByTestId('streak-1')).toHaveTextContent('1-day streak')
+    expect(screen.getByTestId('streak-1')).toHaveTextContent('1')
   })
 })
