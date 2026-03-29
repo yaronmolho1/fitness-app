@@ -1,6 +1,6 @@
 # Smart Logging Autofill
 
-**Status:** partial — Capability 1 Resistance (AC1-5) implemented in T190
+**Status:** partial — Capability 1 Resistance (AC1-8) implemented in T190, Running (AC9-11) + MMA/BJJ (AC12-14) implemented in T191
 **Epic:** Workout Logging
 **Depends:** specs/pre-filled-resistance-logging.md, specs/actual-set-input.md, specs/add-remove-sets.md, specs/mobile-logging-redesign.md, specs/running-logging.md, specs/mma-bjj-logging.md, specs/retroactive-workout-logging.md, specs/workout-rating-notes.md
 
