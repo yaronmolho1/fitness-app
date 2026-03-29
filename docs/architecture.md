@@ -20,6 +20,7 @@ Stack: Next.js 16 App Router, SQLite (WAL mode), Drizzle ORM v2, shadcn/ui, Tail
 graph TD
     Browser["Browser\n(Desktop / Mobile)"]
     Nginx["nginx Reverse Proxy\n(SSL termination, docker-app-stack)"]
+    GoogleAPI["Google Calendar API\n(OAuth2, calendar CRUD)"]
 
     subgraph Docker["Docker Container — node:20-alpine"]
         subgraph NextApp["Next.js 16 App Router"]
@@ -28,6 +29,7 @@ graph TD
             CC["Client Components\n(forms, interactivity)"]
             SA["Server Actions\n(all CRUD mutations)"]
             RH["Route Handlers\n(/api/calendar, /api/calendar/day,\n/api/progression, /api/today, /api/health)"]
+            GoogleAuth["Google OAuth Routes\n(/api/auth/google, /api/auth/google/callback)"]
         end
 
         subgraph DataLayer["Data Layer"]
@@ -43,6 +45,7 @@ graph TD
     SA --> Drizzle
     RH --> Drizzle
     Drizzle --> SQLite
+    GoogleAuth -->|OAuth2 consent + callback| GoogleAPI
 ```
 
 See ADR-001 (SQLite decision) and ADR-004 (hybrid API decision).
@@ -134,7 +137,7 @@ Hybrid pattern: Server Actions for all mutations, Route Handlers for computed re
 | Pattern | Used For | Examples |
 |---------|----------|---------|
 | **Server Actions** | All form mutations (create, update, delete, log) | Create exercise, update template, log workout, clone mesocycle, cascade edit, mark routine done |
-| **Route Handlers** | Computed reads, health check, future API consumers | `GET /api/calendar`, `GET /api/calendar/day`, `GET /api/progression`, `GET /api/today`, `GET /api/health`, `POST /api/coaching/summary` |
+| **Route Handlers** | Computed reads, health check, OAuth flows, future API consumers | `GET /api/calendar`, `GET /api/calendar/day`, `GET /api/progression`, `GET /api/today`, `GET /api/health`, `POST /api/coaching/summary`, `GET /api/auth/google`, `GET /api/auth/google/callback` |
 
 Route Handlers are intentionally kept for reads that may serve V2 consumers (LLM coach, Garmin integration, ecosystem aggregator). Server Actions save boilerplate on 15+ mutation operations with automatic cache revalidation and end-to-end type safety.
 
@@ -151,12 +154,13 @@ Route Handlers are intentionally kept for reads that may serve V2 consumers (LLM
 | Routines | Routine item CRUD with flexible scoping, daily log tracking |
 | Calendar / Progression | Computed views: projected calendar, exercise progression charts, today's sessions (multi-session per day) |
 | Coaching | Summary generation: assembles athlete profile, current plan, recent sessions, progression trends, and subjective state into a structured markdown brief for coaching review |
+| Google | OAuth2 client (`lib/google/client.ts`), token management with auto-refresh, Calendar API access (timezone read, calendar creation) |
 
 For response format and status codes, see `docs/api-standards.md`.
 
 ## Auth Strategy
 
-Single-user auth. No registration, no OAuth, no database-stored users.
+Single-user auth. No registration, no database-stored users.
 
 - **Credentials**: `AUTH_USERNAME` and `AUTH_PASSWORD_HASH` from environment variables
 - **JWT**: issued via `jose` library — Edge-compatible, no `better-sqlite3` in middleware
@@ -166,6 +170,7 @@ Single-user auth. No registration, no OAuth, no database-stored users.
 - **No session storage**: JWT is stateless; no server-side session table required
 - **Password hash**: `AUTH_PASSWORD_HASH` is a bcrypt hash. The login route hashes the submitted password and compares with `jose`-compatible bcrypt. Token expiry is configurable via `JWT_EXPIRES_IN` env var (default: 7 days).
 - **Route protection scope**: All routes under `/(app)` are protected. Public routes: `/login`, `/api/auth/login`, `/api/auth/logout`, `/api/health`.
+- **Google OAuth**: OAuth2 flow for Google Calendar integration (not for app login). `GET /api/auth/google` initiates consent redirect; `GET /api/auth/google/callback` exchanges code for tokens. CSRF protection via httpOnly state cookie. Tokens stored in `google_credentials` table. Client: `lib/google/client.ts` using `googleapis` + `google-auth-library`. Requires env vars: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`.
 
 ## Infrastructure
 
@@ -190,7 +195,7 @@ Single-user auth. No registration, no OAuth, no database-stored users.
 - **Health check**: `GET /api/health` — returns `{ status: "ok", db: "connected" }`. Used by nginx upstream health checks and future ecosystem aggregation (ADR-008).
 - **Monitoring**: health endpoint only (V1); no centralized log aggregation or alerting
 - **CI/CD**: not in V1 scope; deployment is manual (`docker compose pull && docker compose up -d`)
-- **Environment variables**: `AUTH_USERNAME`, `AUTH_PASSWORD_HASH`, `JWT_SECRET`, `DATABASE_URL` (path to SQLite file)
+- **Environment variables**: `AUTH_USERNAME`, `AUTH_PASSWORD_HASH`, `JWT_SECRET`, `DATABASE_URL` (path to SQLite file), `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` (for Google Calendar OAuth)
 - **Orchestration**: `docker-app-stack` repo manages multi-app nginx config; fitness-app runs as a peer to expense-tracker and tutor-ai
 
 ## Key Tradeoffs

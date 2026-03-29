@@ -22,4 +22,5 @@ Server-side business logic, database, and auth.
 - `progression/` — Exercise progression data queries (planned vs actual weight/volume over time) ([README](./progression/README.md))
 - `calendar/` — Monthly calendar projection query (scheduled vs completed days) ([README](./calendar/README.md))
 - `coaching/` — Athlete profile and recent session history for coaching context ([README](./coaching/README.md))
+- `google/` — Google OAuth 2.0 client and Calendar API integration ([README](./google/README.md))
 - `ui/` — Shared UI utilities (modality color mappings, superset grouping) ([README](./ui/README.md))
