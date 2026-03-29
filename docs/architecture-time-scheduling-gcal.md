@@ -118,7 +118,7 @@ last_synced_at   INTEGER              -- timestamp
 created_at       INTEGER NOT NULL
 ```
 
-Unique index on `(mesocycle_id, template_id, event_date)` — one Google event per workout instance. The `google_event_id` has a separate unique index for reverse lookup.
+Unique index on `(mesocycle_id, template_id, event_date, time_slot)` — one Google event per workout instance at a specific time. The `google_event_id` has a separate unique index for reverse lookup.
 
 ### Drizzle Schema Additions (`lib/db/schema.ts`)
 
@@ -158,7 +158,8 @@ export const google_calendar_events = sqliteTable(
     instanceIdx: uniqueIndex('gcal_events_instance_idx').on(
       t.mesocycle_id,
       t.template_id,
-      t.event_date
+      t.event_date,
+      t.time_slot
     ),
   })
 )

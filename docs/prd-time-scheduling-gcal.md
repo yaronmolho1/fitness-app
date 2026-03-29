@@ -153,7 +153,7 @@ Note: unique includes template_id because overlapping times are allowed (with UI
   template_id      INTEGER NOT NULL      -- FK
   event_date       TEXT NOT NULL         -- YYYY-MM-DD, the projected date
   time_slot        TEXT NOT NULL         -- HH:MM at time of sync
-  sync_status      TEXT NOT NULL DEFAULT 'synced'  -- synced/pending/failed/deleted
+  sync_status      TEXT NOT NULL DEFAULT 'synced'  -- synced/pending/failed
   last_synced_at   INTEGER              -- timestamp
   created_at       INTEGER NOT NULL
 ```
