@@ -3,7 +3,7 @@
 Route Handlers — JSON endpoints for computed reads and auth.
 
 ## Subdirectories
-- `auth/` — login/logout routes (POST, cookie-based JWT)
+- `auth/` — login/logout routes + Google OAuth flow ([README](./auth/README.md))
 - `calendar/` — month projection + day detail ([README](./calendar/README.md))
 - `coaching/` — coaching summary generation ([README](./coaching/README.md))
 - `health/` — healthcheck endpoint
