@@ -55,6 +55,7 @@ describe('T135 — numeric input migration: workout-logging-form', () => {
     render(<WorkoutLoggingForm data={data} />)
 
     const input = screen.getByTestId('weight-input-0-0') as HTMLInputElement
+    await user.clear(input)
     await user.type(input, '8a2b.5c')
     expect(input.value).toBe('82.5')
   })
@@ -65,6 +66,7 @@ describe('T135 — numeric input migration: workout-logging-form', () => {
     render(<WorkoutLoggingForm data={data} />)
 
     const input = screen.getByTestId('reps-input-0-0') as HTMLInputElement
+    await user.clear(input)
     await user.type(input, '1a2.3')
     expect(input.value).toBe('123')
   })

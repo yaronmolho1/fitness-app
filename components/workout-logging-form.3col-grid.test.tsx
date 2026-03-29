@@ -160,36 +160,36 @@ describe('T087 — 3-column set input grid', () => {
     })
   })
 
-  // AC5: Planned values as placeholder text
-  describe('AC5 — planned values as placeholders', () => {
-    it('weight input placeholder shows planned weight', () => {
+  // AC5: Planned values autofilled (T190 replaced placeholders with real values)
+  describe('AC5 — planned values autofilled', () => {
+    it('weight input autofilled with planned weight', () => {
       const data = makeWorkoutData({
         slots: [makeSlot({ sets: 1, weight: 120.5 })],
       })
       render(<WorkoutLoggingForm data={data} />)
 
       const weightInput = screen.getByTestId('weight-input-0-0') as HTMLInputElement
-      expect(weightInput.placeholder).toBe('120.5')
+      expect(weightInput.value).toBe('120.5')
     })
 
-    it('reps input placeholder shows planned reps', () => {
+    it('reps input autofilled with planned reps', () => {
       const data = makeWorkoutData({
         slots: [makeSlot({ sets: 1, reps: '10' })],
       })
       render(<WorkoutLoggingForm data={data} />)
 
       const repsInput = screen.getByTestId('reps-input-0-0') as HTMLInputElement
-      expect(repsInput.placeholder).toBe('10')
+      expect(repsInput.value).toBe('10')
     })
 
-    it('weight placeholder shows dash when target_weight is null', () => {
+    it('weight is empty when target_weight is null', () => {
       const data = makeWorkoutData({
         slots: [makeSlot({ sets: 1, weight: null })],
       })
       render(<WorkoutLoggingForm data={data} />)
 
       const weightInput = screen.getByTestId('weight-input-0-0') as HTMLInputElement
-      expect(weightInput.placeholder).toBe('\u2014')
+      expect(weightInput.value).toBe('')
     })
 
     it('no separate planned values reference row exists', () => {
@@ -198,12 +198,11 @@ describe('T087 — 3-column set input grid', () => {
       })
       render(<WorkoutLoggingForm data={data} />)
 
-      // The old planned-weight/planned-reps testids should not exist
       expect(screen.queryByTestId('planned-weight-0-0')).not.toBeInTheDocument()
       expect(screen.queryByTestId('planned-reps-0-0')).not.toBeInTheDocument()
     })
 
-    it('inputs start empty (values not pre-filled) when placeholders show plan', () => {
+    it('inputs are autofilled with planned values', () => {
       const data = makeWorkoutData({
         slots: [makeSlot({ sets: 1, weight: 80, reps: '10' })],
       })
@@ -211,11 +210,8 @@ describe('T087 — 3-column set input grid', () => {
 
       const weightInput = screen.getByTestId('weight-input-0-0') as HTMLInputElement
       const repsInput = screen.getByTestId('reps-input-0-0') as HTMLInputElement
-      // Inputs should be empty — planned values shown as placeholder only
-      expect(weightInput.value).toBe('')
-      expect(repsInput.value).toBe('')
-      expect(weightInput.placeholder).toBe('80')
-      expect(repsInput.placeholder).toBe('10')
+      expect(weightInput.value).toBe('80')
+      expect(repsInput.value).toBe('10')
     })
   })
 
