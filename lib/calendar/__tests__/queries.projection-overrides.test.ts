@@ -239,7 +239,7 @@ describe('getCalendarProjection — schedule_week_overrides', () => {
 
   // ── Multi-session: override one period, other unaffected ─────────────
   describe('multi-session override', () => {
-    it('AC3: overriding morning does not affect evening on same day', async () => {
+    it('AC3: overriding morning time_slot does not affect evening on same day', async () => {
       sqlite.exec(`
         INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
         VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
@@ -247,12 +247,12 @@ describe('getCalendarProjection — schedule_week_overrides', () => {
         VALUES (1, 1, 'Push', 'push', 'resistance');
         INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
         VALUES (2, 1, 'Run', 'run', 'running');
-        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-        VALUES (1, 0, 1, 'normal', 'morning');
-        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-        VALUES (1, 0, 2, 'normal', 'evening');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+        VALUES (1, 0, 1, 'normal', 'morning', '07:00');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+        VALUES (1, 0, 2, 'normal', 'evening', '18:00');
 
-        -- Override only morning in week 1 (clear it)
+        -- Override only 07:00 time_slot in week 1 (clear it)
         INSERT INTO schedule_week_overrides (mesocycle_id, week_number, day_of_week, period, template_id, time_slot, duration, override_group)
         VALUES (1, 1, 0, 'morning', NULL, '07:00', 60, 'move-1');
       `)
@@ -260,13 +260,13 @@ describe('getCalendarProjection — schedule_week_overrides', () => {
       const result = await getCalendarProjection(db, '2026-03')
       const mar2 = result.days.filter((d) => d.date === '2026-03-02')
 
-      // Morning cleared by override
-      const morning = mar2.find((d) => d.period === 'morning')!
+      // Morning (07:00) cleared by override
+      const morning = mar2.find((d) => d.time_slot === '07:00')!
       expect(morning.template_name).toBeNull()
       expect(morning.status).toBe('rest')
 
-      // Evening unaffected
-      const evening = mar2.find((d) => d.period === 'evening')!
+      // Evening (18:00) unaffected
+      const evening = mar2.find((d) => d.time_slot === '18:00')!
       expect(evening.template_name).toBe('Run')
       expect(evening.status).toBe('projected')
     })
@@ -303,25 +303,29 @@ describe('getCalendarProjection — schedule_week_overrides', () => {
 
   // ── Override with time_slot ──────────────────────────────────────────
   describe('override time_slot', () => {
-    it('override time_slot replaces base time_slot', async () => {
+    it('override at same time_slot replaces the base entry', async () => {
       sqlite.exec(`
         INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
         VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
         INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
         VALUES (1, 1, 'Push', 'push', 'resistance');
+        INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+        VALUES (2, 1, 'Pull', 'pull', 'resistance');
         INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
         VALUES (1, 0, 1, 'normal', 'morning', '07:00');
 
-        -- Override week 2 Mon morning with different time
+        -- Override week 2 Mon 07:00 to a different template
         INSERT INTO schedule_week_overrides (mesocycle_id, week_number, day_of_week, period, template_id, time_slot, override_group)
-        VALUES (1, 2, 0, 'morning', 1, '18:00', 'move-1');
+        VALUES (1, 2, 0, 'morning', 2, '07:00', 'move-1');
       `)
 
       const result = await getCalendarProjection(db, '2026-03')
-      // Week 1 (Mar 2) — base time_slot
-      expect(result.days.find((d) => d.date === '2026-03-02')!.time_slot).toBe('07:00')
-      // Week 2 (Mar 9) — overridden time_slot
-      expect(result.days.find((d) => d.date === '2026-03-09')!.time_slot).toBe('18:00')
+      // Week 1 (Mar 2) — base template
+      expect(result.days.find((d) => d.date === '2026-03-02')!.template_name).toBe('Push')
+      // Week 2 (Mar 9) — overridden template at same time_slot
+      const mar9 = result.days.find((d) => d.date === '2026-03-09')!
+      expect(mar9.template_name).toBe('Pull')
+      expect(mar9.time_slot).toBe('07:00')
     })
   })
 

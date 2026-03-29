@@ -776,7 +776,7 @@ describe('getTodayWorkout — result type structure (characterize)', () => {
     expect(result.type).toBe('workout')
     if (result.type === 'workout') {
       expect(Object.keys(result).sort()).toEqual(
-        ['date', 'mesocycle', 'period', 'slots', 'template', 'time_slot', 'type'].sort()
+        ['date', 'duration', 'mesocycle', 'period', 'slots', 'template', 'time_slot', 'type'].sort()
       )
     }
   })
@@ -805,7 +805,7 @@ describe('getTodayWorkout — result type structure (characterize)', () => {
     expect(result.type).toBe('already_logged')
     if (result.type === 'already_logged') {
       expect(Object.keys(result).sort()).toEqual(
-        ['date', 'loggedWorkout', 'mesocycle', 'period', 'time_slot', 'type'].sort()
+        ['date', 'duration', 'loggedWorkout', 'mesocycle', 'period', 'time_slot', 'type'].sort()
       )
     }
   })

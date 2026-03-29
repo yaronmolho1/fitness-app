@@ -8,10 +8,10 @@ import type { CalendarDay } from '@/lib/calendar/queries'
 const MARCH_2026_DAYS: CalendarDay[] = Array.from({ length: 31 }, (_, i) => {
   const day = i + 1
   const date = `2026-03-${String(day).padStart(2, '0')}`
-  if (day === 2) return { date, template_name: 'Push A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'morning', time_slot: null }
-  if (day === 4) return { date, template_name: '5K Tempo', modality: 'running', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'morning', time_slot: null }
-  if (day === 6) return { date, template_name: 'BJJ Sparring', modality: 'mma', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'morning', time_slot: null }
-  return { date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest', period: null, time_slot: null }
+  if (day === 2) return { date, template_name: 'Push A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'morning', time_slot: null, duration: 90 }
+  if (day === 4) return { date, template_name: '5K Tempo', modality: 'running', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'morning', time_slot: null, duration: 90 }
+  if (day === 6) return { date, template_name: 'BJJ Sparring', modality: 'mma', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'morning', time_slot: null, duration: 90 }
+  return { date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest', period: null, time_slot: null, duration: null }
 })
 
 function mockFetch(responses: Record<string, CalendarDay[]>) {
@@ -154,7 +154,7 @@ describe('CalendarGrid', () => {
   it('navigates to previous month', async () => {
     const febDays: CalendarDay[] = Array.from({ length: 28 }, (_, i) => ({
       date: `2026-02-${String(i + 1).padStart(2, '0')}`,
-      template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest' as const, period: null, time_slot: null,
+      template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest' as const, period: null, time_slot: null, duration: null,
     }))
 
     mockFetch({ '2026-03': MARCH_2026_DAYS, '2026-02': febDays })
@@ -180,7 +180,7 @@ describe('CalendarGrid', () => {
   it('navigates to next month', async () => {
     const aprilDays: CalendarDay[] = Array.from({ length: 30 }, (_, i) => ({
       date: `2026-04-${String(i + 1).padStart(2, '0')}`,
-      template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest' as const, period: null, time_slot: null,
+      template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest' as const, period: null, time_slot: null, duration: null,
     }))
 
     mockFetch({ '2026-03': MARCH_2026_DAYS, '2026-04': aprilDays })
@@ -235,11 +235,11 @@ describe('CalendarGrid – status markers', () => {
   const DAYS_WITH_STATUS: CalendarDay[] = Array.from({ length: 31 }, (_, i) => {
     const day = i + 1
     const date = `2026-03-${String(day).padStart(2, '0')}`
-    if (day === 2) return { date, template_name: 'Push A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'completed', period: 'morning', time_slot: null }
-    if (day === 4) return { date, template_name: '5K Tempo', modality: 'running', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'morning', time_slot: null }
-    if (day === 6) return { date, template_name: 'BJJ Sparring', modality: 'mma', mesocycle_id: 1, is_deload: false, status: 'completed', period: 'morning', time_slot: null }
-    if (day === 9) return { date, template_name: 'Pull A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'morning', time_slot: null }
-    return { date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest', period: null, time_slot: null }
+    if (day === 2) return { date, template_name: 'Push A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'completed', period: 'morning', time_slot: null, duration: 90 }
+    if (day === 4) return { date, template_name: '5K Tempo', modality: 'running', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'morning', time_slot: null, duration: 90 }
+    if (day === 6) return { date, template_name: 'BJJ Sparring', modality: 'mma', mesocycle_id: 1, is_deload: false, status: 'completed', period: 'morning', time_slot: null, duration: 90 }
+    if (day === 9) return { date, template_name: 'Pull A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'morning', time_slot: null, duration: 90 }
+    return { date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest', period: null, time_slot: null, duration: null }
   })
 
   afterEach(() => {
@@ -363,13 +363,13 @@ describe('CalendarGrid – deload week distinction', () => {
   const DAYS_WITH_DELOAD: CalendarDay[] = Array.from({ length: 31 }, (_, i) => {
     const day = i + 1
     const date = `2026-03-${String(day).padStart(2, '0')}`
-    if (day === 2) return { date, template_name: 'Push A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'morning', time_slot: null }
-    if (day === 9) return { date, template_name: 'Push A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'morning', time_slot: null }
-    if (day >= 3 && day <= 8) return { date, template_name: null, modality: null, mesocycle_id: 1, is_deload: false, status: 'rest', period: null, time_slot: null }
-    if (day >= 10 && day <= 15) return { date, template_name: null, modality: null, mesocycle_id: 1, is_deload: false, status: 'rest', period: null, time_slot: null }
-    if (day === 16) return { date, template_name: 'Push Deload', modality: 'resistance', mesocycle_id: 1, is_deload: true, status: 'projected', period: 'morning', time_slot: null }
-    if (day >= 17 && day <= 22) return { date, template_name: null, modality: null, mesocycle_id: 1, is_deload: true, status: 'rest', period: null, time_slot: null }
-    return { date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest', period: null, time_slot: null }
+    if (day === 2) return { date, template_name: 'Push A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'morning', time_slot: null, duration: 90 }
+    if (day === 9) return { date, template_name: 'Push A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'morning', time_slot: null, duration: 90 }
+    if (day >= 3 && day <= 8) return { date, template_name: null, modality: null, mesocycle_id: 1, is_deload: false, status: 'rest', period: null, time_slot: null, duration: null }
+    if (day >= 10 && day <= 15) return { date, template_name: null, modality: null, mesocycle_id: 1, is_deload: false, status: 'rest', period: null, time_slot: null, duration: null }
+    if (day === 16) return { date, template_name: 'Push Deload', modality: 'resistance', mesocycle_id: 1, is_deload: true, status: 'projected', period: 'morning', time_slot: null, duration: 90 }
+    if (day >= 17 && day <= 22) return { date, template_name: null, modality: null, mesocycle_id: 1, is_deload: true, status: 'rest', period: null, time_slot: null, duration: null }
+    return { date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest', period: null, time_slot: null, duration: null }
   })
 
   afterEach(() => {
@@ -468,7 +468,7 @@ describe('CalendarGrid – deload week distinction', () => {
     const NO_DELOAD_DAYS: CalendarDay[] = Array.from({ length: 31 }, (_, i) => {
       const day = i + 1
       const date = `2026-03-${String(day).padStart(2, '0')}`
-      return { date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest' as const, period: null, time_slot: null }
+      return { date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest' as const, period: null, time_slot: null, duration: null }
     })
 
     mockFetch({ '2026-03': NO_DELOAD_DAYS })
@@ -487,9 +487,9 @@ describe('CalendarGrid – mixed modality (T123)', () => {
   const MIXED_DAYS: CalendarDay[] = Array.from({ length: 31 }, (_, i) => {
     const day = i + 1
     const date = `2026-03-${String(day).padStart(2, '0')}`
-    if (day === 2) return { date, template_name: 'Strength + Cardio', modality: 'mixed' as const, mesocycle_id: 1, is_deload: false, status: 'projected' as const, period: 'morning' as const, time_slot: null }
-    if (day === 4) return { date, template_name: 'Push A', modality: 'resistance' as const, mesocycle_id: 1, is_deload: false, status: 'projected' as const, period: 'morning' as const, time_slot: null }
-    return { date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest' as const, period: null, time_slot: null }
+    if (day === 2) return { date, template_name: 'Strength + Cardio', modality: 'mixed' as const, mesocycle_id: 1, is_deload: false, status: 'projected' as const, period: 'morning' as const, time_slot: null, duration: 90 }
+    if (day === 4) return { date, template_name: 'Push A', modality: 'resistance' as const, mesocycle_id: 1, is_deload: false, status: 'projected' as const, period: 'morning' as const, time_slot: null, duration: 90 }
+    return { date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest' as const, period: null, time_slot: null, duration: null }
   })
 
   afterEach(() => {
@@ -537,10 +537,10 @@ describe('CalendarGrid – mixed modality (T123)', () => {
       const day = i + 1
       const date = `2026-03-${String(day).padStart(2, '0')}`
       if (day === 2) return [
-        { date, template_name: 'Strength + Cardio', modality: 'mixed' as const, mesocycle_id: 1, is_deload: false, status: 'projected' as const, period: 'morning' as const, time_slot: null },
-        { date, template_name: '5K Run', modality: 'running' as const, mesocycle_id: 1, is_deload: false, status: 'projected' as const, period: 'evening' as const, time_slot: null },
+        { date, template_name: 'Strength + Cardio', modality: 'mixed' as const, mesocycle_id: 1, is_deload: false, status: 'projected' as const, period: 'morning' as const, time_slot: null, duration: 90 },
+        { date, template_name: '5K Run', modality: 'running' as const, mesocycle_id: 1, is_deload: false, status: 'projected' as const, period: 'evening' as const, time_slot: null, duration: 30 },
       ]
-      return [{ date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest' as const, period: null, time_slot: null }]
+      return [{ date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest' as const, period: null, time_slot: null, duration: null }]
     }).flat()
 
     mockFetch({ '2026-03': multiMixedDays })
@@ -567,13 +567,13 @@ describe('CalendarGrid – multi-workout pills (T115)', () => {
       const date = `2026-03-${String(i).padStart(2, '0')}`
       if (i === 2) {
         // Two workouts on Monday
-        days.push({ date, template_name: 'Push A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'morning', time_slot: '07:00' })
-        days.push({ date, template_name: '5K Run', modality: 'running', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'evening', time_slot: '18:00' })
+        days.push({ date, template_name: 'Push A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'morning', time_slot: '07:00', duration: 90 })
+        days.push({ date, template_name: '5K Run', modality: 'running', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'evening', time_slot: '18:00', duration: 45 })
       } else if (i === 4) {
         // Single workout on Wednesday
-        days.push({ date, template_name: 'Pull A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'morning', time_slot: null })
+        days.push({ date, template_name: 'Pull A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'morning', time_slot: null, duration: 90 })
       } else {
-        days.push({ date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest', period: null, time_slot: null })
+        days.push({ date, template_name: null, modality: null, mesocycle_id: null, is_deload: false, status: 'rest', period: null, time_slot: null, duration: null })
       }
     }
     return days

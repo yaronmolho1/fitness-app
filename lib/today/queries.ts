@@ -98,7 +98,8 @@ type WorkoutResult = {
   slots: SlotData[]
   sections?: SectionData[]
   period: Period
-  time_slot: string | null
+  time_slot: string
+  duration: number
 }
 
 export type RoutineItemInfo = {
@@ -175,17 +176,11 @@ type AlreadyLoggedResult = {
   mesocycle: MesocycleInfo
   loggedWorkout: LoggedWorkoutSummary
   period: Period
-  time_slot: string | null
+  time_slot: string
+  duration: number
 }
 
 export type TodayResult = WorkoutResult | RestDayResult | NoActiveMesoResult | AlreadyLoggedResult
-
-// Period ordering for sorting sessions
-const PERIOD_ORDER: Record<Period, number> = {
-  morning: 0,
-  afternoon: 1,
-  evening: 2,
-}
 
 // Determine if the given date falls in the deload week of a mesocycle
 export function isDeloadWeek(
@@ -336,7 +331,8 @@ async function buildAlreadyLoggedResult(
   today: string,
   mesoInfo: MesocycleInfo,
   period: Period,
-  timeSlot: string | null
+  timeSlot: string,
+  duration: number
 ): Promise<AlreadyLoggedResult> {
   const loggedExerciseRows = await db
     .select({
@@ -376,6 +372,7 @@ async function buildAlreadyLoggedResult(
     },
     period,
     time_slot: timeSlot,
+    duration,
   }
 }
 
@@ -484,7 +481,7 @@ export async function getTodayWorkout(today: string): Promise<TodayResult[]> {
 
     if (existingLog) {
       results.push(
-        await buildAlreadyLoggedResult(existingLog, today, mesoInfo, period, timeSlot)
+        await buildAlreadyLoggedResult(existingLog, today, mesoInfo, period, timeSlot, row.duration)
       )
       continue
     }
@@ -628,6 +625,7 @@ export async function getTodayWorkout(today: string): Promise<TodayResult[]> {
       slots: mergedSlots as SlotData[],
       period,
       time_slot: timeSlot,
+      duration: row.duration,
     }
     if (sections) {
       workoutResult.sections = sections
@@ -641,11 +639,11 @@ export async function getTodayWorkout(today: string): Promise<TodayResult[]> {
     return [{ type: 'rest_day', date: today, mesocycle: mesoInfo, routines }]
   }
 
-  // Sort by period order (morning → afternoon → evening)
+  // Sort by time_slot ascending (chronological)
   results.sort((a, b) => {
-    const aPeriod = 'period' in a ? PERIOD_ORDER[a.period] : 0
-    const bPeriod = 'period' in b ? PERIOD_ORDER[b.period] : 0
-    return aPeriod - bPeriod
+    const aSlot = 'time_slot' in a ? (a.time_slot ?? '') : ''
+    const bSlot = 'time_slot' in b ? (b.time_slot ?? '') : ''
+    return aSlot.localeCompare(bSlot)
   })
 
   return results

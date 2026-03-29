@@ -1,4 +1,4 @@
-// T184 tests — getTodayWorkout uses getEffectiveScheduleForDay for override-aware schedule
+// T200: Tests for time-first today view — time_slot sorting, duration in response
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { sql } from 'drizzle-orm'
 import * as schema from '@/lib/db/schema'
@@ -23,15 +23,15 @@ import { getTodayWorkout } from './queries'
 function createTables() {
   testDb.run(sql`DROP TABLE IF EXISTS routine_logs`)
   testDb.run(sql`DROP TABLE IF EXISTS routine_items`)
+  testDb.run(sql`DROP TABLE IF EXISTS template_week_overrides`)
+  testDb.run(sql`DROP TABLE IF EXISTS slot_week_overrides`)
   testDb.run(sql`DROP TABLE IF EXISTS logged_sets`)
   testDb.run(sql`DROP TABLE IF EXISTS logged_exercises`)
   testDb.run(sql`DROP TABLE IF EXISTS logged_workouts`)
-  testDb.run(sql`DROP TABLE IF EXISTS slot_week_overrides`)
-  testDb.run(sql`DROP TABLE IF EXISTS template_week_overrides`)
   testDb.run(sql`DROP TABLE IF EXISTS template_sections`)
   testDb.run(sql`DROP TABLE IF EXISTS exercise_slots`)
-  testDb.run(sql`DROP TABLE IF EXISTS weekly_schedule`)
   testDb.run(sql`DROP TABLE IF EXISTS schedule_week_overrides`)
+  testDb.run(sql`DROP TABLE IF EXISTS weekly_schedule`)
   testDb.run(sql`DROP TABLE IF EXISTS workout_templates`)
   testDb.run(sql`DROP TABLE IF EXISTS exercises`)
   testDb.run(sql`DROP TABLE IF EXISTS mesocycles`)
@@ -95,6 +95,26 @@ function createTables() {
     )
   `)
   testDb.run(sql`
+    CREATE TABLE template_sections (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      template_id INTEGER NOT NULL REFERENCES workout_templates(id) ON DELETE CASCADE,
+      section_name TEXT NOT NULL,
+      modality TEXT NOT NULL,
+      "order" INTEGER NOT NULL,
+      run_type TEXT,
+      target_pace TEXT,
+      hr_zone INTEGER,
+      interval_count INTEGER,
+      interval_rest INTEGER,
+      coaching_cues TEXT,
+      target_distance REAL,
+      target_duration INTEGER,
+      target_elevation_gain INTEGER,
+      planned_duration INTEGER,
+      created_at INTEGER
+    )
+  `)
+  testDb.run(sql`
     CREATE TABLE weekly_schedule (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       mesocycle_id INTEGER NOT NULL REFERENCES mesocycles(id) ON DELETE CASCADE,
@@ -128,46 +148,34 @@ function createTables() {
     sql`CREATE UNIQUE INDEX schedule_week_overrides_meso_week_day_timeslot_template_idx ON schedule_week_overrides(mesocycle_id, week_number, day_of_week, time_slot, template_id)`
   )
   testDb.run(sql`
-    CREATE TABLE template_sections (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      template_id INTEGER NOT NULL REFERENCES workout_templates(id) ON DELETE CASCADE,
-      section_name TEXT NOT NULL,
-      modality TEXT NOT NULL,
-      "order" INTEGER NOT NULL,
-      run_type TEXT,
-      target_pace TEXT,
-      hr_zone INTEGER,
-      interval_count INTEGER,
-      interval_rest INTEGER,
-      coaching_cues TEXT,
-      target_distance REAL, target_duration INTEGER,
-      planned_duration INTEGER,
-      created_at INTEGER
-    )
-  `)
-  testDb.run(sql`
     CREATE TABLE slot_week_overrides (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       exercise_slot_id INTEGER NOT NULL REFERENCES exercise_slots(id) ON DELETE CASCADE,
       week_number INTEGER NOT NULL,
-      weight REAL, reps TEXT, sets INTEGER, rpe REAL,
-      distance REAL, duration INTEGER, pace TEXT, planned_duration INTEGER,
-      interval_count INTEGER, interval_rest INTEGER, elevation_gain INTEGER,
+      weight REAL,
+      reps TEXT,
+      sets INTEGER,
+      rpe REAL,
+      distance REAL,
+      duration INTEGER,
+      pace TEXT,
       is_deload INTEGER NOT NULL DEFAULT 0,
       created_at INTEGER
     )
   `)
-  testDb.run(
-    sql`CREATE UNIQUE INDEX slot_week_overrides_slot_week_idx ON slot_week_overrides(exercise_slot_id, week_number)`
-  )
   testDb.run(sql`
     CREATE TABLE template_week_overrides (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       template_id INTEGER NOT NULL REFERENCES workout_templates(id) ON DELETE CASCADE,
-      section_id INTEGER REFERENCES template_sections(id),
+      section_id INTEGER REFERENCES template_sections(id) ON DELETE CASCADE,
       week_number INTEGER NOT NULL,
-      pace TEXT, distance REAL, duration INTEGER, planned_duration INTEGER,
-      interval_count INTEGER, interval_rest INTEGER, elevation_gain INTEGER,
+      pace TEXT,
+      interval_count INTEGER,
+      interval_rest INTEGER,
+      distance REAL,
+      duration INTEGER,
+      elevation_gain INTEGER,
+      planned_duration INTEGER,
       created_at INTEGER
     )
   `)
@@ -259,21 +267,13 @@ function seedMesocycle(
     .insert(schema.mesocycles)
     .values({
       name: overrides.name ?? 'Test Meso',
-      start_date: overrides.start_date ?? '2026-03-02',
-      end_date: overrides.end_date ?? '2026-03-29',
+      start_date: overrides.start_date ?? '2026-03-01',
+      end_date: overrides.end_date ?? '2026-03-28',
       work_weeks: overrides.work_weeks ?? 4,
       has_deload: overrides.has_deload ?? false,
       status: overrides.status ?? 'planned',
     })
     .returning({ id: schema.mesocycles.id })
-    .get()
-}
-
-function seedExercise(name: string, modality = 'resistance') {
-  return testDb
-    .insert(schema.exercises)
-    .values({ name, modality, created_at: new Date() })
-    .returning({ id: schema.exercises.id })
     .get()
 }
 
@@ -301,7 +301,8 @@ function seedSchedule(
   templateId: number,
   weekType = 'normal',
   period = 'morning',
-  timeSlot?: string
+  timeSlot = '07:00',
+  duration = 90
 ) {
   return testDb
     .insert(schema.weekly_schedule)
@@ -311,177 +312,101 @@ function seedSchedule(
       template_id: templateId,
       week_type: weekType,
       period,
-      time_slot: timeSlot ?? (period === 'morning' ? '07:00' : period === 'afternoon' ? '13:00' : '18:00'),
+      time_slot: timeSlot,
+      duration,
       created_at: new Date(),
     })
     .returning()
     .get()
 }
 
-function seedExerciseSlot(templateId: number, exerciseId: number, order: number) {
-  return testDb
-    .insert(schema.exercise_slots)
-    .values({
-      template_id: templateId,
-      exercise_id: exerciseId,
-      sets: 3,
-      reps: '8-10',
-      order,
-      is_main: false,
-      created_at: new Date(),
-    })
-    .returning({ id: schema.exercise_slots.id })
-    .get()
-}
-
-// ============================================================================
-// T184 — getTodayWorkout respects schedule_week_overrides
-// ============================================================================
-
-describe('getTodayWorkout — T184: override-aware schedule resolution', () => {
+describe('getTodayWorkout — T200 time-first model', () => {
   beforeEach(() => {
     createTables()
   })
 
-  it('returns overridden template when override swaps template for the week', async () => {
-    // AC10: getTodayWorkout returns the overridden template, not the base
-    const meso = seedMesocycle({ status: 'active', start_date: '2026-03-02' })
-    const ex = seedExercise('Bench Press')
-    const tmpl1 = seedTemplate(meso.id, 'Base Push')
-    const tmpl2 = seedTemplate(meso.id, 'Override Pull')
-    seedExerciseSlot(tmpl1.id, ex.id, 1)
-    seedExerciseSlot(tmpl2.id, ex.id, 1)
-    seedSchedule(meso.id, 0, tmpl1.id, 'normal', 'morning')
+  // ── duration in workout result ──────────────────────────────────────
+  describe('duration in response', () => {
+    it('workout result includes duration from schedule', async () => {
+      const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
+      const tmpl = seedTemplate(meso.id, 'Push A')
+      seedSchedule(meso.id, 1, tmpl.id, 'normal', 'morning', '08:00', 75)
 
-    // Override week 1, Monday morning at same time_slot -> template 2
-    testDb.run(sql`
-      INSERT INTO schedule_week_overrides
-        (mesocycle_id, week_number, day_of_week, period, template_id, time_slot, override_group)
-      VALUES
-        (${meso.id}, 1, 0, 'morning', ${tmpl2.id}, '07:00', 'move-test')
-    `)
-
-    const results = await getTodayWorkout('2026-03-02')
-    expect(results).toHaveLength(1)
-    expect(results[0].type).toBe('workout')
-    if (results[0].type === 'workout') {
-      expect(results[0].template.name).toBe('Override Pull')
-      expect(results[0].time_slot).toBe('07:00')
-    }
-  })
-
-  it('returns rest day when override nullifies template for the period', async () => {
-    // Override sets template_id=NULL -> rest override for that slot
-    const meso = seedMesocycle({ status: 'active', start_date: '2026-03-02' })
-    const ex = seedExercise('Squat')
-    const tmpl = seedTemplate(meso.id, 'Legs')
-    seedExerciseSlot(tmpl.id, ex.id, 1)
-    seedSchedule(meso.id, 0, tmpl.id, 'normal', 'morning')
-
-    testDb.run(sql`
-      INSERT INTO schedule_week_overrides
-        (mesocycle_id, week_number, day_of_week, period, template_id, time_slot, override_group)
-      VALUES
-        (${meso.id}, 1, 0, 'morning', NULL, '07:00', 'move-rest')
-    `)
-
-    const results = await getTodayWorkout('2026-03-02')
-    expect(results).toHaveLength(1)
-    // Null template override = rest day
-    expect(results[0].type).toBe('rest_day')
-  })
-
-  it('includes override-only entry when workout added to period with no base', async () => {
-    // Override adds evening workout, base only has morning
-    const meso = seedMesocycle({ status: 'active', start_date: '2026-03-02' })
-    const ex = seedExercise('Bench Press')
-    const tmpl1 = seedTemplate(meso.id, 'Morning Push')
-    const tmpl2 = seedTemplate(meso.id, 'Evening Add')
-    seedExerciseSlot(tmpl1.id, ex.id, 1)
-    seedExerciseSlot(tmpl2.id, ex.id, 1)
-    seedSchedule(meso.id, 0, tmpl1.id, 'normal', 'morning')
-
-    testDb.run(sql`
-      INSERT INTO schedule_week_overrides
-        (mesocycle_id, week_number, day_of_week, period, template_id, time_slot, override_group)
-      VALUES
-        (${meso.id}, 1, 0, 'evening', ${tmpl2.id}, '19:00', 'move-add')
-    `)
-
-    const results = await getTodayWorkout('2026-03-02')
-    expect(results).toHaveLength(2)
-    // Sorted: morning first, evening second
-    if (results[0].type === 'workout' && results[1].type === 'workout') {
-      expect(results[0].period).toBe('morning')
-      expect(results[0].template.name).toBe('Morning Push')
-      expect(results[1].period).toBe('evening')
-      expect(results[1].template.name).toBe('Evening Add')
-      expect(results[1].time_slot).toBe('19:00')
-    }
-  })
-
-  it('override only affects the specific week, not other weeks', async () => {
-    // Week 1 has override, week 2 should use base schedule
-    const meso = seedMesocycle({ status: 'active', start_date: '2026-03-02' })
-    const ex = seedExercise('Bench Press')
-    const tmpl1 = seedTemplate(meso.id, 'Base Push')
-    const tmpl2 = seedTemplate(meso.id, 'Override Pull')
-    seedExerciseSlot(tmpl1.id, ex.id, 1)
-    seedExerciseSlot(tmpl2.id, ex.id, 1)
-    seedSchedule(meso.id, 0, tmpl1.id, 'normal', 'morning')
-
-    // Override only week 1 at same time_slot as base
-    testDb.run(sql`
-      INSERT INTO schedule_week_overrides
-        (mesocycle_id, week_number, day_of_week, period, template_id, time_slot, override_group)
-      VALUES
-        (${meso.id}, 1, 0, 'morning', ${tmpl2.id}, '07:00', 'move-test')
-    `)
-
-    // Week 2 Monday = 2026-03-09
-    const results = await getTodayWorkout('2026-03-09')
-    expect(results).toHaveLength(1)
-    expect(results[0].type).toBe('workout')
-    if (results[0].type === 'workout') {
-      expect(results[0].template.name).toBe('Base Push')
-      expect(results[0].time_slot).toBe('07:00')
-    }
-  })
-
-  it('override during deload week resolves against deload base schedule', async () => {
-    // AC12: deload week override
-    const meso = seedMesocycle({
-      status: 'active',
-      start_date: '2026-03-02',
-      end_date: '2026-03-22',
-      work_weeks: 2,
-      has_deload: true,
+      const results = await getTodayWorkout('2026-03-10')
+      expect(results[0].type).toBe('workout')
+      if (results[0].type === 'workout') {
+        expect(results[0].duration).toBe(75)
+      }
     })
-    const ex = seedExercise('Bench Press')
-    const tmplNormal = seedTemplate(meso.id, 'Push Normal')
-    const tmplDeload = seedTemplate(meso.id, 'Push Deload')
-    const tmplOverride = seedTemplate(meso.id, 'Deload Override')
-    seedExerciseSlot(tmplNormal.id, ex.id, 1)
-    seedExerciseSlot(tmplDeload.id, ex.id, 1)
-    seedExerciseSlot(tmplOverride.id, ex.id, 1)
-    seedSchedule(meso.id, 0, tmplNormal.id, 'normal')
-    seedSchedule(meso.id, 0, tmplDeload.id, 'deload')
 
-    // Override week 3 (deload) Monday morning
-    testDb.run(sql`
-      INSERT INTO schedule_week_overrides
-        (mesocycle_id, week_number, day_of_week, period, template_id, time_slot, override_group)
-      VALUES
-        (${meso.id}, 3, 0, 'morning', ${tmplOverride.id}, '07:00', 'move-deload')
-    `)
+    it('already_logged result includes duration from schedule', async () => {
+      const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
+      const tmpl = seedTemplate(meso.id, 'Push A')
+      seedSchedule(meso.id, 1, tmpl.id, 'normal', 'morning', '08:00', 60)
 
-    // 2026-03-16 is Monday, week 3 = deload
-    const results = await getTodayWorkout('2026-03-16')
-    expect(results).toHaveLength(1)
-    expect(results[0].type).toBe('workout')
-    if (results[0].type === 'workout') {
-      expect(results[0].template.name).toBe('Deload Override')
-      expect(results[0].mesocycle.week_type).toBe('deload')
-    }
+      testDb
+        .insert(schema.logged_workouts)
+        .values({
+          template_id: tmpl.id,
+          canonical_name: 'push-a',
+          log_date: '2026-03-10',
+          logged_at: new Date(),
+          template_snapshot: { version: 1, name: 'push-a', modality: 'resistance' },
+          created_at: new Date(),
+        })
+        .run()
+
+      const results = await getTodayWorkout('2026-03-10')
+      expect(results[0].type).toBe('already_logged')
+      if (results[0].type === 'already_logged') {
+        expect(results[0].duration).toBe(60)
+      }
+    })
+  })
+
+  // ── time_slot ascending sort ────────────────────────────────────────
+  describe('sort by time_slot ascending', () => {
+    it('sorts results by time_slot, not by period', async () => {
+      const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
+      const t1 = seedTemplate(meso.id, 'A')
+      const t2 = seedTemplate(meso.id, 'B')
+      const t3 = seedTemplate(meso.id, 'C')
+
+      // Insert out of time_slot order, with mismatched period/time
+      seedSchedule(meso.id, 1, t3.id, 'normal', 'evening', '18:00')
+      seedSchedule(meso.id, 1, t1.id, 'normal', 'morning', '07:00')
+      seedSchedule(meso.id, 1, t2.id, 'normal', 'afternoon', '14:00')
+
+      const results = await getTodayWorkout('2026-03-10')
+      expect(results).toHaveLength(3)
+      if (
+        results[0].type === 'workout' &&
+        results[1].type === 'workout' &&
+        results[2].type === 'workout'
+      ) {
+        expect(results[0].time_slot).toBe('07:00')
+        expect(results[1].time_slot).toBe('14:00')
+        expect(results[2].time_slot).toBe('18:00')
+      }
+    })
+
+    it('afternoon at 06:00 sorts before morning at 09:00 (time_slot wins)', async () => {
+      const meso = seedMesocycle({ status: 'active', start_date: '2026-03-01' })
+      const t1 = seedTemplate(meso.id, 'Early')
+      const t2 = seedTemplate(meso.id, 'Late')
+
+      // "afternoon" at 06:00, "morning" at 09:00 — time_slot should determine order
+      seedSchedule(meso.id, 1, t2.id, 'normal', 'morning', '09:00')
+      seedSchedule(meso.id, 1, t1.id, 'normal', 'afternoon', '06:00')
+
+      const results = await getTodayWorkout('2026-03-10')
+      expect(results).toHaveLength(2)
+      if (results[0].type === 'workout' && results[1].type === 'workout') {
+        expect(results[0].time_slot).toBe('06:00')
+        expect(results[0].template.name).toBe('Early')
+        expect(results[1].time_slot).toBe('09:00')
+        expect(results[1].template.name).toBe('Late')
+      }
+    })
   })
 })

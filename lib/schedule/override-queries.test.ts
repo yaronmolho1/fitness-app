@@ -117,7 +117,7 @@ describe('getEffectiveScheduleForDay', () => {
     })
   })
 
-  it('returns override entry instead of base when override exists for a slot', async () => {
+  it('returns override entry instead of base when override exists at same time_slot', async () => {
     sqlite.exec(`
       INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
       VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
@@ -128,7 +128,7 @@ describe('getEffectiveScheduleForDay', () => {
       INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
       VALUES (1, 0, 1, 'normal', 'morning', '08:00');
       INSERT INTO schedule_week_overrides (mesocycle_id, week_number, day_of_week, period, template_id, time_slot, override_group)
-      VALUES (1, 2, 0, 'morning', 2, '09:00', 'move-abc');
+      VALUES (1, 2, 0, 'morning', 2, '08:00', 'move-abc');
     `)
 
     const result = await getEffectiveScheduleForDay(db, 1, 2, 0, 'normal')
@@ -137,7 +137,7 @@ describe('getEffectiveScheduleForDay', () => {
     expect(result[0]).toMatchObject({
       template_id: 2,
       period: 'morning',
-      time_slot: '09:00',
+      time_slot: '08:00',
       is_override: true,
       override_group: 'move-abc',
     })
@@ -167,7 +167,7 @@ describe('getEffectiveScheduleForDay', () => {
     })
   })
 
-  it('handles multiple periods on same day independently', async () => {
+  it('handles multiple time_slots on same day independently', async () => {
     sqlite.exec(`
       INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
       VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
@@ -181,21 +181,21 @@ describe('getEffectiveScheduleForDay', () => {
       VALUES (1, 0, 1, 'normal', 'morning', '07:00');
       INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
       VALUES (1, 0, 2, 'normal', 'evening', '18:00');
-      -- Override only the morning slot
+      -- Override the morning time_slot (07:00)
       INSERT INTO schedule_week_overrides (mesocycle_id, week_number, day_of_week, period, template_id, time_slot, override_group)
-      VALUES (1, 2, 0, 'morning', 3, '08:00', 'move-123');
+      VALUES (1, 2, 0, 'morning', 3, '07:00', 'move-123');
     `)
 
     const result = await getEffectiveScheduleForDay(db, 1, 2, 0, 'normal')
 
     expect(result).toHaveLength(2)
-    // Morning is overridden
-    const morning = result.find((e) => e.period === 'morning')!
+    // Morning (07:00) is overridden
+    const morning = result.find((e) => e.time_slot === '07:00')!
     expect(morning.template_id).toBe(3)
     expect(morning.is_override).toBe(true)
     expect(morning.override_group).toBe('move-123')
-    // Evening is base
-    const evening = result.find((e) => e.period === 'evening')!
+    // Evening (18:00) is base
+    const evening = result.find((e) => e.time_slot === '18:00')!
     expect(evening.template_id).toBe(2)
     expect(evening.is_override).toBe(false)
     expect(evening.override_group).toBeNull()
@@ -261,7 +261,7 @@ describe('getEffectiveScheduleForDay', () => {
     expect(evening.override_group).toBe('move-new')
   })
 
-  it('results are sorted by period: morning → afternoon → evening', async () => {
+  it('results are sorted by time_slot ascending', async () => {
     sqlite.exec(`
       INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
       VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
@@ -271,20 +271,20 @@ describe('getEffectiveScheduleForDay', () => {
       VALUES (2, 1, '5K Run', '5k-run', 'running');
       INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
       VALUES (3, 1, 'BJJ', 'bjj', 'mma');
-      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-      VALUES (1, 0, 2, 'normal', 'evening');
-      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-      VALUES (1, 0, 3, 'normal', 'afternoon');
-      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-      VALUES (1, 0, 1, 'normal', 'morning');
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+      VALUES (1, 0, 2, 'normal', 'evening', '18:00');
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+      VALUES (1, 0, 3, 'normal', 'afternoon', '14:00');
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+      VALUES (1, 0, 1, 'normal', 'morning', '07:00');
     `)
 
     const result = await getEffectiveScheduleForDay(db, 1, 1, 0, 'normal')
 
     expect(result).toHaveLength(3)
-    expect(result[0].period).toBe('morning')
-    expect(result[1].period).toBe('afternoon')
-    expect(result[2].period).toBe('evening')
+    expect(result[0].time_slot).toBe('07:00')
+    expect(result[1].time_slot).toBe('14:00')
+    expect(result[2].time_slot).toBe('18:00')
   })
 
   it('override only applies to specified week number', async () => {

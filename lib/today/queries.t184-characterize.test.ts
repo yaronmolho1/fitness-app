@@ -458,12 +458,12 @@ describe('getTodayWorkout — schedule resolution baseline (T184 characterize)',
     seedExerciseSlot(tmpl2.id, ex.id, 1)
     seedSchedule(meso.id, 0, tmpl1.id, 'normal', 'morning')
 
-    // Insert an override for week 1, day 0, morning
+    // Insert an override for week 1, day 0, at same time_slot as base
     testDb.run(sql`
       INSERT INTO schedule_week_overrides
         (mesocycle_id, week_number, day_of_week, period, template_id, time_slot, override_group)
       VALUES
-        (${meso.id}, 1, 0, 'morning', ${tmpl2.id}, '09:00', 'move-test')
+        (${meso.id}, 1, 0, 'morning', ${tmpl2.id}, '07:00', 'move-test')
     `)
 
     const results = await getTodayWorkout('2026-03-02')
@@ -471,7 +471,7 @@ describe('getTodayWorkout — schedule resolution baseline (T184 characterize)',
     // Override template is returned
     if (results[0].type === 'workout') {
       expect(results[0].template.name).toBe('Override Pull')
-      expect(results[0].time_slot).toBe('09:00')
+      expect(results[0].time_slot).toBe('07:00')
     }
   })
 

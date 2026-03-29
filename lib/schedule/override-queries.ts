@@ -8,21 +8,16 @@ export type EffectiveScheduleEntry = {
   schedule_entry_id: number | null
   template_id: number | null
   period: Period
-  time_slot: string | null
-  duration: number | null
+  time_slot: string
+  duration: number
   is_override: boolean
   override_group: string | null
-}
-
-const PERIOD_ORDER: Record<Period, number> = {
-  morning: 0,
-  afternoon: 1,
-  evening: 2,
 }
 
 /**
  * Resolves the effective schedule for a specific day within a mesocycle,
  * merging base weekly_schedule with any schedule_week_overrides.
+ * Override matching uses time_slot key (not period). Results sorted by time_slot ascending.
  */
 export async function getEffectiveScheduleForDay(
   database: AppDb,
@@ -69,20 +64,20 @@ export async function getEffectiveScheduleForDay(
     )
     .all()
 
-  // Index overrides by period for fast lookup
-  const overrideByPeriod = new Map<string, (typeof overrideRows)[number]>()
+  // Index overrides by time_slot for fast lookup
+  const overrideByTimeSlot = new Map<string, (typeof overrideRows)[number]>()
   for (const ov of overrideRows) {
-    overrideByPeriod.set(ov.period, ov)
+    overrideByTimeSlot.set(ov.time_slot, ov)
   }
 
-  // Collect all periods present in either base or overrides
-  const seenPeriods = new Set<string>()
+  // Track seen time_slots to identify override-only entries
+  const seenTimeSlots = new Set<string>()
   const entries: EffectiveScheduleEntry[] = []
 
-  // Process base entries — apply override if one exists for the period
+  // Process base entries — apply override if one exists for the same time_slot
   for (const base of baseRows) {
-    seenPeriods.add(base.period)
-    const override = overrideByPeriod.get(base.period)
+    seenTimeSlots.add(base.time_slot)
+    const override = overrideByTimeSlot.get(base.time_slot)
 
     if (override) {
       entries.push({
@@ -107,9 +102,9 @@ export async function getEffectiveScheduleForDay(
     }
   }
 
-  // Add override-only entries (periods with no base schedule)
+  // Add override-only entries (time_slots with no base schedule)
   for (const ov of overrideRows) {
-    if (!seenPeriods.has(ov.period)) {
+    if (!seenTimeSlots.has(ov.time_slot)) {
       entries.push({
         schedule_entry_id: null,
         template_id: ov.template_id,
@@ -122,8 +117,8 @@ export async function getEffectiveScheduleForDay(
     }
   }
 
-  // Sort by period order
-  entries.sort((a, b) => PERIOD_ORDER[a.period] - PERIOD_ORDER[b.period])
+  // Sort by time_slot ascending (chronological)
+  entries.sort((a, b) => a.time_slot.localeCompare(b.time_slot))
 
   return entries
 }

@@ -17,16 +17,11 @@ export type CalendarDay = {
   status: 'completed' | 'projected' | 'rest'
   period: 'morning' | 'afternoon' | 'evening' | null
   time_slot: string | null
+  duration: number | null
 }
 
 export type CalendarProjection = {
   days: CalendarDay[]
-}
-
-const PERIOD_ORDER: Record<string, number> = {
-  morning: 0,
-  afternoon: 1,
-  evening: 2,
 }
 
 // Returns 0=Monday..6=Sunday from a YYYY-MM-DD string
@@ -71,7 +66,8 @@ type ScheduleRow = {
   template_name: string | null
   modality: string | null
   period: string
-  time_slot: string | null
+  time_slot: string
+  duration: number
 }
 
 type OverrideRow = {
@@ -82,7 +78,8 @@ type OverrideRow = {
   template_id: number | null
   template_name: string | null
   modality: string | null
-  time_slot: string | null
+  time_slot: string
+  duration: number
 }
 
 export async function getCalendarProjection(
@@ -122,6 +119,7 @@ export async function getCalendarProjection(
         modality: workout_templates.modality,
         period: weekly_schedule.period,
         time_slot: weekly_schedule.time_slot,
+        duration: weekly_schedule.duration,
       })
       .from(weekly_schedule)
       .leftJoin(workout_templates, eq(weekly_schedule.template_id, workout_templates.id))
@@ -142,7 +140,7 @@ export async function getCalendarProjection(
   }
 
   // Batch-load schedule_week_overrides for overlapping mesocycles
-  // Key: `${mesocycle_id}-${week_number}-${day_of_week}-${period}`
+  // Key: `${mesocycle_id}-${week_number}-${day_of_week}-${time_slot}`
   const overrideLookup = new Map<string, OverrideRow>()
 
   if (mesoRows.length > 0) {
@@ -158,6 +156,7 @@ export async function getCalendarProjection(
         template_name: workout_templates.name,
         modality: workout_templates.modality,
         time_slot: schedule_week_overrides.time_slot,
+        duration: schedule_week_overrides.duration,
       })
       .from(schedule_week_overrides)
       .leftJoin(workout_templates, eq(schedule_week_overrides.template_id, workout_templates.id))
@@ -165,7 +164,7 @@ export async function getCalendarProjection(
       .all() as OverrideRow[]
 
     for (const row of overrideRows) {
-      const key = `${row.mesocycle_id}-${row.week_number}-${row.day_of_week}-${row.period}`
+      const key = `${row.mesocycle_id}-${row.week_number}-${row.day_of_week}-${row.time_slot}`
       overrideLookup.set(key, row)
     }
   }
@@ -196,6 +195,7 @@ export async function getCalendarProjection(
         status: 'rest' as const,
         period: null,
         time_slot: null,
+        duration: null,
       }]
     }
 
@@ -213,16 +213,15 @@ export async function getCalendarProjection(
     const schedMap = scheduleLookup.get(meso.id)
     const baseEntries = schedMap?.get(`${dow}-${weekType}`) ?? []
 
-    // Merge base schedule with per-week overrides
-    const periods = ['morning', 'afternoon', 'evening'] as const
-    type ResolvedEntry = { template_name: string | null; modality: string | null; period: string; time_slot: string | null }
+    // Merge base schedule with per-week overrides (keyed by time_slot)
+    type ResolvedEntry = { template_name: string | null; modality: string | null; period: string; time_slot: string; duration: number }
     const resolved: ResolvedEntry[] = []
-    const seenPeriods = new Set<string>()
+    const seenTimeSlots = new Set<string>()
 
-    // Process base entries, applying overrides where they exist
+    // Process base entries, applying overrides where they exist (matched by time_slot)
     for (const entry of baseEntries) {
-      seenPeriods.add(entry.period)
-      const overrideKey = `${meso.id}-${weekNumber}-${dow}-${entry.period}`
+      seenTimeSlots.add(entry.time_slot)
+      const overrideKey = `${meso.id}-${weekNumber}-${dow}-${entry.time_slot}`
       const override = overrideLookup.get(overrideKey)
 
       if (override) {
@@ -231,6 +230,7 @@ export async function getCalendarProjection(
           modality: override.modality ?? null,
           period: override.period,
           time_slot: override.time_slot,
+          duration: override.duration,
         })
       } else {
         resolved.push({
@@ -238,23 +238,24 @@ export async function getCalendarProjection(
           modality: entry.modality ?? null,
           period: entry.period,
           time_slot: entry.time_slot,
+          duration: entry.duration,
         })
       }
     }
 
-    // Add override-only entries (periods with no base schedule)
-    for (const period of periods) {
-      if (seenPeriods.has(period)) continue
-      const overrideKey = `${meso.id}-${weekNumber}-${dow}-${period}`
-      const override = overrideLookup.get(overrideKey)
-      if (override) {
-        resolved.push({
-          template_name: override.template_name ?? null,
-          modality: override.modality ?? null,
-          period: override.period,
-          time_slot: override.time_slot,
-        })
-      }
+    // Add override-only entries (time_slots with no base schedule)
+    // Collect all override time_slots for this day/week
+    const overridePrefix = `${meso.id}-${weekNumber}-${dow}-`
+    for (const [key, override] of overrideLookup) {
+      if (!key.startsWith(overridePrefix)) continue
+      if (seenTimeSlots.has(override.time_slot)) continue
+      resolved.push({
+        template_name: override.template_name ?? null,
+        modality: override.modality ?? null,
+        period: override.period,
+        time_slot: override.time_slot,
+        duration: override.duration,
+      })
     }
 
     if (resolved.length === 0) {
@@ -267,12 +268,13 @@ export async function getCalendarProjection(
         status: 'rest' as const,
         period: null,
         time_slot: null,
+        duration: null,
       }]
     }
 
-    // Sort by period order: morning → afternoon → evening
+    // Sort by time_slot ascending (chronological)
     const sorted = resolved.sort(
-      (a, b) => (PERIOD_ORDER[a.period] ?? 99) - (PERIOD_ORDER[b.period] ?? 99)
+      (a, b) => a.time_slot.localeCompare(b.time_slot)
     )
 
     return sorted.map((entry) => {
@@ -297,6 +299,7 @@ export async function getCalendarProjection(
         status,
         period: entry.period as CalendarDay['period'],
         time_slot: entry.time_slot,
+        duration: entry.duration,
       }
     })
   })
