@@ -1,5 +1,5 @@
-// Characterization tests for move-workout-modal before T202 refactor
-// Captures current period-based behavior that will change to time-first model
+// Characterization tests for move-workout-modal — updated for T202 time-first model
+// Period-based tests replaced with time-based equivalents
 // @vitest-environment jsdom
 import { render, screen, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -22,7 +22,6 @@ function makeProps(overrides: Partial<MoveWorkoutModalProps> = {}): MoveWorkoutM
     mesocycleId: 1,
     weekNumber: 2,
     sourceDay: 0, // Monday (internal)
-    sourcePeriod: 'morning',
     sourceTimeSlot: '07:00',
     sourceDuration: 90,
     sourceTemplateName: 'Push A',
@@ -32,25 +31,25 @@ function makeProps(overrides: Partial<MoveWorkoutModalProps> = {}): MoveWorkoutM
   }
 }
 
-describe('MoveWorkoutModal — characterization (pre-T202)', () => {
+describe('MoveWorkoutModal — characterization (post-T202)', () => {
   afterEach(cleanup)
 
   // -- Initial render state --
 
   describe('initial render', () => {
-    it('does not render period/time/scope controls until a day is selected', () => {
+    it('does not render time/duration/scope controls until a day is selected', () => {
       render(<MoveWorkoutModal {...makeProps()} />)
-      // Period radios not shown
-      expect(screen.queryByRole('radio', { name: /morning/i })).not.toBeInTheDocument()
       // Time input not shown
       expect(screen.queryByLabelText(/time/i)).not.toBeInTheDocument()
+      // Duration input not shown
+      expect(screen.queryByLabelText(/duration/i)).not.toBeInTheDocument()
       // Scope radios not shown
       expect(screen.queryByRole('radio', { name: /this week only/i })).not.toBeInTheDocument()
     })
 
     it('renders dialog description text', () => {
       render(<MoveWorkoutModal {...makeProps()} />)
-      expect(screen.getByText(/choose a new day, period, and time/i)).toBeInTheDocument()
+      expect(screen.getByText(/choose a new day and time/i)).toBeInTheDocument()
     })
 
     it('renders cancel and move buttons', () => {
@@ -78,24 +77,20 @@ describe('MoveWorkoutModal — characterization (pre-T202)', () => {
     it('source day is not disabled when week offset is non-zero', async () => {
       const user = userEvent.setup()
       render(<MoveWorkoutModal {...makeProps({ sourceDay: 0 })} />)
-      // Mon is disabled at offset 0
       expect(screen.getByRole('button', { name: 'Mon' })).toBeDisabled()
-      // Switch to next week
       await user.click(screen.getByRole('button', { name: /next week/i }))
-      // Mon should be enabled now
       expect(screen.getByRole('button', { name: 'Mon' })).not.toBeDisabled()
     })
 
     it('resets target day selection when week offset changes', async () => {
       const user = userEvent.setup()
       render(<MoveWorkoutModal {...makeProps()} />)
-      // Select Tue
       await user.click(screen.getByRole('button', { name: 'Tue' }))
-      // Period controls should be visible
-      expect(screen.getByRole('radio', { name: /morning/i })).toBeInTheDocument()
-      // Switch to next week — target day resets, period controls disappear
+      // Time controls should be visible
+      expect(screen.getByLabelText(/time/i)).toBeInTheDocument()
+      // Switch to next week — target day resets, controls disappear
       await user.click(screen.getByRole('button', { name: /next week/i }))
-      expect(screen.queryByRole('radio', { name: /morning/i })).not.toBeInTheDocument()
+      expect(screen.queryByLabelText(/time/i)).not.toBeInTheDocument()
     })
 
     it('sends week offset in onConfirm', async () => {
@@ -108,50 +103,6 @@ describe('MoveWorkoutModal — characterization (pre-T202)', () => {
       expect(onConfirm).toHaveBeenCalledWith(
         expect.objectContaining({ targetWeekOffset: 1 })
       )
-    })
-
-    it('fully occupied days are not disabled when week offset is non-zero', async () => {
-      const user = userEvent.setup()
-      const occupiedSlots: OccupiedSlot[] = [
-        { day: 3, period: 'morning', templateName: 'A' },
-        { day: 3, period: 'afternoon', templateName: 'B' },
-        { day: 3, period: 'evening', templateName: 'C' },
-      ]
-      render(<MoveWorkoutModal {...makeProps({ occupiedSlots })} />)
-      // Thu disabled at offset 0
-      expect(screen.getByRole('button', { name: 'Thu' })).toBeDisabled()
-      // Switch to prev week
-      await user.click(screen.getByRole('button', { name: /prev week/i }))
-      // Thu should be enabled now (occupied data only applies at offset 0)
-      expect(screen.getByRole('button', { name: 'Thu' })).not.toBeDisabled()
-    })
-  })
-
-  // -- Period selector defaults --
-
-  describe('period selector defaults', () => {
-    it('defaults to morning period', async () => {
-      const user = userEvent.setup()
-      render(<MoveWorkoutModal {...makeProps()} />)
-      await user.click(screen.getByRole('button', { name: 'Tue' }))
-      expect(screen.getByRole('radio', { name: /morning/i })).toBeChecked()
-    })
-
-    it('switching period updates onConfirm targetDay but period is implicit from time', async () => {
-      const onConfirm = vi.fn()
-      const user = userEvent.setup()
-      render(<MoveWorkoutModal {...makeProps({ onConfirm })} />)
-      await user.click(screen.getByRole('button', { name: 'Wed' }))
-      await user.click(screen.getByRole('radio', { name: /afternoon/i }))
-      await user.click(screen.getByRole('button', { name: /move workout/i }))
-      // onConfirm does NOT receive a period — period is not part of the callback
-      expect(onConfirm).toHaveBeenCalledWith({
-        targetDay: 2,
-        targetTimeSlot: '07:00',
-        targetDuration: 90,
-        scope: 'this_week',
-        targetWeekOffset: 0,
-      })
     })
   })
 
@@ -172,7 +123,21 @@ describe('MoveWorkoutModal — characterization (pre-T202)', () => {
       expect(screen.getByLabelText(/time/i)).toHaveValue('07:00')
     })
 
-    it('pre-fills duration from sourceDuration in onConfirm', async () => {
+    it('pre-fills duration from sourceDuration', async () => {
+      const user = userEvent.setup()
+      render(<MoveWorkoutModal {...makeProps({ sourceDuration: 45 })} />)
+      await user.click(screen.getByRole('button', { name: 'Tue' }))
+      expect(screen.getByLabelText(/duration/i)).toHaveValue(45)
+    })
+
+    it('falls back to 60 min duration when sourceDuration is null', async () => {
+      const user = userEvent.setup()
+      render(<MoveWorkoutModal {...makeProps({ sourceDuration: null })} />)
+      await user.click(screen.getByRole('button', { name: 'Tue' }))
+      expect(screen.getByLabelText(/duration/i)).toHaveValue(60)
+    })
+
+    it('pre-fills duration in onConfirm', async () => {
       const onConfirm = vi.fn()
       const user = userEvent.setup()
       render(<MoveWorkoutModal {...makeProps({ onConfirm, sourceDuration: 45 })} />)
@@ -180,17 +145,6 @@ describe('MoveWorkoutModal — characterization (pre-T202)', () => {
       await user.click(screen.getByRole('button', { name: /move workout/i }))
       expect(onConfirm).toHaveBeenCalledWith(
         expect.objectContaining({ targetDuration: 45 })
-      )
-    })
-
-    it('falls back to 60 min duration when sourceDuration is null', async () => {
-      const onConfirm = vi.fn()
-      const user = userEvent.setup()
-      render(<MoveWorkoutModal {...makeProps({ onConfirm, sourceDuration: null })} />)
-      await user.click(screen.getByRole('button', { name: 'Tue' }))
-      await user.click(screen.getByRole('button', { name: /move workout/i }))
-      expect(onConfirm).toHaveBeenCalledWith(
-        expect.objectContaining({ targetDuration: 60 })
       )
     })
   })
@@ -201,12 +155,11 @@ describe('MoveWorkoutModal — characterization (pre-T202)', () => {
     it('maps day buttons to internal convention (Mon=0 through Sun=6)', async () => {
       const onConfirm = vi.fn()
       const user = userEvent.setup()
-      // Source is Mon (0), so test with Fri
       render(<MoveWorkoutModal {...makeProps({ onConfirm, sourceDay: 0 })} />)
       await user.click(screen.getByRole('button', { name: 'Fri' }))
       await user.click(screen.getByRole('button', { name: /move workout/i }))
       expect(onConfirm).toHaveBeenCalledWith(
-        expect.objectContaining({ targetDay: 4 }) // Fri = internal 4
+        expect.objectContaining({ targetDay: 4 })
       )
     })
 
@@ -234,58 +187,38 @@ describe('MoveWorkoutModal — characterization (pre-T202)', () => {
     })
   })
 
-  // -- Occupied slot warnings --
+  // -- Overlap warnings (time-based) --
 
-  describe('occupied slot warnings (period-based)', () => {
-    it('shows occupied text next to each occupied period', async () => {
+  describe('overlap warnings (time-based)', () => {
+    it('shows overlap warning when target time range intersects existing workout', async () => {
       const user = userEvent.setup()
       const occupiedSlots: OccupiedSlot[] = [
-        { day: 1, period: 'morning', templateName: 'Pull A' },
-        { day: 1, period: 'evening', templateName: 'Legs' },
+        { day: 1, timeSlot: '07:30', duration: 60, templateName: 'Pull A' },
+      ]
+      render(<MoveWorkoutModal {...makeProps({ occupiedSlots, sourceTimeSlot: '07:00', sourceDuration: 90 })} />)
+      await user.click(screen.getByRole('button', { name: 'Tue' }))
+      // 07:00-08:30 overlaps 07:30-08:30
+      expect(screen.getByText(/overlap.*Pull A/i)).toBeInTheDocument()
+    })
+
+    it('no warning when times do not overlap', async () => {
+      const user = userEvent.setup()
+      const occupiedSlots: OccupiedSlot[] = [
+        { day: 1, timeSlot: '14:00', duration: 60, templateName: 'Legs' },
+      ]
+      render(<MoveWorkoutModal {...makeProps({ occupiedSlots, sourceTimeSlot: '07:00', sourceDuration: 60 })} />)
+      await user.click(screen.getByRole('button', { name: 'Tue' }))
+      expect(screen.queryByText(/overlap/i)).not.toBeInTheDocument()
+    })
+
+    it('AC11: no day-level restrictions regardless of workout count', () => {
+      const occupiedSlots: OccupiedSlot[] = [
+        { day: 3, timeSlot: '06:00', duration: 60, templateName: 'A' },
+        { day: 3, timeSlot: '10:00', duration: 60, templateName: 'B' },
+        { day: 3, timeSlot: '14:00', duration: 60, templateName: 'C' },
       ]
       render(<MoveWorkoutModal {...makeProps({ occupiedSlots })} />)
-      await user.click(screen.getByRole('button', { name: 'Tue' }))
-
-      // Morning shows occupied
-      const morningLabel = screen.getByRole('radio', { name: /morning/i }).closest('label')!
-      expect(morningLabel.textContent).toContain('Pull A')
-
-      // Afternoon is free
-      const afternoonLabel = screen.getByRole('radio', { name: /afternoon/i }).closest('label')!
-      expect(afternoonLabel.textContent).not.toContain('occupied')
-
-      // Evening shows occupied
-      const eveningLabel = screen.getByRole('radio', { name: /evening/i }).closest('label')!
-      expect(eveningLabel.textContent).toContain('Legs')
-    })
-
-    it('shows warning banner when selected period is occupied', async () => {
-      const user = userEvent.setup()
-      render(
-        <MoveWorkoutModal
-          {...makeProps({
-            occupiedSlots: [{ day: 1, period: 'morning', templateName: 'Pull A' }],
-          })}
-        />
-      )
-      await user.click(screen.getByRole('button', { name: 'Tue' }))
-      // Morning is default and occupied — warning should show
-      expect(screen.getByText(/already has a workout.*Pull A/i)).toBeInTheDocument()
-    })
-
-    it('warning disappears when switching to free period', async () => {
-      const user = userEvent.setup()
-      render(
-        <MoveWorkoutModal
-          {...makeProps({
-            occupiedSlots: [{ day: 1, period: 'morning', templateName: 'Pull A' }],
-          })}
-        />
-      )
-      await user.click(screen.getByRole('button', { name: 'Tue' }))
-      expect(screen.getByText(/already has a workout/i)).toBeInTheDocument()
-      await user.click(screen.getByRole('radio', { name: /afternoon/i }))
-      expect(screen.queryByText(/already has a workout/i)).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Thu' })).not.toBeDisabled()
     })
   })
 
