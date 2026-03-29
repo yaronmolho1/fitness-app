@@ -10,6 +10,7 @@ import type { MesocycleInfo, TemplateInfo, SectionData, SlotData } from '@/lib/t
 import { SectionHeading } from '@/components/layout/section-heading'
 import { formatDateWithWeekday } from '@/lib/date-format'
 import { useLogAsPlanned } from '@/lib/use-log-as-planned'
+import { parseRepsLowerBound } from '@/lib/reps-parsing'
 
 export type MixedWorkoutData = {
   date: string
@@ -62,6 +63,7 @@ function formatRest(seconds: number): string {
 // Resistance section logging (embedded, reusing the same input pattern as workout-logging-form)
 function ResistanceSectionInputs({
   sectionIndex,
+  resistanceIdx,
   slots,
   sets,
   exerciseRpe,
@@ -69,8 +71,10 @@ function ResistanceSectionInputs({
   onAddSet,
   onRemoveSet,
   onUpdateRpe,
+  onResetToPlanned,
 }: {
   sectionIndex: number
+  resistanceIdx: number
   slots: SlotData[]
   sets: SetFormData[][]
   exerciseRpe: (number | null)[]
@@ -78,6 +82,7 @@ function ResistanceSectionInputs({
   onAddSet: (slotIndex: number) => void
   onRemoveSet: (slotIndex: number, setIndex: number) => void
   onUpdateRpe: (slotIndex: number, value: number | null) => void
+  onResetToPlanned: (slotIndex: number) => void
 }) {
   return (
     <div className="space-y-3">
@@ -97,16 +102,26 @@ function ResistanceSectionInputs({
             <h3 className="text-base font-semibold leading-tight">
               {slot.exercise_name}
             </h3>
-            <span
-              className={cn(
-                'shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium',
-                slot.is_main
-                  ? 'bg-primary/15 text-primary'
-                  : 'bg-muted text-muted-foreground'
-              )}
-            >
-              {slot.is_main ? 'Main' : 'Complementary'}
-            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                data-testid={`as-planned-resistance-${resistanceIdx}-${slotIndex}`}
+                onClick={() => onResetToPlanned(slotIndex)}
+                className="shrink-0 rounded-full border border-primary/30 bg-primary/5 px-2.5 py-0.5 text-xs font-medium text-primary transition-colors hover:bg-primary/10 active:scale-95"
+              >
+                As Planned
+              </button>
+              <span
+                className={cn(
+                  'shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium',
+                  slot.is_main
+                    ? 'bg-primary/15 text-primary'
+                    : 'bg-muted text-muted-foreground'
+                )}
+              >
+                {slot.is_main ? 'Main' : 'Complementary'}
+              </span>
+            </div>
           </div>
 
           {/* Column headers */}
@@ -225,14 +240,18 @@ function ResistanceSectionInputs({
 // Running section logging (embedded, reusing the same input pattern as running-logging-form)
 function RunningSectionInputs({
   sectionIndex,
+  runningIdx,
   section,
   state,
   onUpdate,
+  onResetToPlanned,
 }: {
   sectionIndex: number
+  runningIdx: number
   section: SectionData
   state: RunningSectionState
   onUpdate: (field: keyof RunningSectionState, value: string) => void
+  onResetToPlanned: () => void
 }) {
   const config = section.run_type ? runTypeConfig[section.run_type] : null
   const isInterval = section.run_type === 'interval'
@@ -285,9 +304,19 @@ function RunningSectionInputs({
 
       {/* Actual fields */}
       <div className="rounded-xl border bg-card p-4 space-y-4">
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-          Actual
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            Actual
+          </h3>
+          <button
+            type="button"
+            data-testid={`as-planned-running-${runningIdx}`}
+            onClick={onResetToPlanned}
+            className="shrink-0 rounded-full border border-primary/30 bg-primary/5 px-2.5 py-0.5 text-xs font-medium text-primary transition-colors hover:bg-primary/10 active:scale-95"
+          >
+            As Planned
+          </button>
+        </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="space-y-1.5">
             <label htmlFor={`actual-distance-${sectionIndex}`} className="text-sm font-medium">
@@ -340,14 +369,18 @@ function RunningSectionInputs({
 // MMA section logging (embedded, reusing the same input pattern as mma-logging-form)
 function MmaSectionInputs({
   sectionIndex,
+  mmaIdx,
   section,
   state,
   onUpdate,
+  onResetToPlanned,
 }: {
   sectionIndex: number
+  mmaIdx: number
   section: SectionData
   state: MmaSectionState
   onUpdate: (field: 'duration' | 'feeling', value: string | number | null) => void
+  onResetToPlanned: () => void
 }) {
   return (
     <div className="space-y-3">
@@ -369,9 +402,19 @@ function MmaSectionInputs({
 
       {/* Actual fields */}
       <div className="rounded-xl border bg-card p-4 space-y-4">
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-          Actual
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            Actual
+          </h3>
+          <button
+            type="button"
+            data-testid={`as-planned-mma-${mmaIdx}`}
+            onClick={onResetToPlanned}
+            className="shrink-0 rounded-full border border-primary/30 bg-primary/5 px-2.5 py-0.5 text-xs font-medium text-primary transition-colors hover:bg-primary/10 active:scale-95"
+          >
+            As Planned
+          </button>
+        </div>
         <div className="space-y-1.5">
           <label htmlFor={`actual-duration-${sectionIndex}`} className="text-sm font-medium">
             Duration (minutes)
@@ -577,9 +620,24 @@ export function MixedLoggingForm({ data, onSaveSuccess }: { data: MixedWorkoutDa
           content = (
             <ResistanceSectionInputs
               sectionIndex={sectionIndex}
+              resistanceIdx={idx}
               slots={slots}
               sets={state.sets}
               exerciseRpe={state.rpe}
+              onResetToPlanned={(slotIndex) => {
+                const slot = slots[slotIndex]
+                const weight = slot.weight != null && slot.weight !== 0 ? String(slot.weight) : ''
+                const lowerBound = parseRepsLowerBound(slot.reps)
+                const reps = lowerBound !== null ? String(lowerBound) : ''
+                setResistanceState((prev) => {
+                  const next = [...prev]
+                  const sectionState = { ...next[idx] }
+                  sectionState.sets = sectionState.sets.map((s) => s.map((r) => ({ ...r })))
+                  sectionState.sets[slotIndex] = Array.from({ length: slot.sets }, () => ({ weight, reps }))
+                  next[idx] = sectionState
+                  return next
+                })
+              }}
               onUpdateSet={(slotIndex, setIndex, field, value) => {
                 markModified()
                 setResistanceState((prev) => {
@@ -634,6 +692,7 @@ export function MixedLoggingForm({ data, onSaveSuccess }: { data: MixedWorkoutDa
           content = (
             <RunningSectionInputs
               sectionIndex={sectionIndex}
+              runningIdx={idx}
               section={section}
               state={runningState[idx]}
               onUpdate={(field, value) => {
@@ -644,6 +703,17 @@ export function MixedLoggingForm({ data, onSaveSuccess }: { data: MixedWorkoutDa
                   return next
                 })
               }}
+              onResetToPlanned={() => {
+                setRunningState((prev) => {
+                  const next = [...prev]
+                  next[idx] = {
+                    ...next[idx],
+                    distance: section.target_distance !== null ? String(section.target_distance) : '',
+                    pace: section.target_pace ?? '',
+                  }
+                  return next
+                })
+              }}
             />
           )
         } else if (section.modality === 'mma') {
@@ -651,6 +721,7 @@ export function MixedLoggingForm({ data, onSaveSuccess }: { data: MixedWorkoutDa
           content = (
             <MmaSectionInputs
               sectionIndex={sectionIndex}
+              mmaIdx={idx}
               section={section}
               state={mmaState[idx]}
               onUpdate={(field, value) => {
@@ -661,6 +732,16 @@ export function MixedLoggingForm({ data, onSaveSuccess }: { data: MixedWorkoutDa
                     next[idx] = { ...next[idx], duration: value as string }
                   } else {
                     next[idx] = { ...next[idx], feeling: value as number | null }
+                  }
+                  return next
+                })
+              }}
+              onResetToPlanned={() => {
+                setMmaState((prev) => {
+                  const next = [...prev]
+                  next[idx] = {
+                    ...next[idx],
+                    duration: section.planned_duration !== null ? String(section.planned_duration) : '',
                   }
                   return next
                 })

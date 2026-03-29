@@ -120,6 +120,18 @@ export function WorkoutLoggingForm({ data, onSaveSuccess }: { data: WorkoutData;
     })
   }
 
+  function resetToPlanned(slotIndex: number) {
+    const slot = sortedSlots[slotIndex]
+    const weight = slot.weight != null && slot.weight !== 0 ? String(slot.weight) : ''
+    const lowerBound = parseRepsLowerBound(slot.reps)
+    const reps = lowerBound !== null ? String(lowerBound) : ''
+    setSets((prev) => {
+      const next = prev.map((s) => s.map((r) => ({ ...r })))
+      next[slotIndex] = Array.from({ length: slot.sets }, () => ({ weight, reps }))
+      return next
+    })
+  }
+
   function addSet(slotIndex: number) {
     setSets((prev) => {
       const next = prev.map((s) => s.map((r) => ({ ...r })))
@@ -196,16 +208,26 @@ export function WorkoutLoggingForm({ data, onSaveSuccess }: { data: WorkoutData;
                   <SectionHeading className="mt-0 mb-0 text-base leading-tight">
                     {slot.exercise_name}
                   </SectionHeading>
-                  <span
-                    className={cn(
-                      'shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium',
-                      slot.is_main
-                        ? 'bg-primary/15 text-primary'
-                        : 'bg-muted text-muted-foreground'
-                    )}
-                  >
-                    {slot.is_main ? 'Main' : 'Complementary'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      data-testid={`as-planned-btn-${slotIndex}`}
+                      onClick={() => resetToPlanned(slotIndex)}
+                      className="shrink-0 rounded-full border border-primary/30 bg-primary/5 px-2.5 py-0.5 text-xs font-medium text-primary transition-colors hover:bg-primary/10 active:scale-95"
+                    >
+                      As Planned
+                    </button>
+                    <span
+                      className={cn(
+                        'shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium',
+                        slot.is_main
+                          ? 'bg-primary/15 text-primary'
+                          : 'bg-muted text-muted-foreground'
+                      )}
+                    >
+                      {slot.is_main ? 'Main' : 'Complementary'}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Column headers */}
