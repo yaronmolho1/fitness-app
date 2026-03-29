@@ -423,7 +423,10 @@ export function DayDetailPanel({ date, onClose, onMutate }: DayDetailPanelProps)
     .sort((a, b) => {
       const aSlot = ('time_slot' in a ? a.time_slot : null) ?? ''
       const bSlot = ('time_slot' in b ? b.time_slot : null) ?? ''
-      return aSlot.localeCompare(bSlot)
+      if (aSlot !== bSlot) return aSlot.localeCompare(bSlot)
+      const aName = getWorkoutMeta(a).name
+      const bName = getWorkoutMeta(b).name
+      return aName.localeCompare(bName)
     })
 
   const isRestDay = details.length > 0 && workouts.length === 0

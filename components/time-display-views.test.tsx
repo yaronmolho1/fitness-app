@@ -230,6 +230,42 @@ describe('DayDetailPanel — T203 time + duration display', () => {
     expect(trigger.textContent).not.toMatch(/\bAM\b/)
   })
 
+  it('edge: time_slot present but duration null — shows time only', async () => {
+    const projected: DayDetailResult = {
+      type: 'projected',
+      date: '2026-03-02',
+      mesocycle_id: 1,
+      mesocycle_status: 'active',
+      template: {
+        id: 1, name: 'Push A', modality: 'resistance', notes: null,
+        run_type: null, target_pace: null, hr_zone: null,
+        interval_count: null, interval_rest: null, coaching_cues: null,
+        planned_duration: null, target_elevation_gain: null,
+      },
+      slots: [],
+      is_deload: false,
+      period: 'morning',
+      time_slot: '07:00',
+      duration: null,
+      schedule_entry_id: 1,
+      is_override: false,
+      override_group: null,
+      week_number: 1,
+      day_of_week: 0,
+    }
+    mockDayDetailFetch([projected])
+    render(<DayDetailPanel date="2026-03-02" onClose={() => {}} />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Push A')).toBeInTheDocument()
+    })
+
+    const trigger = screen.getByTestId('workout-card-trigger')
+    expect(trigger.textContent).toContain('07:00')
+    // No duration shown when null
+    expect(trigger.textContent).not.toContain('min')
+  })
+
   it('AC3: null time_slot falls back to period label, no duration shown', async () => {
     const projected: DayDetailResult = {
       type: 'projected',
