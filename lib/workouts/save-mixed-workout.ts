@@ -122,9 +122,9 @@ export async function saveMixedWorkoutCore(
   }
 
   // Duplicate check
-  const duplicate = await hasExistingLog(database, input.logDate, template.mesocycle_id)
+  const duplicate = await hasExistingLog(database, input.logDate, input.templateId)
   if (duplicate) {
-    return { success: false, error: 'Workout already logged for this date and mesocycle' }
+    return { success: false, error: 'This workout is already logged for this date' }
   }
 
   // Load template sections for snapshot

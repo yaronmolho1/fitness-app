@@ -5,8 +5,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { assignTemplate, removeAssignment } from '@/lib/schedule/actions'
 import type { ScheduleEntry, TemplateOption } from '@/lib/schedule/queries'
-
-const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+import { DAY_NAMES, displayToInternal } from '@/lib/day-mapping'
 
 const PERIODS = ['morning', 'afternoon', 'evening'] as const
 type Period = (typeof PERIODS)[number]
@@ -118,16 +117,17 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
       )}
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-7">
-        {DAY_NAMES.map((dayName, dayIndex) => {
-          const assignments = getAssignments(dayIndex)
-          const usedPeriods = getUsedPeriods(dayIndex)
+        {DAY_NAMES.map((dayName, displayIdx) => {
+          const internalDay = displayToInternal(displayIdx)
+          const assignments = getAssignments(internalDay)
+          const usedPeriods = getUsedPeriods(internalDay)
           const hasAssignments = assignments.length > 0
           const unusedPeriods = PERIODS.filter((p) => !usedPeriods.has(p))
 
           return (
             <div
-              key={dayIndex}
-              data-testid={`day-cell-${dayIndex}`}
+              key={displayIdx}
+              data-testid={`day-cell-${internalDay}`}
               className={cn(
                 'rounded-xl border p-3 transition-colors duration-150',
                 hasAssignments
@@ -159,7 +159,7 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
                         variant="ghost"
                         size="sm"
                         className="h-7 px-2 text-xs text-destructive hover:text-destructive"
-                        onClick={() => handleRemove(dayIndex, entry.period)}
+                        onClick={() => handleRemove(internalDay, entry.period)}
                         disabled={isPending}
                         aria-label="Remove assignment"
                       >
@@ -184,7 +184,7 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
                       variant="outline"
                       size="sm"
                       className="h-7 w-full text-xs"
-                      onClick={() => handleAddClick(dayIndex, period)}
+                      onClick={() => handleAddClick(internalDay, period)}
                       disabled={isPending}
                       aria-label={`Add ${period}`}
                     >
@@ -195,7 +195,7 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
               )}
 
               {/* Template picker for the active slot */}
-              {picker?.day === dayIndex && (
+              {picker?.day === internalDay && (
                 <div className="mt-2 rounded-md border bg-background p-2 shadow-md">
                   {templates.map((tmpl) => (
                     <div

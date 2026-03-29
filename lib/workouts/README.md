@@ -5,7 +5,7 @@ Workout logging: validates input, snapshots the template, and inserts immutable 
 ## Files
 - `actions.ts` — Server Action entry point (`saveWorkout`), handles cache revalidation
 - `save-workout.ts` — Core logic (`saveWorkoutCore`): input validation, template snapshot, atomic insert of logged_workouts + logged_exercises + logged_sets
-- `duplicate-check.ts` — `hasExistingLog` guard: prevents logging the same date + mesocycle combination twice
+- `duplicate-check.ts` — `hasExistingLog` guard: prevents logging the same template on the same date twice
 - `save-running-workout.ts` — `saveRunningWorkoutCore`: validates running workout input, snapshots template, inserts logged_workouts with interval rep data
 - `save-mma-workout.ts` — `saveMmaWorkoutCore`: validates MMA/BJJ workout input, snapshots template, inserts logged_workouts with duration/feeling
 - `save-mixed-workout.ts` — `saveMixedWorkoutCore`: validates mixed-modality workout input, snapshots per-section template data, inserts logged_workouts with section-typed payload
