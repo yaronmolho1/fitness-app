@@ -21,6 +21,8 @@ const mockTemplates = [
   { id: 4, name: 'Strength + Cardio', canonical_name: 'strength-cardio', modality: 'mixed' as const },
 ]
 
+let nextId = 1
+
 function buildSchedule(
   assignments: Array<{
     day_of_week: number
@@ -28,14 +30,17 @@ function buildSchedule(
     template_name: string
     period?: 'morning' | 'afternoon' | 'evening'
     time_slot?: string
+    duration?: number
   }>
 ): ScheduleEntry[] {
   return assignments.map((a) => ({
+    id: nextId++,
     day_of_week: a.day_of_week,
     template_id: a.template_id,
     template_name: a.template_name,
     period: a.period ?? 'morning',
     time_slot: a.time_slot ?? '07:00',
+    duration: a.duration ?? 90,
   }))
 }
 
@@ -43,6 +48,7 @@ describe('ScheduleGrid', () => {
   afterEach(() => {
     cleanup()
     vi.restoreAllMocks()
+    nextId = 1
   })
 
   it('renders all 7 day labels', () => {
@@ -189,8 +195,8 @@ describe('ScheduleGrid', () => {
   describe('multiple entries per day', () => {
     it('renders multiple entries stacked within a day cell', () => {
       const schedule = buildSchedule([
-        { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning' },
-        { day_of_week: 0, template_id: 2, template_name: 'Pull A', period: 'evening' },
+        { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning', time_slot: '07:00' },
+        { day_of_week: 0, template_id: 2, template_name: 'Pull A', period: 'evening', time_slot: '18:00' },
       ])
 
       render(
@@ -210,9 +216,9 @@ describe('ScheduleGrid', () => {
 
     it('orders entries by period: morning -> afternoon -> evening', () => {
       const schedule = buildSchedule([
-        { day_of_week: 0, template_id: 3, template_name: 'Legs A', period: 'evening' },
-        { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning' },
-        { day_of_week: 0, template_id: 2, template_name: 'Pull A', period: 'afternoon' },
+        { day_of_week: 0, template_id: 3, template_name: 'Legs A', period: 'evening', time_slot: '18:00' },
+        { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning', time_slot: '07:00' },
+        { day_of_week: 0, template_id: 2, template_name: 'Pull A', period: 'afternoon', time_slot: '13:00' },
       ])
 
       render(
@@ -235,8 +241,8 @@ describe('ScheduleGrid', () => {
 
     it('shows period label on each entry', () => {
       const schedule = buildSchedule([
-        { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning' },
-        { day_of_week: 0, template_id: 2, template_name: 'Pull A', period: 'evening' },
+        { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning', time_slot: '07:00' },
+        { day_of_week: 0, template_id: 2, template_name: 'Pull A', period: 'evening', time_slot: '18:00' },
       ])
 
       render(
@@ -258,8 +264,8 @@ describe('ScheduleGrid', () => {
     it('shows add button for each unused period slot', () => {
       // Morning and evening assigned, afternoon should have add button
       const schedule = buildSchedule([
-        { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning' },
-        { day_of_week: 0, template_id: 2, template_name: 'Pull A', period: 'evening' },
+        { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning', time_slot: '07:00' },
+        { day_of_week: 0, template_id: 2, template_name: 'Pull A', period: 'evening', time_slot: '18:00' },
       ])
 
       render(
@@ -273,9 +279,7 @@ describe('ScheduleGrid', () => {
       )
 
       const mondayCell = screen.getByTestId('day-cell-0')
-      // Should have add button for afternoon only
       expect(within(mondayCell).getByRole('button', { name: /add afternoon/i })).toBeInTheDocument()
-      // Should NOT have add buttons for morning or evening (already assigned)
       expect(within(mondayCell).queryByRole('button', { name: /add morning/i })).not.toBeInTheDocument()
       expect(within(mondayCell).queryByRole('button', { name: /add evening/i })).not.toBeInTheDocument()
     })
@@ -297,13 +301,13 @@ describe('ScheduleGrid', () => {
       expect(within(mondayCell).getByRole('button', { name: /add evening/i })).toBeInTheDocument()
     })
 
-    it('remove works for individual period entries', async () => {
+    it('remove works for individual entries', async () => {
       const user = userEvent.setup()
       vi.mocked(removeAssignment).mockResolvedValue({ success: true })
 
       const schedule = buildSchedule([
-        { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning' },
-        { day_of_week: 0, template_id: 2, template_name: 'Pull A', period: 'evening' },
+        { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning', time_slot: '07:00' },
+        { day_of_week: 0, template_id: 2, template_name: 'Pull A', period: 'evening', time_slot: '18:00' },
       ])
 
       render(
@@ -325,33 +329,30 @@ describe('ScheduleGrid', () => {
 
       await waitFor(() => {
         expect(removeAssignment).toHaveBeenCalledWith({
-          mesocycle_id: 1,
-          day_of_week: 0,
-          week_type: 'normal',
-          period: 'morning',
+          id: schedule[0].id,
         })
       })
     })
 
-    it('assigns template with correct period when using add button', async () => {
+    it('assigns template with correct time_slot and duration when using add button', async () => {
       const user = userEvent.setup()
       vi.mocked(assignTemplate).mockResolvedValue({
         success: true,
         data: {
-          id: 1,
+          id: 10,
           mesocycle_id: 1,
           day_of_week: 0,
           template_id: 2,
           week_type: 'normal',
           period: 'afternoon',
-          time_slot: '07:00',
+          time_slot: '13:00',
           duration: 90,
           created_at: new Date(),
         },
       })
 
       const schedule = buildSchedule([
-        { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning' },
+        { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning', time_slot: '07:00' },
       ])
 
       render(
@@ -365,11 +366,9 @@ describe('ScheduleGrid', () => {
       )
 
       const mondayCell = screen.getByTestId('day-cell-0')
-      // Click add button for afternoon
       const addBtn = within(mondayCell).getByRole('button', { name: /add afternoon/i })
       await user.click(addBtn)
 
-      // Pick a template
       const templateOption = screen.getByText(/pull a/i)
       await user.click(templateOption)
 
@@ -379,16 +378,17 @@ describe('ScheduleGrid', () => {
           day_of_week: 0,
           template_id: 2,
           week_type: 'normal',
-          period: 'afternoon',
+          time_slot: '13:00',
+          duration: 90,
         })
       })
     })
 
     it('no add buttons when all 3 periods assigned', () => {
       const schedule = buildSchedule([
-        { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning' },
-        { day_of_week: 0, template_id: 2, template_name: 'Pull A', period: 'afternoon' },
-        { day_of_week: 0, template_id: 3, template_name: 'Legs A', period: 'evening' },
+        { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning', time_slot: '07:00' },
+        { day_of_week: 0, template_id: 2, template_name: 'Pull A', period: 'afternoon', time_slot: '13:00' },
+        { day_of_week: 0, template_id: 3, template_name: 'Legs A', period: 'evening', time_slot: '18:00' },
       ])
 
       render(
@@ -409,8 +409,8 @@ describe('ScheduleGrid', () => {
 
     it('no add or remove buttons when completed with multiple entries', () => {
       const schedule = buildSchedule([
-        { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning' },
-        { day_of_week: 0, template_id: 2, template_name: 'Pull A', period: 'evening' },
+        { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning', time_slot: '07:00' },
+        { day_of_week: 0, template_id: 2, template_name: 'Pull A', period: 'evening', time_slot: '18:00' },
       ])
 
       render(
@@ -423,18 +423,15 @@ describe('ScheduleGrid', () => {
         />
       )
 
-      // Period labels still shown
       const mondayCell = screen.getByTestId('day-cell-0')
       expect(within(mondayCell).getByText('Push A')).toBeInTheDocument()
       expect(within(mondayCell).getByText('Pull A')).toBeInTheDocument()
-
-      // No buttons at all
       expect(within(mondayCell).queryByRole('button')).not.toBeInTheDocument()
     })
 
     it('day cell has assigned styling when at least one entry exists', () => {
       const schedule = buildSchedule([
-        { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning' },
+        { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning', time_slot: '07:00' },
       ])
 
       render(
@@ -456,20 +453,20 @@ describe('ScheduleGrid', () => {
       vi.mocked(assignTemplate).mockResolvedValue({
         success: true,
         data: {
-          id: 2,
+          id: 10,
           mesocycle_id: 1,
           day_of_week: 0,
           template_id: 2,
           week_type: 'normal',
           period: 'evening',
-          time_slot: '07:00',
+          time_slot: '18:00',
           duration: 90,
           created_at: new Date(),
         },
       })
 
       const schedule = buildSchedule([
-        { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning' },
+        { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning', time_slot: '07:00' },
       ])
 
       render(
@@ -489,7 +486,6 @@ describe('ScheduleGrid', () => {
       const templateOption = screen.getByText(/pull a/i)
       await user.click(templateOption)
 
-      // After assignment, both entries should show
       await waitFor(() => {
         expect(within(mondayCell).getByText('Push A')).toBeInTheDocument()
         expect(within(mondayCell).getByText('Pull A')).toBeInTheDocument()
@@ -499,7 +495,7 @@ describe('ScheduleGrid', () => {
     // T123: mixed template in schedule grid
     it('renders mixed template name in schedule entry', () => {
       const schedule = buildSchedule([
-        { day_of_week: 0, template_id: 4, template_name: 'Strength + Cardio', period: 'morning' },
+        { day_of_week: 0, template_id: 4, template_name: 'Strength + Cardio', period: 'morning', time_slot: '07:00' },
       ])
 
       render(
@@ -532,7 +528,6 @@ describe('ScheduleGrid', () => {
       const addBtn = within(mondayCell).getByRole('button', { name: /add morning/i })
       await user.click(addBtn)
 
-      // Picker should show the mixed template
       expect(screen.getByText('Strength + Cardio')).toBeInTheDocument()
     })
 
@@ -541,7 +536,7 @@ describe('ScheduleGrid', () => {
       vi.mocked(assignTemplate).mockResolvedValue({
         success: true,
         data: {
-          id: 1,
+          id: 10,
           mesocycle_id: 1,
           day_of_week: 0,
           template_id: 4,
@@ -576,7 +571,8 @@ describe('ScheduleGrid', () => {
           day_of_week: 0,
           template_id: 4,
           week_type: 'normal',
-          period: 'morning',
+          time_slot: '07:00',
+          duration: 90,
         })
       })
     })
@@ -586,8 +582,8 @@ describe('ScheduleGrid', () => {
       vi.mocked(removeAssignment).mockResolvedValue({ success: true })
 
       const schedule = buildSchedule([
-        { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning' },
-        { day_of_week: 0, template_id: 2, template_name: 'Pull A', period: 'evening' },
+        { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning', time_slot: '07:00' },
+        { day_of_week: 0, template_id: 2, template_name: 'Pull A', period: 'evening', time_slot: '18:00' },
       ])
 
       render(
@@ -605,7 +601,6 @@ describe('ScheduleGrid', () => {
       const removeBtn = within(entries[0]).getByRole('button', { name: /remove/i })
       await user.click(removeBtn)
 
-      // Morning entry removed, evening stays
       await waitFor(() => {
         expect(within(mondayCell).queryByText('Push A')).not.toBeInTheDocument()
         expect(within(mondayCell).getByText('Pull A')).toBeInTheDocument()

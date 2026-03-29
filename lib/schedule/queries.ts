@@ -3,11 +3,13 @@ import { db } from '@/lib/db/index'
 import { weekly_schedule, workout_templates } from '@/lib/db/schema'
 
 export type ScheduleEntry = {
+  id: number
   day_of_week: number
   template_id: number
   template_name: string
   period: 'morning' | 'afternoon' | 'evening'
-  time_slot: string | null
+  time_slot: string
+  duration: number
 }
 
 // Fetches schedule assignments for a mesocycle, joining template names
@@ -17,11 +19,13 @@ export async function getScheduleForMesocycle(
 ): Promise<ScheduleEntry[]> {
   const rows = await db
     .select({
+      id: weekly_schedule.id,
       day_of_week: weekly_schedule.day_of_week,
       template_id: weekly_schedule.template_id,
       template_name: workout_templates.name,
       period: weekly_schedule.period,
       time_slot: weekly_schedule.time_slot,
+      duration: weekly_schedule.duration,
     })
     .from(weekly_schedule)
     .innerJoin(workout_templates, eq(weekly_schedule.template_id, workout_templates.id))
