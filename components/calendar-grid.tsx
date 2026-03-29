@@ -40,6 +40,23 @@ function gridDow(year: number, month: number, day: number): number {
   return new Date(year, month - 1, day).getDay()
 }
 
+// Sort entries chronologically by time_slot, template name as tiebreaker
+function sortChronologically(entries: CalendarDay[]): CalendarDay[] {
+  return [...entries].sort((a, b) => {
+    const aSlot = a.time_slot ?? ''
+    const bSlot = b.time_slot ?? ''
+    if (aSlot !== bSlot) return aSlot.localeCompare(bSlot)
+    return (a.template_name ?? '').localeCompare(b.template_name ?? '')
+  })
+}
+
+// Format pill prefix: prefer time_slot, fall back to period label
+function pillPrefix(entry: CalendarDay): string {
+  if (entry.time_slot) return entry.time_slot
+  if (entry.period) return PERIOD_LABELS[entry.period] ?? ''
+  return ''
+}
+
 // Group flat CalendarDay[] into one group per unique date, preserving order
 function groupByDate(days: CalendarDay[]): DayGroup[] {
   const map = new Map<string, CalendarDay[]>()
@@ -49,7 +66,10 @@ function groupByDate(days: CalendarDay[]): DayGroup[] {
     }
     map.get(d.date)!.push(d)
   }
-  return Array.from(map.entries()).map(([date, entries]) => ({ date, entries }))
+  return Array.from(map.entries()).map(([date, entries]) => ({
+    date,
+    entries: sortChronologically(entries),
+  }))
 }
 
 interface CalendarGridProps {
@@ -200,14 +220,14 @@ export function CalendarGrid({ initialMonth, refreshKey }: CalendarGridProps = {
               {/* Multi-workout: stacked pills */}
               {isMulti && (
                 <div className="mt-0.5 flex flex-col gap-0.5">
-                  {entries.filter((e) => e.template_name !== null).map((entry) => (
+                  {entries.filter((e) => e.template_name !== null).map((entry, idx) => (
                     <div
-                      key={`${entry.period}`}
+                      key={`${entry.time_slot ?? entry.period ?? idx}`}
                       data-testid="workout-pill"
                       className={`rounded px-1 py-px text-[0.55rem] leading-tight truncate ${entry.modality ? getModalityBadgeClasses(entry.modality) : ''}`}
                     >
-                      <span className="font-semibold">{entry.period ? PERIOD_LABELS[entry.period] : ''}</span>
-                      {' '}
+                      {pillPrefix(entry) && <span className="font-semibold">{pillPrefix(entry)}</span>}
+                      {pillPrefix(entry) ? ' ' : ''}
                       {entry.template_name}
                     </div>
                   ))}
@@ -217,13 +237,13 @@ export function CalendarGrid({ initialMonth, refreshKey }: CalendarGridProps = {
               {/* Single workout: original template label + pill */}
               {!isMulti && hasWorkouts && entries.filter((e) => e.template_name !== null).map((entry) => (
                 <div
-                  key={`${entry.period ?? 'single'}`}
+                  key={`${entry.time_slot ?? entry.period ?? 'single'}`}
                   data-testid="workout-pill"
                   className="mt-0.5"
                 >
                   <p className="text-[0.65rem] leading-tight truncate">
-                    {entry.period && PERIOD_LABELS[entry.period] ? (
-                      <span className="font-semibold">{PERIOD_LABELS[entry.period]} </span>
+                    {pillPrefix(entry) ? (
+                      <span className="font-semibold">{pillPrefix(entry)} </span>
                     ) : null}
                     {entry.template_name}
                   </p>

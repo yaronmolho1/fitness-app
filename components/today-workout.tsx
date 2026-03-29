@@ -30,6 +30,7 @@ type WorkoutResponse = {
   sections?: SectionData[]
   period: Period
   time_slot: string | null
+  duration: number | null
 }
 
 type RestDayResponse = {
@@ -63,6 +64,7 @@ type AlreadyLoggedResponse = {
   }
   period: Period
   time_slot: string | null
+  duration: number | null
 }
 
 type TodayResponse = WorkoutResponse | RestDayResponse | NoMesoResponse | AlreadyLoggedResponse
@@ -73,7 +75,8 @@ const PERIOD_LABELS: Record<Period, string> = {
   evening: 'Evening',
 }
 
-function formatPeriodLabel(period: Period, timeSlot: string | null): string {
+function formatPeriodLabel(period: Period, timeSlot: string | null, duration: number | null): string {
+  if (timeSlot && duration) return `${timeSlot} — ${duration} min`
   if (timeSlot) return timeSlot
   return PERIOD_LABELS[period]
 }
@@ -270,6 +273,11 @@ function WorkoutHeader({ data }: { data: WorkoutResponse }) {
           )}
         </div>
         <p className="text-sm text-muted-foreground">{formatDateLong(data.date)}</p>
+        {data.time_slot && (
+          <p data-testid="time-info" className="text-sm font-medium text-muted-foreground">
+            {data.time_slot}{data.duration ? ` — ${data.duration} min` : ''}
+          </p>
+        )}
       </CardHeader>
       {data.template.notes && (
         <CardContent className="pt-0">
@@ -671,7 +679,7 @@ function SessionSection({
       <div data-testid="session-group">
         {showPeriodLabel && (
           <SectionHeading data-testid="period-label" className="mt-0 mb-3 text-sm uppercase tracking-wider text-muted-foreground">
-            {formatPeriodLabel(session.period, session.time_slot)}
+            {formatPeriodLabel(session.period, session.time_slot, session.duration ?? null)}
           </SectionHeading>
         )}
         <AlreadyLoggedSummary data={session} />
@@ -700,7 +708,7 @@ function SessionSection({
       <div data-testid="session-group">
         {showPeriodLabel && (
           <SectionHeading data-testid="period-label" className="mt-0 mb-3 text-sm uppercase tracking-wider text-muted-foreground">
-            {formatPeriodLabel(session.period, session.time_slot)}
+            {formatPeriodLabel(session.period, session.time_slot, session.duration ?? null)}
           </SectionHeading>
         )}
         {session.template.modality === 'mixed' ? (
