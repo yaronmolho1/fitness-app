@@ -14,12 +14,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { AlertTriangle } from 'lucide-react'
+import { DAY_LABELS, internalToDisplay, displayToInternal } from '@/lib/day-mapping'
 
 type Period = 'morning' | 'afternoon' | 'evening'
 type Scope = 'this_week' | 'remaining_weeks'
 
 export interface OccupiedSlot {
-  day: number
+  day: number // internal convention (0=Mon)
   period: Period
   templateName: string
 }
@@ -29,20 +30,18 @@ export interface MoveWorkoutModalProps {
   onOpenChange: (open: boolean) => void
   mesocycleId: number
   weekNumber: number
-  sourceDay: number
+  sourceDay: number // internal convention (0=Mon)
   sourcePeriod: Period
   sourceTimeSlot: string | null
   sourceTemplateName: string
   occupiedSlots: OccupiedSlot[]
   onConfirm: (params: {
-    targetDay: number
+    targetDay: number // internal convention (0=Mon)
     targetPeriod: Period
     targetTimeSlot: string | null
     scope: Scope
   }) => void
 }
-
-const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const
 
 export function MoveWorkoutModal(props: MoveWorkoutModalProps) {
   return (
@@ -65,7 +64,7 @@ function MoveWorkoutModalContent({
   const [timeSlot, setTimeSlot] = useState(sourceTimeSlot ?? '')
   const [scope, setScope] = useState<Scope>('this_week')
 
-  // Days where all 3 periods are occupied
+  // Days where all 3 periods are occupied (keyed by internal day)
   const fullyOccupiedDays = useMemo(() => {
     const counts = new Map<number, number>()
     for (const slot of occupiedSlots) {
@@ -78,7 +77,7 @@ function MoveWorkoutModalContent({
     return result
   }, [occupiedSlots])
 
-  // Check if current target selection has existing workout
+  // Check if current target selection has existing workout (targetDay is internal)
   const targetOccupied = useMemo(() => {
     if (targetDay === null) return null
     return occupiedSlots.find(
@@ -117,17 +116,18 @@ function MoveWorkoutModalContent({
           <div className="space-y-2">
             <Label>Target day</Label>
             <div className="flex gap-1">
-              {DAY_LABELS.map((label, i) => {
-                const isSource = i === sourceDay
-                const isFullyOccupied = fullyOccupiedDays.has(i)
-                const isSelected = targetDay === i
+              {DAY_LABELS.map((label, displayIdx) => {
+                const internalDay = displayToInternal(displayIdx)
+                const isSource = internalDay === sourceDay
+                const isFullyOccupied = fullyOccupiedDays.has(internalDay)
+                const isSelected = targetDay === internalDay
                 return (
                   <Button
                     key={label}
                     variant={isSelected ? 'default' : 'outline'}
                     size="sm"
                     disabled={isSource || isFullyOccupied}
-                    onClick={() => setTargetDay(i)}
+                    onClick={() => setTargetDay(internalDay)}
                     className="flex-1 px-0"
                   >
                     {label}
