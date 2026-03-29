@@ -353,12 +353,12 @@ describe('getTodayWorkout — T184: override-aware schedule resolution', () => {
     seedExerciseSlot(tmpl2.id, ex.id, 1)
     seedSchedule(meso.id, 0, tmpl1.id, 'normal', 'morning')
 
-    // Override week 1, Monday morning -> template 2 with time_slot
+    // Override week 1, Monday morning at same time_slot -> template 2
     testDb.run(sql`
       INSERT INTO schedule_week_overrides
         (mesocycle_id, week_number, day_of_week, period, template_id, time_slot, override_group)
       VALUES
-        (${meso.id}, 1, 0, 'morning', ${tmpl2.id}, '09:00', 'move-test')
+        (${meso.id}, 1, 0, 'morning', ${tmpl2.id}, '07:00', 'move-test')
     `)
 
     const results = await getTodayWorkout('2026-03-02')
@@ -366,7 +366,7 @@ describe('getTodayWorkout — T184: override-aware schedule resolution', () => {
     expect(results[0].type).toBe('workout')
     if (results[0].type === 'workout') {
       expect(results[0].template.name).toBe('Override Pull')
-      expect(results[0].time_slot).toBe('09:00')
+      expect(results[0].time_slot).toBe('07:00')
     }
   })
 
@@ -430,12 +430,12 @@ describe('getTodayWorkout — T184: override-aware schedule resolution', () => {
     seedExerciseSlot(tmpl2.id, ex.id, 1)
     seedSchedule(meso.id, 0, tmpl1.id, 'normal', 'morning')
 
-    // Override only week 1
+    // Override only week 1 at same time_slot as base
     testDb.run(sql`
       INSERT INTO schedule_week_overrides
         (mesocycle_id, week_number, day_of_week, period, template_id, time_slot, override_group)
       VALUES
-        (${meso.id}, 1, 0, 'morning', ${tmpl2.id}, '09:00', 'move-test')
+        (${meso.id}, 1, 0, 'morning', ${tmpl2.id}, '07:00', 'move-test')
     `)
 
     // Week 2 Monday = 2026-03-09

@@ -113,6 +113,7 @@ describe('getEffectiveScheduleForDay — characterization', () => {
         template_id: 1,
         period: 'morning',
         time_slot: '08:00',
+        duration: 90,
         is_override: false,
         override_group: null,
       })
@@ -330,11 +331,11 @@ describe('getEffectiveScheduleForDay — characterization', () => {
     })
   })
 
-  // ── Last override wins for same period ──────────────────────────────
-  describe('duplicate overrides for same period', () => {
-    it('last inserted override for same period wins (Map.set semantics)', async () => {
-      // NOTE: If two overrides exist for the same (meso, week, day, period),
-      // the Map keyed by period means the last one iterated wins.
+  // ── Multiple overrides at different time_slots ──────────────────────
+  describe('multiple overrides at different time_slots (same period)', () => {
+    it('each override at a distinct time_slot produces a separate entry', async () => {
+      // With time_slot-based keying, two overrides at different time_slots
+      // are separate entries. The base at 07:00 also remains (no override at that slot).
       sqlite.exec(`
         INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
         VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
@@ -345,7 +346,7 @@ describe('getEffectiveScheduleForDay — characterization', () => {
         INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
         VALUES (1, 0, 1, 'normal', 'morning');
       `)
-      // Insert two overrides for same period with different time_slots (unique index allows this)
+      // Two overrides at different time_slots (unique index allows this)
       sqlite.exec(`
         INSERT INTO schedule_week_overrides (mesocycle_id, week_number, day_of_week, period, template_id, time_slot, override_group)
         VALUES (1, 1, 0, 'morning', 1, '08:00', 'grp-a');
@@ -354,10 +355,17 @@ describe('getEffectiveScheduleForDay — characterization', () => {
       `)
 
       const result = await getEffectiveScheduleForDay(db, 1, 1, 0, 'normal')
-      // Map.set overwrites — last row from DB wins for the period
-      expect(result).toHaveLength(1)
-      expect(result[0].template_id).toBe(2)
-      expect(result[0].override_group).toBe('grp-b')
+      // Base at 07:00 (default) + override at 08:00 + override at 09:00 = 3 entries
+      expect(result).toHaveLength(3)
+      expect(result[0].time_slot).toBe('07:00')
+      expect(result[0].template_id).toBe(1)
+      expect(result[0].is_override).toBe(false)
+      expect(result[1].time_slot).toBe('08:00')
+      expect(result[1].template_id).toBe(1)
+      expect(result[1].is_override).toBe(true)
+      expect(result[2].time_slot).toBe('09:00')
+      expect(result[2].template_id).toBe(2)
+      expect(result[2].is_override).toBe(true)
     })
   })
 

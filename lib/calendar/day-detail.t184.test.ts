@@ -177,7 +177,7 @@ describe('getDayDetail — T184: override-aware schedule resolution', () => {
       INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
       VALUES (1, 0, 1, 'normal', 'morning');
       INSERT INTO schedule_week_overrides (mesocycle_id, week_number, day_of_week, period, template_id, time_slot, override_group)
-      VALUES (1, 1, 0, 'morning', 2, '09:00', 'move-test');
+      VALUES (1, 1, 0, 'morning', 2, '07:00', 'move-test');
     `)
 
     const results = await getDayDetail(db, '2026-03-02')

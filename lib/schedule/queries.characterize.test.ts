@@ -172,6 +172,7 @@ describe('getScheduleForMesocycle — characterization', () => {
         template_name: 'Push A',
         period: 'afternoon',
         time_slot: '14:00',
+        duration: 90,
       })
     })
   })

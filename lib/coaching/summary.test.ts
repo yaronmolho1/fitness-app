@@ -94,9 +94,9 @@ function makeProgressionTrend(): SummaryInput['progressionTrends'] {
 
 function makeUpcomingDays(): CalendarDay[] {
   return [
-    { date: '2026-03-26', template_name: 'Push A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'morning', time_slot: null },
-    { date: '2026-03-27', template_name: null, modality: null, mesocycle_id: 1, is_deload: false, status: 'rest', period: null, time_slot: null },
-    { date: '2026-03-28', template_name: 'Pull A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'morning', time_slot: null },
+    { date: '2026-03-26', template_name: 'Push A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'morning', time_slot: null, duration: 90 },
+    { date: '2026-03-27', template_name: null, modality: null, mesocycle_id: 1, is_deload: false, status: 'rest', period: null, time_slot: null, duration: null },
+    { date: '2026-03-28', template_name: 'Pull A', modality: 'resistance', mesocycle_id: 1, is_deload: false, status: 'projected', period: 'morning', time_slot: null, duration: 90 },
   ]
 }
 

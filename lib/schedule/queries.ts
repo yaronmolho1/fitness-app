@@ -35,7 +35,7 @@ export async function getScheduleForMesocycle(
         eq(weekly_schedule.week_type, weekType)
       )
     )
-    .orderBy(asc(weekly_schedule.day_of_week), asc(weekly_schedule.period))
+    .orderBy(asc(weekly_schedule.day_of_week), asc(weekly_schedule.time_slot))
     .all()
 
   return rows as ScheduleEntry[]

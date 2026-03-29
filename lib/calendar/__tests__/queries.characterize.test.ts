@@ -169,6 +169,7 @@ describe('getCalendarProjection — characterization', () => {
           status: 'rest',
           period: null,
           time_slot: null,
+          duration: null,
         })
       }
     })

@@ -550,7 +550,7 @@ describe('getCalendarProjection', () => {
       expect(mar2Entries[1].template_name).toBe('5K Run')
     })
 
-    it('orders multiple entries per day by period: morning → afternoon → evening', async () => {
+    it('orders multiple entries per day by time_slot ascending', async () => {
       sqlite.exec(`
         INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
         VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
@@ -560,20 +560,20 @@ describe('getCalendarProjection', () => {
         VALUES (2, 1, '5K Run', '5k-run', 'running');
         INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
         VALUES (3, 1, 'BJJ', 'bjj', 'mma');
-        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-        VALUES (1, 0, 2, 'normal', 'evening');
-        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-        VALUES (1, 0, 1, 'normal', 'morning');
-        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-        VALUES (1, 0, 3, 'normal', 'afternoon');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+        VALUES (1, 0, 2, 'normal', 'evening', '18:00');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+        VALUES (1, 0, 1, 'normal', 'morning', '07:00');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+        VALUES (1, 0, 3, 'normal', 'afternoon', '14:00');
       `)
 
       const result = await getCalendarProjection(db, '2026-03')
       const mar2Entries = result.days.filter((d) => d.date === '2026-03-02')
       expect(mar2Entries).toHaveLength(3)
-      expect(mar2Entries[0].period).toBe('morning')
-      expect(mar2Entries[1].period).toBe('afternoon')
-      expect(mar2Entries[2].period).toBe('evening')
+      expect(mar2Entries[0].time_slot).toBe('07:00')
+      expect(mar2Entries[1].time_slot).toBe('14:00')
+      expect(mar2Entries[2].time_slot).toBe('18:00')
     })
 
     it('days with single workout still get period field', async () => {
