@@ -384,6 +384,7 @@ export function DayDetailPanel({ date, onClose, onMutate }: DayDetailPanelProps)
     targetPeriod: 'morning' | 'afternoon' | 'evening'
     targetTimeSlot: string | null
     scope: 'this_week' | 'remaining_weeks'
+    targetWeekOffset: number
   }) => {
     if (!moveTarget) return
     try {
@@ -397,6 +398,7 @@ export function DayDetailPanel({ date, onClose, onMutate }: DayDetailPanelProps)
         target_period: params.targetPeriod,
         target_time_slot: params.targetTimeSlot,
         scope: params.scope,
+        target_week_offset: params.targetWeekOffset,
       })
       if (!result.success) {
         setError(result.error)
