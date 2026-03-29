@@ -110,6 +110,7 @@ describe('getEffectiveScheduleForDay — characterization', () => {
       const result = await getEffectiveScheduleForDay(db, 1, 1, 0, 'normal')
       expect(result).toHaveLength(1)
       expect(result[0]).toEqual({
+        schedule_entry_id: 1,
         template_id: 1,
         period: 'morning',
         time_slot: '08:00',

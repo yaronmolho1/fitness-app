@@ -167,6 +167,7 @@ describe('getScheduleForMesocycle — characterization', () => {
       const result = await getScheduleForMesocycle(meso.id)
       expect(result).toHaveLength(1)
       expect(result[0]).toEqual({
+        id: 1,
         day_of_week: 0,
         template_id: tmpl.id,
         template_name: 'Push A',
