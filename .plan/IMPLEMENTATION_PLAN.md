@@ -1,7 +1,7 @@
 # Implementation Plan
 
-> 158 tasks across 30 waves. Completed waves (0–14, UI-1–3, R1–3, F1–F5) archived in [ARCHIVE_COMPLETED.md](ARCHIVE_COMPLETED.md).
-> Active: P1–P2, P3, CS, RL waves below. Each task = one TDD cycle.
+> 164 tasks across 32 waves. Completed waves (0–14, UI-1–3, R1–3, F1–F5) archived in [ARCHIVE_COMPLETED.md](ARCHIVE_COMPLETED.md).
+> Active: P1–P2, P3, CS, RL, EG, SW, AL waves below. Each task = one TDD cycle.
 
 ## Archived Waves (134 tasks, all complete)
 
@@ -442,3 +442,65 @@ T182 → T183 → T186 → T188 → T189 (schema → query → move action → m
 | Small | 3 | 1-2h | ~5h |
 | Medium | 5 | 3-5h | ~20h |
 | **Total** | **8** (T182-T189) | | **~25h** |
+
+---
+
+## Wave AL1: Smart Logging Autofill — Foundation
+
+> Autofill inputs with planned values on form load. Two parallel tracks: resistance and running/MMA.
+
+### Track A: Resistance Autofill
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T190 | Resistance autofill on load + reps parsing utility: modify `buildInitialSets()` in `workout-logging-form.tsx` to prefill weight and reps from `SlotData` values instead of empty strings. Add shared `parseRepsLowerBound(reps: string)` utility — extracts lower bound from ranges ("8-12" → 8, "8" → 8, "AMRAP" → null, "5-5" → 5). Handle null `weight` → empty input (not "0"). Add muted hint label "Target: X-Y" beneath reps input when reps is a range. Remove existing placeholder attrs (replaced by real values). RPE, rating, notes remain empty. | medium | Workout Logging | — | smart-logging-autofill |
+
+### Track B: Running + MMA Autofill
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T191 | Running + MMA autofill on load: in `running-logging-form.tsx`, initialize `actual_distance` from `target_distance` and `actual_avg_pace` from `target_pace` when available (null → empty). Leave `actual_avg_hr` empty (no planned equivalent). In `mma-logging-form.tsx`, initialize `actual_duration_minutes` from `planned_duration` when available. Leave `feeling` unset and notes empty. | small | Workout Logging | — | smart-logging-autofill |
+
+## Wave AL2: Smart Logging Autofill — Buttons + Mixed
+
+> Depends on AL1. Four parallel tasks once resistance autofill lands.
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T192 | Mixed modality autofill on load: wire per-section autofill in `mixed-logging-form.tsx`. Resistance sections autofill per T190 logic, running sections per T191, MMA sections per T191. Each section's initial state uses modality-appropriate prefill. | small | Workout Logging | T190, T191 | smart-logging-autofill |
+| T193 | "Log as Planned" whole-workout button: add button below workout name in all logging forms. Visible only when no inputs have been modified from autofilled values. Track `isModified` state (set true on any weight/reps/actual field change; once true, stays true). Tapping scrolls to rating/notes section + shows Sonner toast "Review and save when ready." Normal save button completes the flow. Works across all modalities. | medium | Workout Logging | T190 | smart-logging-autofill |
+| T194 | Per-exercise "As Planned" button: add small button in exercise header row (resistance) and section header (running/MMA in mixed). Tapping fills all sets with planned weight + lower-bound reps (via `parseRepsLowerBound`), restores set count to `target_sets` (removes extras, re-adds removed). Does NOT modify RPE. For running/MMA sections: fills actual fields with planned targets. | small | Workout Logging | T190 | smart-logging-autofill |
+| T195 | Copy-down button: show right-aligned "Copy down" button after set 1's row when (a) exercise has 2+ sets and (b) user has edited set 1 after initial autofill load. Tapping copies set 1's current weight and reps to sets 2 through N. RPE unaffected (per-exercise). Button not shown when set 1 still matches autofill value. Track set-1-edited state per exercise. | small | Workout Logging | T190 | smart-logging-autofill |
+
+## Wave AL Dependency Graph
+
+```
+T190 (resistance autofill + reps util) ── T192 (mixed autofill)
+                                       ├── T193 (log as planned button)
+                                       ├── T194 (per-exercise as planned)
+                                       └── T195 (copy-down)
+T191 (running + MMA autofill) ─────────── T192 (mixed autofill)
+```
+
+## Wave AL Critical Path
+
+T190 → T193 (resistance autofill → log as planned button, estimated: M + M = ~8-12h)
+
+## Wave AL Gap Analysis
+
+- **Supersedes placeholder approach**: `pre-filled-resistance-logging.md` AC#15-16 specifies "pre-filled" but implementation uses placeholders. T190 resolves this gap by using real input values.
+- **Save-time fallback retained**: `resolveSetFallbacks()` in `save-workout.ts` stays as safety net for edge cases (user clears an input and saves). No code removal needed.
+- **Open questions**: 4 items noted in spec with recommendations. All have clear defaults — no blockers.
+
+## Wave AL Risk Areas
+
+- **T190 (resistance autofill)**: `buildInitialSets` is the core initialization path. Must ensure autofilled values are distinguishable from user edits for "Log as Planned" and copy-down state tracking. Consider storing initial values for comparison.
+- **T193 (log as planned)**: `isModified` tracking across all form inputs adds state complexity. One-way flag (never resets) keeps it simple.
+
+## Wave AL Scope Summary
+
+| Scope | Count | Est. Hours Each | Total |
+|-------|-------|-----------------|-------|
+| Small | 3 | 1-2h | ~5h |
+| Medium | 2 | 3-5h | ~8h |
+| **Total** | **6** (T190-T195) | | **~13h** |
