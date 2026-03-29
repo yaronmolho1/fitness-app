@@ -5,6 +5,7 @@ import { eq, and } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '@/lib/db/index'
 import { weekly_schedule, workout_templates, mesocycles } from '@/lib/db/schema'
+import { timeSlotSchema } from '@/lib/schedule/time-utils'
 
 type ScheduleRow = typeof weekly_schedule.$inferSelect
 
@@ -17,12 +18,6 @@ type RemoveResult =
   | { success: false; error: string }
 
 const periodEnum = z.enum(['morning', 'afternoon', 'evening'])
-
-// HH:MM format, 00:00-23:59
-const timeSlotSchema = z.string().regex(
-  /^([01]\d|2[0-3]):[0-5]\d$/,
-  'time_slot must be HH:MM format (00:00-23:59)'
-)
 
 const assignSchema = z.object({
   mesocycle_id: z.number().int().positive('Invalid mesocycle ID'),
