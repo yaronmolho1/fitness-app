@@ -32,7 +32,7 @@ Move a scheduled workout from one day/period to another for a specific week (or 
 
 13. **Given** an override exists for a slot, **When** the day detail panel opens, **Then** an "Overridden" indicator is visible and an "Undo Move" action is available.
 
-14. **Given** no available period on the target day (all three occupied), **When** the user tries to move there, **Then** the target day is disabled or an error is shown.
+14. **Superseded** by `specs/move-workout-time-aware.md` AC11 — unlimited workouts per day, no "periods full" restriction.
 
 ## Edge Cases
 
