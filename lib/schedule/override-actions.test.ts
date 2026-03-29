@@ -58,7 +58,7 @@ function createTables() {
       target_distance REAL,
       target_duration INTEGER,
       target_elevation_gain INTEGER,
-      planned_duration INTEGER,
+      planned_duration INTEGER, estimated_duration INTEGER,
       created_at INTEGER
     )
   `)
@@ -70,12 +70,13 @@ function createTables() {
       template_id INTEGER REFERENCES workout_templates(id),
       week_type TEXT NOT NULL DEFAULT 'normal',
       period TEXT NOT NULL DEFAULT 'morning',
-      time_slot TEXT,
+      time_slot TEXT NOT NULL DEFAULT '07:00',
+      duration INTEGER NOT NULL DEFAULT 90,
       created_at INTEGER
     )
   `)
   testDb.run(
-    sql`CREATE UNIQUE INDEX weekly_schedule_meso_day_type_period_idx ON weekly_schedule(mesocycle_id, day_of_week, week_type, period)`
+    sql`CREATE UNIQUE INDEX weekly_schedule_meso_day_type_timeslot_template_idx ON weekly_schedule(mesocycle_id, day_of_week, week_type, time_slot, template_id)`
   )
   testDb.run(sql`
     CREATE TABLE schedule_week_overrides (
@@ -85,13 +86,14 @@ function createTables() {
       day_of_week INTEGER NOT NULL,
       period TEXT NOT NULL,
       template_id INTEGER REFERENCES workout_templates(id),
-      time_slot TEXT,
+      time_slot TEXT NOT NULL DEFAULT '07:00',
+      duration INTEGER NOT NULL DEFAULT 90,
       override_group TEXT NOT NULL,
       created_at INTEGER
     )
   `)
   testDb.run(
-    sql`CREATE UNIQUE INDEX schedule_week_overrides_meso_week_day_period_idx ON schedule_week_overrides(mesocycle_id, week_number, day_of_week, period)`
+    sql`CREATE UNIQUE INDEX schedule_week_overrides_meso_week_day_timeslot_template_idx ON schedule_week_overrides(mesocycle_id, week_number, day_of_week, time_slot, template_id)`
   )
   testDb.run(sql`
     CREATE TABLE logged_workouts (
@@ -153,8 +155,11 @@ function seedSchedule(
   templateId: number,
   period: 'morning' | 'afternoon' | 'evening' = 'morning',
   weekType: 'normal' | 'deload' = 'normal',
-  timeSlot: string | null = null
+  timeSlot?: string
 ) {
+  const resolvedTimeSlot = timeSlot ?? (
+    period === 'morning' ? '07:00' : period === 'afternoon' ? '13:00' : '18:00'
+  )
   return testDb
     .insert(schema.weekly_schedule)
     .values({
@@ -163,7 +168,7 @@ function seedSchedule(
       template_id: templateId,
       week_type: weekType,
       period,
-      time_slot: timeSlot,
+      time_slot: resolvedTimeSlot,
       created_at: new Date(),
     })
     .returning()

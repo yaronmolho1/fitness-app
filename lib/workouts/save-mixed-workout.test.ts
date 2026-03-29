@@ -31,7 +31,7 @@ const CREATE_SQL = `
     notes TEXT, run_type TEXT, target_pace TEXT, hr_zone INTEGER,
     interval_count INTEGER, interval_rest INTEGER, coaching_cues TEXT,
     target_distance REAL, target_duration INTEGER, target_elevation_gain INTEGER,
-    planned_duration INTEGER, created_at INTEGER
+    planned_duration INTEGER, estimated_duration INTEGER, created_at INTEGER
   );
   CREATE TABLE template_sections (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

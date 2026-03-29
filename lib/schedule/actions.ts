@@ -85,7 +85,12 @@ export async function assignTemplate(input: {
     return { success: false, error: 'Template does not belong to this mesocycle' }
   }
 
-  // Upsert via unique index (mesocycle_id, day_of_week, week_type, period)
+  // Derive time_slot from period if not provided
+  const resolvedTimeSlot = time_slot ?? (
+    period === 'morning' ? '07:00' : period === 'afternoon' ? '13:00' : '18:00'
+  )
+
+  // Upsert via unique index (mesocycle_id, day_of_week, week_type, time_slot, template_id)
   const row = db
     .insert(weekly_schedule)
     .values({
@@ -94,12 +99,13 @@ export async function assignTemplate(input: {
       template_id,
       week_type,
       period,
-      time_slot: time_slot ?? null,
+      time_slot: resolvedTimeSlot,
+      duration: 90, // default, will be refined by time-scheduling feature
       created_at: new Date(),
     })
     .onConflictDoUpdate({
-      target: [weekly_schedule.mesocycle_id, weekly_schedule.day_of_week, weekly_schedule.week_type, weekly_schedule.period],
-      set: { template_id, time_slot: time_slot ?? null },
+      target: [weekly_schedule.mesocycle_id, weekly_schedule.day_of_week, weekly_schedule.week_type, weekly_schedule.time_slot, weekly_schedule.template_id],
+      set: { template_id, time_slot: resolvedTimeSlot },
     })
     .returning()
     .get()

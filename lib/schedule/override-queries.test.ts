@@ -38,7 +38,7 @@ function createTestDb() {
       target_distance REAL,
       target_duration INTEGER,
       target_elevation_gain INTEGER,
-      planned_duration INTEGER,
+      planned_duration INTEGER, estimated_duration INTEGER,
       created_at INTEGER
     );
     CREATE TABLE weekly_schedule (
@@ -48,11 +48,12 @@ function createTestDb() {
       template_id INTEGER REFERENCES workout_templates(id),
       week_type TEXT NOT NULL DEFAULT 'normal',
       period TEXT NOT NULL DEFAULT 'morning',
-      time_slot TEXT,
+      time_slot TEXT NOT NULL DEFAULT '07:00',
+      duration INTEGER NOT NULL DEFAULT 90,
       created_at INTEGER
     );
-    CREATE UNIQUE INDEX weekly_schedule_meso_day_type_period_idx
-      ON weekly_schedule(mesocycle_id, day_of_week, week_type, period);
+    CREATE UNIQUE INDEX weekly_schedule_meso_day_type_timeslot_template_idx
+      ON weekly_schedule(mesocycle_id, day_of_week, week_type, time_slot, template_id);
     CREATE TABLE schedule_week_overrides (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       mesocycle_id INTEGER NOT NULL REFERENCES mesocycles(id) ON DELETE CASCADE,
@@ -60,12 +61,13 @@ function createTestDb() {
       day_of_week INTEGER NOT NULL,
       period TEXT NOT NULL,
       template_id INTEGER REFERENCES workout_templates(id),
-      time_slot TEXT,
+      time_slot TEXT NOT NULL DEFAULT '07:00',
+      duration INTEGER NOT NULL DEFAULT 90,
       override_group TEXT NOT NULL,
       created_at INTEGER
     );
-    CREATE UNIQUE INDEX schedule_week_overrides_meso_week_day_period_idx
-      ON schedule_week_overrides(mesocycle_id, week_number, day_of_week, period);
+    CREATE UNIQUE INDEX schedule_week_overrides_meso_week_day_timeslot_template_idx
+      ON schedule_week_overrides(mesocycle_id, week_number, day_of_week, time_slot, template_id);
   `)
 
   const db = drizzle(sqlite, { schema: { ...schema, ...relationsModule } }) as AppDb
@@ -147,10 +149,10 @@ describe('getEffectiveScheduleForDay', () => {
       VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
       INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
       VALUES (1, 1, 'Push A', 'push-a', 'resistance');
-      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-      VALUES (1, 0, 1, 'normal', 'morning');
-      INSERT INTO schedule_week_overrides (mesocycle_id, week_number, day_of_week, period, template_id, time_slot, override_group)
-      VALUES (1, 3, 0, 'morning', NULL, NULL, 'move-xyz');
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot, duration)
+      VALUES (1, 0, 1, 'normal', 'morning', '07:00', 90);
+      INSERT INTO schedule_week_overrides (mesocycle_id, week_number, day_of_week, period, template_id, time_slot, duration, override_group)
+      VALUES (1, 3, 0, 'morning', NULL, '07:00', 60, 'move-xyz');
     `)
 
     const result = await getEffectiveScheduleForDay(db, 1, 3, 0, 'normal')
@@ -159,7 +161,7 @@ describe('getEffectiveScheduleForDay', () => {
     expect(result[0]).toMatchObject({
       template_id: null,
       period: 'morning',
-      time_slot: null,
+      time_slot: '07:00',
       is_override: true,
       override_group: 'move-xyz',
     })

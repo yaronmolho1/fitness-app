@@ -92,7 +92,7 @@ const CREATE_SQL = `
     target_distance REAL,
     target_duration INTEGER,
     target_elevation_gain INTEGER,
-    planned_duration INTEGER,
+    planned_duration INTEGER, estimated_duration INTEGER,
     created_at INTEGER
   );
   CREATE TABLE template_sections (
@@ -138,7 +138,8 @@ const CREATE_SQL = `
     template_id INTEGER REFERENCES workout_templates(id),
     week_type TEXT NOT NULL DEFAULT 'normal',
     period TEXT NOT NULL DEFAULT 'morning',
-    time_slot TEXT,
+    time_slot TEXT NOT NULL DEFAULT '07:00',
+    duration INTEGER NOT NULL DEFAULT 90,
     created_at INTEGER
   );
   CREATE TABLE logged_workouts (
@@ -311,20 +312,24 @@ function insertSchedule(
   mesocycleId: number,
   dayOfWeek: number,
   templateId: number,
-  overrides: { week_type?: string; period?: string; time_slot?: string | null } = {}
+  overrides: { week_type?: string; period?: string; time_slot?: string } = {}
 ) {
+  const period = overrides.period ?? 'morning'
+  const timeSlot = overrides.time_slot ?? (
+    period === 'morning' ? '07:00' : period === 'afternoon' ? '13:00' : '18:00'
+  )
   return sqlite
     .prepare(
-      `INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
-       VALUES (?, ?, ?, ?, ?, ?)`
+      `INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot, duration)
+       VALUES (?, ?, ?, ?, ?, ?, 90)`
     )
     .run(
       mesocycleId,
       dayOfWeek,
       templateId,
       overrides.week_type ?? 'normal',
-      overrides.period ?? 'morning',
-      overrides.time_slot ?? null
+      period,
+      timeSlot
     ).lastInsertRowid as number
 }
 

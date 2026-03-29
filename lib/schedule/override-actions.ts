@@ -169,6 +169,12 @@ export async function moveWorkout(input: {
         continue
       }
 
+      // Derive time slots from period if not provided
+      const sourceTimeSlot = source_period === 'morning' ? '07:00' : source_period === 'afternoon' ? '13:00' : '18:00'
+      const resolvedTargetTimeSlot = target_time_slot ?? (
+        target_period === 'morning' ? '07:00' : target_period === 'afternoon' ? '13:00' : '18:00'
+      )
+
       // Insert source override (null out the source slot)
       tx.insert(schedule_week_overrides)
         .values({
@@ -177,7 +183,8 @@ export async function moveWorkout(input: {
           day_of_week: source_day,
           period: source_period,
           template_id: null,
-          time_slot: null,
+          time_slot: sourceTimeSlot,
+          duration: 60, // rest/removed slot
           override_group: overrideGroup,
           created_at: new Date(),
         })
@@ -186,11 +193,12 @@ export async function moveWorkout(input: {
             schedule_week_overrides.mesocycle_id,
             schedule_week_overrides.week_number,
             schedule_week_overrides.day_of_week,
-            schedule_week_overrides.period,
+            schedule_week_overrides.time_slot,
+            schedule_week_overrides.template_id,
           ],
           set: {
             template_id: null,
-            time_slot: null,
+            time_slot: sourceTimeSlot,
             override_group: overrideGroup,
           },
         })
@@ -204,7 +212,8 @@ export async function moveWorkout(input: {
           day_of_week: target_day,
           period: target_period,
           template_id: templateId,
-          time_slot: target_time_slot ?? null,
+          time_slot: resolvedTargetTimeSlot,
+          duration: 90, // default, will be refined by time-scheduling feature
           override_group: overrideGroup,
           created_at: new Date(),
         })
@@ -213,11 +222,12 @@ export async function moveWorkout(input: {
             schedule_week_overrides.mesocycle_id,
             schedule_week_overrides.week_number,
             schedule_week_overrides.day_of_week,
-            schedule_week_overrides.period,
+            schedule_week_overrides.time_slot,
+            schedule_week_overrides.template_id,
           ],
           set: {
             template_id: templateId,
-            time_slot: target_time_slot ?? null,
+            time_slot: resolvedTargetTimeSlot,
             override_group: overrideGroup,
           },
         })

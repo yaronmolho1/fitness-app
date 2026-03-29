@@ -45,7 +45,7 @@ function createTestDb() {
       interval_rest INTEGER,
       coaching_cues TEXT,
       target_distance REAL, target_duration INTEGER, target_elevation_gain INTEGER,
-      planned_duration INTEGER,
+      planned_duration INTEGER, estimated_duration INTEGER,
       created_at INTEGER
     );
     CREATE TABLE exercise_slots (
@@ -70,10 +70,11 @@ function createTestDb() {
       template_id INTEGER REFERENCES workout_templates(id),
       week_type TEXT NOT NULL DEFAULT 'normal',
       period TEXT NOT NULL DEFAULT 'morning',
-      time_slot TEXT,
+      time_slot TEXT NOT NULL DEFAULT '07:00',
+      duration INTEGER NOT NULL DEFAULT 90,
       created_at INTEGER
     );
-    CREATE UNIQUE INDEX weekly_schedule_meso_day_type_period_idx ON weekly_schedule(mesocycle_id, day_of_week, week_type, period);
+    CREATE UNIQUE INDEX weekly_schedule_meso_day_type_timeslot_template_idx ON weekly_schedule(mesocycle_id, day_of_week, week_type, time_slot, template_id);
     CREATE TABLE schedule_week_overrides (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       mesocycle_id INTEGER NOT NULL REFERENCES mesocycles(id) ON DELETE CASCADE,
@@ -81,12 +82,13 @@ function createTestDb() {
       day_of_week INTEGER NOT NULL,
       period TEXT NOT NULL,
       template_id INTEGER REFERENCES workout_templates(id),
-      time_slot TEXT,
+      time_slot TEXT NOT NULL DEFAULT '07:00',
+      duration INTEGER NOT NULL DEFAULT 90,
       override_group TEXT NOT NULL,
       created_at INTEGER
     );
-    CREATE UNIQUE INDEX schedule_week_overrides_meso_week_day_period_idx
-      ON schedule_week_overrides(mesocycle_id, week_number, day_of_week, period);
+    CREATE UNIQUE INDEX schedule_week_overrides_meso_week_day_timeslot_template_idx
+      ON schedule_week_overrides(mesocycle_id, week_number, day_of_week, time_slot, template_id);
     CREATE TABLE logged_workouts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       template_id INTEGER,
@@ -198,7 +200,7 @@ describe('getDayDetail — T184: override-aware schedule resolution', () => {
       INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
       VALUES (1, 0, 1, 'normal', 'morning');
       INSERT INTO schedule_week_overrides (mesocycle_id, week_number, day_of_week, period, template_id, time_slot, override_group)
-      VALUES (1, 1, 0, 'morning', NULL, NULL, 'move-rest');
+      VALUES (1, 1, 0, 'morning', NULL, '07:00', 'move-rest');
     `)
 
     const results = await getDayDetail(db, '2026-03-02')
@@ -284,7 +286,7 @@ describe('getDayDetail — T184: override-aware schedule resolution', () => {
       INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type)
       VALUES (1, 0, 2, 'deload');
       INSERT INTO schedule_week_overrides (mesocycle_id, week_number, day_of_week, period, template_id, time_slot, override_group)
-      VALUES (1, 3, 0, 'morning', 3, NULL, 'move-deload');
+      VALUES (1, 3, 0, 'morning', 3, '07:00', 'move-deload');
     `)
 
     // 2026-03-16 is Monday, week 3 = deload
