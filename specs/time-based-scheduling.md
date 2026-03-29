@@ -1,5 +1,5 @@
 ---
-status: ready
+status: in-progress
 epic: time-scheduling-gcal
 depends: [specs/7-day-assignment-grid.md, specs/workout-time-slots.md]
 supersedes: specs/workout-time-slots.md (partially — replaces period-first model with time-first)
