@@ -60,7 +60,7 @@ const CREATE_WORKOUT_TEMPLATES = sql`
     target_distance REAL,
     target_duration INTEGER,
     target_elevation_gain INTEGER,
-    planned_duration INTEGER,
+    planned_duration INTEGER, estimated_duration INTEGER,
     created_at INTEGER
   )
 `
@@ -115,7 +115,8 @@ const CREATE_WEEKLY_SCHEDULE = sql`
     template_id INTEGER,
     week_type TEXT NOT NULL DEFAULT 'normal',
     period TEXT NOT NULL DEFAULT 'morning',
-    time_slot TEXT,
+    time_slot TEXT NOT NULL DEFAULT '07:00',
+    duration INTEGER NOT NULL DEFAULT 90,
     created_at INTEGER
   )
 `

@@ -27,7 +27,7 @@ function buildSchedule(
     template_id: number
     template_name: string
     period?: 'morning' | 'afternoon' | 'evening'
-    time_slot?: string | null
+    time_slot?: string
   }>
 ): ScheduleEntry[] {
   return assignments.map((a) => ({
@@ -35,7 +35,7 @@ function buildSchedule(
     template_id: a.template_id,
     template_name: a.template_name,
     period: a.period ?? 'morning',
-    time_slot: a.time_slot ?? null,
+    time_slot: a.time_slot ?? '07:00',
   }))
 }
 
@@ -344,7 +344,8 @@ describe('ScheduleGrid', () => {
           template_id: 2,
           week_type: 'normal',
           period: 'afternoon',
-          time_slot: null,
+          time_slot: '07:00',
+          duration: 90,
           created_at: new Date(),
         },
       })
@@ -461,7 +462,8 @@ describe('ScheduleGrid', () => {
           template_id: 2,
           week_type: 'normal',
           period: 'evening',
-          time_slot: null,
+          time_slot: '07:00',
+          duration: 90,
           created_at: new Date(),
         },
       })
@@ -545,7 +547,8 @@ describe('ScheduleGrid', () => {
           template_id: 4,
           week_type: 'normal',
           period: 'morning',
-          time_slot: null,
+          time_slot: '07:00',
+          duration: 90,
           created_at: new Date(),
         },
       })

@@ -84,7 +84,7 @@ describe('createResistanceTemplate', () => {
         interval_rest INTEGER,
         coaching_cues TEXT,
     target_distance REAL, target_duration INTEGER, target_elevation_gain INTEGER,
-        planned_duration INTEGER,
+        planned_duration INTEGER, estimated_duration INTEGER,
         created_at INTEGER
       )
     `)
@@ -260,7 +260,7 @@ describe('createRunningTemplate', () => {
         interval_rest INTEGER,
         coaching_cues TEXT,
     target_distance REAL, target_duration INTEGER, target_elevation_gain INTEGER,
-        planned_duration INTEGER,
+        planned_duration INTEGER, estimated_duration INTEGER,
         created_at INTEGER
       )
     `)
@@ -668,7 +668,7 @@ describe('createMmaBjjTemplate', () => {
         interval_rest INTEGER,
         coaching_cues TEXT,
     target_distance REAL, target_duration INTEGER, target_elevation_gain INTEGER,
-        planned_duration INTEGER,
+        planned_duration INTEGER, estimated_duration INTEGER,
         created_at INTEGER
       )
     `)
@@ -874,7 +874,7 @@ describe('updateTemplate', () => {
         interval_rest INTEGER,
         coaching_cues TEXT,
     target_distance REAL, target_duration INTEGER, target_elevation_gain INTEGER,
-        planned_duration INTEGER,
+        planned_duration INTEGER, estimated_duration INTEGER,
         created_at INTEGER
       )
     `)
@@ -956,7 +956,7 @@ describe('deleteTemplate', () => {
         interval_rest INTEGER,
         coaching_cues TEXT,
     target_distance REAL, target_duration INTEGER, target_elevation_gain INTEGER,
-        planned_duration INTEGER,
+        planned_duration INTEGER, estimated_duration INTEGER,
         created_at INTEGER
       )
     `)
@@ -984,7 +984,8 @@ describe('deleteTemplate', () => {
         day_of_week INTEGER NOT NULL,
         week_type TEXT NOT NULL DEFAULT 'normal',
         period TEXT NOT NULL DEFAULT 'morning',
-        time_slot TEXT,
+        time_slot TEXT NOT NULL DEFAULT '07:00',
+        duration INTEGER NOT NULL DEFAULT 90,
         created_at INTEGER
       )
     `)

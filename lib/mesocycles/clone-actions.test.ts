@@ -68,7 +68,7 @@ function resetTables() {
     interval_rest INTEGER,
     coaching_cues TEXT,
     target_distance REAL, target_duration INTEGER, target_elevation_gain INTEGER,
-    planned_duration INTEGER,
+    planned_duration INTEGER, estimated_duration INTEGER,
     created_at INTEGER
   )`)
   testDb.run(sql`CREATE TABLE IF NOT EXISTS template_sections (
@@ -109,9 +109,10 @@ function resetTables() {
     template_id INTEGER REFERENCES workout_templates(id),
     week_type TEXT NOT NULL DEFAULT 'normal',
     period TEXT NOT NULL DEFAULT 'morning',
-    time_slot TEXT,
+    time_slot TEXT NOT NULL DEFAULT '07:00',
+    duration INTEGER NOT NULL DEFAULT 90,
     created_at INTEGER,
-    UNIQUE(mesocycle_id, day_of_week, week_type, period)
+    UNIQUE(mesocycle_id, day_of_week, week_type, time_slot, template_id)
   )`)
 }
 
@@ -1089,7 +1090,7 @@ describe('cloneMesocycle', () => {
       )
       expect(wedEntry).toBeDefined()
       expect(wedEntry!.period).toBe('afternoon')
-      expect(wedEntry!.time_slot).toBeNull()
+      expect(wedEntry!.time_slot).toBe('07:00') // default when not explicitly set
     })
 
     it('preserves period on deload schedule entries', async () => {

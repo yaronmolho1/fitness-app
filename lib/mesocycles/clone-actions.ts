@@ -186,6 +186,7 @@ export async function cloneMesocycle(input: CloneInput): Promise<CloneResult> {
           week_type: row.week_type,
           period: row.period,
           time_slot: row.time_slot,
+          duration: row.duration,
         })
         .run()
     }

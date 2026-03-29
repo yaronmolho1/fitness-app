@@ -38,7 +38,7 @@ function createTestDb() {
       interval_rest INTEGER,
       coaching_cues TEXT,
       target_distance REAL, target_duration INTEGER, target_elevation_gain INTEGER,
-      planned_duration INTEGER,
+      planned_duration INTEGER, estimated_duration INTEGER,
       created_at INTEGER
     );
     CREATE TABLE weekly_schedule (
@@ -48,10 +48,11 @@ function createTestDb() {
       template_id INTEGER REFERENCES workout_templates(id),
       week_type TEXT NOT NULL DEFAULT 'normal',
       period TEXT NOT NULL DEFAULT 'morning',
-      time_slot TEXT,
+      time_slot TEXT NOT NULL DEFAULT '07:00',
+      duration INTEGER NOT NULL DEFAULT 90,
       created_at INTEGER
     );
-    CREATE UNIQUE INDEX weekly_schedule_meso_day_type_period_idx ON weekly_schedule(mesocycle_id, day_of_week, week_type, period);
+    CREATE UNIQUE INDEX weekly_schedule_meso_day_type_timeslot_template_idx ON weekly_schedule(mesocycle_id, day_of_week, week_type, time_slot, template_id);
     CREATE TABLE logged_workouts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       template_id INTEGER,
@@ -70,11 +71,12 @@ function createTestDb() {
       day_of_week INTEGER NOT NULL,
       period TEXT NOT NULL,
       template_id INTEGER REFERENCES workout_templates(id),
-      time_slot TEXT,
+      time_slot TEXT NOT NULL DEFAULT '07:00',
+      duration INTEGER NOT NULL DEFAULT 90,
       override_group TEXT NOT NULL,
       created_at INTEGER
     );
-    CREATE UNIQUE INDEX schedule_week_overrides_meso_week_day_period_idx ON schedule_week_overrides(mesocycle_id, week_number, day_of_week, period);
+    CREATE UNIQUE INDEX schedule_week_overrides_meso_week_day_timeslot_template_idx ON schedule_week_overrides(mesocycle_id, week_number, day_of_week, time_slot, template_id);
   `)
 
   const db = drizzle(sqlite, { schema: { ...schema, ...relationsModule } }) as AppDb
@@ -518,7 +520,7 @@ describe('getCalendarProjection — characterization', () => {
       expect(result.days.find((d) => d.date === '2026-03-02')!.time_slot).toBe('07:30')
     })
 
-    it('null time_slot passes through as null', async () => {
+    it('default time_slot when not specified', async () => {
       sqlite.exec(`
         INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
         VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
@@ -528,7 +530,7 @@ describe('getCalendarProjection — characterization', () => {
         VALUES (1, 0, 1, 'normal', 'morning');
       `)
       const result = await getCalendarProjection(db, '2026-03')
-      expect(result.days.find((d) => d.date === '2026-03-02')!.time_slot).toBeNull()
+      expect(result.days.find((d) => d.date === '2026-03-02')!.time_slot).toBe('07:00')
     })
   })
 

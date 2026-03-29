@@ -63,6 +63,7 @@ export const workout_templates = sqliteTable('workout_templates', {
   target_elevation_gain: integer('target_elevation_gain'), // meters, nullable
   // MMA/BJJ-specific (null for non-mma templates)
   planned_duration: integer('planned_duration'),
+  estimated_duration: integer('estimated_duration'), // minutes, nullable — computed from modality
   created_at: integer('created_at', { mode: 'timestamp' }),
 })
 
@@ -195,15 +196,17 @@ export const weekly_schedule = sqliteTable(
     })
       .notNull()
       .default('morning'),
-    time_slot: text('time_slot'), // nullable, "HH:MM" format
+    time_slot: text('time_slot').notNull().default('07:00'), // "HH:MM" format
+    duration: integer('duration').notNull().default(90), // minutes
     created_at: integer('created_at', { mode: 'timestamp' }),
   },
   (t) => ({
-    uniq: uniqueIndex('weekly_schedule_meso_day_type_period_idx').on(
+    uniq: uniqueIndex('weekly_schedule_meso_day_type_timeslot_template_idx').on(
       t.mesocycle_id,
       t.day_of_week,
       t.week_type,
-      t.period
+      t.time_slot,
+      t.template_id
     ),
   })
 )
@@ -261,16 +264,18 @@ export const schedule_week_overrides = sqliteTable(
     template_id: integer('template_id').references(
       () => workout_templates.id
     ), // nullable — null = rest/removed
-    time_slot: text('time_slot'), // nullable, "HH:MM" format
+    time_slot: text('time_slot').notNull().default('07:00'), // "HH:MM" format
+    duration: integer('duration').notNull().default(90), // minutes
     override_group: text('override_group').notNull(),
     created_at: integer('created_at', { mode: 'timestamp' }),
   },
   (t) => ({
-    uniq: uniqueIndex('schedule_week_overrides_meso_week_day_period_idx').on(
+    uniq: uniqueIndex('schedule_week_overrides_meso_week_day_timeslot_template_idx').on(
       t.mesocycle_id,
       t.week_number,
       t.day_of_week,
-      t.period
+      t.time_slot,
+      t.template_id
     ),
   })
 )
@@ -288,6 +293,7 @@ export const athlete_profile = sqliteTable('athlete_profile', {
   training_age_years: integer('training_age_years'),
   primary_goal: text('primary_goal'),
   injury_history: text('injury_history'),
+  timezone: text('timezone').notNull().default('UTC'),
   created_at: integer('created_at', { mode: 'timestamp' }),
   updated_at: integer('updated_at', { mode: 'timestamp' }),
 })
@@ -354,6 +360,56 @@ export const routine_logs = sqliteTable(
     uniq: uniqueIndex('routine_logs_item_date_idx').on(
       t.routine_item_id,
       t.log_date
+    ),
+  })
+)
+
+// ============================================================================
+// GOOGLE CALENDAR INTEGRATION (2 tables)
+// ============================================================================
+
+export const google_credentials = sqliteTable('google_credentials', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  access_token: text('access_token').notNull(),
+  refresh_token: text('refresh_token').notNull(),
+  token_type: text('token_type').notNull().default('Bearer'),
+  expiry_date: integer('expiry_date', { mode: 'timestamp' }).notNull(),
+  scope: text('scope'),
+  calendar_id: text('calendar_id'), // selected calendar for syncing
+  created_at: integer('created_at', { mode: 'timestamp' }),
+  updated_at: integer('updated_at', { mode: 'timestamp' }),
+})
+
+export const google_calendar_events = sqliteTable(
+  'google_calendar_events',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    google_event_id: text('google_event_id').notNull(),
+    mesocycle_id: integer('mesocycle_id')
+      .notNull()
+      .references(() => mesocycles.id, { onDelete: 'cascade' }),
+    schedule_entry_id: integer('schedule_entry_id'), // weekly_schedule.id, nullable
+    override_entry_id: integer('override_entry_id'), // schedule_week_overrides.id, nullable
+    event_date: text('event_date').notNull(), // YYYY-MM-DD
+    summary: text('summary').notNull(),
+    start_time: text('start_time').notNull(), // HH:MM
+    end_time: text('end_time').notNull(), // HH:MM
+    sync_status: text('sync_status', {
+      enum: ['synced', 'pending', 'error'],
+    })
+      .notNull()
+      .default('pending'),
+    last_synced_at: integer('last_synced_at', { mode: 'timestamp' }),
+    created_at: integer('created_at', { mode: 'timestamp' }),
+    updated_at: integer('updated_at', { mode: 'timestamp' }),
+  },
+  (t) => ({
+    uniqGoogleEvent: uniqueIndex('google_calendar_events_google_event_id_idx').on(
+      t.google_event_id
+    ),
+    uniqScheduleDate: uniqueIndex('google_calendar_events_schedule_date_idx').on(
+      t.schedule_entry_id,
+      t.event_date
     ),
   })
 )

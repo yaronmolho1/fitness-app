@@ -30,7 +30,7 @@ const CREATE_SQL = `
     notes TEXT, run_type TEXT, target_pace TEXT, hr_zone INTEGER,
     interval_count INTEGER, interval_rest INTEGER, coaching_cues TEXT,
     target_distance REAL, target_duration INTEGER, target_elevation_gain INTEGER,
-    planned_duration INTEGER, created_at INTEGER
+    planned_duration INTEGER, estimated_duration INTEGER, created_at INTEGER
   );
   CREATE TABLE template_sections (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -67,10 +67,11 @@ const CREATE_SQL = `
     template_id INTEGER REFERENCES workout_templates(id),
     week_type TEXT NOT NULL DEFAULT 'normal',
     period TEXT NOT NULL DEFAULT 'morning',
-    time_slot TEXT,
+    time_slot TEXT NOT NULL DEFAULT '07:00',
+    duration INTEGER NOT NULL DEFAULT 90,
     created_at INTEGER
   );
-  CREATE UNIQUE INDEX weekly_schedule_meso_day_type_period_idx ON weekly_schedule(mesocycle_id, day_of_week, week_type, period);
+  CREATE UNIQUE INDEX weekly_schedule_meso_day_type_timeslot_template_idx ON weekly_schedule(mesocycle_id, day_of_week, week_type, time_slot, template_id);
   CREATE TABLE logged_workouts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     template_id INTEGER, canonical_name TEXT, log_date TEXT NOT NULL,

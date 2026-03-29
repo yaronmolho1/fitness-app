@@ -19,6 +19,7 @@ describe('athlete_profile schema', () => {
         training_age_years INTEGER,
         primary_goal TEXT,
         injury_history TEXT,
+        timezone TEXT NOT NULL DEFAULT 'UTC',
         created_at INTEGER,
         updated_at INTEGER
       )
