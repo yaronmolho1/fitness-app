@@ -10,7 +10,7 @@ import type { MesocycleInfo, TemplateInfo, SectionData, SlotData } from '@/lib/t
 import { SectionHeading } from '@/components/layout/section-heading'
 import { formatDateWithWeekday } from '@/lib/date-format'
 import { useLogAsPlanned } from '@/lib/use-log-as-planned'
-import { parseRepsLowerBound } from '@/lib/reps-parsing'
+import { parseRepsLowerBound, isRepsRange } from '@/lib/reps-parsing'
 
 export type MixedWorkoutData = {
   date: string
@@ -165,17 +165,24 @@ function ResistanceSectionInputs({
                   className="min-h-[44px] w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 />
 
-                <NumericInput
-                  data-testid={`reps-input-${sectionIndex}-${slotIndex}-${setIndex}`}
-                  aria-label={`Actual reps for set ${setIndex + 1}`}
-                  mode="integer"
-                  placeholder={slot.reps || '\u2014'}
-                  value={setData.reps}
-                  onValueChange={(v) =>
-                    onUpdateSet(slotIndex, setIndex, 'reps', v)
-                  }
-                  className="min-h-[44px] w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                />
+                <div>
+                  <NumericInput
+                    data-testid={`reps-input-${sectionIndex}-${slotIndex}-${setIndex}`}
+                    aria-label={`Actual reps for set ${setIndex + 1}`}
+                    mode="integer"
+                    placeholder={slot.reps || '\u2014'}
+                    value={setData.reps}
+                    onValueChange={(v) =>
+                      onUpdateSet(slotIndex, setIndex, 'reps', v)
+                    }
+                    className="min-h-[44px] w-full rounded-lg border border-input bg-background px-3 text-center text-base font-medium tabular-nums placeholder:text-muted-foreground/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  />
+                  {(isRepsRange(slot.reps) || (parseRepsLowerBound(slot.reps) === null && slot.reps !== '')) && (
+                    <span className="block text-center text-[10px] text-muted-foreground mt-0.5">
+                      Target: {slot.reps}
+                    </span>
+                  )}
+                </div>
 
                 <button
                   type="button"

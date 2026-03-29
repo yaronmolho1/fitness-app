@@ -156,6 +156,48 @@ describe('T192: Mixed modality autofill on load', () => {
       expect(w.value).toBe('')
     })
 
+    it('shows "Target: 8-12" hint when reps is a range', () => {
+      const data = makeData([
+        makeSection({
+          id: 1,
+          section_name: 'Strength',
+          modality: 'resistance',
+          order: 1,
+          slots: [makeSlot({ reps: '8-12', sets: 1 })],
+        }),
+      ])
+      render(<MixedLoggingForm data={data} />)
+      expect(screen.getByText('Target: 8-12')).toBeTruthy()
+    })
+
+    it('shows "Target: AMRAP" hint when reps is non-numeric', () => {
+      const data = makeData([
+        makeSection({
+          id: 1,
+          section_name: 'Strength',
+          modality: 'resistance',
+          order: 1,
+          slots: [makeSlot({ reps: 'AMRAP', sets: 1 })],
+        }),
+      ])
+      render(<MixedLoggingForm data={data} />)
+      expect(screen.getByText('Target: AMRAP')).toBeTruthy()
+    })
+
+    it('does not show target hint when reps is a plain integer', () => {
+      const data = makeData([
+        makeSection({
+          id: 1,
+          section_name: 'Strength',
+          modality: 'resistance',
+          order: 1,
+          slots: [makeSlot({ reps: '10', sets: 1 })],
+        }),
+      ])
+      render(<MixedLoggingForm data={data} />)
+      expect(screen.queryByText(/^Target:/)).toBeNull()
+    })
+
     it('leaves reps empty for non-numeric like AMRAP', () => {
       const data = makeData([
         makeSection({
