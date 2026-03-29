@@ -10,22 +10,20 @@ import {
   schedule_week_overrides,
   logged_workouts,
 } from '@/lib/db/schema'
+import { derivePeriod, timeSlotSchema, durationSchema } from '@/lib/schedule/time-utils'
 
 type MoveResult =
   | { success: true; override_group: string }
   | { success: false; error: string }
 
-const periodEnum = z.enum(['morning', 'afternoon', 'evening'])
-
 const moveWorkoutSchema = z.object({
   mesocycle_id: z.number().int().positive('Invalid mesocycle ID'),
   week_number: z.number().int().positive('Invalid week number'),
-  source_day: z.number().int().min(0).max(6, 'source_day must be 0-6'),
-  source_period: periodEnum,
+  schedule_id: z.number().int().positive('Invalid schedule entry ID'),
   target_day: z.number().int().min(0).max(6, 'target_day must be 0-6'),
-  target_period: periodEnum,
+  target_time_slot: timeSlotSchema,
+  target_duration: durationSchema,
   scope: z.enum(['this_week', 'remaining_weeks']),
-  target_time_slot: z.string().nullish(),
   target_week_offset: z.number().int().min(-1).max(1).default(0),
 })
 
@@ -51,12 +49,11 @@ function generateOverrideGroup(): string {
 export async function moveWorkout(input: {
   mesocycle_id: number
   week_number: number
-  source_day: number
-  source_period: 'morning' | 'afternoon' | 'evening'
+  schedule_id: number
   target_day: number
-  target_period: 'morning' | 'afternoon' | 'evening'
+  target_time_slot: string
+  target_duration: number
   scope: 'this_week' | 'remaining_weeks'
-  target_time_slot?: string | null
   target_week_offset?: number
 }): Promise<MoveResult> {
   const parsed = moveWorkoutSchema.safeParse(input)
@@ -67,19 +64,13 @@ export async function moveWorkout(input: {
   const {
     mesocycle_id,
     week_number,
-    source_day,
-    source_period,
+    schedule_id,
     target_day,
-    target_period,
-    scope,
     target_time_slot,
+    target_duration,
+    scope,
     target_week_offset,
   } = parsed.data
-
-  // Same day + same period + same week = no-op
-  if (target_week_offset === 0 && source_day === target_day && source_period === target_period) {
-    return { success: false, error: 'Cannot move to the same day and period' }
-  }
 
   const result = db.transaction((tx): MoveResult => {
     // Verify mesocycle exists and isn't completed
@@ -103,29 +94,30 @@ export async function moveWorkout(input: {
       return { success: false, error: 'Invalid week number' } as const
     }
 
-    // Determine week_type based on week_number vs work_weeks
-    const weekType = (meso.has_deload && week_number > meso.work_weeks) ? 'deload' : 'normal'
-
-    // Find the source slot in the base schedule
+    // Find source entry by row ID
     const sourceSlot = tx
       .select()
       .from(weekly_schedule)
-      .where(
-        and(
-          eq(weekly_schedule.mesocycle_id, mesocycle_id),
-          eq(weekly_schedule.day_of_week, source_day),
-          eq(weekly_schedule.week_type, weekType),
-          eq(weekly_schedule.period, source_period)
-        )
-      )
+      .where(eq(weekly_schedule.id, schedule_id))
       .get()
 
-    if (!sourceSlot || !sourceSlot.template_id) {
-      return { success: false, error: 'Source slot has no template assigned' } as const
+    if (!sourceSlot || !sourceSlot.template_id || sourceSlot.mesocycle_id !== mesocycle_id) {
+      return { success: false, error: 'Source schedule entry not found or has no template' } as const
+    }
+
+    const source_day = sourceSlot.day_of_week
+    const sourceTimeSlot = sourceSlot.time_slot
+    const sourceDuration = sourceSlot.duration
+    const sourcePeriod = derivePeriod(sourceTimeSlot)
+
+    // Same day + same time_slot + same week = no-op
+    if (target_week_offset === 0 && source_day === target_day && sourceTimeSlot === target_time_slot) {
+      return { success: false, error: 'Cannot move to the same day and time' } as const
     }
 
     const templateId = sourceSlot.template_id
     const overrideGroup = generateOverrideGroup()
+    const targetPeriod = derivePeriod(target_time_slot)
 
     // Determine which weeks to apply overrides
     const totalWeeks = meso.work_weeks
@@ -161,19 +153,11 @@ export async function moveWorkout(input: {
         .get()
 
       if (logged) {
-        // For this_week scope, reject entirely
         if (scope === 'this_week') {
           return { success: false, error: 'Cannot move an already-logged workout' } as const
         }
-        // For remaining_weeks, skip this week
         continue
       }
-
-      // Derive time slots from period if not provided
-      const sourceTimeSlot = source_period === 'morning' ? '07:00' : source_period === 'afternoon' ? '13:00' : '18:00'
-      const resolvedTargetTimeSlot = target_time_slot ?? (
-        target_period === 'morning' ? '07:00' : target_period === 'afternoon' ? '13:00' : '18:00'
-      )
 
       // Insert source override (null out the source slot)
       tx.insert(schedule_week_overrides)
@@ -181,10 +165,10 @@ export async function moveWorkout(input: {
           mesocycle_id,
           week_number: wk,
           day_of_week: source_day,
-          period: source_period,
+          period: sourcePeriod,
           template_id: null,
           time_slot: sourceTimeSlot,
-          duration: 60, // rest/removed slot
+          duration: sourceDuration,
           override_group: overrideGroup,
           created_at: new Date(),
         })
@@ -210,10 +194,10 @@ export async function moveWorkout(input: {
           mesocycle_id,
           week_number: targetWk,
           day_of_week: target_day,
-          period: target_period,
+          period: targetPeriod,
           template_id: templateId,
-          time_slot: resolvedTargetTimeSlot,
-          duration: 90, // default, will be refined by time-scheduling feature
+          time_slot: target_time_slot,
+          duration: target_duration,
           override_group: overrideGroup,
           created_at: new Date(),
         })
@@ -227,7 +211,7 @@ export async function moveWorkout(input: {
           ],
           set: {
             template_id: templateId,
-            time_slot: resolvedTargetTimeSlot,
+            time_slot: target_time_slot,
             override_group: overrideGroup,
           },
         })

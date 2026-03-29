@@ -25,6 +25,7 @@ function makeProps(overrides: Partial<MoveWorkoutModalProps> = {}): MoveWorkoutM
     sourceDay: 0,
     sourcePeriod: 'morning',
     sourceTimeSlot: '07:00',
+    sourceDuration: 90,
     sourceTemplateName: 'Push A',
     occupiedSlots: [],
     onConfirm: vi.fn(),
@@ -149,8 +150,8 @@ describe('MoveWorkoutModal', () => {
       await user.click(screen.getByRole('button', { name: /confirm|move/i }))
       expect(onConfirm).toHaveBeenCalledWith({
         targetDay: 2,
-        targetPeriod: 'evening',
         targetTimeSlot: '07:00',
+        targetDuration: 90,
         scope: 'this_week',
         targetWeekOffset: 0,
       })

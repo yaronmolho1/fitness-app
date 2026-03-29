@@ -91,6 +91,9 @@ type ProjectedResult = {
   mesocycle_id: number
   mesocycle_status: MesocycleStatus
   period: Period
+  time_slot: string | null
+  duration: number | null
+  schedule_entry_id: number | null
   template: TemplateDetail
   slots: SlotDetail[]
   is_deload: boolean
@@ -286,6 +289,9 @@ export async function getDayDetail(
       mesocycle_id: meso.id,
       mesocycle_status: mesoStatus,
       period,
+      time_slot: entry.time_slot,
+      duration: entry.duration,
+      schedule_entry_id: entry.schedule_entry_id,
       template,
       slots,
       is_deload: isDeload,
