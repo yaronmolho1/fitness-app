@@ -308,6 +308,7 @@ function buildWeeklySummarySection(sessions: RecentSession[]): string | null {
     sessions: number
     runningKm: number
     runningElevation: number
+    resistanceSets: number
     resistanceVolume: number
   }>()
 
@@ -320,7 +321,7 @@ function buildWeeklySummarySection(sessions: RecentSession[]): string | null {
     const weekKey = monday.toISOString().split('T')[0]
 
     if (!weeks.has(weekKey)) {
-      weeks.set(weekKey, { weekStart: weekKey, sessions: 0, runningKm: 0, runningElevation: 0, resistanceVolume: 0 })
+      weeks.set(weekKey, { weekStart: weekKey, sessions: 0, runningKm: 0, runningElevation: 0, resistanceSets: 0, resistanceVolume: 0 })
     }
     const week = weeks.get(weekKey)!
     week.sessions++
@@ -332,6 +333,7 @@ function buildWeeklySummarySection(sessions: RecentSession[]): string | null {
     } else {
       for (const ex of session.exercises) {
         for (const set of ex.sets) {
+          week.resistanceSets++
           if (set.actualReps != null && set.actualWeight != null) {
             week.resistanceVolume += set.actualReps * set.actualWeight
           }
@@ -345,15 +347,16 @@ function buildWeeklySummarySection(sessions: RecentSession[]): string | null {
   const sorted = [...weeks.values()].sort((a, b) => a.weekStart.localeCompare(b.weekStart))
 
   const lines: string[] = ['## Weekly Summary', '']
-  lines.push('| Week | Sessions | Running km | Elevation m | Resistance Volume |')
-  lines.push('|------|----------|-----------|-------------|-------------------|')
+  lines.push('| Week | Sessions | Running km | Elevation m | Sets | Load (kg) |')
+  lines.push('|------|----------|-----------|-------------|------|-----------|')
 
   for (const week of sorted) {
     const weekLabel = formatDateDisplay(week.weekStart)
     const km = week.runningKm > 0 ? week.runningKm.toFixed(1) : '—'
     const elev = week.runningElevation > 0 ? String(week.runningElevation) : '—'
+    const sets = week.resistanceSets > 0 ? String(week.resistanceSets) : '—'
     const vol = week.resistanceVolume > 0 ? week.resistanceVolume.toLocaleString() : '—'
-    lines.push(`| ${weekLabel} | ${week.sessions} | ${km} | ${elev} | ${vol} |`)
+    lines.push(`| ${weekLabel} | ${week.sessions} | ${km} | ${elev} | ${sets} | ${vol} |`)
   }
 
   return lines.join('\n')
