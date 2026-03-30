@@ -63,6 +63,7 @@ docker compose up -d   # containerized run
 - **Migrations**: `drizzle-kit generate` then `drizzle-kit migrate`. Never `push`.
 - **SQLite PRAGMAs**: `journal_mode=WAL`, `busy_timeout=5000`, `synchronous=NORMAL`, `foreign_keys=ON`
 - **Immutability**: no UPDATE/DELETE on logged_workouts, logged_exercises, logged_sets, routine_logs
+- **Google Calendar sync**: fire-and-forget via `.catch(() => {})` — local mutations must never fail due to sync errors. Sync hooks live in the action files (not in a middleware layer). Pure date helpers in `lib/google/sync-helpers.ts`.
 
 ## Forbidden
 

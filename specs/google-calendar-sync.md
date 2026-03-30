@@ -1,5 +1,5 @@
 ---
-status: ready
+status: in-progress
 epic: time-scheduling-gcal
 depends: [specs/google-calendar-connect.md, specs/time-based-scheduling.md, specs/move-workout-time-aware.md, specs/clone-mesocycle.md]
 ---
