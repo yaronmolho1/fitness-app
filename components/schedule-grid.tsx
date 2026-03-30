@@ -4,10 +4,10 @@ import { useState, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
-import { assignTemplate, removeAssignment } from '@/lib/schedule/actions'
+import { assignTemplate, removeAssignment, updateScheduleEntry } from '@/lib/schedule/actions'
 import type { ScheduleEntry, TemplateOption } from '@/lib/schedule/queries'
 import { DAY_NAMES, displayToInternal } from '@/lib/day-mapping'
-import { derivePeriod, checkOverlap, timeSlotSchema } from '@/lib/schedule/time-utils'
+import { derivePeriod, checkOverlap, timeSlotSchema, formatDuration } from '@/lib/schedule/time-utils'
 
 const PERIOD_LABELS: Record<string, string> = {
   morning: 'Morning',
@@ -33,6 +33,13 @@ type FormState = {
   duration: string
 } | null
 
+type EditFormState = {
+  entryId: number
+  day: number
+  timeSlot: string
+  duration: string
+} | null
+
 // Get duration from template fields: estimated_duration > target_duration > planned_duration > 90
 function getTemplateDuration(tmpl: TemplateOption): number {
   if (tmpl.estimated_duration) return tmpl.estimated_duration
@@ -44,8 +51,10 @@ function getTemplateDuration(tmpl: TemplateOption): number {
 export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule, isCompleted, variant }: Props) {
   const [schedule, setSchedule] = useState(initialSchedule)
   const [form, setForm] = useState<FormState>(null)
+  const [editForm, setEditForm] = useState<EditFormState>(null)
   const [error, setError] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
+  const [editError, setEditError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   function getAssignments(day: number): ScheduleEntry[] {
@@ -137,6 +146,75 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
     })
   }
 
+  function handleEditClick(entry: ScheduleEntry) {
+    setError(null)
+    setEditError(null)
+    setForm(null)
+    setEditForm({
+      entryId: entry.id,
+      day: entry.day_of_week,
+      timeSlot: entry.time_slot,
+      duration: String(entry.duration),
+    })
+  }
+
+  function handleEditCancel() {
+    setEditForm(null)
+    setEditError(null)
+  }
+
+  function handleEditSave() {
+    if (!editForm) return
+
+    const timeResult = timeSlotSchema.safeParse(editForm.timeSlot)
+    if (!timeResult.success) {
+      setEditError('Invalid time format. Use HH:MM (00:00-23:59)')
+      return
+    }
+
+    const duration = parseInt(editForm.duration, 10)
+    if (isNaN(duration) || duration <= 0) {
+      setEditError('Duration must be a positive number')
+      return
+    }
+
+    setEditError(null)
+    const entryId = editForm.entryId
+    const timeSlot = editForm.timeSlot
+    setEditForm(null)
+
+    startTransition(async () => {
+      const result = await updateScheduleEntry({
+        id: entryId,
+        time_slot: timeSlot,
+        duration,
+      })
+
+      if (result.success) {
+        setSchedule((prev) =>
+          prev.map((s) =>
+            s.id === entryId
+              ? { ...s, time_slot: result.data.time_slot, duration: result.data.duration, period: result.data.period }
+              : s
+          )
+        )
+        setError(null)
+      } else {
+        setError(result.error)
+      }
+    })
+  }
+
+  function hasEditOverlap(): boolean {
+    if (!editForm) return false
+    const duration = parseInt(editForm.duration, 10)
+    if (isNaN(duration) || duration <= 0) return false
+    const existing = schedule
+      .filter((s) => s.day_of_week === editForm.day && s.id !== editForm.entryId)
+      .map((s) => ({ time_slot: s.time_slot, duration: s.duration }))
+    return checkOverlap(existing, editForm.timeSlot, duration)
+  }
+
   // Check overlap for the current form state
   function hasOverlap(): boolean {
     if (!form || !form.selectedTemplateId || !form.timeSlot) return false
@@ -182,32 +260,114 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
                   data-testid="schedule-entry"
                   className="mb-2 space-y-1"
                 >
-                  <p
-                    data-testid="period-label"
-                    className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground"
-                  >
-                    {PERIOD_LABELS[derivePeriod(entry.time_slot)] ?? entry.period}
-                  </p>
-                  <span
-                    data-testid="time-display"
-                    className="text-[10px] font-mono text-muted-foreground"
-                  >
-                    {entry.time_slot}
-                  </span>
-                  <p className="text-sm font-semibold">{entry.template_name}</p>
-                  {!isCompleted && (
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 px-2 text-xs text-destructive hover:text-destructive"
-                        onClick={() => handleRemove(entry)}
-                        disabled={isPending}
-                        aria-label="Remove assignment"
-                      >
-                        Remove
-                      </Button>
+                  {editForm?.entryId === entry.id ? (
+                    <div className="rounded-md border bg-background p-2 shadow-md space-y-2" data-testid="edit-form">
+                      <p className="text-xs font-semibold">{entry.template_name}</p>
+                      <div>
+                        <label htmlFor={`edit-time-${entry.id}`} className="text-xs text-muted-foreground">
+                          Time
+                        </label>
+                        <Input
+                          id={`edit-time-${entry.id}`}
+                          type="time"
+                          value={editForm.timeSlot}
+                          onChange={(e) => setEditForm({ ...editForm, timeSlot: e.target.value })}
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor={`edit-duration-${entry.id}`} className="text-xs text-muted-foreground">
+                          Duration (min)
+                        </label>
+                        <Input
+                          id={`edit-duration-${entry.id}`}
+                          type="number"
+                          min={1}
+                          value={editForm.duration}
+                          onChange={(e) => setEditForm({ ...editForm, duration: e.target.value })}
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                      {editError && (
+                        <p className="text-xs text-destructive">{editError}</p>
+                      )}
+                      {hasEditOverlap() && (
+                        <p className="text-xs text-yellow-600 bg-yellow-50 rounded px-2 py-1">
+                          This time overlaps with an existing workout
+                        </p>
+                      )}
+                      <div className="flex gap-1">
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={handleEditSave}
+                          disabled={isPending}
+                          aria-label="Save"
+                        >
+                          Save
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={handleEditCancel}
+                          disabled={isPending}
+                          aria-label="Cancel edit"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
                     </div>
+                  ) : (
+                    <>
+                      <p
+                        data-testid="period-label"
+                        className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground"
+                      >
+                        {PERIOD_LABELS[derivePeriod(entry.time_slot)] ?? entry.period}
+                      </p>
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          data-testid="time-display"
+                          className="text-[10px] font-mono text-muted-foreground"
+                        >
+                          {entry.time_slot}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">·</span>
+                        <span
+                          data-testid="duration-display"
+                          className="text-[10px] text-muted-foreground"
+                        >
+                          {formatDuration(entry.duration)}
+                        </span>
+                      </div>
+                      <p className="text-sm font-semibold">{entry.template_name}</p>
+                      {!isCompleted && (
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => handleEditClick(entry)}
+                            disabled={isPending}
+                            aria-label="Edit assignment"
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+                            onClick={() => handleRemove(entry)}
+                            disabled={isPending}
+                            aria-label="Remove assignment"
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               ))}
