@@ -532,3 +532,73 @@ export async function syncCompletion(
 
   return result
 }
+
+/**
+ * Retry all events with 'error' sync_status.
+ * For each failed mapping, re-attempt the GCal insert and update the mapping on success.
+ */
+export async function retryFailedSyncs(): Promise<SyncResult> {
+  const result = emptySyncResult()
+  const ctx = await getCalendarContext()
+  if (!ctx) return result
+
+  const failedEvents = await db
+    .select()
+    .from(google_calendar_events)
+    .where(eq(google_calendar_events.sync_status, 'error'))
+    .all()
+
+  if (failedEvents.length === 0) return result
+
+  for (const mapping of failedEvents) {
+    try {
+      const body: GCalEventBody = {
+        summary: mapping.summary,
+        start: {
+          dateTime: `${mapping.event_date}T${mapping.start_time}:00`,
+          timeZone: ctx.timezone,
+        },
+        end: {
+          dateTime: `${mapping.event_date}T${mapping.end_time}:00`,
+          timeZone: ctx.timezone,
+        },
+        extendedProperties: {
+          private: {
+            mesocycleId: String(mapping.mesocycle_id),
+            eventDate: mapping.event_date,
+          },
+        },
+      }
+
+      const res = await ctx.calendarApi.events.insert({
+        calendarId: ctx.calendarId,
+        requestBody: body,
+      })
+
+      if (res.data.id) {
+        const now = new Date()
+        await db
+          .update(google_calendar_events)
+          .set({
+            google_event_id: res.data.id,
+            sync_status: 'synced',
+            last_synced_at: now,
+            updated_at: now,
+          })
+          .where(eq(google_calendar_events.id, mapping.id))
+      }
+
+      result.created++
+    } catch (err) {
+      result.failed++
+      result.errors.push({
+        operation: 'create',
+        date: mapping.event_date,
+        templateId: 0,
+        message: err instanceof Error ? err.message : String(err),
+      })
+    }
+  }
+
+  return result
+}

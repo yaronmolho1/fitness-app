@@ -46,3 +46,39 @@ export async function getEventsByMesocycle(mesoId: number) {
     .from(google_calendar_events)
     .where(eq(google_calendar_events.mesocycle_id, mesoId))
 }
+
+// Get sync status counts + last sync timestamp
+export type SyncStatusResult = {
+  synced: number
+  pending: number
+  error: number
+  lastSyncedAt: string | null
+}
+
+export async function getSyncStatus(): Promise<SyncStatusResult> {
+  const rows = await db.select().from(google_calendar_events)
+
+  let synced = 0
+  let pending = 0
+  let error = 0
+  let lastSyncedAt: Date | null = null
+
+  for (const row of rows) {
+    if (row.sync_status === 'synced') synced++
+    else if (row.sync_status === 'pending') pending++
+    else if (row.sync_status === 'error') error++
+
+    if (row.last_synced_at) {
+      if (!lastSyncedAt || row.last_synced_at > lastSyncedAt) {
+        lastSyncedAt = row.last_synced_at
+      }
+    }
+  }
+
+  return {
+    synced,
+    pending,
+    error,
+    lastSyncedAt: lastSyncedAt ? lastSyncedAt.toISOString() : null,
+  }
+}
