@@ -154,7 +154,7 @@ Route Handlers are intentionally kept for reads that may serve V2 consumers (LLM
 | Routines | Routine item CRUD with flexible scoping, daily log tracking |
 | Calendar / Progression | Computed views: projected calendar, exercise progression charts, today's sessions (multi-session per day) |
 | Coaching | Summary generation: assembles athlete profile, current plan, recent sessions, progression trends, and subjective state into a structured markdown brief for coaching review |
-| Google | OAuth2 client (`lib/google/client.ts`), token management with auto-refresh, Calendar API access (timezone read, calendar creation), credential queries + connection status (`lib/google/queries.ts`), event mapping lookups, disconnect action (`lib/google/actions.ts`) |
+| Google | OAuth2 client (`lib/google/client.ts`), token management with auto-refresh, Calendar API access (timezone read, calendar creation), credential queries + connection status (`lib/google/queries.ts`), event mapping lookups, disconnect action (`lib/google/actions.ts`), push-sync engine (`lib/google/sync.ts`): `syncMesocycle` (batch-project all workouts), `syncScheduleChange` (diff-based assign/remove/move/reset), `syncCompletion` (checkmark update with 404 recreation); types in `lib/google/types.ts` |
 
 For response format and status codes, see `docs/api-standards.md`.
 
