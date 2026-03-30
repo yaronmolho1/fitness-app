@@ -75,17 +75,19 @@ export async function storeCredentials(data: {
 }) {
   const now = new Date()
 
-  // Upsert: delete existing then insert fresh
-  await db.delete(google_credentials)
-  await db.insert(google_credentials).values({
-    access_token: data.access_token,
-    refresh_token: data.refresh_token,
-    token_type: data.token_type ?? 'Bearer',
-    expiry_date: new Date(data.expiry_date),
-    scope: data.scope ?? SCOPES.join(' '),
-    calendar_id: data.calendar_id,
-    created_at: now,
-    updated_at: now,
+  // Upsert: delete existing then insert fresh (transactional to avoid data loss on crash)
+  await db.transaction(async (tx) => {
+    await tx.delete(google_credentials)
+    await tx.insert(google_credentials).values({
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
+      token_type: data.token_type ?? 'Bearer',
+      expiry_date: new Date(data.expiry_date),
+      scope: data.scope ?? SCOPES.join(' '),
+      calendar_id: data.calendar_id,
+      created_at: now,
+      updated_at: now,
+    })
   })
 }
 

@@ -10,7 +10,16 @@ type DisconnectResult =
   | { success: true }
   | { success: false; error: string }
 
-// Disconnect Google account: delete credentials and optionally delete the Fitness calendar
+// Revoke a token at Google's OAuth endpoint (best-effort)
+async function revokeToken(token: string): Promise<void> {
+  const res = await fetch(
+    `https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(token)}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+  )
+  if (!res.ok) throw new Error(`revoke failed: ${res.status}`)
+}
+
+// Disconnect Google account: revoke tokens, delete credentials, optionally delete calendar
 export async function disconnectGoogle(
   options?: { deleteCalendar?: boolean }
 ): Promise<DisconnectResult> {
@@ -29,6 +38,15 @@ export async function disconnectGoogle(
       await calendar.calendars.delete({ calendarId: creds.calendar_id })
     } catch {
       // Best-effort: calendar deletion failure shouldn't block disconnect
+    }
+  }
+
+  // Revoke refresh token at Google (best-effort — local cleanup proceeds either way)
+  if (creds.refresh_token) {
+    try {
+      await revokeToken(creds.refresh_token)
+    } catch {
+      // Best-effort: revocation failure shouldn't block disconnect
     }
   }
 
