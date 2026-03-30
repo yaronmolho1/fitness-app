@@ -1,5 +1,5 @@
 ---
-status: ready
+status: done
 epic: time-scheduling-gcal
 depends: [specs/auth-system.md]
 ---
