@@ -28,7 +28,7 @@ graph TD
             SC["Server Components\n(data fetching, auth checks)"]
             CC["Client Components\n(forms, interactivity)"]
             SA["Server Actions\n(all CRUD mutations)"]
-            RH["Route Handlers\n(/api/calendar, /api/calendar/day,\n/api/progression, /api/today, /api/health,\n/api/google/disconnect)"]
+            RH["Route Handlers\n(/api/calendar, /api/calendar/day,\n/api/progression, /api/today, /api/health,\n/api/google/disconnect, /api/google/status,\n/api/google/sync)"]
             GoogleAuth["Google OAuth Routes\n(/api/auth/google, /api/auth/google/callback)"]
         end
 
@@ -118,7 +118,7 @@ erDiagram
 | Table | Purpose |
 |-------|---------|
 | `google_credentials` | OAuth2 tokens for Google Calendar API access; single row per user with access/refresh tokens, expiry, and calendar ID |
-| `google_calendar_events` | Mapping between schedule entries and Google Calendar events; tracks sync state (pending/synced/deleted) per mesocycle+template+date |
+| `google_calendar_events` | Mapping between schedule entries and Google Calendar events; tracks sync state (pending/synced/error) per mesocycle+template+date |
 
 **Cross-layer link**: `workout_templates.canonical_name` ↔ `logged_workouts.canonical_name` — string slug match, not a foreign key. See ADR-006.
 
@@ -137,7 +137,7 @@ Hybrid pattern: Server Actions for all mutations, Route Handlers for computed re
 | Pattern | Used For | Examples |
 |---------|----------|---------|
 | **Server Actions** | All form mutations (create, update, delete, log) | Create exercise, update template, log workout, clone mesocycle, cascade edit, mark routine done, disconnect Google |
-| **Route Handlers** | Computed reads, health check, OAuth flows, future API consumers | `GET /api/calendar`, `GET /api/calendar/day`, `GET /api/progression`, `GET /api/today`, `GET /api/health`, `POST /api/coaching/summary`, `GET /api/auth/google`, `GET /api/auth/google/callback`, `POST /api/google/disconnect` |
+| **Route Handlers** | Computed reads, health check, OAuth flows, future API consumers | `GET /api/calendar`, `GET /api/calendar/day`, `GET /api/progression`, `GET /api/today`, `GET /api/health`, `POST /api/coaching/summary`, `GET /api/auth/google`, `GET /api/auth/google/callback`, `POST /api/google/disconnect`, `GET /api/google/status`, `POST /api/google/sync` |
 
 Route Handlers are intentionally kept for reads that may serve V2 consumers (LLM coach, Garmin integration, ecosystem aggregator). Server Actions save boilerplate on 15+ mutation operations with automatic cache revalidation and end-to-end type safety.
 
@@ -154,7 +154,7 @@ Route Handlers are intentionally kept for reads that may serve V2 consumers (LLM
 | Routines | Routine item CRUD with flexible scoping, daily log tracking |
 | Calendar / Progression | Computed views: projected calendar, exercise progression charts, today's sessions (multi-session per day) |
 | Coaching | Summary generation: assembles athlete profile, current plan, recent sessions, progression trends, and subjective state into a structured markdown brief for coaching review |
-| Google | OAuth2 client (`lib/google/client.ts`), token management with auto-refresh, Calendar API access (timezone read, calendar creation), credential queries + connection status (`lib/google/queries.ts`), event mapping lookups, disconnect action (`lib/google/actions.ts`), push-sync engine (`lib/google/sync.ts`): `syncMesocycle` (batch-project all workouts), `syncScheduleChange` (diff-based assign/remove/move/reset), `syncCompletion` (checkmark update with 404 recreation); types in `lib/google/types.ts` |
+| Google | OAuth2 client (`lib/google/client.ts`), token management with auto-refresh, Calendar API access (timezone read, calendar creation), credential queries + connection status + sync status counts (`lib/google/queries.ts`), event mapping lookups, disconnect action (`lib/google/actions.ts`), push-sync engine (`lib/google/sync.ts`): `syncMesocycle` (batch-project all workouts, idempotent via pre-delete), `syncScheduleChange` (diff-based assign/remove/move/reset), `syncCompletion` (checkmark update with 404 recreation, template-filtered lookup), `retryFailedSyncs` (re-attempt all error-state events); status/sync route handlers (`/api/google/status`, `/api/google/sync`); types in `lib/google/types.ts` |
 
 For response format and status codes, see `docs/api-standards.md`.
 
