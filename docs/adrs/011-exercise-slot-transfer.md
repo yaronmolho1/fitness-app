@@ -1,4 +1,4 @@
-# ADR-009: Exercise Slot Transfer Between Templates
+# ADR-011: Exercise Slot Transfer Between Templates
 
 ## Status
 Proposed

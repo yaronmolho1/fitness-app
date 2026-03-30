@@ -3,7 +3,7 @@
 Workout template server actions for all modalities (resistance, running, MMA/BJJ).
 
 ## Files
-- `actions.ts` — `createResistanceTemplate()`, `createRunningTemplate()`, `createMmaBjjTemplate()`, `updateTemplate()`, `deleteTemplate()` with canonical name uniqueness per mesocycle, completed-mesocycle guard
+- `actions.ts` — `createResistanceTemplate()`, `createRunningTemplate()`, `createMmaBjjTemplate()`, `updateTemplate()`, `deleteTemplate()` with canonical name uniqueness per mesocycle, completed-mesocycle guard. Running templates support `target_duration` and `target_elevation_gain`.
 - `utils.ts` — `generateCanonicalName()` slugifies template name for cross-mesocycle identity tracking
 - `slot-actions.ts` — `addExerciseSlot()` (optional `section_id` for mixed templates), `updateExerciseSlot()`, `removeExerciseSlot()`, `toggleSlotRole()`, `reorderExerciseSlots()` Server Actions with Zod validation
 - `slot-queries.ts` — `getSlotsByTemplate()` query with exercise join, returns `SlotWithExercise[]`
@@ -20,4 +20,7 @@ Workout template server actions for all modalities (resistance, running, MMA/BJJ
 - `transfer-actions.ts` — `copyExerciseSlots()`, `moveExerciseSlots()` Server Actions for copying/moving exercise slots between templates with group_id remapping, completed-meso guards, cross-template validation, and reorder-after-move
 - `transfer-queries.ts` — `getTransferTargets()` loads active/planned mesocycles with compatible templates (resistance + mixed) and resistance sections; exports `TransferTarget`, `TransferTargetTemplate`, `TransferTargetSection` types
 - `transfer-helpers.ts` — `collectGroupSlotIds()`, `shouldPromptSuperset()` utilities for detecting superset membership and collecting group slot IDs before copy/move
+- `cascade-slot-params.ts` — `cascadeSlotParams()` Server Action for cascading individual slot parameter edits (sets, reps, weight, rpe, rest, guidelines) across sibling templates via `findMatchingSlots`, skips templates with logged workouts
+- `section-queries.ts` — `getSectionsForTemplate()` fetches `template_sections` rows for a template ordered by section order; exports `TemplateSectionRow` type
 - `use-pending-edits.ts` — `usePendingEdits()` client hook for tracking slot-level edits before batch cascade; exposes `markEdited`, `clearAll`, `clearOne`, `isEdited`, `hasPendingEdits`, `pendingEditIds`
+- `reorder-slots.test.ts` — tests for exercise slot reorder behavior
