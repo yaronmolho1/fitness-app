@@ -18,6 +18,7 @@ function makeProfile(overrides: Partial<SummaryInput['profile']> = {}): SummaryI
     training_age_years: 5,
     primary_goal: 'hypertrophy',
     injury_history: 'left shoulder impingement',
+    athletic_background: null,
     ...overrides,
   }
 }
@@ -40,6 +41,16 @@ function makeCurrentPlan(overrides: Partial<CurrentPlan> = {}): CurrentPlan {
         canonical_name: 'push-a',
         modality: 'resistance',
         notes: null,
+        run_type: null,
+        target_pace: null,
+        hr_zone: null,
+        target_distance: null,
+        target_duration: null,
+        target_elevation_gain: null,
+        interval_count: null,
+        interval_rest: null,
+        coaching_cues: null,
+        planned_duration: null,
         exercise_slots: [
           { id: 1, exercise_id: 100, sets: 4, reps: '6-8', weight: 80, rpe: 8, rest_seconds: 120, order: 1, exercise_name: 'Bench Press' },
           { id: 2, exercise_id: 101, sets: 3, reps: '10-12', weight: 40, rpe: 7, rest_seconds: 90, order: 2, exercise_name: 'OHP' },
@@ -117,6 +128,7 @@ function makeFullInput(overrides: Partial<SummaryInput> = {}): SummaryInput {
     currentPlan: makeCurrentPlan(),
     recentSessions: [makeSession()],
     progressionTrends: makeProgressionTrend(),
+    runningProgressionTrends: [],
     subjectiveState: makeSubjectiveState(),
     upcomingDays: makeUpcomingDays(),
     ...overrides,
@@ -151,6 +163,139 @@ describe('generateCoachingSummary', () => {
       expect(sessionsIdx).toBeLessThan(trendsIdx)
       expect(trendsIdx).toBeLessThan(subjectiveIdx)
       expect(subjectiveIdx).toBeLessThan(upcomingIdx)
+    })
+
+    it('includes weekly summary when sessions have data', () => {
+      const md = generateCoachingSummary(makeFullInput())
+      expect(md).toContain('## Weekly Summary')
+    })
+  })
+
+  describe('Running support', () => {
+    function makeRunningTemplate() {
+      return {
+        id: 2,
+        name: 'Vo2 Max',
+        canonical_name: 'vo2-max',
+        modality: 'running' as const,
+        notes: null,
+        run_type: 'interval' as const,
+        target_pace: '4:30/km',
+        hr_zone: 5,
+        target_distance: 8,
+        target_duration: 45,
+        target_elevation_gain: 150,
+        interval_count: 6,
+        interval_rest: 90,
+        coaching_cues: 'Stay relaxed on recovery',
+        planned_duration: null,
+        exercise_slots: [],
+      }
+    }
+
+    function makeRunningSession(): RecentSession {
+      return {
+        id: 10,
+        logDate: '2026-03-20',
+        rating: 3,
+        notes: null,
+        templateSnapshot: {
+          version: 1,
+          name: 'Vo2 Max',
+          modality: 'running',
+          run_type: 'interval',
+          target_pace: '4:30/km',
+          target_distance: 8,
+          target_elevation_gain: 150,
+          hr_zone: 5,
+          actual_distance: 8.2,
+          actual_avg_pace: '4:35/km',
+          actual_avg_hr: 172,
+          actual_elevation_gain: 165,
+          interval_data: [
+            { rep_number: 1, interval_pace: '4:20/km', interval_avg_hr: 175, interval_notes: null, interval_elevation_gain: 25 },
+            { rep_number: 2, interval_pace: '4:25/km', interval_avg_hr: 178, interval_notes: null, interval_elevation_gain: 28 },
+          ],
+        },
+        canonicalName: 'vo2-max',
+        exercises: [],
+      }
+    }
+
+    it('renders running template details in Current Plan', () => {
+      const plan = makeCurrentPlan({
+        templates: [makeRunningTemplate()],
+      })
+      const md = generateCoachingSummary(makeFullInput({ currentPlan: plan }))
+
+      expect(md).toContain('Run type: interval')
+      expect(md).toContain('Target distance: 8 km')
+      expect(md).toContain('Target pace: 4:30/km')
+      expect(md).toContain('HR zone: 5')
+      expect(md).toContain('Target elevation: 150 m')
+      expect(md).toContain('Intervals: 6 reps, 90s rest')
+      expect(md).toContain('Cues: Stay relaxed on recovery')
+    })
+
+    it('renders running session actual data from snapshot', () => {
+      const md = generateCoachingSummary(makeFullInput({
+        recentSessions: [makeRunningSession()],
+      }))
+
+      expect(md).toContain('**Distance:** 8.2 km (target: 8 km)')
+      expect(md).toContain('**Avg pace:** 4:35/km (target: 4:30/km)')
+      expect(md).toContain('**Avg HR:** 172 bpm (zone 5)')
+      expect(md).toContain('**Elevation:** 165 m (target: 150 m)')
+    })
+
+    it('renders interval rep data', () => {
+      const md = generateCoachingSummary(makeFullInput({
+        recentSessions: [makeRunningSession()],
+      }))
+
+      expect(md).toContain('**Intervals:** 2 reps')
+      expect(md).toContain('Rep 1 | 4:20/km | HR 175 | 25m gain')
+      expect(md).toContain('Rep 2 | 4:25/km | HR 178 | 28m gain')
+    })
+
+    it('renders running progression trends', () => {
+      const md = generateCoachingSummary(makeFullInput({
+        runningProgressionTrends: [{
+          canonicalName: 'vo2-max',
+          templateName: 'Vo2 Max',
+          runType: 'interval',
+          dataPoints: [
+            { date: '2026-03-06', distance: 7.5, avgPace: '4:40/km', avgHr: 168, elevationGain: 140 },
+            { date: '2026-03-13', distance: 8.0, avgPace: '4:35/km', avgHr: 170, elevationGain: 155 },
+          ],
+        }],
+      }))
+
+      expect(md).toContain('## Running Progression')
+      expect(md).toContain('Vo2 Max (interval)')
+      expect(md).toContain('7.5 km')
+      expect(md).toContain('4:40/km')
+      expect(md).toContain('140 m')
+    })
+
+    it('renders MMA template with planned duration', () => {
+      const plan = makeCurrentPlan({
+        templates: [{
+          id: 3,
+          name: 'BJJ Gi',
+          canonical_name: 'bjj-gi',
+          modality: 'mma',
+          notes: null,
+          run_type: null, target_pace: null, hr_zone: null,
+          target_distance: null, target_duration: null, target_elevation_gain: null,
+          interval_count: null, interval_rest: null, coaching_cues: null,
+          planned_duration: 90,
+          exercise_slots: [],
+        }],
+      })
+      const md = generateCoachingSummary(makeFullInput({ currentPlan: plan }))
+
+      expect(md).toContain('Planned duration: 90 min')
     })
   })
 

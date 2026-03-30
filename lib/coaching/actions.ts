@@ -14,6 +14,7 @@ const profileSchema = z.object({
   training_age_years: z.number().int().nonnegative().nullish(),
   primary_goal: z.string().nullish(),
   injury_history: z.string().nullish(),
+  athletic_background: z.string().nullish(),
 })
 
 type ProfileInput = z.input<typeof profileSchema>
@@ -55,6 +56,7 @@ export async function saveAthleteProfile(input: ProfileInput): Promise<SaveProfi
           training_age_years: data.training_age_years ?? null,
           primary_goal: data.primary_goal ?? null,
           injury_history: data.injury_history ?? null,
+          athletic_background: data.athletic_background ?? null,
           created_at: now,
           updated_at: now,
         })
@@ -70,6 +72,7 @@ export async function saveAthleteProfile(input: ProfileInput): Promise<SaveProfi
       if ('training_age_years' in data) updates.training_age_years = data.training_age_years ?? null
       if ('primary_goal' in data) updates.primary_goal = data.primary_goal ?? null
       if ('injury_history' in data) updates.injury_history = data.injury_history ?? null
+      if ('athletic_background' in data) updates.athletic_background = data.athletic_background ?? null
 
       const [updated] = await db
         .update(athlete_profile)

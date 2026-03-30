@@ -1,0 +1,1 @@
+ALTER TABLE `athlete_profile` ADD `athletic_background` text;

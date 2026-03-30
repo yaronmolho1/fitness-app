@@ -35,6 +35,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
   const [trainingAge, setTrainingAge] = useState(profile?.training_age_years?.toString() ?? '')
   const [primaryGoal, setPrimaryGoal] = useState(profile?.primary_goal ?? '')
   const [injuryHistory, setInjuryHistory] = useState(profile?.injury_history ?? '')
+  const [athleticBackground, setAthleticBackground] = useState(profile?.athletic_background ?? '')
   const [, startTransition] = useTransition()
 
   // Track last-saved values to skip no-op saves
@@ -46,6 +47,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
     training_age_years: profile?.training_age_years?.toString() ?? '',
     primary_goal: profile?.primary_goal ?? '',
     injury_history: profile?.injury_history ?? '',
+    athletic_background: profile?.athletic_background ?? '',
   })
 
   // Map field names to their state setters for revert on failure
@@ -57,6 +59,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
     training_age_years: setTrainingAge,
     primary_goal: setPrimaryGoal,
     injury_history: setInjuryHistory,
+    athletic_background: setAthleticBackground,
   }
 
   function saveField(field: string, rawValue: string) {
@@ -187,6 +190,18 @@ export function ProfileForm({ profile }: ProfileFormProps) {
           onChange={(e) => setInjuryHistory(e.target.value)}
           onBlur={() => saveField('injury_history', injuryHistory)}
           placeholder="Describe any past or current injuries"
+          rows={3}
+        />
+      </div>
+
+      <div className="space-y-2 sm:col-span-2">
+        <Label htmlFor="profile-athletic-background">Athletic Background</Label>
+        <Textarea
+          id="profile-athletic-background"
+          value={athleticBackground}
+          onChange={(e) => setAthleticBackground(e.target.value)}
+          onBlur={() => saveField('athletic_background', athleticBackground)}
+          placeholder="e.g. 15 years competitive swimming (elite), 3 years MMA"
           rows={3}
         />
       </div>

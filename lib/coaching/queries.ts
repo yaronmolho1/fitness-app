@@ -129,6 +129,16 @@ export type CurrentPlanTemplate = {
   canonical_name: string
   modality: string
   notes: string | null
+  run_type: string | null
+  target_pace: string | null
+  hr_zone: number | null
+  target_distance: number | null
+  target_duration: number | null
+  target_elevation_gain: number | null
+  interval_count: number | null
+  interval_rest: number | null
+  coaching_cues: string | null
+  planned_duration: number | null
   exercise_slots: CurrentPlanSlot[]
 }
 
@@ -223,6 +233,16 @@ export async function getCurrentPlan(
     canonical_name: t.canonical_name,
     modality: t.modality,
     notes: t.notes,
+    run_type: t.run_type,
+    target_pace: t.target_pace,
+    hr_zone: t.hr_zone,
+    target_distance: t.target_distance,
+    target_duration: t.target_duration,
+    target_elevation_gain: t.target_elevation_gain,
+    interval_count: t.interval_count,
+    interval_rest: t.interval_rest,
+    coaching_cues: t.coaching_cues,
+    planned_duration: t.planned_duration,
     exercise_slots: slotsByTemplate.get(t.id) ?? [],
   }))
 
@@ -250,4 +270,41 @@ export async function getCurrentPlan(
     templates: resultTemplates,
     schedule: scheduleRows,
   }
+}
+
+export type RunningTrendPoint = {
+  date: string
+  distance: number | null
+  avgPace: string | null
+  avgHr: number | null
+  elevationGain: number | null
+}
+
+export async function getRunningProgressionData(
+  db: AppDb,
+  canonicalName: string
+): Promise<RunningTrendPoint[]> {
+  const workouts = db
+    .select()
+    .from(logged_workouts)
+    .where(eq(logged_workouts.canonical_name, canonicalName))
+    .orderBy(asc(logged_workouts.log_date))
+    .all()
+
+  return workouts.map((w) => {
+    const snapshot = w.template_snapshot as {
+      actual_distance?: number | null
+      actual_avg_pace?: string | null
+      actual_avg_hr?: number | null
+      actual_elevation_gain?: number | null
+    }
+
+    return {
+      date: w.log_date,
+      distance: snapshot.actual_distance ?? null,
+      avgPace: snapshot.actual_avg_pace ?? null,
+      avgHr: snapshot.actual_avg_hr ?? null,
+      elevationGain: snapshot.actual_elevation_gain ?? null,
+    }
+  })
 }
