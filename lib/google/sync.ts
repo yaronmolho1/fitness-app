@@ -631,28 +631,47 @@ export async function retryFailedSyncs(): Promise<SyncResult> {
  * Delete all Google Calendar events mapped to a mesocycle.
  * Used when a mesocycle is deleted.
  */
-export async function deleteEventsForMesocycle(mesoId: number): Promise<SyncResult> {
-  const result = emptySyncResult()
-  const ctx = await getCalendarContext()
-
+// Collect Google event IDs before cascade delete wipes local mappings
+export async function collectEventIdsForMesocycle(mesoId: number): Promise<string[]> {
   const events = await db
-    .select()
+    .select({ google_event_id: google_calendar_events.google_event_id })
     .from(google_calendar_events)
     .where(eq(google_calendar_events.mesocycle_id, mesoId))
+    .all()
+  return events
+    .map(e => e.google_event_id)
+    .filter(id => !id.startsWith('pending-'))
+}
 
-  if (!ctx) {
-    // No Google connection — just clean up local mappings
-    for (const evt of events) {
-      await db.delete(google_calendar_events).where(eq(google_calendar_events.id, evt.id))
+// Delete events from Google Calendar by pre-collected event IDs
+export async function deleteEventsByIds(eventIds: string[]): Promise<SyncResult> {
+  const result = emptySyncResult()
+  if (eventIds.length === 0) return result
+
+  const ctx = await getCalendarContext()
+  if (!ctx) return result
+
+  for (const eventId of eventIds) {
+    try {
+      await ctx.calendarApi.events.delete({
+        calendarId: ctx.calendarId,
+        eventId,
+      })
       result.deleted++
+    } catch (err) {
+      if (!isGoneError(err)) {
+        result.failed++
+      } else {
+        result.deleted++
+      }
     }
-    return result
-  }
-
-  for (const evt of events) {
-    await deleteEvent(ctx.calendarApi, ctx.calendarId, evt, result)
     await sleep(250)
   }
 
   return result
+}
+
+export async function deleteEventsForMesocycle(mesoId: number): Promise<SyncResult> {
+  const eventIds = await collectEventIdsForMesocycle(mesoId)
+  return deleteEventsByIds(eventIds)
 }

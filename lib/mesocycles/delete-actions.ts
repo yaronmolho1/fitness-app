@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { db } from '@/lib/db/index'
 import { mesocycles, routine_items } from '@/lib/db/schema'
-import { deleteEventsForMesocycle } from '@/lib/google/sync'
+import { collectEventIdsForMesocycle, deleteEventsByIds } from '@/lib/google/sync'
 
 type DeleteResult =
   | { success: true }
@@ -14,6 +14,9 @@ export async function deleteMesocycle(id: number): Promise<DeleteResult> {
   if (!Number.isInteger(id) || id < 1) {
     return { success: false, error: 'Invalid mesocycle ID' }
   }
+
+  // Collect Google event IDs before cascade delete wipes local mappings
+  const eventIds = await collectEventIdsForMesocycle(id)
 
   const result = db.transaction((tx) => {
     const meso = tx
@@ -47,8 +50,8 @@ export async function deleteMesocycle(id: number): Promise<DeleteResult> {
   })
 
   if (result.success) {
-    // Fire-and-forget: delete Google Calendar events for this mesocycle
-    deleteEventsForMesocycle(id).catch(() => {})
+    // Fire-and-forget: delete Google Calendar events (IDs collected before cascade)
+    deleteEventsByIds(eventIds).catch(() => {})
   }
 
   return result
