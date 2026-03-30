@@ -269,7 +269,7 @@ export async function syncMesocycle(mesoId: number): Promise<SyncResult> {
           result.failed++
         }
       }
-      await sleep(100)
+      await sleep(250)
     }
   }
   await db.delete(google_calendar_events).where(
@@ -651,6 +651,7 @@ export async function deleteEventsForMesocycle(mesoId: number): Promise<SyncResu
 
   for (const evt of events) {
     await deleteEvent(ctx.calendarApi, ctx.calendarId, evt, result)
+    await sleep(250)
   }
 
   return result
