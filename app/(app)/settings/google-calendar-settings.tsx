@@ -22,23 +22,46 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { disconnectGoogle } from '@/lib/google/actions'
+import type { SyncStatusResult } from '@/lib/google/queries'
 
 type Props = {
   connected: boolean
   timezone: string | null
   error?: string
+  syncStatus?: SyncStatusResult
 }
 
-export function GoogleCalendarSettings({ connected, timezone, error }: Props) {
+export function GoogleCalendarSettings({ connected, timezone, error, syncStatus }: Props) {
   const router = useRouter()
   const [showConfirm, setShowConfirm] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [syncResult, setSyncResult] = useState<string | null>(null)
 
   function handleDisconnect() {
     startTransition(async () => {
       await disconnectGoogle()
       router.refresh()
     })
+  }
+
+  async function handleResync() {
+    setIsSyncing(true)
+    setSyncResult(null)
+    try {
+      const res = await fetch('/api/google/sync', { method: 'POST' })
+      const data = await res.json()
+      if (data.created > 0 || data.failed === 0) {
+        setSyncResult(`Re-synced ${data.created} event${data.created !== 1 ? 's' : ''}`)
+      } else {
+        setSyncResult(`${data.failed} event${data.failed !== 1 ? 's' : ''} still failing`)
+      }
+      router.refresh()
+    } catch {
+      setSyncResult('Re-sync failed')
+    } finally {
+      setIsSyncing(false)
+    }
   }
 
   return (
@@ -71,13 +94,57 @@ export function GoogleCalendarSettings({ connected, timezone, error }: Props) {
                 <span>{timezone}</span>
               </div>
             )}
-            <Button
-              variant="destructive"
-              onClick={() => setShowConfirm(true)}
-              disabled={isPending}
-            >
-              Disconnect
-            </Button>
+
+            {syncStatus && (
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-3 text-sm">
+                  <span>
+                    <span className="font-medium">{syncStatus.synced}</span>{' '}
+                    <span className="text-muted-foreground">synced</span>
+                  </span>
+                  {syncStatus.pending > 0 && (
+                    <span>
+                      <span className="font-medium">{syncStatus.pending}</span>{' '}
+                      <span className="text-muted-foreground">pending</span>
+                    </span>
+                  )}
+                  {syncStatus.error > 0 && (
+                    <span>
+                      <span className="font-medium text-destructive">{syncStatus.error}</span>{' '}
+                      <span className="text-muted-foreground">failed</span>
+                    </span>
+                  )}
+                </div>
+                {syncStatus.lastSyncedAt && (
+                  <p className="text-xs text-muted-foreground">
+                    Last sync: {new Date(syncStatus.lastSyncedAt).toLocaleString()}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {syncResult && (
+              <p className="text-sm text-muted-foreground">{syncResult}</p>
+            )}
+
+            <div className="flex gap-2">
+              {syncStatus && syncStatus.error > 0 && (
+                <Button
+                  variant="outline"
+                  onClick={handleResync}
+                  disabled={isSyncing}
+                >
+                  {isSyncing ? 'Re-syncing...' : 'Re-sync'}
+                </Button>
+              )}
+              <Button
+                variant="destructive"
+                onClick={() => setShowConfirm(true)}
+                disabled={isPending}
+              >
+                Disconnect
+              </Button>
+            </div>
           </>
         ) : (
           <Button asChild>

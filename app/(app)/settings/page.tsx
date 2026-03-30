@@ -1,7 +1,7 @@
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
 import { isGoogleConnected } from '@/lib/google/queries'
-import { getAthleteTimezone } from '@/lib/google/queries'
+import { getAthleteTimezone, getSyncStatus } from '@/lib/google/queries'
 import { GoogleCalendarSettings } from './google-calendar-settings'
 
 export const dynamic = 'force-dynamic'
@@ -14,6 +14,7 @@ export default async function SettingsPage({
   const { error } = await searchParams
   const connected = await isGoogleConnected()
   const timezone = await getAthleteTimezone()
+  const syncStatus = connected ? await getSyncStatus() : undefined
 
   return (
     <PageContainer variant="narrow">
@@ -23,6 +24,7 @@ export default async function SettingsPage({
           connected={connected}
           timezone={timezone}
           error={error}
+          syncStatus={syncStatus}
         />
       </div>
     </PageContainer>
