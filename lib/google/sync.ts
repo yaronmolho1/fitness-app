@@ -326,13 +326,10 @@ export async function syncMesocycle(mesoId: number): Promise<SyncResult> {
     }
   }
 
-  // Batch insert with throttling to avoid Google API rate limits
-  for (let i = 0; i < allParams.length; i += BATCH_SIZE) {
-    const batch = allParams.slice(i, i + BATCH_SIZE)
-    await Promise.all(
-      batch.map((params) => createEvent(ctx.calendarApi, ctx.calendarId, params, result))
-    )
-    if (i + BATCH_SIZE < allParams.length) await sleep(1000)
+  // Sequential insert with throttling to avoid Google API rate limits
+  for (const params of allParams) {
+    await createEvent(ctx.calendarApi, ctx.calendarId, params, result)
+    await sleep(250)
   }
 
   return result
