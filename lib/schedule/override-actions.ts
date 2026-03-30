@@ -12,7 +12,7 @@ import {
 } from '@/lib/db/schema'
 import { derivePeriod, timeSlotSchema, durationSchema } from '@/lib/schedule/time-utils'
 import { syncScheduleChange } from '@/lib/google/sync'
-import { projectWeekDates } from '@/lib/google/sync-helpers'
+import { projectWeekDates, getDateForWeekDay } from '@/lib/google/sync-helpers'
 
 type MoveResult =
   | { success: true; override_group: string }
@@ -29,20 +29,6 @@ const moveWorkoutSchema = z.object({
   target_week_offset: z.number().int().min(-1).max(1).default(0),
 })
 
-/**
- * Computes the calendar date for a given week + day within a mesocycle.
- * start_date is a Monday (day 0 = Monday). day_of_week 0-6.
- */
-function getDateForWeekDay(startDate: string, weekNumber: number, dayOfWeek: number): string {
-  const start = new Date(startDate + 'T00:00:00')
-  const daysOffset = (weekNumber - 1) * 7 + dayOfWeek
-  const target = new Date(start)
-  target.setDate(start.getDate() + daysOffset)
-  const y = target.getFullYear()
-  const m = String(target.getMonth() + 1).padStart(2, '0')
-  const d = String(target.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
-}
 
 function generateOverrideGroup(): string {
   return `move-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
