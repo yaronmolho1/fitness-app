@@ -15,6 +15,10 @@ type AssignResult =
   | { success: true; data: ScheduleRow }
   | { success: false; error: string }
 
+type UpdateResult =
+  | { success: true; data: ScheduleRow }
+  | { success: false; error: string }
+
 type RemoveResult =
   | { success: true }
   | { success: false; error: string }
@@ -164,4 +168,68 @@ export async function removeAssignment(input: {
   syncScheduleChange('remove', meso.id, dates).catch(() => {})
 
   return { success: true }
+}
+
+const updateSchema = z.object({
+  id: z.number().int().positive('Invalid schedule entry ID'),
+  time_slot: timeSlotSchema.optional(),
+  duration: durationSchema.optional(),
+}).refine(d => d.time_slot !== undefined || d.duration !== undefined, {
+  message: 'At least one of time_slot or duration must be provided',
+})
+
+export async function updateScheduleEntry(input: {
+  id: number
+  time_slot?: string
+  duration?: number
+}): Promise<UpdateResult> {
+  const parsed = updateSchema.safeParse(input)
+  if (!parsed.success) {
+    const firstError = parsed.error.issues[0]
+    return { success: false, error: firstError.message }
+  }
+
+  const { id, time_slot, duration } = parsed.data
+
+  const entry = db
+    .select()
+    .from(weekly_schedule)
+    .where(eq(weekly_schedule.id, id))
+    .get()
+
+  if (!entry) {
+    return { success: false, error: 'Schedule entry not found' }
+  }
+
+  const meso = db
+    .select()
+    .from(mesocycles)
+    .where(eq(mesocycles.id, entry.mesocycle_id))
+    .get()
+
+  if (!meso) {
+    return { success: false, error: 'Mesocycle not found' }
+  }
+
+  if (meso.status === 'completed') {
+    return { success: false, error: 'Cannot modify schedule of a completed mesocycle' }
+  }
+
+  const newTimeSlot = time_slot ?? entry.time_slot
+  const newDuration = duration ?? entry.duration
+  const newPeriod = derivePeriod(newTimeSlot)
+
+  const row = db
+    .update(weekly_schedule)
+    .set({ time_slot: newTimeSlot, duration: newDuration, period: newPeriod })
+    .where(eq(weekly_schedule.id, id))
+    .returning()
+    .get()
+
+  revalidatePath('/mesocycles', 'layout')
+
+  const dates = projectAffectedDates(meso.start_date, meso.end_date, entry.day_of_week)
+  syncScheduleChange('assign', entry.mesocycle_id, dates).catch(() => {})
+
+  return { success: true, data: row }
 }
