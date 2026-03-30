@@ -24,6 +24,7 @@ import {
   isGoogleConnected,
   getEventMapping,
   getEventsByMesocycle,
+  getSyncStatus,
 } from './queries'
 
 describe('lib/google/queries', () => {
@@ -113,6 +114,28 @@ describe('lib/google/queries', () => {
       const result = await getEventsByMesocycle(1)
       expect(result).toEqual(events)
       expect(result).toHaveLength(2)
+    })
+  })
+
+  describe('getSyncStatus', () => {
+    it('returns zero counts when no events', async () => {
+      mockFrom.mockResolvedValue([])
+      const result = await getSyncStatus()
+      expect(result).toEqual({ synced: 0, pending: 0, error: 0, lastSyncedAt: null })
+    })
+
+    it('returns counts grouped by sync_status', async () => {
+      mockFrom.mockResolvedValue([
+        { sync_status: 'synced', last_synced_at: new Date('2026-03-30T10:00:00Z') },
+        { sync_status: 'synced', last_synced_at: new Date('2026-03-29T10:00:00Z') },
+        { sync_status: 'error', last_synced_at: null },
+        { sync_status: 'pending', last_synced_at: null },
+      ])
+      const result = await getSyncStatus()
+      expect(result.synced).toBe(2)
+      expect(result.error).toBe(1)
+      expect(result.pending).toBe(1)
+      expect(result.lastSyncedAt).toBe('2026-03-30T10:00:00.000Z')
     })
   })
 })

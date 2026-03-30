@@ -135,6 +135,7 @@ import {
   syncMesocycle,
   syncScheduleChange,
   syncCompletion,
+  retryFailedSyncs,
   MODALITY_COLORS,
 } from './sync'
 
@@ -532,6 +533,86 @@ describe('lib/google/sync', () => {
       expect(result.updated).toBe(1)
       expect(result.failed).toBe(0)
       expect(mockEventsInsert).toHaveBeenCalled()
+    })
+  })
+
+  // ── retryFailedSyncs ──────────────────────────────────────────────────
+
+  describe('retryFailedSyncs', () => {
+    it('AC20: returns empty result when Google not connected', async () => {
+      mockGetGoogleCredentials.mockResolvedValue(null)
+
+      const result = await retryFailedSyncs()
+      expect(result.created).toBe(0)
+      expect(result.failed).toBe(0)
+    })
+
+    it('AC20: retries events with error sync_status', async () => {
+      setupConnected()
+
+      let allCallCount = 0
+      mockSelectAll.mockImplementation(() => {
+        allCallCount++
+        if (allCallCount === 1) {
+          // Failed events query
+          return [
+            {
+              id: 1, google_event_id: 'pending-2026-04-06-10-1-1234',
+              mesocycle_id: 1, schedule_entry_id: 5,
+              event_date: '2026-04-06', summary: 'Push A — Week 2',
+              start_time: '07:00', end_time: '08:30',
+              sync_status: 'error', last_synced_at: null,
+              created_at: new Date(), updated_at: new Date(),
+            },
+          ]
+        }
+        return []
+      })
+
+      mockEventsInsert.mockResolvedValue({ data: { id: 'gcal-new-1' } })
+
+      const result = await retryFailedSyncs()
+      expect(result.created).toBe(1)
+      expect(result.failed).toBe(0)
+      expect(mockEventsInsert).toHaveBeenCalled()
+    })
+
+    it('AC20: no-op when no failed events exist', async () => {
+      setupConnected()
+
+      mockSelectAll.mockReturnValue([])
+
+      const result = await retryFailedSyncs()
+      expect(result.created).toBe(0)
+      expect(mockEventsInsert).not.toHaveBeenCalled()
+    })
+
+    it('records failure if retry also fails', async () => {
+      setupConnected()
+
+      let allCallCount = 0
+      mockSelectAll.mockImplementation(() => {
+        allCallCount++
+        if (allCallCount === 1) {
+          return [
+            {
+              id: 1, google_event_id: 'pending-2026-04-06-10-1-1234',
+              mesocycle_id: 1, schedule_entry_id: 5,
+              event_date: '2026-04-06', summary: 'Push A — Week 2',
+              start_time: '07:00', end_time: '08:30',
+              sync_status: 'error', last_synced_at: null,
+              created_at: new Date(), updated_at: new Date(),
+            },
+          ]
+        }
+        return []
+      })
+
+      mockEventsInsert.mockRejectedValue(new Error('Still failing'))
+
+      const result = await retryFailedSyncs()
+      expect(result.failed).toBe(1)
+      expect(result.errors[0].message).toContain('Still failing')
     })
   })
 

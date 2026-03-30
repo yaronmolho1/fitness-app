@@ -107,6 +107,60 @@ describe('GoogleCalendarSettings', () => {
     })
   })
 
+  describe('sync status display', () => {
+    it('AC25: shows synced/pending/failed counts when connected', () => {
+      render(
+        <GoogleCalendarSettings
+          connected={true}
+          timezone="America/New_York"
+          syncStatus={{ synced: 20, pending: 2, error: 1, lastSyncedAt: '2026-03-30T10:00:00.000Z' }}
+        />
+      )
+      expect(screen.getByText('20')).toBeInTheDocument()
+      expect(screen.getByText('synced')).toBeInTheDocument()
+      expect(screen.getByText('2')).toBeInTheDocument()
+      expect(screen.getByText('pending')).toBeInTheDocument()
+    })
+
+    it('AC25: shows last sync timestamp', () => {
+      render(
+        <GoogleCalendarSettings
+          connected={true}
+          timezone="America/New_York"
+          syncStatus={{ synced: 20, pending: 0, error: 0, lastSyncedAt: '2026-03-30T10:00:00.000Z' }}
+        />
+      )
+      expect(screen.getByText(/last sync/i)).toBeInTheDocument()
+    })
+
+    it('does not show sync status when disconnected', () => {
+      render(<GoogleCalendarSettings connected={false} timezone={null} />)
+      expect(screen.queryByText(/synced/i)).not.toBeInTheDocument()
+    })
+
+    it('shows re-sync button when there are failed events', () => {
+      render(
+        <GoogleCalendarSettings
+          connected={true}
+          timezone="America/New_York"
+          syncStatus={{ synced: 10, pending: 0, error: 3, lastSyncedAt: null }}
+        />
+      )
+      expect(screen.getByRole('button', { name: /re-sync/i })).toBeInTheDocument()
+    })
+
+    it('does not show re-sync button when no failed events', () => {
+      render(
+        <GoogleCalendarSettings
+          connected={true}
+          timezone="America/New_York"
+          syncStatus={{ synced: 10, pending: 0, error: 0, lastSyncedAt: null }}
+        />
+      )
+      expect(screen.queryByRole('button', { name: /re-sync/i })).not.toBeInTheDocument()
+    })
+  })
+
   describe('error message', () => {
     it('shows error message when provided', () => {
       render(<GoogleCalendarSettings connected={false} timezone={null} error="access_denied" />)
