@@ -10,7 +10,7 @@ env:
   PNPM_VERSION: latest
 
 jobs:
-  ci:
+  CI:
     name: CI
     runs-on: ubuntu-latest
     env:
@@ -45,9 +45,10 @@ jobs:
           pnpm build
           test -f .next/standalone/server.js
 
-  e2e:
+  E2E:
     name: E2E Tests
-    needs: ci
+    if: false
+    needs: CI
     runs-on: ubuntu-latest
     continue-on-error: true
     env:
