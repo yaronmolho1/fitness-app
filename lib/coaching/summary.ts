@@ -246,33 +246,37 @@ function buildRecentSessionsSection(sessions: RecentSession[]): string {
     if (isRunning) {
       if (snapshot.run_type) lines.push(`- **Run type:** ${snapshot.run_type}`)
 
+      // Total run metrics (includes warmup/cooldown)
       if (snapshot.actual_distance != null) {
-        let line = `- **Distance:** ${snapshot.actual_distance} km`
+        let line = `- **Total distance:** ${snapshot.actual_distance} km`
         if (snapshot.target_distance != null) line += ` (target: ${snapshot.target_distance} km)`
         lines.push(line)
       }
       if (snapshot.actual_avg_pace) {
-        let line = `- **Avg pace:** ${snapshot.actual_avg_pace}`
+        let line = `- **Overall avg pace:** ${snapshot.actual_avg_pace}`
         if (snapshot.target_pace) line += ` (target: ${snapshot.target_pace})`
         lines.push(line)
       }
       if (snapshot.actual_avg_hr != null) {
-        let line = `- **Avg HR:** ${snapshot.actual_avg_hr} bpm`
-        if (snapshot.hr_zone != null) line += ` (zone ${snapshot.hr_zone})`
+        let line = `- **Overall avg HR:** ${snapshot.actual_avg_hr} bpm`
+        if (snapshot.hr_zone != null) line += ` (target zone ${snapshot.hr_zone})`
         lines.push(line)
       }
       if (snapshot.actual_elevation_gain != null) {
-        let line = `- **Elevation:** ${snapshot.actual_elevation_gain} m`
+        let line = `- **Total elevation gain:** ${snapshot.actual_elevation_gain} m`
         if (snapshot.target_elevation_gain != null) line += ` (target: ${snapshot.target_elevation_gain} m)`
         lines.push(line)
       }
+
+      // Interval reps (work portions only, separate from warmup/cooldown)
       if (snapshot.interval_data && snapshot.interval_data.length > 0) {
-        lines.push(`- **Intervals:** ${snapshot.interval_data.length} reps`)
+        lines.push(`- **Interval reps** (${snapshot.interval_data.length}):`)
         for (const rep of snapshot.interval_data) {
           const parts: string[] = [`Rep ${rep.rep_number}`]
-          if (rep.interval_pace) parts.push(rep.interval_pace)
+          if (rep.interval_pace) parts.push(`pace ${rep.interval_pace}`)
           if (rep.interval_avg_hr != null) parts.push(`HR ${rep.interval_avg_hr}`)
-          if (rep.interval_elevation_gain != null) parts.push(`${rep.interval_elevation_gain}m gain`)
+          if (rep.interval_elevation_gain != null) parts.push(`elev ${rep.interval_elevation_gain}m`)
+          if (rep.interval_notes) parts.push(`"${rep.interval_notes}"`)
           lines.push(`  - ${parts.join(' | ')}`)
         }
       }

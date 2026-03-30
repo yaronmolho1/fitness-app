@@ -242,10 +242,10 @@ describe('generateCoachingSummary', () => {
         recentSessions: [makeRunningSession()],
       }))
 
-      expect(md).toContain('**Distance:** 8.2 km (target: 8 km)')
-      expect(md).toContain('**Avg pace:** 4:35/km (target: 4:30/km)')
-      expect(md).toContain('**Avg HR:** 172 bpm (zone 5)')
-      expect(md).toContain('**Elevation:** 165 m (target: 150 m)')
+      expect(md).toContain('**Total distance:** 8.2 km (target: 8 km)')
+      expect(md).toContain('**Overall avg pace:** 4:35/km (target: 4:30/km)')
+      expect(md).toContain('**Overall avg HR:** 172 bpm (target zone 5)')
+      expect(md).toContain('**Total elevation gain:** 165 m (target: 150 m)')
     })
 
     it('renders interval rep data', () => {
@@ -253,9 +253,9 @@ describe('generateCoachingSummary', () => {
         recentSessions: [makeRunningSession()],
       }))
 
-      expect(md).toContain('**Intervals:** 2 reps')
-      expect(md).toContain('Rep 1 | 4:20/km | HR 175 | 25m gain')
-      expect(md).toContain('Rep 2 | 4:25/km | HR 178 | 28m gain')
+      expect(md).toContain('**Interval reps** (2):')
+      expect(md).toContain('Rep 1 | pace 4:20/km | HR 175 | elev 25m')
+      expect(md).toContain('Rep 2 | pace 4:25/km | HR 178 | elev 28m')
     })
 
     it('renders running progression trends', () => {
