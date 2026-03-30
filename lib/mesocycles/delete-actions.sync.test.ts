@@ -28,9 +28,11 @@ vi.mock('next/cache', () => ({
   revalidatePath: (...args: unknown[]) => mockRevalidatePath(...args),
 }))
 
-const mockDeleteEventsForMesocycle = vi.fn().mockResolvedValue({ created: 0, updated: 0, deleted: 0, failed: 0, errors: [] })
+const mockCollectEventIds = vi.fn().mockResolvedValue([])
+const mockDeleteEventsByIds = vi.fn().mockResolvedValue({ created: 0, updated: 0, deleted: 0, failed: 0, errors: [] })
 vi.mock('@/lib/google/sync', () => ({
-  deleteEventsForMesocycle: (...args: unknown[]) => mockDeleteEventsForMesocycle(...args),
+  collectEventIdsForMesocycle: (...args: unknown[]) => mockCollectEventIds(...args),
+  deleteEventsByIds: (...args: unknown[]) => mockDeleteEventsByIds(...args),
 }))
 
 import { deleteMesocycle } from './delete-actions'
@@ -135,34 +137,35 @@ beforeEach(() => {
 })
 
 describe('deleteMesocycle — sync hooks (T208)', () => {
-  it('AC17: calls deleteEventsForMesocycle(id) after successful delete', async () => {
+  it('AC17: calls deleteEventsByIds after successful delete', async () => {
+    mockCollectEventIds.mockResolvedValueOnce(['gcal-1', 'gcal-2'])
     const { id } = insertMeso()
     const result = await deleteMesocycle(id)
     expect(result).toEqual({ success: true })
-    expect(mockDeleteEventsForMesocycle).toHaveBeenCalledTimes(1)
-    expect(mockDeleteEventsForMesocycle).toHaveBeenCalledWith(id)
+    expect(mockCollectEventIds).toHaveBeenCalledWith(id)
+    expect(mockDeleteEventsByIds).toHaveBeenCalledWith(['gcal-1', 'gcal-2'])
   })
 
   it('AC19: sync failure does not affect delete result', async () => {
-    mockDeleteEventsForMesocycle.mockRejectedValueOnce(new Error('API failed'))
+    mockDeleteEventsByIds.mockRejectedValueOnce(new Error('API failed'))
     const { id } = insertMeso()
     const result = await deleteMesocycle(id)
     expect(result).toEqual({ success: true })
   })
 
-  it('does NOT call deleteEventsForMesocycle when delete fails (active)', async () => {
+  it('does NOT call deleteEventsByIds when delete fails (active)', async () => {
     const { id } = insertMeso({ status: 'active' })
     await deleteMesocycle(id)
-    expect(mockDeleteEventsForMesocycle).not.toHaveBeenCalled()
+    expect(mockDeleteEventsByIds).not.toHaveBeenCalled()
   })
 
-  it('does NOT call deleteEventsForMesocycle when meso not found', async () => {
+  it('does NOT call deleteEventsByIds when meso not found', async () => {
     await deleteMesocycle(999)
-    expect(mockDeleteEventsForMesocycle).not.toHaveBeenCalled()
+    expect(mockDeleteEventsByIds).not.toHaveBeenCalled()
   })
 
-  it('does NOT call deleteEventsForMesocycle on invalid ID', async () => {
+  it('does NOT call deleteEventsByIds on invalid ID', async () => {
     await deleteMesocycle(-1)
-    expect(mockDeleteEventsForMesocycle).not.toHaveBeenCalled()
+    expect(mockDeleteEventsByIds).not.toHaveBeenCalled()
   })
 })

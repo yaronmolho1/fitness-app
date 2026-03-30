@@ -26,6 +26,11 @@ vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }))
 
+vi.mock('@/lib/google/sync', () => ({
+  collectEventIdsForMesocycle: vi.fn().mockResolvedValue([]),
+  deleteEventsByIds: vi.fn().mockResolvedValue({ created: 0, updated: 0, deleted: 0, failed: 0, errors: [] }),
+}))
+
 import { deleteMesocycle } from './delete-actions'
 import { getMesocycleCascadeSummary } from './queries'
 
