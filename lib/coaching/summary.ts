@@ -147,7 +147,18 @@ function buildCurrentPlanSection(plan: CurrentPlan | null): string {
     for (const tpl of templates) {
       lines.push(`**${tpl.name}** (${tpl.modality})`)
 
-      if (tpl.modality === 'running') {
+      // Exercise slots (resistance, mixed)
+      if (tpl.exercise_slots.length > 0) {
+        for (const slot of tpl.exercise_slots) {
+          const parts = [`${slot.sets}×${slot.reps}`]
+          if (slot.weight !== null) parts.push(`${slot.weight}kg`)
+          if (slot.rpe !== null) parts.push(`RPE ${slot.rpe}`)
+          lines.push(`  - ${slot.exercise_name}: ${parts.join(', ')}`)
+        }
+      }
+
+      // Running fields (running, mixed)
+      if (tpl.modality === 'running' || tpl.modality === 'mixed') {
         if (tpl.run_type) lines.push(`  - Run type: ${tpl.run_type}`)
         if (tpl.target_distance !== null) lines.push(`  - Target distance: ${tpl.target_distance} km`)
         if (tpl.target_pace) lines.push(`  - Target pace: ${tpl.target_pace}`)
@@ -160,21 +171,10 @@ function buildCurrentPlanSection(plan: CurrentPlan | null): string {
           lines.push(intervalLine)
         }
         if (tpl.coaching_cues) lines.push(`  - Cues: ${tpl.coaching_cues}`)
-      } else if (tpl.modality === 'mma') {
-        if (tpl.planned_duration !== null) lines.push(`  - Planned duration: ${tpl.planned_duration} min`)
-      } else {
-        for (const slot of tpl.exercise_slots) {
-          const parts = [`${slot.sets}×${slot.reps}`]
-          if (slot.weight !== null) parts.push(`${slot.weight}kg`)
-          if (slot.rpe !== null) parts.push(`RPE ${slot.rpe}`)
-          lines.push(`  - ${slot.exercise_name}: ${parts.join(', ')}`)
-        }
       }
 
-      // Mixed templates: show exercise slots AND running details if present
-      if (tpl.modality === 'mixed') {
-        if (tpl.run_type) lines.push(`  - Run type: ${tpl.run_type}`)
-        if (tpl.target_distance !== null) lines.push(`  - Target distance: ${tpl.target_distance} km`)
+      // MMA/mixed duration
+      if (tpl.modality === 'mma' || tpl.modality === 'mixed') {
         if (tpl.planned_duration !== null) lines.push(`  - Planned duration: ${tpl.planned_duration} min`)
       }
 
