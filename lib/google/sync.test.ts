@@ -535,6 +535,163 @@ describe('lib/google/sync', () => {
     })
   })
 
+  // ── Bug fixes (T207 review) ───────────────────────────────────────────
+
+  describe('syncCompletion — templateId filter (bug #1)', () => {
+    it('filters by templateId when looking up event mapping', async () => {
+      setupConnected()
+
+      let allCallCount = 0
+      mockSelectAll.mockImplementation(() => {
+        allCallCount++
+        if (allCallCount === 1) {
+          // First call: schedule entries for mesocycle+templateId=20
+          return [{ id: 6 }]
+        }
+        // Second call: all events for mesocycle+date
+        return [
+          {
+            id: 1, google_event_id: 'gcal-evt-1', mesocycle_id: 1,
+            schedule_entry_id: 5, event_date: '2026-04-06',
+            summary: 'Push A — Week 2', start_time: '07:00', end_time: '08:30',
+            sync_status: 'synced',
+          },
+          {
+            id: 2, google_event_id: 'gcal-evt-2', mesocycle_id: 1,
+            schedule_entry_id: 6, event_date: '2026-04-06',
+            summary: 'Pull B — Week 2', start_time: '17:00', end_time: '18:30',
+            sync_status: 'synced',
+          },
+        ]
+      })
+
+      mockEventsUpdate.mockResolvedValue({
+        data: { id: 'gcal-evt-2', summary: '✅ Pull B — Week 2' },
+      })
+
+      // Completing templateId=20 (Pull B) — should pick event id=2
+      const result = await syncCompletion(1, 20, '2026-04-06')
+      expect(result.updated).toBe(1)
+      // The update call should use event id 2's google_event_id
+      expect(mockEventsUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventId: 'gcal-evt-2',
+          requestBody: expect.objectContaining({
+            summary: '✅ Pull B — Week 2',
+          }),
+        })
+      )
+    })
+  })
+
+  describe('syncMesocycle — idempotency (bug #2)', () => {
+    it('deletes existing mappings for the mesocycle before inserting', async () => {
+      setupConnected()
+
+      let getCallCount = 0
+      mockSelectGet.mockImplementation(() => {
+        getCallCount++
+        if (getCallCount === 1) {
+          return {
+            id: 1, name: 'Block 1', start_date: '2026-03-30', end_date: '2026-04-05',
+            work_weeks: 1, has_deload: false,
+          }
+        }
+        return { id: 10, name: 'Push A', modality: 'resistance', mesocycle_id: 1 }
+      })
+
+      mockSelectAll.mockImplementation(() => {
+        return [{ id: 5, day_of_week: 0, template_id: 10, week_type: 'normal', time_slot: '07:00', duration: 90 }]
+      })
+
+      mockEventsInsert.mockResolvedValue({ data: { id: 'gcal-evt-1' } })
+
+      await syncMesocycle(1)
+
+      // Should call db.delete to clear existing mappings before creating new ones
+      expect(mockDeleteWhere).toHaveBeenCalled()
+    })
+  })
+
+  describe('syncMesocycle — week_type filter (bug #3)', () => {
+    it('filters schedule entries by week_type to avoid duplicates', async () => {
+      setupConnected()
+
+      // 3-week range: 2 work + 1 deload, all Mondays
+      let getCallCount = 0
+      mockSelectGet.mockImplementation(() => {
+        getCallCount++
+        if (getCallCount === 1) {
+          return {
+            id: 1, name: 'Block 1', start_date: '2026-03-30', end_date: '2026-04-19',
+            work_weeks: 2, has_deload: true,
+          }
+        }
+        return { id: 10, name: 'Push A', modality: 'resistance', mesocycle_id: 1 }
+      })
+
+      // Both normal and deload entries for same day_of_week
+      let allCallCount = 0
+      mockSelectAll.mockImplementation(() => {
+        allCallCount++
+        if (allCallCount === 1) {
+          return [
+            { id: 5, day_of_week: 0, template_id: 10, week_type: 'normal', time_slot: '07:00', duration: 90 },
+            { id: 6, day_of_week: 0, template_id: 10, week_type: 'deload', time_slot: '07:00', duration: 60 },
+          ]
+        }
+        return [{ name: 'Bench Press' }]
+      })
+
+      mockEventsInsert.mockResolvedValue({ data: { id: 'gcal-evt-1' } })
+
+      const result = await syncMesocycle(1)
+      // Mondays: 03-30 (wk1, normal), 04-06 (wk2, normal), 04-13 (wk3, deload)
+      // Each week only 1 event → 3 total (not 6 from both entries × 3 dates)
+      expect(result.created).toBe(3)
+    })
+  })
+
+  describe('createEvent — placeholder collision (bug #4)', () => {
+    it('uses unique placeholder IDs for failed events', async () => {
+      setupConnected()
+
+      let getCallCount = 0
+      mockSelectGet.mockImplementation(() => {
+        getCallCount++
+        if (getCallCount === 1) {
+          return {
+            id: 1, name: 'Block 1', start_date: '2026-03-30', end_date: '2026-04-05',
+            work_weeks: 1, has_deload: false,
+          }
+        }
+        return { id: 10, name: 'Push A', modality: 'resistance', mesocycle_id: 1 }
+      })
+
+      // Two entries on same day at different times, both with same template
+      mockSelectAll.mockImplementation(() => {
+        return [
+          { id: 5, day_of_week: 0, template_id: 10, week_type: 'normal', time_slot: '07:00', duration: 90 },
+          { id: 6, day_of_week: 0, template_id: 10, week_type: 'normal', time_slot: '17:00', duration: 60 },
+        ]
+      })
+
+      // Both API calls fail — will generate placeholder IDs
+      mockEventsInsert.mockRejectedValue(new Error('API error'))
+
+      await syncMesocycle(1)
+
+      // Collect all placeholder IDs from insert calls
+      const placeholderIds = mockInsertValues.mock.calls
+        .map((args) => args[0]?.google_event_id)
+        .filter((id): id is string => typeof id === 'string' && id.startsWith('pending-'))
+
+      // All placeholder IDs should be unique
+      const unique = new Set(placeholderIds)
+      expect(unique.size).toBe(placeholderIds.length)
+    })
+  })
+
   // ── MODALITY_COLORS ────────────────────────────────────────────────────
 
   describe('MODALITY_COLORS', () => {

@@ -24,6 +24,7 @@ export const MODALITY_COLORS: Record<string, string> = {
 }
 
 const BATCH_SIZE = 50
+let failCounter = 0
 
 // Build a Google Calendar event body from params
 export function buildEventBody(params: GCalEventParams): GCalEventBody {
@@ -165,10 +166,11 @@ async function createEvent(
       message: err instanceof Error ? err.message : String(err),
     })
 
-    // Record failed mapping for retry
+    // Record failed mapping for retry (unique placeholder per failure)
+    failCounter++
     const now = new Date()
     await db.insert(google_calendar_events).values({
-      google_event_id: `pending-${params.date}-${params.templateId}`,
+      google_event_id: `pending-${params.date}-${params.templateId}-${failCounter}-${now.getTime()}`,
       mesocycle_id: params.mesocycleId,
       schedule_entry_id: params.scheduleEntryId,
       event_date: params.date,
@@ -244,6 +246,11 @@ export async function syncMesocycle(mesoId: number): Promise<SyncResult> {
     .get()
   if (!meso) return result
 
+  // Delete existing mappings for idempotency (re-projection safe)
+  await db.delete(google_calendar_events).where(
+    eq(google_calendar_events.mesocycle_id, mesoId)
+  )
+
   // Load base schedule entries
   const scheduleEntries = await db
     .select()
@@ -251,7 +258,8 @@ export async function syncMesocycle(mesoId: number): Promise<SyncResult> {
     .where(eq(weekly_schedule.mesocycle_id, mesoId))
     .all()
 
-  // Build all event params
+  // Build all event params — filter by week_type based on week position
+  const totalWeeks = meso.work_weeks + (meso.has_deload ? 1 : 0)
   const allParams: GCalEventParams[] = []
 
   for (const entry of scheduleEntries) {
@@ -268,13 +276,21 @@ export async function syncMesocycle(mesoId: number): Promise<SyncResult> {
     const dates = projectDatesForDay(meso.start_date, meso.end_date, entry.day_of_week)
 
     for (const date of dates) {
+      const weekNum = getWeekNumber(meso.start_date, date)
+      // Determine if this week is deload (last week when has_deload)
+      const isDeloadWeek = meso.has_deload && weekNum === totalWeeks
+      const expectedWeekType = isDeloadWeek ? 'deload' : 'normal'
+
+      // Only use entries matching the appropriate week_type
+      if (entry.week_type !== expectedWeekType) continue
+
       allParams.push({
         templateName: template.name,
         modality: template.modality,
         date,
         timeSlot: entry.time_slot,
         duration: entry.duration,
-        weekNumber: getWeekNumber(meso.start_date, date),
+        weekNumber: weekNum,
         timezone: ctx.timezone,
         appUrl: ctx.appUrl,
         mesocycleId: mesoId,
@@ -404,7 +420,21 @@ export async function syncCompletion(
   const ctx = await getCalendarContext()
   if (!ctx) return result
 
-  // Find existing event mapping for this mesocycle + date
+  // Find schedule entries for this mesocycle + template to get schedule_entry_ids
+  const scheduleEntries = await db
+    .select({ id: weekly_schedule.id })
+    .from(weekly_schedule)
+    .where(
+      and(
+        eq(weekly_schedule.mesocycle_id, mesoId),
+        eq(weekly_schedule.template_id, templateId)
+      )
+    )
+    .all()
+
+  const entryIds = scheduleEntries.map((e) => e.id)
+
+  // Find existing event mapping for this mesocycle + date + template's schedule entries
   const events = await db
     .select()
     .from(google_calendar_events)
@@ -416,9 +446,12 @@ export async function syncCompletion(
     )
     .all()
 
-  if (events.length === 0) return result
+  // Filter to the event matching this template's schedule entries
+  const mapping = events.find((e) =>
+    e.schedule_entry_id !== null && entryIds.includes(e.schedule_entry_id)
+  ) ?? events[0]
 
-  const mapping = events[0]
+  if (!mapping) return result
   const completedSummary = mapping.summary.startsWith('✅ ')
     ? mapping.summary
     : `✅ ${mapping.summary}`
