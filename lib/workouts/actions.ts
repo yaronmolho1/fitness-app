@@ -62,7 +62,7 @@ export async function saveWorkout(input: SaveWorkoutInput): Promise<SaveWorkoutR
   const result = await saveWorkoutCore(db, input)
   if (result.success) {
     revalidatePath('/')
-    fireCompletionSync(input.templateId, input.logDate)
+    fireCompletionSync(input.templateId, input.logDate).catch(() => {})
   }
   return result
 }
@@ -73,7 +73,7 @@ export async function saveRunningWorkout(
   const result = await saveRunningWorkoutCore(db, input)
   if (result.success) {
     revalidatePath('/')
-    fireCompletionSync(input.templateId, input.logDate)
+    fireCompletionSync(input.templateId, input.logDate).catch(() => {})
   }
   return result
 }
@@ -84,7 +84,7 @@ export async function saveMmaWorkout(
   const result = await saveMmaWorkoutCore(db, input)
   if (result.success) {
     revalidatePath('/')
-    fireCompletionSync(input.templateId, input.logDate)
+    fireCompletionSync(input.templateId, input.logDate).catch(() => {})
   }
   return result
 }
@@ -95,7 +95,7 @@ export async function saveMixedWorkout(
   const result = await saveMixedWorkoutCore(db, input)
   if (result.success) {
     revalidatePath('/')
-    fireCompletionSync(input.templateId, input.logDate)
+    fireCompletionSync(input.templateId, input.logDate).catch(() => {})
   }
   return result
 }
