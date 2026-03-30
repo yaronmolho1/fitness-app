@@ -28,7 +28,7 @@ graph TD
             SC["Server Components\n(data fetching, auth checks)"]
             CC["Client Components\n(forms, interactivity)"]
             SA["Server Actions\n(all CRUD mutations)"]
-            RH["Route Handlers\n(/api/calendar, /api/calendar/day,\n/api/progression, /api/today, /api/health)"]
+            RH["Route Handlers\n(/api/calendar, /api/calendar/day,\n/api/progression, /api/today, /api/health,\n/api/google/disconnect)"]
             GoogleAuth["Google OAuth Routes\n(/api/auth/google, /api/auth/google/callback)"]
         end
 
@@ -136,8 +136,8 @@ Hybrid pattern: Server Actions for all mutations, Route Handlers for computed re
 
 | Pattern | Used For | Examples |
 |---------|----------|---------|
-| **Server Actions** | All form mutations (create, update, delete, log) | Create exercise, update template, log workout, clone mesocycle, cascade edit, mark routine done |
-| **Route Handlers** | Computed reads, health check, OAuth flows, future API consumers | `GET /api/calendar`, `GET /api/calendar/day`, `GET /api/progression`, `GET /api/today`, `GET /api/health`, `POST /api/coaching/summary`, `GET /api/auth/google`, `GET /api/auth/google/callback` |
+| **Server Actions** | All form mutations (create, update, delete, log) | Create exercise, update template, log workout, clone mesocycle, cascade edit, mark routine done, disconnect Google |
+| **Route Handlers** | Computed reads, health check, OAuth flows, future API consumers | `GET /api/calendar`, `GET /api/calendar/day`, `GET /api/progression`, `GET /api/today`, `GET /api/health`, `POST /api/coaching/summary`, `GET /api/auth/google`, `GET /api/auth/google/callback`, `POST /api/google/disconnect` |
 
 Route Handlers are intentionally kept for reads that may serve V2 consumers (LLM coach, Garmin integration, ecosystem aggregator). Server Actions save boilerplate on 15+ mutation operations with automatic cache revalidation and end-to-end type safety.
 
@@ -154,7 +154,7 @@ Route Handlers are intentionally kept for reads that may serve V2 consumers (LLM
 | Routines | Routine item CRUD with flexible scoping, daily log tracking |
 | Calendar / Progression | Computed views: projected calendar, exercise progression charts, today's sessions (multi-session per day) |
 | Coaching | Summary generation: assembles athlete profile, current plan, recent sessions, progression trends, and subjective state into a structured markdown brief for coaching review |
-| Google | OAuth2 client (`lib/google/client.ts`), token management with auto-refresh, Calendar API access (timezone read, calendar creation) |
+| Google | OAuth2 client (`lib/google/client.ts`), token management with auto-refresh, Calendar API access (timezone read, calendar creation), credential queries + connection status (`lib/google/queries.ts`), event mapping lookups, disconnect action (`lib/google/actions.ts`) |
 
 For response format and status codes, see `docs/api-standards.md`.
 
@@ -170,7 +170,7 @@ Single-user auth. No registration, no database-stored users.
 - **No session storage**: JWT is stateless; no server-side session table required
 - **Password hash**: `AUTH_PASSWORD_HASH` is a bcrypt hash. The login route hashes the submitted password and compares with `jose`-compatible bcrypt. Token expiry is configurable via `JWT_EXPIRES_IN` env var (default: 7 days).
 - **Route protection scope**: All routes under `/(app)` are protected. Public routes: `/login`, `/api/auth/login`, `/api/auth/logout`, `/api/health`.
-- **Google OAuth**: OAuth2 flow for Google Calendar integration (not for app login). `GET /api/auth/google` initiates consent redirect; `GET /api/auth/google/callback` exchanges code for tokens. CSRF protection via httpOnly state cookie. Tokens stored in `google_credentials` table. Client: `lib/google/client.ts` using `googleapis` + `google-auth-library`. Requires env vars: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`.
+- **Google OAuth**: OAuth2 flow for Google Calendar integration (not for app login). `GET /api/auth/google` initiates consent redirect; `GET /api/auth/google/callback` exchanges code for tokens. CSRF protection via httpOnly state cookie. Tokens stored in `google_credentials` table. Client: `lib/google/client.ts` using `googleapis` + `google-auth-library`. Disconnect via `POST /api/google/disconnect` (deletes credentials + event mappings; optionally deletes the Google Calendar). Requires env vars: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`.
 
 ## Infrastructure
 
