@@ -311,6 +311,10 @@ describe('lib/google/sync', () => {
       mockSelectAll.mockImplementation(() => {
         allCallCount++
         if (allCallCount === 1) {
+          // existing Google Calendar event mappings (empty for clean sync)
+          return []
+        }
+        if (allCallCount === 2) {
           // schedule entries: Mon=0 and Wed=2
           return [
             { id: 5, day_of_week: 0, template_id: 10, week_type: 'normal', time_slot: '07:00', duration: 90 },
@@ -344,7 +348,10 @@ describe('lib/google/sync', () => {
         return { id: 10, name: 'Push A', modality: 'resistance', mesocycle_id: 1 }
       })
 
+      let allCallCount = 0
       mockSelectAll.mockImplementation(() => {
+        allCallCount++
+        if (allCallCount === 1) return [] // existing event mappings
         return [{ id: 5, day_of_week: 0, template_id: 10, week_type: 'normal', time_slot: '07:00', duration: 90 }]
       })
 
@@ -364,9 +371,14 @@ describe('lib/google/sync', () => {
         work_weeks: 1, has_deload: false,
       })
 
-      mockSelectAll.mockReturnValue([
-        { id: 5, day_of_week: 0, template_id: null, week_type: 'normal', time_slot: '07:00', duration: 90 },
-      ])
+      let allCallCount = 0
+      mockSelectAll.mockImplementation(() => {
+        allCallCount++
+        if (allCallCount === 1) return [] // existing event mappings
+        return [
+          { id: 5, day_of_week: 0, template_id: null, week_type: 'normal', time_slot: '07:00', duration: 90 },
+        ]
+      })
 
       const result = await syncMesocycle(1)
       expect(result.created).toBe(0)
@@ -681,7 +693,10 @@ describe('lib/google/sync', () => {
         return { id: 10, name: 'Push A', modality: 'resistance', mesocycle_id: 1 }
       })
 
+      let allCallCount = 0
       mockSelectAll.mockImplementation(() => {
+        allCallCount++
+        if (allCallCount === 1) return [] // existing event mappings
         return [{ id: 5, day_of_week: 0, template_id: 10, week_type: 'normal', time_slot: '07:00', duration: 90 }]
       })
 
@@ -716,6 +731,10 @@ describe('lib/google/sync', () => {
       mockSelectAll.mockImplementation(() => {
         allCallCount++
         if (allCallCount === 1) {
+          // existing event mappings (empty for clean sync)
+          return []
+        }
+        if (allCallCount === 2) {
           return [
             { id: 5, day_of_week: 0, template_id: 10, week_type: 'normal', time_slot: '07:00', duration: 90 },
             { id: 6, day_of_week: 0, template_id: 10, week_type: 'deload', time_slot: '07:00', duration: 60 },
@@ -750,7 +769,10 @@ describe('lib/google/sync', () => {
       })
 
       // Two entries on same day at different times, both with same template
+      let allCallCount = 0
       mockSelectAll.mockImplementation(() => {
+        allCallCount++
+        if (allCallCount === 1) return [] // existing event mappings
         return [
           { id: 5, day_of_week: 0, template_id: 10, week_type: 'normal', time_slot: '07:00', duration: 90 },
           { id: 6, day_of_week: 0, template_id: 10, week_type: 'normal', time_slot: '17:00', duration: 60 },
