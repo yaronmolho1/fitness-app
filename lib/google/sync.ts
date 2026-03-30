@@ -23,8 +23,12 @@ export const MODALITY_COLORS: Record<string, string> = {
   mixed: '3',       // grape
 }
 
-const BATCH_SIZE = 50
+const BATCH_SIZE = 5
 let failCounter = 0
+
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
 
 // Build a Google Calendar event body from params
 export function buildEventBody(params: GCalEventParams): GCalEventBody {
@@ -246,7 +250,28 @@ export async function syncMesocycle(mesoId: number): Promise<SyncResult> {
     .get()
   if (!meso) return result
 
-  // Delete existing mappings for idempotency (re-projection safe)
+  // Delete existing Google Calendar events + local mappings for idempotency
+  const existingMappings = await db
+    .select({ id: google_calendar_events.id, google_event_id: google_calendar_events.google_event_id })
+    .from(google_calendar_events)
+    .where(eq(google_calendar_events.mesocycle_id, mesoId))
+    .all()
+
+  for (const mapping of existingMappings) {
+    if (!mapping.google_event_id.startsWith('pending-')) {
+      try {
+        await ctx.calendarApi.events.delete({
+          calendarId: ctx.calendarId,
+          eventId: mapping.google_event_id,
+        })
+      } catch (err) {
+        if (!isGoneError(err)) {
+          result.failed++
+        }
+      }
+      await sleep(100)
+    }
+  }
   await db.delete(google_calendar_events).where(
     eq(google_calendar_events.mesocycle_id, mesoId)
   )
@@ -301,12 +326,13 @@ export async function syncMesocycle(mesoId: number): Promise<SyncResult> {
     }
   }
 
-  // Batch insert
+  // Batch insert with throttling to avoid Google API rate limits
   for (let i = 0; i < allParams.length; i += BATCH_SIZE) {
     const batch = allParams.slice(i, i + BATCH_SIZE)
     await Promise.all(
       batch.map((params) => createEvent(ctx.calendarApi, ctx.calendarId, params, result))
     )
+    if (i + BATCH_SIZE < allParams.length) await sleep(1000)
   }
 
   return result
@@ -598,6 +624,7 @@ export async function retryFailedSyncs(): Promise<SyncResult> {
         message: err instanceof Error ? err.message : String(err),
       })
     }
+    await sleep(200)
   }
 
   return result
