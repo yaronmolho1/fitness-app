@@ -13,3 +13,4 @@ Authenticated route group. All routes require JWT auth via middleware.
 - `routines/` — routine management and items
 - `calendar/` — projected month calendar grid, color-coded by workout modality
 - `coaching/` — coaching overview: active mesocycle status, week navigation, daily slot cards
+- `settings/` — app settings: Google Calendar connection management ([README](./settings/README.md))

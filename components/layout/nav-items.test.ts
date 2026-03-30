@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { navItems } from './nav-items'
 
 describe('navItems', () => {
-  it('has 7 items in correct order', () => {
+  it('has 8 items in correct order', () => {
     expect(navItems.map(i => i.label)).toEqual([
       'Today',
       'Exercises',
@@ -11,6 +11,7 @@ describe('navItems', () => {
       'Progression',
       'Routines',
       'Coaching',
+      'Settings',
     ])
   })
 
@@ -43,5 +44,24 @@ describe('navItems', () => {
     const routinesIdx = labels.indexOf('Routines')
     const coachingIdx = labels.indexOf('Coaching')
     expect(coachingIdx).toBe(routinesIdx + 1)
+  })
+
+  it('Settings links to /settings', () => {
+    const settings = navItems.find(i => i.label === 'Settings')
+    expect(settings).toBeDefined()
+    expect(settings!.href).toBe('/settings')
+  })
+
+  it('Settings uses Settings icon', async () => {
+    const { Settings } = await import('lucide-react')
+    const settings = navItems.find(i => i.label === 'Settings')
+    expect(settings!.icon).toBe(Settings)
+  })
+
+  it('Settings appears after Coaching', () => {
+    const labels = navItems.map(i => i.label)
+    const coachingIdx = labels.indexOf('Coaching')
+    const settingsIdx = labels.indexOf('Settings')
+    expect(settingsIdx).toBe(coachingIdx + 1)
   })
 })
