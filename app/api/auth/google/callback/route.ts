@@ -53,7 +53,8 @@ export async function GET(request: NextRequest) {
   }
   try {
     tokens = await exchangeCodeForTokens(code)
-  } catch {
+  } catch (err) {
+    console.error('[google-callback] token exchange failed:', err)
     return redirectToSettings('token_exchange_failed')
   }
 
