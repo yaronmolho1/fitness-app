@@ -1,6 +1,6 @@
 import { eq, and } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { google_credentials, google_calendar_events } from '@/lib/db/schema'
+import { google_credentials, google_calendar_events, athlete_profile } from '@/lib/db/schema'
 
 // Get stored Google credentials, or null if not connected
 export async function getGoogleCredentials() {
@@ -31,6 +31,12 @@ export async function getEventMapping(
       )
     )
   return rows.length > 0 ? rows[0] : null
+}
+
+// Get timezone from athlete profile (used for settings display)
+export async function getAthleteTimezone(): Promise<string | null> {
+  const rows = await db.select({ timezone: athlete_profile.timezone }).from(athlete_profile)
+  return rows.length > 0 ? rows[0].timezone : null
 }
 
 // Get all calendar events for a mesocycle

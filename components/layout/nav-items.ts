@@ -6,6 +6,7 @@ import {
   TrendingUp,
   ListChecks,
   BrainCircuit,
+  Settings,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -23,4 +24,5 @@ export const navItems: NavItem[] = [
   { href: '/progression', label: 'Progression', icon: TrendingUp },
   { href: '/routines', label: 'Routines', icon: ListChecks },
   { href: '/coaching', label: 'Coaching', icon: BrainCircuit },
+  { href: '/settings', label: 'Settings', icon: Settings },
 ]
