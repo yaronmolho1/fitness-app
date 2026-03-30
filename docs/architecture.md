@@ -52,7 +52,7 @@ See ADR-001 (SQLite decision) and ADR-004 (hybrid API decision).
 
 ## Data Model
 
-Sixteen tables split into four layers. See `lib/db/schema.ts` for column definitions and `lib/db/relations.ts` for Drizzle v2 `defineRelations` config. See ADR-002 (mesocycle-scoped templates) and ADR-003 (deload as separate schedule) for the structural decisions behind this schema.
+Seventeen tables split into four layers. See `lib/db/schema.ts` for column definitions and `lib/db/relations.ts` for Drizzle v2 `defineRelations` config. See ADR-002 (mesocycle-scoped templates) and ADR-003 (deload as separate schedule) for the structural decisions behind this schema.
 
 ```mermaid
 erDiagram
@@ -67,6 +67,8 @@ erDiagram
     weekly_schedule }o--|| workout_templates : "assigns template to day"
     mesocycles ||--o{ schedule_week_overrides : "per-week schedule overrides"
     schedule_week_overrides }o--o| workout_templates : "overrides template assignment"
+    workout_templates ||--o{ template_week_overrides : "per-week template targets"
+    template_sections ||--o{ template_week_overrides : "per-week section targets"
 
     logged_workouts ||--o{ logged_exercises : "contains"
     logged_exercises ||--o{ logged_sets : "contains"
@@ -96,6 +98,7 @@ erDiagram
 | `weekly_schedule` | Day-to-template assignment grid; keyed by `(mesocycle_id, day_of_week, week_type, time_slot, template_id)`; `time_slot` (HH:MM) + `duration` (minutes) are NOT NULL with defaults |
 | `slot_week_overrides` | Per-week overrides for exercise slot targets (sets/reps/weight/RPE); enables week-by-week periodization within a mesocycle |
 | `schedule_week_overrides` | Per-week schedule overrides for moving/removing workouts on specific weeks; links source+target via `override_group`; null `template_id` = rest/removed |
+| `template_week_overrides` | Per-week overrides for template-level targets (distance/duration/pace/intervals); enables week-by-week periodization for running and mixed templates |
 | `routine_items` | Daily habit items with flexible scope: global, per-mesocycle, date-range, or skip-on-deload |
 
 ### Logging Layer (immutable after save)
@@ -156,7 +159,7 @@ Route Handlers are intentionally kept for reads that may serve V2 consumers (LLM
 | Coaching | Summary generation: assembles athlete profile, current plan, recent sessions, progression trends, and subjective state into a structured markdown brief for coaching review |
 | Google | OAuth2 client (`lib/google/client.ts`), token management with auto-refresh, Calendar API access (timezone read, calendar creation), credential queries + connection status + sync status counts (`lib/google/queries.ts`), event mapping lookups, disconnect action (`lib/google/actions.ts`), push-sync engine (`lib/google/sync.ts`): `syncMesocycle` (batch-project all workouts, idempotent via pre-delete), `syncScheduleChange` (diff-based assign/remove/move/reset), `syncCompletion` (checkmark update with 404 recreation, template-filtered lookup), `retryFailedSyncs` (re-attempt all error-state events), `deleteEventsForMesocycle` (bulk-delete on mesocycle deletion); pure date projection helpers (`lib/google/sync-helpers.ts`): `projectAffectedDates`, `projectWeekDates`, `getDateForWeekDay`; status/sync route handlers (`/api/google/status`, `/api/google/sync`); types in `lib/google/types.ts`. Schedule and mesocycle actions call sync functions fire-and-forget (`.catch(() => {})`) so local mutations never fail due to Google API errors. |
 
-For response format and status codes, see `docs/api-standards.md`.
+Response format follows standard JSON envelopes with appropriate HTTP status codes.
 
 ## Auth Strategy
 
@@ -222,7 +225,7 @@ Key conventions for executor agents implementing this app. See `.sisyphus/plans/
 - **Middleware constraint**: Cannot import `better-sqlite3` in `middleware.ts` (Edge runtime). JWT validation via `jose` only.
 - **IDs**: Auto-increment integers — no UUIDs. Single-user app, no distributed ID requirements.
 - **Migrations**: Always `drizzle-kit generate` then `drizzle-kit migrate`. Never `push`.
-- **Error responses**: See `docs/api-standards.md` for standard error envelope and status codes.
+- **Error responses**: Standard JSON error envelope with appropriate HTTP status codes.
 - **Testing**: Vitest for unit/integration tests; Playwright for E2E. Server Actions are tested via Vitest with a test database. Route Handlers are tested via curl/Playwright. See `docs/dev-workflow.md` for local dev setup and test commands.
 - **Immutability enforcement**: No UPDATE or DELETE on `logged_workouts`, `logged_exercises`, `logged_sets`, or `routine_logs` tables after initial INSERT. Enforced at the application layer (no DB trigger needed for single-user).
 

@@ -17,9 +17,9 @@ Personal fitness planning + logging app. Desktop for coaching/planning, mobile f
 docs/
   architecture.md      # System overview, data model, API boundaries
   prd.md               # Full PRD with story map and V1 scope
-  adr.md               # ADR index (links to docs/adrs/001-008)
-  adrs/                # 8 individual architecture decision records
-specs/                 # 43 feature specs (status/epic/depends/AC/tests)
+  adr.md               # ADR index (links to docs/adrs/001-011)
+  adrs/                # 11 individual architecture decision records
+specs/                 # 79 feature specs (status/epic/depends/AC/tests)
 .plan/
   IMPLEMENTATION_PLAN.md  # 77 tasks across 15 waves with dependency graph
   progress.md             # Task status table (T0001-T0004, T001-T073)
@@ -78,7 +78,7 @@ docker compose up -d   # containerized run
 ## Architecture References
 
 - Core invariant: plan changes cascade via `canonical_name`; logged history frozen at snapshot time
-- 16 tables: 9 planning (mutable, includes `template_sections`, `slot_week_overrides`, `schedule_week_overrides`) + 4 logging (immutable) + 1 config (`athlete_profile`) + 2 Google Calendar (`google_credentials`, `google_calendar_events`). See `docs/architecture.md` Data Model.
+- 17 tables: 10 planning (mutable, includes `template_sections`, `template_week_overrides`, `slot_week_overrides`, `schedule_week_overrides`) + 4 logging (immutable) + 1 config (`athlete_profile`) + 2 Google Calendar (`google_credentials`, `google_calendar_events`). See `docs/architecture.md` Data Model.
 - Auth: single-user, JWT cookie, env vars `AUTH_USERNAME`, `AUTH_PASSWORD_HASH`, `JWT_SECRET`. Google OAuth for Calendar integration via `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`
 - Infra: standalone port 3000, orchestrated port 3002. SQLite volume at `/app/data/`
 - Sibling apps: expense-tracker (3001), tutor-ai. Shared nginx in docker-app-stack.
