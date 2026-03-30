@@ -3,10 +3,10 @@
 Weekly schedule assignment, overrides, and time-slot utilities for mesocycle day slots.
 
 ## Files
-- `actions.ts` — `assignTemplate` (upsert a template onto a day/week_type slot by time_slot+duration, derives period from time_slot), `removeAssignment` (idempotent delete by row id); validates mesocycle status and template ownership; revalidates `/mesocycles`
+- `actions.ts` — `assignTemplate` (upsert a template onto a day/week_type slot by time_slot+duration, derives period from time_slot), `removeAssignment` (idempotent delete by row id); validates mesocycle status and template ownership; revalidates `/mesocycles`; fire-and-forget Google Calendar sync via `syncScheduleChange`
 - `queries.ts` — `getScheduleForMesocycle` (weekly_schedule rows joined with template names), `getTemplatesForMesocycle` (templates for picker); exports `ScheduleEntry` (id, day_of_week, template_id, template_name, period, time_slot, duration) and `TemplateOption` types
 - `override-queries.ts` — `getEffectiveScheduleForDay` resolves a day's schedule by merging base `weekly_schedule` with `schedule_week_overrides`; exports `EffectiveScheduleEntry` type
-- `override-actions.ts` — `moveWorkout` (move workout between days/periods via override pairs), `undoScheduleMove` (delete overrides by override_group + mesocycle), `resetWeekSchedule` (delete all overrides for a mesocycle + week); all validate mesocycle not completed; revalidate paths
+- `override-actions.ts` — `moveWorkout` (move workout between days/periods via override pairs), `undoScheduleMove` (delete overrides by override_group + mesocycle), `resetWeekSchedule` (delete all overrides for a mesocycle + week); all validate mesocycle not completed; revalidate paths; fire-and-forget Google Calendar sync on affected dates
 - `time-utils.ts` — `timeSlotSchema` (HH:MM Zod validator), `durationSchema` (positive int minutes), `derivePeriod()` (time → morning/afternoon/evening), `getEndTime()` (start + duration with midnight wrap), `checkOverlap()` (detect time-range collisions); exports `Period` type
 
 ## Tests
