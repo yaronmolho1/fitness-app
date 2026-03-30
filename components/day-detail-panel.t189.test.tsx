@@ -60,6 +60,7 @@ const projectedOverride: DayDetailResult = {
   is_override: true,
   override_group: 'move-123-abc',
   period: 'afternoon' as const,
+  time_slot: '14:00',
   day_of_week: 2,
 }
 
