@@ -11,6 +11,7 @@ import {
   template_sections,
 } from '@/lib/db/schema'
 import { calculateEndDate } from './utils'
+import { syncMesocycle } from '@/lib/google/sync'
 
 type CloneInput = {
   source_id: number
@@ -198,5 +199,9 @@ export async function cloneMesocycle(input: CloneInput): Promise<CloneResult> {
   }
 
   revalidatePath('/mesocycles')
+
+  // Fire-and-forget: push events for cloned mesocycle to Google Calendar
+  syncMesocycle(result.id).catch(() => {})
+
   return result
 }

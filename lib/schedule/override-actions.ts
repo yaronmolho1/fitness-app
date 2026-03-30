@@ -11,6 +11,8 @@ import {
   logged_workouts,
 } from '@/lib/db/schema'
 import { derivePeriod, timeSlotSchema, durationSchema } from '@/lib/schedule/time-utils'
+import { syncScheduleChange } from '@/lib/google/sync'
+import { projectWeekDates } from '@/lib/google/sync-helpers'
 
 type MoveResult =
   | { success: true; override_group: string }
@@ -72,7 +74,12 @@ export async function moveWorkout(input: {
     target_week_offset,
   } = parsed.data
 
-  const result = db.transaction((tx): MoveResult => {
+  // Internal result carries sync data alongside the public shape
+  type InternalMoveResult =
+    | MoveResult & { success: false }
+    | { success: true; override_group: string; _syncDates: string[] }
+
+  const result = db.transaction((tx): InternalMoveResult => {
     // Verify mesocycle exists and isn't completed
     const meso = tx
       .select()
@@ -127,6 +134,7 @@ export async function moveWorkout(input: {
 
     // For each target week, check logged workout guard and create override pairs
     let createdAny = false
+    const syncDates: string[] = []
     for (const wk of weeks) {
       const targetWk = wk + target_week_offset
 
@@ -218,19 +226,28 @@ export async function moveWorkout(input: {
         .run()
 
       createdAny = true
+      syncDates.push(sourceDate)
+      syncDates.push(getDateForWeekDay(meso.start_date, targetWk, target_day))
     }
 
     if (!createdAny) {
       return { success: false, error: 'No weeks available to move (all logged)' } as const
     }
 
-    return { success: true, override_group: overrideGroup } as const
+    return { success: true, override_group: overrideGroup, _syncDates: syncDates } as const
   })
 
   if (result.success) {
     revalidatePath('/mesocycles', 'layout')
+
+    // Fire-and-forget: sync affected dates to Google Calendar
+    syncScheduleChange('move', mesocycle_id, result._syncDates).catch(() => {})
   }
 
+  // Strip internal sync data before returning
+  if (result.success) {
+    return { success: true, override_group: result.override_group }
+  }
   return result
 }
 
@@ -245,7 +262,7 @@ export async function undoScheduleMove(
     return { success: false, error: 'Missing override_group or mesocycle_id' }
   }
 
-  return db.transaction((tx) => {
+  const txResult = db.transaction((tx) => {
     const meso = tx
       .select()
       .from(mesocycles)
@@ -259,6 +276,20 @@ export async function undoScheduleMove(
       return { success: false, error: 'Cannot modify schedule of a completed mesocycle' } as const
     }
 
+    // Capture override dates before deletion for sync
+    const overrideRows = tx
+      .select({ week_number: schedule_week_overrides.week_number, day_of_week: schedule_week_overrides.day_of_week })
+      .from(schedule_week_overrides)
+      .where(
+        and(
+          eq(schedule_week_overrides.override_group, overrideGroup),
+          eq(schedule_week_overrides.mesocycle_id, mesocycleId)
+        )
+      )
+      .all()
+
+    const syncDates = overrideRows.map(r => getDateForWeekDay(meso.start_date, r.week_number, r.day_of_week))
+
     const result = tx
       .delete(schedule_week_overrides)
       .where(
@@ -270,8 +301,17 @@ export async function undoScheduleMove(
       .run()
 
     revalidatePath('/mesocycles', 'layout')
-    return { success: true, deleted: result.changes } as const
+    return { success: true, deleted: result.changes, _syncDates: [...new Set(syncDates)] } as const
   })
+
+  if (txResult.success && txResult._syncDates.length > 0) {
+    syncScheduleChange('reset', mesocycleId, [...txResult._syncDates]).catch(() => {})
+  }
+
+  if (txResult.success) {
+    return { success: true, deleted: txResult.deleted }
+  }
+  return txResult
 }
 
 /** Deletes all override rows for a given mesocycle + week number. */
@@ -283,7 +323,7 @@ export async function resetWeekSchedule(
     return { success: false, error: 'Missing mesocycle_id or week_number' }
   }
 
-  return db.transaction((tx) => {
+  const txResult = db.transaction((tx) => {
     const meso = tx
       .select()
       .from(mesocycles)
@@ -308,6 +348,15 @@ export async function resetWeekSchedule(
       .run()
 
     revalidatePath('/mesocycles', 'layout')
-    return { success: true, deleted: result.changes } as const
+    return { success: true, deleted: result.changes, start_date: meso.start_date } as const
   })
+
+  if (txResult.success) {
+    // Fire-and-forget: sync all dates in this week
+    const weekDates = projectWeekDates(txResult.start_date, weekNumber)
+    syncScheduleChange('reset', mesocycleId, weekDates).catch(() => {})
+    return { success: true, deleted: txResult.deleted }
+  }
+
+  return txResult
 }

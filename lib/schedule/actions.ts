@@ -6,6 +6,8 @@ import { z } from 'zod'
 import { db } from '@/lib/db/index'
 import { weekly_schedule, workout_templates, mesocycles } from '@/lib/db/schema'
 import { derivePeriod, timeSlotSchema, durationSchema } from '@/lib/schedule/time-utils'
+import { syncScheduleChange } from '@/lib/google/sync'
+import { projectAffectedDates } from '@/lib/google/sync-helpers'
 
 type ScheduleRow = typeof weekly_schedule.$inferSelect
 
@@ -104,6 +106,11 @@ export async function assignTemplate(input: {
     .get()
 
   revalidatePath('/mesocycles', 'layout')
+
+  // Fire-and-forget: sync affected dates to Google Calendar
+  const dates = projectAffectedDates(meso.start_date, meso.end_date, day_of_week)
+  syncScheduleChange('assign', mesocycle_id, dates).catch(() => {})
+
   return { success: true, data: row }
 }
 
@@ -118,9 +125,9 @@ export async function removeAssignment(input: {
 
   const { id } = parsed.data
 
-  // Look up the row to check mesocycle guard
+  // Look up the row to check mesocycle guard and capture day for sync
   const entry = db
-    .select({ mesocycle_id: weekly_schedule.mesocycle_id })
+    .select({ mesocycle_id: weekly_schedule.mesocycle_id, day_of_week: weekly_schedule.day_of_week })
     .from(weekly_schedule)
     .where(eq(weekly_schedule.id, id))
     .get()
@@ -151,5 +158,10 @@ export async function removeAssignment(input: {
     .run()
 
   revalidatePath('/mesocycles', 'layout')
+
+  // Fire-and-forget: sync removed dates to Google Calendar
+  const dates = projectAffectedDates(meso.start_date, meso.end_date, entry.day_of_week)
+  syncScheduleChange('remove', meso.id, dates).catch(() => {})
+
   return { success: true }
 }

@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { db } from '@/lib/db/index'
 import { mesocycles, routine_items } from '@/lib/db/schema'
+import { deleteEventsForMesocycle } from '@/lib/google/sync'
 
 type DeleteResult =
   | { success: true }
@@ -14,7 +15,7 @@ export async function deleteMesocycle(id: number): Promise<DeleteResult> {
     return { success: false, error: 'Invalid mesocycle ID' }
   }
 
-  return db.transaction((tx) => {
+  const result = db.transaction((tx) => {
     const meso = tx
       .select({ id: mesocycles.id, status: mesocycles.status })
       .from(mesocycles)
@@ -44,4 +45,11 @@ export async function deleteMesocycle(id: number): Promise<DeleteResult> {
     revalidatePath('/mesocycles')
     return { success: true } as const
   })
+
+  if (result.success) {
+    // Fire-and-forget: delete Google Calendar events for this mesocycle
+    deleteEventsForMesocycle(id).catch(() => {})
+  }
+
+  return result
 }
