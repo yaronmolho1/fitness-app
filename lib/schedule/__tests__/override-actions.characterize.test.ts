@@ -20,6 +20,10 @@ vi.mock('@/lib/db/index', () => ({
   },
 }))
 
+vi.mock('@/lib/google/sync', () => ({
+  syncScheduleChange: vi.fn().mockResolvedValue({ created: 0, updated: 0, deleted: 0, failed: 0, errors: [] }),
+}))
+
 import { revalidatePath } from 'next/cache'
 import { moveWorkout, undoScheduleMove, resetWeekSchedule } from '../override-actions'
 
@@ -43,6 +47,7 @@ function buildTx(opts: {
               if (currentCount === 2) return opts.sourceSlot
               return opts.logged
             }),
+            all: vi.fn(() => []),
           })),
         })),
       }
@@ -392,7 +397,7 @@ describe('undoScheduleMove', () => {
 
   describe('successful undo', () => {
     it('deletes overrides and returns changes count', async () => {
-      const tx = buildTx({ meso: { id: 1, status: 'active' }, sourceSlot: undefined, logged: undefined })
+      const tx = buildTx({ meso: { id: 1, status: 'active', start_date: '2026-03-23', work_weeks: 4, has_deload: false }, sourceSlot: undefined, logged: undefined })
       setupTx(tx)
       const result = await undoScheduleMove('move-123', 1)
       expect(result.success).toBe(true)
@@ -403,7 +408,7 @@ describe('undoScheduleMove', () => {
     })
 
     it('calls revalidatePath', async () => {
-      const tx = buildTx({ meso: { id: 1, status: 'active' }, sourceSlot: undefined, logged: undefined })
+      const tx = buildTx({ meso: { id: 1, status: 'active', start_date: '2026-03-23', work_weeks: 4, has_deload: false }, sourceSlot: undefined, logged: undefined })
       setupTx(tx)
       await undoScheduleMove('move-123', 1)
       expect(revalidatePath).toHaveBeenCalledWith('/mesocycles', 'layout')
@@ -444,7 +449,7 @@ describe('resetWeekSchedule', () => {
 
   describe('successful reset', () => {
     it('deletes overrides and returns changes count', async () => {
-      const tx = buildTx({ meso: { id: 1, status: 'active' }, sourceSlot: undefined, logged: undefined })
+      const tx = buildTx({ meso: { id: 1, status: 'active', start_date: '2026-03-23', work_weeks: 4, has_deload: false }, sourceSlot: undefined, logged: undefined })
       setupTx(tx)
       const result = await resetWeekSchedule(1, 2)
       expect(result.success).toBe(true)
@@ -455,7 +460,7 @@ describe('resetWeekSchedule', () => {
     })
 
     it('calls revalidatePath', async () => {
-      const tx = buildTx({ meso: { id: 1, status: 'active' }, sourceSlot: undefined, logged: undefined })
+      const tx = buildTx({ meso: { id: 1, status: 'active', start_date: '2026-03-23', work_weeks: 4, has_deload: false }, sourceSlot: undefined, logged: undefined })
       setupTx(tx)
       await resetWeekSchedule(1, 2)
       expect(revalidatePath).toHaveBeenCalledWith('/mesocycles', 'layout')

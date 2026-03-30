@@ -215,7 +215,7 @@ async function deleteEvent(
 }
 
 // Shared setup: check connection, get calendar API + credentials
-async function getCalendarContext() {
+export async function getCalendarContext() {
   const creds = await getGoogleCredentials()
   if (!creds?.calendar_id) return null
 
@@ -598,6 +598,35 @@ export async function retryFailedSyncs(): Promise<SyncResult> {
         message: err instanceof Error ? err.message : String(err),
       })
     }
+  }
+
+  return result
+}
+
+/**
+ * Delete all Google Calendar events mapped to a mesocycle.
+ * Used when a mesocycle is deleted.
+ */
+export async function deleteEventsForMesocycle(mesoId: number): Promise<SyncResult> {
+  const result = emptySyncResult()
+  const ctx = await getCalendarContext()
+
+  const events = await db
+    .select()
+    .from(google_calendar_events)
+    .where(eq(google_calendar_events.mesocycle_id, mesoId))
+
+  if (!ctx) {
+    // No Google connection — just clean up local mappings
+    for (const evt of events) {
+      await db.delete(google_calendar_events).where(eq(google_calendar_events.id, evt.id))
+      result.deleted++
+    }
+    return result
+  }
+
+  for (const evt of events) {
+    await deleteEvent(ctx.calendarApi, ctx.calendarId, evt, result)
   }
 
   return result

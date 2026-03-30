@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { db } from '@/lib/db/index'
 import { mesocycles } from '@/lib/db/schema'
 import { calculateEndDate } from './utils'
+import { syncMesocycle } from '@/lib/google/sync'
 
 type CreateResult =
   | { success: true; id: number }
@@ -73,7 +74,14 @@ export async function updateMesocycle(id: number, formData: FormData): Promise<U
   }
 
   const meso = db
-    .select({ id: mesocycles.id, status: mesocycles.status })
+    .select({
+      id: mesocycles.id,
+      status: mesocycles.status,
+      start_date: mesocycles.start_date,
+      end_date: mesocycles.end_date,
+      work_weeks: mesocycles.work_weeks,
+      has_deload: mesocycles.has_deload,
+    })
     .from(mesocycles)
     .where(eq(mesocycles.id, id))
     .get()
@@ -116,6 +124,12 @@ export async function updateMesocycle(id: number, formData: FormData): Promise<U
   const hasDeload = rawHasDeload === 'true'
   const endDate = calculateEndDate(startDate, workWeeks, hasDeload)
 
+  // Detect date range change for sync
+  const dateRangeChanged =
+    meso.start_date !== startDate ||
+    meso.work_weeks !== workWeeks ||
+    meso.has_deload !== hasDeload
+
   db.update(mesocycles)
     .set({
       name,
@@ -128,6 +142,12 @@ export async function updateMesocycle(id: number, formData: FormData): Promise<U
     .run()
 
   revalidatePath('/mesocycles')
+
+  // Fire-and-forget: re-project events if date range changed
+  if (dateRangeChanged) {
+    syncMesocycle(id).catch(() => {})
+  }
+
   return { success: true, id }
 }
 
