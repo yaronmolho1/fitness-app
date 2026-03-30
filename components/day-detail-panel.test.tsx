@@ -70,7 +70,7 @@ const projectedRunning: DayDetailResult = {
   slots: [],
   is_deload: false,
   period: 'evening',
-  time_slot: '07:00',
+  time_slot: '18:00',
   duration: 90,
   schedule_entry_id: 1,
   is_override: false,
