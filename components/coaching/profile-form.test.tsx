@@ -41,6 +41,7 @@ const fullProfile = {
   training_age_years: 5,
   primary_goal: 'Hypertrophy',
   injury_history: 'Left shoulder impingement',
+  athletic_background: null,
   timezone: 'UTC', created_at: new Date(),
   updated_at: new Date(),
 }

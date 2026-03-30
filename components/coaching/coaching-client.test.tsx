@@ -56,6 +56,7 @@ const mockProfile = {
   training_age_years: 5,
   primary_goal: 'Hypertrophy',
   injury_history: null,
+  athletic_background: null,
   timezone: 'UTC',
   created_at: null,
   updated_at: null,

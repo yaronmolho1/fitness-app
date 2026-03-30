@@ -127,6 +127,13 @@
       "when": 1774793379299,
       "tag": "0017_mixed_shatterstar",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1774852761426,
+      "tag": "0018_slippery_morlocks",
+      "breakpoints": true
     }
   ]
 }

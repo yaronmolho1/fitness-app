@@ -4,11 +4,13 @@ import { verifyToken } from '@/lib/auth/jwt'
 import { db } from '@/lib/db'
 import { getAthleteProfile, getCurrentPlan, getRecentSessions } from '@/lib/coaching/queries'
 import { getProgressionData } from '@/lib/progression/queries'
+import { getRunningProgressionData } from '@/lib/coaching/queries'
 import { getCalendarProjection } from '@/lib/calendar/queries'
 import {
   generateCoachingSummary,
   type SubjectiveState,
   type ProgressionTrend,
+  type RunningProgressionTrend,
 } from '@/lib/coaching/summary'
 
 const bodySchema = z.object({
@@ -88,6 +90,27 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Collect running progression trends
+    const runningProgressionTrends: RunningProgressionTrend[] = []
+    if (currentPlan) {
+      const seenRunning = new Set<string>()
+      for (const template of currentPlan.templates) {
+        if (template.modality !== 'running') continue
+        if (seenRunning.has(template.canonical_name)) continue
+        seenRunning.add(template.canonical_name)
+
+        const dataPoints = await getRunningProgressionData(db, template.canonical_name)
+        if (dataPoints.length > 0) {
+          runningProgressionTrends.push({
+            canonicalName: template.canonical_name,
+            templateName: template.name,
+            runType: template.run_type,
+            dataPoints,
+          })
+        }
+      }
+    }
+
     // Get upcoming 14 days of calendar projection
     const now = new Date()
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
@@ -113,6 +136,7 @@ export async function POST(request: NextRequest) {
       currentPlan,
       recentSessions,
       progressionTrends,
+      runningProgressionTrends,
       subjectiveState,
       upcomingDays,
     })

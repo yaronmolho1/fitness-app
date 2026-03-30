@@ -293,6 +293,7 @@ export const athlete_profile = sqliteTable('athlete_profile', {
   training_age_years: integer('training_age_years'),
   primary_goal: text('primary_goal'),
   injury_history: text('injury_history'),
+  athletic_background: text('athletic_background'),
   timezone: text('timezone').notNull().default('UTC'),
   created_at: integer('created_at', { mode: 'timestamp' }),
   updated_at: integer('updated_at', { mode: 'timestamp' }),
