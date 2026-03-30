@@ -4,11 +4,32 @@ import { formatDateBanner } from '@/lib/date-format'
 export function RetroactiveDateBanner({
   date,
   today,
+  isFuture,
 }: {
   date?: string
   today: string
+  isFuture?: boolean
 }) {
   if (!date || date === today) return null
+
+  if (isFuture) {
+    return (
+      <div
+        data-testid="upcoming-banner"
+        className="rounded-lg bg-blue-500/15 px-4 py-3 text-sm font-medium text-blue-700 dark:text-blue-400"
+      >
+        <div className="flex items-center justify-between gap-3">
+          <span>Upcoming workout for {formatDateBanner(date)}</span>
+          <Link
+            href="/calendar"
+            className="shrink-0 text-xs font-semibold underline underline-offset-2 hover:text-blue-900 dark:hover:text-blue-300"
+          >
+            Back to Calendar
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div

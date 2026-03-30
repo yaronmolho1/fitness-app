@@ -198,7 +198,7 @@ function ResistanceDisplay({
   onStartLogging,
 }: {
   data: WorkoutResponse
-  onStartLogging: () => void
+  onStartLogging?: () => void
 }) {
   return (
     <div data-testid="workout-display" className="space-y-4">
@@ -216,7 +216,7 @@ function ResistanceDisplay({
         </Card>
       )}
 
-      {data.template.modality === 'resistance' && (
+      {onStartLogging && data.template.modality === 'resistance' && (
         <button
           type="button"
           data-testid="start-logging-btn"
@@ -295,7 +295,7 @@ function RunningDisplay({
   onStartLogging,
 }: {
   data: WorkoutResponse
-  onStartLogging: () => void
+  onStartLogging?: () => void
 }) {
   const { template } = data
   const config = template.run_type ? runTypeConfig[template.run_type] : null
@@ -353,14 +353,16 @@ function RunningDisplay({
         </CardContent>
       </Card>
 
-      <button
-        type="button"
-        data-testid="start-running-logging-btn"
-        onClick={onStartLogging}
-        className="w-full rounded-xl bg-primary py-3.5 text-base font-semibold text-primary-foreground shadow-lg active:scale-[0.98] transition-transform"
-      >
-        Log Run
-      </button>
+      {onStartLogging && (
+        <button
+          type="button"
+          data-testid="start-running-logging-btn"
+          onClick={onStartLogging}
+          className="w-full rounded-xl bg-primary py-3.5 text-base font-semibold text-primary-foreground shadow-lg active:scale-[0.98] transition-transform"
+        >
+          Log Run
+        </button>
+      )}
     </div>
   )
 }
@@ -370,7 +372,7 @@ function MmaDisplay({
   onStartLogging,
 }: {
   data: WorkoutResponse
-  onStartLogging: () => void
+  onStartLogging?: () => void
 }) {
   const { template } = data
 
@@ -388,14 +390,16 @@ function MmaDisplay({
         </CardContent>
       </Card>
 
-      <button
-        type="button"
-        data-testid="start-mma-logging-btn"
-        onClick={onStartLogging}
-        className="w-full rounded-xl bg-primary py-3.5 text-base font-semibold text-primary-foreground shadow-lg active:scale-[0.98] transition-transform"
-      >
-        Log Session
-      </button>
+      {onStartLogging && (
+        <button
+          type="button"
+          data-testid="start-mma-logging-btn"
+          onClick={onStartLogging}
+          className="w-full rounded-xl bg-primary py-3.5 text-base font-semibold text-primary-foreground shadow-lg active:scale-[0.98] transition-transform"
+        >
+          Log Session
+        </button>
+      )}
     </div>
   )
 }
@@ -485,7 +489,7 @@ function MixedDisplay({
   onStartLogging,
 }: {
   data: WorkoutResponse
-  onStartLogging: () => void
+  onStartLogging?: () => void
 }) {
   const sections = data.sections ?? []
 
@@ -521,14 +525,16 @@ function MixedDisplay({
         </div>
       ))}
 
-      <button
-        type="button"
-        data-testid="start-mixed-logging-btn"
-        onClick={onStartLogging}
-        className="w-full rounded-xl bg-primary py-3.5 text-base font-semibold text-primary-foreground shadow-lg active:scale-[0.98] transition-transform"
-      >
-        Log Workout
-      </button>
+      {onStartLogging && (
+        <button
+          type="button"
+          data-testid="start-mixed-logging-btn"
+          onClick={onStartLogging}
+          className="w-full rounded-xl bg-primary py-3.5 text-base font-semibold text-primary-foreground shadow-lg active:scale-[0.98] transition-transform"
+        >
+          Log Workout
+        </button>
+      )}
     </div>
   )
 }
@@ -671,7 +677,7 @@ function SessionSection({
   session: TodayResponse
   showPeriodLabel: boolean
   loggingState: Record<string, boolean>
-  onStartLogging: (key: string) => void
+  onStartLogging?: (key: string) => void
   onSaveSuccess?: () => void
 }) {
   if (session.type === 'already_logged') {
@@ -712,13 +718,13 @@ function SessionSection({
           </SectionHeading>
         )}
         {session.template.modality === 'mixed' ? (
-          <MixedDisplay data={session} onStartLogging={() => onStartLogging(key)} />
+          <MixedDisplay data={session} onStartLogging={onStartLogging ? () => onStartLogging(key) : undefined} />
         ) : session.template.modality === 'running' ? (
-          <RunningDisplay data={session} onStartLogging={() => onStartLogging(key)} />
+          <RunningDisplay data={session} onStartLogging={onStartLogging ? () => onStartLogging(key) : undefined} />
         ) : session.template.modality === 'mma' ? (
-          <MmaDisplay data={session} onStartLogging={() => onStartLogging(key)} />
+          <MmaDisplay data={session} onStartLogging={onStartLogging ? () => onStartLogging(key) : undefined} />
         ) : (
-          <ResistanceDisplay data={session} onStartLogging={() => onStartLogging(key)} />
+          <ResistanceDisplay data={session} onStartLogging={onStartLogging ? () => onStartLogging(key) : undefined} />
         )}
       </div>
     )
@@ -735,12 +741,13 @@ function getToday(): string {
   return `${y}-${m}-${day}`
 }
 
-export function TodayWorkout({ date }: { date?: string }) {
+export function TodayWorkout({ date, action }: { date?: string; action?: string }) {
   const [sessions, setSessions] = useState<TodayResponse[] | null>(null)
   const [error, setError] = useState(false)
   const [loggingState, setLoggingState] = useState<Record<string, boolean>>({})
   const today = getToday()
   const router = useRouter()
+  const isFuture = date ? date > today : false
 
   const onSaveSuccess = useCallback(() => {
     handlePostSaveRedirect({ date, today, push: router.push })
@@ -755,19 +762,28 @@ export function TodayWorkout({ date }: { date?: string }) {
         return res.json()
       })
       .then((json: TodayResponse[]) => {
-        if (!stale) setSessions(json)
+        if (stale) return
+        setSessions(json)
+        // Auto-start logging when action=log and date is not future
+        if (action === 'log' && !isFuture && json.length > 0) {
+          const first = json[0]
+          if (first.type === 'workout') {
+            const key = `${first.period}-${first.template.id}`
+            setLoggingState((prev) => prev[key] ? prev : { ...prev, [key]: true })
+          }
+        }
       })
       .catch(() => {
         if (!stale) setError(true)
       })
     return () => { stale = true }
-  }, [date])
+  }, [date, action, isFuture])
 
   function startLogging(key: string) {
     setLoggingState((prev) => ({ ...prev, [key]: true }))
   }
 
-  const banner = <RetroactiveDateBanner date={date} today={today} />
+  const banner = <RetroactiveDateBanner date={date} today={today} isFuture={isFuture} />
 
   // Loading
   if (!sessions && !error) {
@@ -840,14 +856,16 @@ export function TodayWorkout({ date }: { date?: string }) {
           </CardContent>
         </Card>
 
-        <div>
-          <SectionHeading className="mt-0 mb-3">Daily Routines</SectionHeading>
-          <RoutineCheckOff
-            items={first.routines.items}
-            logs={first.routines.logs}
-            logDate={first.date}
-          />
-        </div>
+        {!isFuture && (
+          <div>
+            <SectionHeading className="mt-0 mb-3">Daily Routines</SectionHeading>
+            <RoutineCheckOff
+              items={first.routines.items}
+              logs={first.routines.logs}
+              logDate={first.date}
+            />
+          </div>
+        )}
       </div>
     )
   }
@@ -885,21 +903,22 @@ export function TodayWorkout({ date }: { date?: string }) {
         return <>{banner}<WorkoutLoggingForm data={session} onSaveSuccess={onSaveSuccess} /></>
       }
 
+      const logHandler = isFuture ? undefined : () => startLogging(key)
       if (session.template.modality === 'mixed') {
-        return <>{banner}<MixedDisplay data={session} onStartLogging={() => startLogging(key)} /></>
+        return <>{banner}<MixedDisplay data={session} onStartLogging={logHandler} /></>
       }
       if (session.template.modality === 'running') {
         return (
-          <>{banner}<RunningDisplay data={session} onStartLogging={() => startLogging(key)} /></>
+          <>{banner}<RunningDisplay data={session} onStartLogging={logHandler} /></>
         )
       }
       if (session.template.modality === 'mma') {
         return (
-          <>{banner}<MmaDisplay data={session} onStartLogging={() => startLogging(key)} /></>
+          <>{banner}<MmaDisplay data={session} onStartLogging={logHandler} /></>
         )
       }
       return (
-        <>{banner}<ResistanceDisplay data={session} onStartLogging={() => startLogging(key)} /></>
+        <>{banner}<ResistanceDisplay data={session} onStartLogging={logHandler} /></>
       )
     }
   }
@@ -914,7 +933,7 @@ export function TodayWorkout({ date }: { date?: string }) {
           session={session}
           showPeriodLabel={showPeriodLabels}
           loggingState={loggingState}
-          onStartLogging={startLogging}
+          onStartLogging={isFuture ? undefined : startLogging}
           onSaveSuccess={onSaveSuccess}
         />
       ))}

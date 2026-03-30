@@ -141,19 +141,26 @@ describe('GET /api/today', () => {
       expect(mockGetTodayWorkout).not.toHaveBeenCalled()
     })
 
-    it('returns 400 for future date', async () => {
-      const res = await GET(makeRequest('http://localhost/api/today?date=2027-01-01'))
-      expect(res.status).toBe(400)
+    it('passes future date to getTodayWorkout', async () => {
+      mockGetTodayWorkout.mockResolvedValue([{
+        type: 'workout',
+        date: '2027-01-01',
+      }])
 
-      const data = await res.json()
-      expect(data.error).toBeDefined()
-      expect(mockGetTodayWorkout).not.toHaveBeenCalled()
+      const res = await GET(makeRequest('http://localhost/api/today?date=2027-01-01'))
+      expect(res.status).toBe(200)
+      expect(mockGetTodayWorkout).toHaveBeenCalledWith('2027-01-01')
     })
 
-    it('returns 400 for tomorrow', async () => {
+    it('passes tomorrow to getTodayWorkout', async () => {
+      mockGetTodayWorkout.mockResolvedValue([{
+        type: 'workout',
+        date: '2026-03-26',
+      }])
+
       const res = await GET(makeRequest('http://localhost/api/today?date=2026-03-26'))
-      expect(res.status).toBe(400)
-      expect(mockGetTodayWorkout).not.toHaveBeenCalled()
+      expect(res.status).toBe(200)
+      expect(mockGetTodayWorkout).toHaveBeenCalledWith('2026-03-26')
     })
 
     it('returns 400 for impossible date like 2026-02-30', async () => {

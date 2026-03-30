@@ -32,12 +32,6 @@ export async function GET(request: NextRequest) {
           { status: 400 }
         )
       }
-      if (dateParam > todayDateString()) {
-        return NextResponse.json(
-          { error: 'Future dates are not allowed.' },
-          { status: 400 }
-        )
-      }
       date = dateParam
     }
 
