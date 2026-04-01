@@ -92,7 +92,6 @@ vi.mock('@/lib/db/schema', () => ({
     end_time: 'end_time',
     sync_status: 'sync_status',
     last_synced_at: 'last_synced_at',
-    override_entry_id: 'override_entry_id',
     created_at: 'created_at',
     updated_at: 'updated_at',
   },
@@ -109,6 +108,11 @@ vi.mock('@/lib/db/schema', () => ({
   schedule_week_overrides: {
     mesocycle_id: 'mesocycle_id', week_number: 'week_number', day_of_week: 'day_of_week',
   },
+}))
+
+const mockGetEffectiveScheduleForDay = vi.fn().mockResolvedValue([])
+vi.mock('@/lib/schedule/override-queries', () => ({
+  getEffectiveScheduleForDay: (...args: unknown[]) => mockGetEffectiveScheduleForDay(...args),
 }))
 
 const mockGetAuthenticatedClient = vi.fn()
@@ -291,39 +295,35 @@ describe('lib/google/sync', () => {
     it('AC1-2: creates events for all projected workouts', async () => {
       setupConnected()
 
-      // Call sequence: mesocycle.get(), schedule.all(), template.get(), exercises.all()
-      // The mock chains always flow through the same path, so we use call-order logic
+      // mesocycle: 2 weeks, Mon 2026-03-30 to Sun 2026-04-12
       let getCallCount = 0
       mockSelectGet.mockImplementation(() => {
         getCallCount++
         if (getCallCount === 1) {
-          // mesocycle
           return {
             id: 1, name: 'Block 1', start_date: '2026-03-30', end_date: '2026-04-12',
             work_weeks: 2, has_deload: false,
           }
         }
-        // template
+        // template lookups
         return { id: 10, name: 'Push A', modality: 'resistance', mesocycle_id: 1 }
       })
 
-      let allCallCount = 0
-      mockSelectAll.mockImplementation(() => {
-        allCallCount++
-        if (allCallCount === 1) {
-          // existing Google Calendar event mappings (empty for clean sync)
+      // existing Google Calendar event mappings (empty for clean sync)
+      mockSelectAll.mockImplementation(() => [])
+
+      // getEffectiveScheduleForDay returns entries based on day_of_week
+      mockGetEffectiveScheduleForDay.mockImplementation(
+        (_db: unknown, _mesoId: unknown, _weekNum: unknown, dayOfWeek: number) => {
+          if (dayOfWeek === 0) { // Monday
+            return [{ schedule_entry_id: 5, template_id: 10, period: 'morning', time_slot: '07:00', duration: 90, is_override: false, override_group: null }]
+          }
+          if (dayOfWeek === 2) { // Wednesday
+            return [{ schedule_entry_id: 6, template_id: 10, period: 'morning', time_slot: '09:00', duration: 60, is_override: false, override_group: null }]
+          }
           return []
         }
-        if (allCallCount === 2) {
-          // schedule entries: Mon=0 and Wed=2
-          return [
-            { id: 5, day_of_week: 0, template_id: 10, week_type: 'normal', time_slot: '07:00', duration: 90 },
-            { id: 6, day_of_week: 2, template_id: 10, week_type: 'normal', time_slot: '09:00', duration: 60 },
-          ]
-        }
-        // exercise names for template
-        return [{ name: 'Bench Press' }, { name: 'OHP' }]
-      })
+      )
 
       mockEventsInsert.mockResolvedValue({ data: { id: 'gcal-evt-1' } })
 
@@ -348,12 +348,16 @@ describe('lib/google/sync', () => {
         return { id: 10, name: 'Push A', modality: 'resistance', mesocycle_id: 1 }
       })
 
-      let allCallCount = 0
-      mockSelectAll.mockImplementation(() => {
-        allCallCount++
-        if (allCallCount === 1) return [] // existing event mappings
-        return [{ id: 5, day_of_week: 0, template_id: 10, week_type: 'normal', time_slot: '07:00', duration: 90 }]
-      })
+      mockSelectAll.mockImplementation(() => []) // existing event mappings
+
+      mockGetEffectiveScheduleForDay.mockImplementation(
+        (_db: unknown, _mesoId: unknown, _weekNum: unknown, dayOfWeek: number) => {
+          if (dayOfWeek === 0) {
+            return [{ schedule_entry_id: 5, template_id: 10, period: 'morning', time_slot: '07:00', duration: 90, is_override: false, override_group: null }]
+          }
+          return []
+        }
+      )
 
       mockEventsInsert.mockRejectedValue(new Error('API quota exceeded'))
 
@@ -371,14 +375,17 @@ describe('lib/google/sync', () => {
         work_weeks: 1, has_deload: false,
       })
 
-      let allCallCount = 0
-      mockSelectAll.mockImplementation(() => {
-        allCallCount++
-        if (allCallCount === 1) return [] // existing event mappings
-        return [
-          { id: 5, day_of_week: 0, template_id: null, week_type: 'normal', time_slot: '07:00', duration: 90 },
-        ]
-      })
+      mockSelectAll.mockImplementation(() => []) // existing event mappings
+
+      // Return rest day (null template) for Monday
+      mockGetEffectiveScheduleForDay.mockImplementation(
+        (_db: unknown, _mesoId: unknown, _weekNum: unknown, dayOfWeek: number) => {
+          if (dayOfWeek === 0) {
+            return [{ schedule_entry_id: 5, template_id: null, period: 'morning', time_slot: '07:00', duration: 90, is_override: false, override_group: null }]
+          }
+          return []
+        }
+      )
 
       const result = await syncMesocycle(1)
       expect(result.created).toBe(0)
@@ -401,15 +408,18 @@ describe('lib/google/sync', () => {
       setupConnected()
       mockGetEventsByMesocycle.mockResolvedValue([])
 
-      mockSelectGet.mockReturnValue({
-        id: 1, start_date: '2026-03-30', end_date: '2026-04-12',
-        work_weeks: 2, has_deload: false,
+      mockSelectGet.mockImplementation(() => {
+        // First call: mesocycle lookup, subsequent: template lookups
+        return { id: 1, name: 'Push A', modality: 'resistance', mesocycle_id: 1, start_date: '2026-03-30', end_date: '2026-04-12', work_weeks: 2, has_deload: false }
       })
 
-      // schedule entries for the affected days
-      mockSelectAll.mockImplementation(() => {
-        return [{ id: 5, day_of_week: 0, template_id: 10, week_type: 'normal', time_slot: '07:00', duration: 90 }]
-      })
+      // Effective schedule returns one entry per affected date
+      mockGetEffectiveScheduleForDay.mockResolvedValue([
+        { schedule_entry_id: 5, template_id: 10, period: 'morning', time_slot: '07:00', duration: 90, is_override: false, override_group: null },
+      ])
+
+      // exercise names
+      mockSelectAll.mockResolvedValue([])
 
       mockEventsInsert.mockResolvedValue({ data: { id: 'gcal-new-1' } })
 
@@ -422,7 +432,7 @@ describe('lib/google/sync', () => {
       mockGetEventsByMesocycle.mockResolvedValue([
         {
           id: 1, google_event_id: 'gcal-evt-1', mesocycle_id: 1,
-          schedule_entry_id: 5, override_entry_id: null,
+          schedule_entry_id: 5,
           event_date: '2026-04-06', summary: 'Push A — Week 2',
           start_time: '07:00', end_time: '08:30',
           sync_status: 'synced', last_synced_at: new Date(),
@@ -446,7 +456,7 @@ describe('lib/google/sync', () => {
       mockGetEventsByMesocycle.mockResolvedValue([
         {
           id: 1, google_event_id: 'gcal-evt-1', mesocycle_id: 1,
-          schedule_entry_id: 5, override_entry_id: null,
+          schedule_entry_id: 5,
           event_date: '2026-04-06', summary: 'Push A — Week 2',
           start_time: '07:00', end_time: '08:30',
           sync_status: 'synced', last_synced_at: new Date(),
@@ -726,22 +736,27 @@ describe('lib/google/sync', () => {
         return { id: 10, name: 'Push A', modality: 'resistance', mesocycle_id: 1 }
       })
 
-      // Both normal and deload entries for same day_of_week
-      let allCallCount = 0
-      mockSelectAll.mockImplementation(() => {
-        allCallCount++
-        if (allCallCount === 1) {
-          // existing event mappings (empty for clean sync)
+      mockSelectAll.mockImplementation(() => []) // existing event mappings
+
+      // getEffectiveScheduleForDay handles week_type filtering internally
+      // wk1+wk2 (normal) → 90min, wk3 (deload) → 60min
+      mockGetEffectiveScheduleForDay.mockImplementation(
+        (_db: unknown, _mesoId: unknown, weekNum: number, dayOfWeek: number) => {
+          if (dayOfWeek === 0) { // Monday
+            const isDeload = weekNum === 3
+            return [{
+              schedule_entry_id: isDeload ? 6 : 5,
+              template_id: 10,
+              period: 'morning',
+              time_slot: '07:00',
+              duration: isDeload ? 60 : 90,
+              is_override: false,
+              override_group: null,
+            }]
+          }
           return []
         }
-        if (allCallCount === 2) {
-          return [
-            { id: 5, day_of_week: 0, template_id: 10, week_type: 'normal', time_slot: '07:00', duration: 90 },
-            { id: 6, day_of_week: 0, template_id: 10, week_type: 'deload', time_slot: '07:00', duration: 60 },
-          ]
-        }
-        return [{ name: 'Bench Press' }]
-      })
+      )
 
       mockEventsInsert.mockResolvedValue({ data: { id: 'gcal-evt-1' } })
 
@@ -768,16 +783,20 @@ describe('lib/google/sync', () => {
         return { id: 10, name: 'Push A', modality: 'resistance', mesocycle_id: 1 }
       })
 
-      // Two entries on same day at different times, both with same template
-      let allCallCount = 0
-      mockSelectAll.mockImplementation(() => {
-        allCallCount++
-        if (allCallCount === 1) return [] // existing event mappings
-        return [
-          { id: 5, day_of_week: 0, template_id: 10, week_type: 'normal', time_slot: '07:00', duration: 90 },
-          { id: 6, day_of_week: 0, template_id: 10, week_type: 'normal', time_slot: '17:00', duration: 60 },
-        ]
-      })
+      mockSelectAll.mockImplementation(() => []) // existing event mappings
+
+      // Two entries on same day at different times
+      mockGetEffectiveScheduleForDay.mockImplementation(
+        (_db: unknown, _mesoId: unknown, _weekNum: unknown, dayOfWeek: number) => {
+          if (dayOfWeek === 0) {
+            return [
+              { schedule_entry_id: 5, template_id: 10, period: 'morning', time_slot: '07:00', duration: 90, is_override: false, override_group: null },
+              { schedule_entry_id: 6, template_id: 10, period: 'evening', time_slot: '17:00', duration: 60, is_override: false, override_group: null },
+            ]
+          }
+          return []
+        }
+      )
 
       // Both API calls fail — will generate placeholder IDs
       mockEventsInsert.mockRejectedValue(new Error('API error'))
