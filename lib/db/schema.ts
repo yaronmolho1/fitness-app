@@ -390,7 +390,6 @@ export const google_calendar_events = sqliteTable(
       .notNull()
       .references(() => mesocycles.id, { onDelete: 'cascade' }),
     schedule_entry_id: integer('schedule_entry_id'), // weekly_schedule.id, nullable
-    override_entry_id: integer('override_entry_id'), // schedule_week_overrides.id, nullable
     event_date: text('event_date').notNull(), // YYYY-MM-DD
     summary: text('summary').notNull(),
     start_time: text('start_time').notNull(), // HH:MM

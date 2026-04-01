@@ -45,20 +45,41 @@ export function GoogleCalendarSettings({ connected, timezone, error, syncStatus 
     })
   }
 
-  async function handleResync() {
+  async function handleRetryFailed() {
     setIsSyncing(true)
     setSyncResult(null)
     try {
       const res = await fetch('/api/google/sync', { method: 'POST' })
       const data = await res.json()
       if (data.created > 0 || data.failed === 0) {
-        setSyncResult(`Re-synced ${data.created} event${data.created !== 1 ? 's' : ''}`)
+        setSyncResult(`Retried ${data.created} event${data.created !== 1 ? 's' : ''}`)
       } else {
         setSyncResult(`${data.failed} event${data.failed !== 1 ? 's' : ''} still failing`)
       }
       router.refresh()
     } catch {
-      setSyncResult('Re-sync failed')
+      setSyncResult('Retry failed')
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
+  async function handleFullResync() {
+    setIsSyncing(true)
+    setSyncResult(null)
+    try {
+      const res = await fetch('/api/google/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'full' }),
+      })
+      const data = await res.json()
+      setSyncResult(
+        `Full re-sync: ${data.created} created, ${data.deleted} deleted${data.failed > 0 ? `, ${data.failed} failed` : ''}`
+      )
+      router.refresh()
+    } catch {
+      setSyncResult('Full re-sync failed')
     } finally {
       setIsSyncing(false)
     }
@@ -131,12 +152,19 @@ export function GoogleCalendarSettings({ connected, timezone, error, syncStatus 
               {syncStatus && syncStatus.error > 0 && (
                 <Button
                   variant="outline"
-                  onClick={handleResync}
+                  onClick={handleRetryFailed}
                   disabled={isSyncing}
                 >
-                  {isSyncing ? 'Re-syncing...' : 'Re-sync'}
+                  {isSyncing ? 'Retrying...' : 'Retry failed'}
                 </Button>
               )}
+              <Button
+                variant="outline"
+                onClick={handleFullResync}
+                disabled={isSyncing}
+              >
+                {isSyncing ? 'Re-syncing...' : 'Full re-sync'}
+              </Button>
               <Button
                 variant="destructive"
                 onClick={() => setShowConfirm(true)}

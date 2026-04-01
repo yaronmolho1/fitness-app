@@ -146,10 +146,10 @@ describe('GoogleCalendarSettings', () => {
           syncStatus={{ synced: 10, pending: 0, error: 3, lastSyncedAt: null }}
         />
       )
-      expect(screen.getByRole('button', { name: /re-sync/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /retry failed/i })).toBeInTheDocument()
     })
 
-    it('does not show re-sync button when no failed events', () => {
+    it('does not show retry-failed button when no failed events', () => {
       render(
         <GoogleCalendarSettings
           connected={true}
@@ -157,7 +157,9 @@ describe('GoogleCalendarSettings', () => {
           syncStatus={{ synced: 10, pending: 0, error: 0, lastSyncedAt: null }}
         />
       )
-      expect(screen.queryByRole('button', { name: /re-sync/i })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /retry failed/i })).not.toBeInTheDocument()
+      // Full re-sync is always visible
+      expect(screen.getByRole('button', { name: /full re-sync/i })).toBeInTheDocument()
     })
   })
 

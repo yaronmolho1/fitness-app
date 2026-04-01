@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server'
-import { retryFailedSyncs } from '@/lib/google/sync'
+import { retryFailedSyncs, fullResync } from '@/lib/google/sync'
 
-export async function POST(_req: Request) {
+export async function POST(req: Request) {
   try {
-    const result = await retryFailedSyncs()
+    const body = await req.json().catch(() => ({}))
+    const mode = (body as { mode?: string }).mode
+
+    const result = mode === 'full'
+      ? await fullResync()
+      : await retryFailedSyncs()
+
     return NextResponse.json(result)
   } catch {
     return NextResponse.json({ error: 'sync_failed' }, { status: 500 })

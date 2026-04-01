@@ -1,6 +1,6 @@
 import { google } from 'googleapis'
 import type { calendar_v3 } from 'googleapis'
-import { eq, and } from 'drizzle-orm'
+import { eq, and, ne } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import {
   google_calendar_events,
@@ -13,6 +13,7 @@ import {
 import { getAuthenticatedClient } from './client'
 import { getGoogleCredentials, getEventsByMesocycle, getAthleteTimezone } from './queries'
 import { getEndTime } from '@/lib/schedule/time-utils'
+import { getEffectiveScheduleForDay } from '@/lib/schedule/override-queries'
 import type { GCalEventParams, SyncResult, SyncAction, GCalEventBody } from './types'
 
 // Google Calendar event color IDs by modality
@@ -30,6 +31,12 @@ function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
+function getDurationMinutes(start: string, end: string): number {
+  const [sh, sm] = start.split(':').map(Number)
+  const [eh, em] = end.split(':').map(Number)
+  return (eh * 60 + em) - (sh * 60 + sm)
+}
+
 // Build a Google Calendar event body from params
 export function buildEventBody(params: GCalEventParams): GCalEventBody {
   const startDateTime = `${params.date}T${params.timeSlot}:00`
@@ -43,13 +50,15 @@ export function buildEventBody(params: GCalEventParams): GCalEventBody {
   }
   if (params.appUrl) {
     descriptionParts.push('')
-    descriptionParts.push(`View workout: ${params.appUrl}/?date=${params.date}`)
-    descriptionParts.push(`Log workout: ${params.appUrl}/?date=${params.date}&action=log`)
+    const viewUrl = `${params.appUrl}/?date=${params.date}`
+    const logUrl = `${params.appUrl}/?date=${params.date}&action=log`
+    descriptionParts.push(`<a href="${viewUrl}">View workout</a>`)
+    descriptionParts.push(`<a href="${logUrl}">Log workout</a>`)
   }
 
   return {
     summary: `${prefix}${params.templateName} — Week ${params.weekNumber}`,
-    description: descriptionParts.join('\n'),
+    description: descriptionParts.join('<br>'),
     start: { dateTime: startDateTime, timeZone: params.timezone },
     end: { dateTime: endDateTime, timeZone: params.timezone },
     source: params.appUrl ? { url: params.appUrl, title: 'Fitness App' } : undefined,
@@ -276,54 +285,62 @@ export async function syncMesocycle(mesoId: number): Promise<SyncResult> {
     eq(google_calendar_events.mesocycle_id, mesoId)
   )
 
-  // Load base schedule entries
-  const scheduleEntries = await db
-    .select()
-    .from(weekly_schedule)
-    .where(eq(weekly_schedule.mesocycle_id, mesoId))
-    .all()
-
-  // Build all event params — filter by week_type based on week position
+  // Build all event params using effective schedule (base + overrides) per date
   const totalWeeks = meso.work_weeks + (meso.has_deload ? 1 : 0)
   const allParams: GCalEventParams[] = []
+  const templateCache = new Map<number, { name: string; modality: string }>()
+  const exerciseCache = new Map<number, string[]>()
 
-  for (const entry of scheduleEntries) {
-    if (!entry.template_id) continue
+  const startDate = new Date(meso.start_date + 'T00:00:00Z')
+  const endDate = new Date(meso.end_date + 'T00:00:00Z')
+  const cursor = new Date(startDate)
 
-    const template = await db
-      .select()
-      .from(workout_templates)
-      .where(eq(workout_templates.id, entry.template_id))
-      .get()
-    if (!template) continue
+  while (cursor <= endDate) {
+    const dateStr = cursor.toISOString().slice(0, 10)
+    const dayOfWeek = (cursor.getUTCDay() + 6) % 7
+    const weekNum = getWeekNumber(meso.start_date, dateStr)
+    const isDeloadWeek = meso.has_deload && weekNum === totalWeeks
+    const weekType = isDeloadWeek ? 'deload' as const : 'normal' as const
 
-    const exerciseNames = await getExerciseNames(template.id)
-    const dates = projectDatesForDay(meso.start_date, meso.end_date, entry.day_of_week)
+    const entries = await getEffectiveScheduleForDay(
+      db, mesoId, weekNum, dayOfWeek, weekType
+    )
 
-    for (const date of dates) {
-      const weekNum = getWeekNumber(meso.start_date, date)
-      // Determine if this week is deload (last week when has_deload)
-      const isDeloadWeek = meso.has_deload && weekNum === totalWeeks
-      const expectedWeekType = isDeloadWeek ? 'deload' : 'normal'
+    for (const entry of entries) {
+      if (!entry.template_id) continue
 
-      // Only use entries matching the appropriate week_type
-      if (entry.week_type !== expectedWeekType) continue
+      if (!templateCache.has(entry.template_id)) {
+        const t = await db
+          .select()
+          .from(workout_templates)
+          .where(eq(workout_templates.id, entry.template_id))
+          .get()
+        if (t) templateCache.set(t.id, { name: t.name, modality: t.modality })
+      }
+      const template = templateCache.get(entry.template_id)
+      if (!template) continue
+
+      if (!exerciseCache.has(entry.template_id)) {
+        exerciseCache.set(entry.template_id, await getExerciseNames(entry.template_id))
+      }
 
       allParams.push({
         templateName: template.name,
         modality: template.modality,
-        date,
+        date: dateStr,
         timeSlot: entry.time_slot,
         duration: entry.duration,
         weekNumber: weekNum,
         timezone: ctx.timezone,
         appUrl: ctx.appUrl,
         mesocycleId: mesoId,
-        templateId: template.id,
-        scheduleEntryId: entry.id,
-        exercises: exerciseNames,
+        templateId: entry.template_id,
+        scheduleEntryId: entry.schedule_entry_id,
+        exercises: exerciseCache.get(entry.template_id),
       })
     }
+
+    cursor.setUTCDate(cursor.getUTCDate() + 1)
   }
 
   // Sequential insert with throttling to avoid Google API rate limits
@@ -376,6 +393,8 @@ export async function syncScheduleChange(
       .get()
     if (!meso) return result
 
+    const totalWeeks = meso.work_weeks + (meso.has_deload ? 1 : 0)
+
     for (const date of affectedDates) {
       // Delete existing events for this date first
       const existing = eventsByDate.get(date) ?? []
@@ -383,18 +402,15 @@ export async function syncScheduleChange(
         await deleteEvent(ctx.calendarApi, ctx.calendarId, evt, result)
       }
 
-      // Create new events based on current schedule for this date
+      // Create new events based on effective schedule (base + overrides)
       const dayOfWeek = getDayOfWeek(date)
-      const entries = await db
-        .select()
-        .from(weekly_schedule)
-        .where(
-          and(
-            eq(weekly_schedule.mesocycle_id, mesoId),
-            eq(weekly_schedule.day_of_week, dayOfWeek)
-          )
-        )
-        .all()
+      const weekNum = getWeekNumber(meso.start_date, date)
+      const isDeloadWeek = meso.has_deload && weekNum === totalWeeks
+      const weekType = isDeloadWeek ? 'deload' as const : 'normal' as const
+
+      const entries = await getEffectiveScheduleForDay(
+        db, mesoId, weekNum, dayOfWeek, weekType
+      )
 
       for (const entry of entries) {
         if (!entry.template_id) continue
@@ -414,12 +430,12 @@ export async function syncScheduleChange(
           date,
           timeSlot: entry.time_slot,
           duration: entry.duration,
-          weekNumber: getWeekNumber(meso.start_date, date),
+          weekNumber: weekNum,
           timezone: ctx.timezone,
           appUrl: ctx.appUrl,
           mesocycleId: mesoId,
           templateId: template.id,
-          scheduleEntryId: entry.id,
+          scheduleEntryId: entry.schedule_entry_id,
           exercises: exerciseNames,
         }, result)
       }
@@ -499,20 +515,47 @@ export async function syncCompletion(
     result.updated++
   } catch (err) {
     if (isGoneError(err)) {
-      // Event was deleted from GCal — recreate with completion prefix
+      // Event was deleted from GCal — recreate with full body + completion prefix
       try {
-        const timezone = (await getAthleteTimezone()) ?? 'UTC'
-        const body: GCalEventBody = {
-          summary: completedSummary,
-          start: {
-            dateTime: `${date}T${mapping.start_time}:00`,
-            timeZone: timezone,
-          },
-          end: {
-            dateTime: `${date}T${mapping.end_time}:00`,
-            timeZone: timezone,
-          },
-        }
+        const template = await db
+          .select({ name: workout_templates.name, modality: workout_templates.modality })
+          .from(workout_templates)
+          .where(eq(workout_templates.id, templateId))
+          .get()
+        const meso = await db
+          .select({ start_date: mesocycles.start_date })
+          .from(mesocycles)
+          .where(eq(mesocycles.id, mesoId))
+          .get()
+        const exerciseNames = await getExerciseNames(templateId)
+
+        const body = template && meso
+          ? buildEventBody({
+              templateName: template.name,
+              modality: template.modality,
+              date,
+              timeSlot: mapping.start_time,
+              duration: getDurationMinutes(mapping.start_time, mapping.end_time),
+              weekNumber: getWeekNumber(meso.start_date, date),
+              timezone: ctx.timezone,
+              appUrl: ctx.appUrl,
+              mesocycleId: mesoId,
+              templateId,
+              scheduleEntryId: mapping.schedule_entry_id,
+              exercises: exerciseNames,
+              completed: true,
+            })
+          : {
+              summary: completedSummary,
+              start: {
+                dateTime: `${date}T${mapping.start_time}:00`,
+                timeZone: ctx.timezone,
+              },
+              end: {
+                dateTime: `${date}T${mapping.end_time}:00`,
+                timeZone: ctx.timezone,
+              },
+            }
 
         const res = await ctx.calendarApi.events.insert({
           calendarId: ctx.calendarId,
@@ -574,24 +617,56 @@ export async function retryFailedSyncs(): Promise<SyncResult> {
   if (failedEvents.length === 0) return result
 
   for (const mapping of failedEvents) {
-    try {
-      const body: GCalEventBody = {
-        summary: mapping.summary,
-        start: {
-          dateTime: `${mapping.event_date}T${mapping.start_time}:00`,
-          timeZone: ctx.timezone,
-        },
-        end: {
-          dateTime: `${mapping.event_date}T${mapping.end_time}:00`,
-          timeZone: ctx.timezone,
-        },
-        extendedProperties: {
-          private: {
-            mesocycleId: String(mapping.mesocycle_id),
-            eventDate: mapping.event_date,
-          },
-        },
+    // Extract templateId from placeholder: pending-YYYY-MM-DD-{templateId}-{counter}-{ts}
+    const parts = mapping.google_event_id.split('-')
+    const templateId = parts.length >= 5 ? Number(parts[4]) : null
+    let template: { name: string; modality: string } | undefined
+    let exerciseNames: string[] = []
+
+    if (templateId) {
+      template = await db
+        .select({ name: workout_templates.name, modality: workout_templates.modality })
+        .from(workout_templates)
+        .where(eq(workout_templates.id, templateId))
+        .get()
+      if (template) {
+        exerciseNames = await getExerciseNames(templateId)
       }
+    }
+
+    try {
+      const meso = await db
+        .select({ start_date: mesocycles.start_date })
+        .from(mesocycles)
+        .where(eq(mesocycles.id, mapping.mesocycle_id))
+        .get()
+
+      const body = template && meso
+        ? buildEventBody({
+            templateName: template.name,
+            modality: template.modality,
+            date: mapping.event_date,
+            timeSlot: mapping.start_time,
+            duration: getDurationMinutes(mapping.start_time, mapping.end_time),
+            weekNumber: getWeekNumber(meso.start_date, mapping.event_date),
+            timezone: ctx.timezone,
+            appUrl: ctx.appUrl,
+            mesocycleId: mapping.mesocycle_id,
+            templateId: templateId!,
+            scheduleEntryId: mapping.schedule_entry_id,
+            exercises: exerciseNames,
+          })
+        : {
+            summary: mapping.summary,
+            start: {
+              dateTime: `${mapping.event_date}T${mapping.start_time}:00`,
+              timeZone: ctx.timezone,
+            },
+            end: {
+              dateTime: `${mapping.event_date}T${mapping.end_time}:00`,
+              timeZone: ctx.timezone,
+            },
+          }
 
       const res = await ctx.calendarApi.events.insert({
         calendarId: ctx.calendarId,
@@ -617,11 +692,38 @@ export async function retryFailedSyncs(): Promise<SyncResult> {
       result.errors.push({
         operation: 'create',
         date: mapping.event_date,
-        templateId: 0,
+        templateId: templateId ?? 0,
         message: err instanceof Error ? err.message : String(err),
       })
     }
     await sleep(200)
+  }
+
+  return result
+}
+
+/**
+ * Full re-sync: delete and recreate all events for non-completed mesocycles.
+ * Uses syncMesocycle which handles overrides correctly.
+ */
+export async function fullResync(): Promise<SyncResult> {
+  const result = emptySyncResult()
+  const ctx = await getCalendarContext()
+  if (!ctx) return result
+
+  const nonCompleted = await db
+    .select()
+    .from(mesocycles)
+    .where(ne(mesocycles.status, 'completed'))
+    .all()
+
+  for (const meso of nonCompleted) {
+    const mesoResult = await syncMesocycle(meso.id)
+    result.created += mesoResult.created
+    result.updated += mesoResult.updated
+    result.deleted += mesoResult.deleted
+    result.failed += mesoResult.failed
+    result.errors.push(...mesoResult.errors)
   }
 
   return result
