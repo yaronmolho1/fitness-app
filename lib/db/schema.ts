@@ -31,10 +31,10 @@ export const mesocycles = sqliteTable('mesocycles', {
     .notNull()
     .default(false),
   status: text('status', {
-    enum: ['planned', 'active', 'completed'],
+    enum: ['draft', 'planned', 'active', 'completed'],
   })
     .notNull()
-    .default('planned'),
+    .default('draft'),
   created_at: integer('created_at', { mode: 'timestamp' }),
 })
 

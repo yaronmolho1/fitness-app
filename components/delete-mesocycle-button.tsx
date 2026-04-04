@@ -19,7 +19,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 
-type MesocycleStatus = 'planned' | 'active' | 'completed'
+type MesocycleStatus = 'draft' | 'planned' | 'active' | 'completed'
 
 export function DeleteMesocycleButton({
   mesocycleId,

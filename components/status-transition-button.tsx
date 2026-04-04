@@ -1,10 +1,23 @@
 'use client'
 
 import { useTransition, useState } from 'react'
-import { activateMesocycle, completeMesocycle } from '@/lib/mesocycles/actions'
+import { activateMesocycle, completeMesocycle, planMesocycle } from '@/lib/mesocycles/actions'
 import { Button } from '@/components/ui/button'
 
-type MesocycleStatus = 'planned' | 'active' | 'completed'
+type MesocycleStatus = 'draft' | 'planned' | 'active' | 'completed'
+
+type TransitionConfig = {
+  label: string
+  action: (id: number) => Promise<{ success: boolean; error?: string }>
+  variant: 'outline' | 'default' | 'secondary'
+  confirm?: string
+}
+
+const transitions: Partial<Record<MesocycleStatus, TransitionConfig>> = {
+  draft: { label: 'Mark as Planned', action: planMesocycle, variant: 'outline' },
+  planned: { label: 'Activate', action: activateMesocycle, variant: 'default' },
+  active: { label: 'Complete', action: completeMesocycle, variant: 'secondary', confirm: 'Complete this mesocycle? This action cannot be undone.' },
+}
 
 export function StatusTransitionButton({
   mesocycleId,
@@ -16,28 +29,21 @@ export function StatusTransitionButton({
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
-  if (status === 'completed') return null
-
-  const isActivate = status === 'planned'
-  const label = isActivate ? 'Activate' : 'Complete'
+  const config = transitions[status]
+  if (!config) return null
 
   function handleClick() {
     setError(null)
 
-    if (!isActivate) {
-      const confirmed = window.confirm(
-        'Complete this mesocycle? This action cannot be undone.'
-      )
+    if (config!.confirm) {
+      const confirmed = window.confirm(config!.confirm)
       if (!confirmed) return
     }
 
     startTransition(async () => {
-      const result = isActivate
-        ? await activateMesocycle(mesocycleId)
-        : await completeMesocycle(mesocycleId)
-
+      const result = await config!.action(mesocycleId)
       if (!result.success) {
-        setError(result.error)
+        setError(result.error ?? 'Unknown error')
       }
     })
   }
@@ -47,11 +53,11 @@ export function StatusTransitionButton({
       <Button
         onClick={handleClick}
         disabled={isPending}
-        variant={isActivate ? 'default' : 'secondary'}
+        variant={config.variant}
         size="sm"
         className="min-w-[100px]"
       >
-        {isPending ? `${label}…` : label}
+        {isPending ? `${config.label}…` : config.label}
       </Button>
       {error && (
         <p className="text-sm text-destructive">{error}</p>

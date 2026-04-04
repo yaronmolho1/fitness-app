@@ -1,4 +1,4 @@
-import { asc, count, desc, eq, ne } from 'drizzle-orm'
+import { asc, count, desc, eq, inArray } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { mesocycles, workout_templates, weekly_schedule, routine_items } from '@/lib/db/schema'
 
@@ -32,7 +32,7 @@ export async function getNonCompletedMesocycles() {
   return db
     .select()
     .from(mesocycles)
-    .where(ne(mesocycles.status, 'completed'))
+    .where(inArray(mesocycles.status, ['planned', 'active']))
     .orderBy(asc(mesocycles.start_date))
     .all()
 }

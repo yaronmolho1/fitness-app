@@ -60,7 +60,7 @@ type SeedMesocycle = {
   end_date: string
   work_weeks: number
   has_deload?: boolean
-  status?: 'planned' | 'active' | 'completed'
+  status?: 'draft' | 'planned' | 'active' | 'completed'
   templates?: SeedTemplate[]
   schedule?: SeedScheduleEntry[]
   logged_workouts?: SeedLoggedWorkout[]
