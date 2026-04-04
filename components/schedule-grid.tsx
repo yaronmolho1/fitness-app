@@ -3,7 +3,6 @@
 import { useState, useTransition, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Pencil, Trash2 } from 'lucide-react'
@@ -430,36 +429,32 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
                       <div className="rounded-md border bg-background p-2 shadow-md space-y-2" data-testid="edit-form">
                         <p className="text-xs font-semibold">{entry.template_name}</p>
                         <div>
-                          <label className="text-xs text-muted-foreground">Time</label>
-                          <Select
+                          <label htmlFor={`edit-time-${entry.id}`} className="text-xs text-muted-foreground">Time</label>
+                          <select
+                            id={`edit-time-${entry.id}`}
+                            aria-label="Time"
                             value={editForm.timeSlot}
-                            onValueChange={(v) => setEditForm({ ...editForm, timeSlot: v })}
+                            onChange={(e) => setEditForm({ ...editForm, timeSlot: e.target.value })}
+                            className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                           >
-                            <SelectTrigger className="h-8 text-xs" aria-label="Time" data-testid={`edit-time-${entry.id}`}>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {TIME_OPTIONS.map((t) => (
-                                <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            {TIME_OPTIONS.map((t) => (
+                              <option key={t} value={t}>{t}</option>
+                            ))}
+                          </select>
                         </div>
                         <div>
-                          <label className="text-xs text-muted-foreground">Duration</label>
-                          <Select
+                          <label htmlFor={`edit-duration-${entry.id}`} className="text-xs text-muted-foreground">Duration</label>
+                          <select
+                            id={`edit-duration-${entry.id}`}
+                            aria-label="Duration"
                             value={editForm.duration}
-                            onValueChange={(v) => setEditForm({ ...editForm, duration: v })}
+                            onChange={(e) => setEditForm({ ...editForm, duration: e.target.value })}
+                            className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                           >
-                            <SelectTrigger className="h-8 text-xs" aria-label="Duration" data-testid={`edit-duration-${entry.id}`}>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {DURATION_OPTIONS.map((d) => (
-                                <SelectItem key={d.value} value={d.value} className="text-xs">{d.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            {DURATION_OPTIONS.map((d) => (
+                              <option key={d.value} value={d.value}>{d.label}</option>
+                            ))}
+                          </select>
                         </div>
                         {editError && (
                           <p className="text-xs text-destructive">{editError}</p>
@@ -633,37 +628,33 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
                       </p>
 
                       <div>
-                        <label className="text-xs text-muted-foreground">Time</label>
-                        <Select
+                        <label htmlFor={`time-${internalDay}`} className="text-xs text-muted-foreground">Time</label>
+                        <select
+                          id={`time-${internalDay}`}
+                          aria-label="Time"
                           value={form.timeSlot}
-                          onValueChange={(v) => setForm({ ...form, timeSlot: v })}
+                          onChange={(e) => setForm({ ...form, timeSlot: e.target.value })}
+                          className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                         >
-                          <SelectTrigger className="h-8 text-xs" aria-label="Time" data-testid={`time-${internalDay}`}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {TIME_OPTIONS.map((t) => (
-                              <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          {TIME_OPTIONS.map((t) => (
+                            <option key={t} value={t}>{t}</option>
+                          ))}
+                        </select>
                       </div>
 
                       <div>
-                        <label className="text-xs text-muted-foreground">Duration</label>
-                        <Select
+                        <label htmlFor={`duration-${internalDay}`} className="text-xs text-muted-foreground">Duration</label>
+                        <select
+                          id={`duration-${internalDay}`}
+                          aria-label="Duration"
                           value={form.duration}
-                          onValueChange={(v) => setForm({ ...form, duration: v })}
+                          onChange={(e) => setForm({ ...form, duration: e.target.value })}
+                          className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                         >
-                          <SelectTrigger className="h-8 text-xs" aria-label="Duration" data-testid={`duration-${internalDay}`}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {DURATION_OPTIONS.map((d) => (
-                              <SelectItem key={d.value} value={d.value} className="text-xs">{d.label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          {DURATION_OPTIONS.map((d) => (
+                            <option key={d.value} value={d.value}>{d.label}</option>
+                          ))}
+                        </select>
                       </div>
 
                       {/* Form validation error */}
