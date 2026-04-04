@@ -1,6 +1,6 @@
 'use server'
 
-import { eq } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { db } from '@/lib/db/index'
 import {
@@ -9,9 +9,11 @@ import {
   exercise_slots,
   weekly_schedule,
   template_sections,
+  slot_week_overrides,
 } from '@/lib/db/schema'
 import { calculateEndDate } from './utils'
 import { syncMesocycle } from '@/lib/google/sync'
+import { mergeSlotWithOverride } from '@/lib/progression/week-overrides'
 
 type CloneInput = {
   source_id: number
@@ -134,7 +136,7 @@ export async function cloneMesocycle(input: CloneInput): Promise<CloneResult> {
         sectionIdMap.set(section.id, newSection.id)
       }
 
-      // Clone exercise slots for this template
+      // Clone exercise slots for this template, merging last-week overrides into base
       const slots = tx
         .select()
         .from(exercise_slots)
@@ -146,15 +148,31 @@ export async function cloneMesocycle(input: CloneInput): Promise<CloneResult> {
           ? sectionIdMap.get(slot.section_id) ?? null
           : null
 
+        // T222: query override at source's last work week
+        const lastWeekOverride = source.work_weeks > 0
+          ? tx
+              .select()
+              .from(slot_week_overrides)
+              .where(
+                and(
+                  eq(slot_week_overrides.exercise_slot_id, slot.id),
+                  eq(slot_week_overrides.week_number, source.work_weeks)
+                )
+              )
+              .get() ?? null
+          : null
+
+        const merged = mergeSlotWithOverride(slot, lastWeekOverride)
+
         tx.insert(exercise_slots)
           .values({
             template_id: newTmpl.id,
             exercise_id: slot.exercise_id,
             section_id: newSectionId,
-            sets: slot.sets,
-            reps: slot.reps,
-            weight: slot.weight,
-            rpe: slot.rpe,
+            sets: merged.sets,
+            reps: merged.reps,
+            weight: merged.weight,
+            rpe: merged.rpe,
             rest_seconds: slot.rest_seconds,
             guidelines: slot.guidelines,
             order: slot.order,
