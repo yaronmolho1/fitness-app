@@ -42,7 +42,7 @@ function resolveRotationCycles(rows: BaseRow[], weekNumber: number): BaseRow[] {
   for (const [, group] of groups) {
     const cycleLength = group[0].cycle_length
     if (cycleLength <= 1) {
-      resolved.push(group[0])
+      resolved.push(...group)
     } else {
       const activePosition = ((weekNumber - 1) % cycleLength) + 1
       const match = group.find((r) => r.cycle_position === activePosition)
