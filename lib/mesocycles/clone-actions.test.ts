@@ -29,6 +29,7 @@ vi.mock('next/cache', () => ({
 import { cloneMesocycle } from './clone-actions'
 
 function resetTables() {
+  testDb.run(sql`DROP TABLE IF EXISTS template_week_overrides`)
   testDb.run(sql`DROP TABLE IF EXISTS slot_week_overrides`)
   testDb.run(sql`DROP TABLE IF EXISTS weekly_schedule`)
   testDb.run(sql`DROP TABLE IF EXISTS exercise_slots`)
@@ -96,6 +97,18 @@ function resetTables() {
     is_deload INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER,
     UNIQUE(exercise_slot_id, week_number)
+  )`)
+  testDb.run(sql`CREATE TABLE template_week_overrides (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    template_id INTEGER NOT NULL REFERENCES workout_templates(id) ON DELETE CASCADE,
+    section_id INTEGER REFERENCES template_sections(id) ON DELETE CASCADE,
+    week_number INTEGER NOT NULL,
+    distance REAL, duration INTEGER, pace TEXT,
+    planned_duration INTEGER, interval_count INTEGER, interval_rest INTEGER,
+    elevation_gain INTEGER,
+    is_deload INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER,
+    UNIQUE(template_id, section_id, week_number)
   )`)
   testDb.run(sql`CREATE TABLE weekly_schedule (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -959,6 +972,485 @@ describe('cloneMesocycle — T222 slot value inheritance', () => {
 
       const clonedSlots = getClonedSlots(result.id)
       expect(clonedSlots[0].weight).toBe(90)
+    })
+  })
+})
+
+// --- T223: Template value inheritance ---
+
+function seedStandaloneRunning() {
+  const meso = testDb
+    .insert(schema.mesocycles)
+    .values({
+      name: 'Run Source',
+      start_date: '2026-03-01',
+      end_date: '2026-03-28',
+      work_weeks: 4,
+      has_deload: false,
+      status: 'active',
+    })
+    .returning({ id: schema.mesocycles.id })
+    .get()
+
+  const tmpl = testDb
+    .insert(schema.workout_templates)
+    .values({
+      mesocycle_id: meso.id,
+      name: 'Tempo Run',
+      canonical_name: 'tempo-run',
+      modality: 'running',
+      run_type: 'tempo',
+      target_pace: '5:00',
+      interval_count: 4,
+      interval_rest: 60,
+      planned_duration: 45,
+    })
+    .returning({ id: schema.workout_templates.id })
+    .get()
+
+  testDb
+    .insert(schema.weekly_schedule)
+    .values({
+      mesocycle_id: meso.id,
+      day_of_week: 2,
+      template_id: tmpl.id,
+      week_type: 'normal',
+      period: 'morning',
+      time_slot: '07:00',
+      duration: 60,
+    })
+    .run()
+
+  return { mesoId: meso.id, tmplId: tmpl.id }
+}
+
+function seedMixedTemplate() {
+  const meso = testDb
+    .insert(schema.mesocycles)
+    .values({
+      name: 'Mixed Source',
+      start_date: '2026-03-01',
+      end_date: '2026-03-28',
+      work_weeks: 4,
+      has_deload: false,
+      status: 'active',
+    })
+    .returning({ id: schema.mesocycles.id })
+    .get()
+
+  const tmpl = testDb
+    .insert(schema.workout_templates)
+    .values({
+      mesocycle_id: meso.id,
+      name: 'MMA Session',
+      canonical_name: 'mma-session',
+      modality: 'mixed',
+      planned_duration: 90,
+    })
+    .returning({ id: schema.workout_templates.id })
+    .get()
+
+  const secA = testDb
+    .insert(schema.template_sections)
+    .values({
+      template_id: tmpl.id,
+      modality: 'running',
+      section_name: 'Warm-up',
+      order: 1,
+      target_pace: '6:00',
+      interval_count: 2,
+      interval_rest: 90,
+      planned_duration: 15,
+    })
+    .returning({ id: schema.template_sections.id })
+    .get()
+
+  const secB = testDb
+    .insert(schema.template_sections)
+    .values({
+      template_id: tmpl.id,
+      modality: 'mma',
+      section_name: 'Sparring',
+      order: 2,
+      planned_duration: 30,
+    })
+    .returning({ id: schema.template_sections.id })
+    .get()
+
+  testDb
+    .insert(schema.weekly_schedule)
+    .values({
+      mesocycle_id: meso.id,
+      day_of_week: 3,
+      template_id: tmpl.id,
+      week_type: 'normal',
+      period: 'evening',
+      time_slot: '18:00',
+      duration: 90,
+    })
+    .run()
+
+  return { mesoId: meso.id, tmplId: tmpl.id, secAId: secA.id, secBId: secB.id }
+}
+
+function getClonedTemplate(clonedMesoId: number) {
+  return testDb
+    .select()
+    .from(schema.workout_templates)
+    .all()
+    .find((t: { mesocycle_id: number }) => t.mesocycle_id === clonedMesoId)!
+}
+
+function getClonedSections(clonedTmplId: number) {
+  return testDb
+    .select()
+    .from(schema.template_sections)
+    .all()
+    .filter((s: { template_id: number }) => s.template_id === clonedTmplId)
+    .sort((a: { order: number }, b: { order: number }) => a.order - b.order)
+}
+
+describe('cloneMesocycle — T223 template value inheritance', () => {
+  describe('standalone running — last-week override merged into base', () => {
+    it('target_pace reflects override pace', async () => {
+      const { mesoId, tmplId } = seedStandaloneRunning()
+      testDb.run(sql`INSERT INTO template_week_overrides
+        (template_id, section_id, week_number, pace, interval_count, interval_rest, planned_duration)
+        VALUES (${tmplId}, NULL, 4, '4:45', 6, 45, 50)`)
+
+      const result = await cloneMesocycle({
+        source_id: mesoId,
+        name: 'Clone',
+        start_date: '2026-04-01',
+      })
+      if (!result.success) throw new Error('clone failed')
+
+      expect(getClonedTemplate(result.id).target_pace).toBe('4:45')
+    })
+
+    it('interval_count reflects override', async () => {
+      const { mesoId, tmplId } = seedStandaloneRunning()
+      testDb.run(sql`INSERT INTO template_week_overrides
+        (template_id, section_id, week_number, interval_count)
+        VALUES (${tmplId}, NULL, 4, 6)`)
+
+      const result = await cloneMesocycle({
+        source_id: mesoId,
+        name: 'Clone',
+        start_date: '2026-04-01',
+      })
+      if (!result.success) throw new Error('clone failed')
+
+      expect(getClonedTemplate(result.id).interval_count).toBe(6)
+    })
+
+    it('interval_rest reflects override', async () => {
+      const { mesoId, tmplId } = seedStandaloneRunning()
+      testDb.run(sql`INSERT INTO template_week_overrides
+        (template_id, section_id, week_number, interval_rest)
+        VALUES (${tmplId}, NULL, 4, 45)`)
+
+      const result = await cloneMesocycle({
+        source_id: mesoId,
+        name: 'Clone',
+        start_date: '2026-04-01',
+      })
+      if (!result.success) throw new Error('clone failed')
+
+      expect(getClonedTemplate(result.id).interval_rest).toBe(45)
+    })
+
+    it('planned_duration reflects override', async () => {
+      const { mesoId, tmplId } = seedStandaloneRunning()
+      testDb.run(sql`INSERT INTO template_week_overrides
+        (template_id, section_id, week_number, planned_duration)
+        VALUES (${tmplId}, NULL, 4, 50)`)
+
+      const result = await cloneMesocycle({
+        source_id: mesoId,
+        name: 'Clone',
+        start_date: '2026-04-01',
+      })
+      if (!result.success) throw new Error('clone failed')
+
+      expect(getClonedTemplate(result.id).planned_duration).toBe(50)
+    })
+
+    it('target_distance reflects override distance', async () => {
+      const { mesoId, tmplId } = seedStandaloneRunning()
+      testDb.run(sql`INSERT INTO template_week_overrides
+        (template_id, section_id, week_number, distance)
+        VALUES (${tmplId}, NULL, 4, 14.0)`)
+
+      const result = await cloneMesocycle({
+        source_id: mesoId,
+        name: 'Clone',
+        start_date: '2026-04-01',
+      })
+      if (!result.success) throw new Error('clone failed')
+
+      expect(getClonedTemplate(result.id).target_distance).toBe(14.0)
+    })
+
+    it('target_duration reflects override duration', async () => {
+      const { mesoId, tmplId } = seedStandaloneRunning()
+      testDb.run(sql`INSERT INTO template_week_overrides
+        (template_id, section_id, week_number, duration)
+        VALUES (${tmplId}, NULL, 4, 90)`)
+
+      const result = await cloneMesocycle({
+        source_id: mesoId,
+        name: 'Clone',
+        start_date: '2026-04-01',
+      })
+      if (!result.success) throw new Error('clone failed')
+
+      expect(getClonedTemplate(result.id).target_duration).toBe(90)
+    })
+
+    it('target_elevation_gain reflects override elevation_gain', async () => {
+      const { mesoId, tmplId } = seedStandaloneRunning()
+      testDb.run(sql`INSERT INTO template_week_overrides
+        (template_id, section_id, week_number, elevation_gain)
+        VALUES (${tmplId}, NULL, 4, 200)`)
+
+      const result = await cloneMesocycle({
+        source_id: mesoId,
+        name: 'Clone',
+        start_date: '2026-04-01',
+      })
+      if (!result.success) throw new Error('clone failed')
+
+      expect(getClonedTemplate(result.id).target_elevation_gain).toBe(200)
+    })
+  })
+
+  describe('no override — base values preserved', () => {
+    it('base values copied when no template_week_overrides exist', async () => {
+      const { mesoId } = seedStandaloneRunning()
+
+      const result = await cloneMesocycle({
+        source_id: mesoId,
+        name: 'Clone',
+        start_date: '2026-04-01',
+      })
+      if (!result.success) throw new Error('clone failed')
+
+      const t = getClonedTemplate(result.id)
+      expect(t.target_pace).toBe('5:00')
+      expect(t.interval_count).toBe(4)
+      expect(t.interval_rest).toBe(60)
+      expect(t.planned_duration).toBe(45)
+    })
+  })
+
+  describe('partial override — only non-null fields change', () => {
+    it('override pace merges, null fields fall back to base', async () => {
+      const { mesoId, tmplId } = seedStandaloneRunning()
+      testDb.run(sql`INSERT INTO template_week_overrides
+        (template_id, section_id, week_number, pace)
+        VALUES (${tmplId}, NULL, 4, '4:30')`)
+
+      const result = await cloneMesocycle({
+        source_id: mesoId,
+        name: 'Clone',
+        start_date: '2026-04-01',
+      })
+      if (!result.success) throw new Error('clone failed')
+
+      const t = getClonedTemplate(result.id)
+      expect(t.target_pace).toBe('4:30')
+      expect(t.interval_count).toBe(4)
+      expect(t.interval_rest).toBe(60)
+      expect(t.planned_duration).toBe(45)
+    })
+  })
+
+  describe('mixed template — per-section overrides merged', () => {
+    it('section A inherits per-section override values', async () => {
+      const { mesoId, tmplId, secAId } = seedMixedTemplate()
+      testDb.run(sql`INSERT INTO template_week_overrides
+        (template_id, section_id, week_number, pace, interval_count, interval_rest, planned_duration)
+        VALUES (${tmplId}, ${secAId}, 4, '5:30', 3, 60, 20)`)
+
+      const result = await cloneMesocycle({
+        source_id: mesoId,
+        name: 'Clone',
+        start_date: '2026-04-01',
+      })
+      if (!result.success) throw new Error('clone failed')
+
+      const sections = getClonedSections(getClonedTemplate(result.id).id)
+      expect(sections[0].target_pace).toBe('5:30')
+      expect(sections[0].interval_count).toBe(3)
+      expect(sections[0].interval_rest).toBe(60)
+      expect(sections[0].planned_duration).toBe(20)
+    })
+
+    it('section B inherits per-section override values', async () => {
+      const { mesoId, tmplId, secBId } = seedMixedTemplate()
+      testDb.run(sql`INSERT INTO template_week_overrides
+        (template_id, section_id, week_number, planned_duration)
+        VALUES (${tmplId}, ${secBId}, 4, 40)`)
+
+      const result = await cloneMesocycle({
+        source_id: mesoId,
+        name: 'Clone',
+        start_date: '2026-04-01',
+      })
+      if (!result.success) throw new Error('clone failed')
+
+      const sections = getClonedSections(getClonedTemplate(result.id).id)
+      expect(sections[1].planned_duration).toBe(40)
+    })
+
+    it('standalone override (section_id=null) merged into template base', async () => {
+      const { mesoId, tmplId } = seedMixedTemplate()
+      testDb.run(sql`INSERT INTO template_week_overrides
+        (template_id, section_id, week_number, planned_duration)
+        VALUES (${tmplId}, NULL, 4, 100)`)
+
+      const result = await cloneMesocycle({
+        source_id: mesoId,
+        name: 'Clone',
+        start_date: '2026-04-01',
+      })
+      if (!result.success) throw new Error('clone failed')
+
+      expect(getClonedTemplate(result.id).planned_duration).toBe(100)
+    })
+  })
+
+  describe('no template_week_overrides created in new meso', () => {
+    it('cloned template has zero template_week_overrides', async () => {
+      const { mesoId, tmplId } = seedStandaloneRunning()
+      testDb.run(sql`INSERT INTO template_week_overrides
+        (template_id, section_id, week_number, pace)
+        VALUES (${tmplId}, NULL, 4, '4:30')`)
+
+      const result = await cloneMesocycle({
+        source_id: mesoId,
+        name: 'Clone',
+        start_date: '2026-04-01',
+      })
+      if (!result.success) throw new Error('clone failed')
+
+      const clonedId = getClonedTemplate(result.id).id
+      const overrides = testDb.all(
+        sql`SELECT * FROM template_week_overrides WHERE template_id = ${clonedId}`
+      )
+      expect(overrides).toHaveLength(0)
+    })
+
+    it('total override row count unchanged after clone', async () => {
+      const { mesoId, tmplId } = seedStandaloneRunning()
+      testDb.run(sql`INSERT INTO template_week_overrides
+        (template_id, section_id, week_number, pace)
+        VALUES (${tmplId}, NULL, 4, '4:30')`)
+
+      const countBefore = testDb.all(sql`SELECT * FROM template_week_overrides`).length
+
+      await cloneMesocycle({
+        source_id: mesoId,
+        name: 'Clone',
+        start_date: '2026-04-01',
+      })
+
+      const countAfter = testDb.all(sql`SELECT * FROM template_week_overrides`).length
+      expect(countAfter).toBe(countBefore)
+    })
+  })
+
+  describe('deload override filtered out', () => {
+    it('deload override at last work week is not inherited', async () => {
+      const { mesoId, tmplId } = seedStandaloneRunning()
+      testDb.run(sql`INSERT INTO template_week_overrides
+        (template_id, section_id, week_number, pace, is_deload)
+        VALUES (${tmplId}, NULL, 4, '4:00', 1)`)
+
+      const result = await cloneMesocycle({
+        source_id: mesoId,
+        name: 'Clone',
+        start_date: '2026-04-01',
+      })
+      if (!result.success) throw new Error('clone failed')
+
+      expect(getClonedTemplate(result.id).target_pace).toBe('5:00')
+    })
+  })
+
+  describe('override source week is always source.work_weeks', () => {
+    it('reads from source work_weeks even when clone has different work_weeks', async () => {
+      const { mesoId, tmplId } = seedStandaloneRunning()
+      testDb.run(sql`INSERT INTO template_week_overrides
+        (template_id, section_id, week_number, pace)
+        VALUES (${tmplId}, NULL, 4, '4:30')`)
+      testDb.run(sql`INSERT INTO template_week_overrides
+        (template_id, section_id, week_number, pace)
+        VALUES (${tmplId}, NULL, 8, '3:30')`)
+
+      const result = await cloneMesocycle({
+        source_id: mesoId,
+        name: 'Clone',
+        start_date: '2026-04-01',
+        work_weeks: 8,
+      })
+      if (!result.success) throw new Error('clone failed')
+
+      expect(getClonedTemplate(result.id).target_pace).toBe('4:30')
+    })
+  })
+
+  describe('zero work_weeks — no override to query', () => {
+    it('base values preserved when source has 0 work_weeks', async () => {
+      const meso = testDb
+        .insert(schema.mesocycles)
+        .values({
+          name: 'Zero Weeks',
+          start_date: '2026-03-01',
+          end_date: '2026-03-01',
+          work_weeks: 0,
+          has_deload: false,
+          status: 'active',
+        })
+        .returning({ id: schema.mesocycles.id })
+        .get()
+
+      testDb
+        .insert(schema.workout_templates)
+        .values({
+          mesocycle_id: meso.id,
+          name: 'Run',
+          canonical_name: 'run',
+          modality: 'running',
+          target_pace: '5:00',
+          planned_duration: 45,
+        })
+        .run()
+
+      testDb
+        .insert(schema.weekly_schedule)
+        .values({
+          mesocycle_id: meso.id,
+          day_of_week: 1,
+          template_id: 1,
+          week_type: 'normal',
+          period: 'morning',
+          time_slot: '07:00',
+          duration: 60,
+        })
+        .run()
+
+      const result = await cloneMesocycle({
+        source_id: meso.id,
+        name: 'Clone',
+        start_date: '2026-04-01',
+      })
+      if (!result.success) throw new Error('clone failed')
+
+      const t = getClonedTemplate(result.id)
+      expect(t.target_pace).toBe('5:00')
+      expect(t.planned_duration).toBe(45)
     })
   })
 })
