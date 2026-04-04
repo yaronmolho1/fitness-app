@@ -118,6 +118,8 @@ describe('getEffectiveScheduleForDay — characterization', () => {
         duration: 90,
         is_override: false,
         override_group: null,
+        cycle_length: 1,
+        cycle_position: 1,
       })
     })
 
