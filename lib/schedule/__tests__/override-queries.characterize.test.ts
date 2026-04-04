@@ -195,6 +195,8 @@ describe('getEffectiveScheduleForDay — characterization', () => {
       duration: 90,
       is_override: false,
       override_group: null,
+      cycle_length: 1,
+      cycle_position: 1,
     })
   })
 
@@ -234,6 +236,8 @@ describe('getEffectiveScheduleForDay — characterization', () => {
       duration: 45,                 // taken from override
       is_override: true,
       override_group: 'grp-A',
+      cycle_length: 1,
+      cycle_position: 1,
     })
   })
 
@@ -277,6 +281,8 @@ describe('getEffectiveScheduleForDay — characterization', () => {
       duration: 45,
       is_override: true,
       override_group: 'grp-add',
+      cycle_length: 1,
+      cycle_position: 1,
     })
   })
 

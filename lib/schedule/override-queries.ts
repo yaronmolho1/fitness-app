@@ -12,6 +12,47 @@ export type EffectiveScheduleEntry = {
   duration: number
   is_override: boolean
   override_group: string | null
+  cycle_length: number
+  cycle_position: number
+}
+
+type BaseRow = {
+  id: number
+  template_id: number | null
+  period: string
+  time_slot: string
+  duration: number
+  cycle_length: number
+  cycle_position: number
+}
+
+// For each time_slot group with cycle_length > 1, keep only the row matching the active position.
+function resolveRotationCycles(rows: BaseRow[], weekNumber: number): BaseRow[] {
+  const groups = new Map<string, BaseRow[]>()
+  for (const row of rows) {
+    const existing = groups.get(row.time_slot)
+    if (existing) {
+      existing.push(row)
+    } else {
+      groups.set(row.time_slot, [row])
+    }
+  }
+
+  const resolved: BaseRow[] = []
+  for (const [, group] of groups) {
+    const cycleLength = group[0].cycle_length
+    if (cycleLength <= 1) {
+      resolved.push(group[0])
+    } else {
+      const activePosition = ((weekNumber - 1) % cycleLength) + 1
+      const match = group.find((r) => r.cycle_position === activePosition)
+      if (match) {
+        resolved.push(match)
+      }
+    }
+  }
+
+  return resolved
 }
 
 /**
@@ -34,6 +75,8 @@ export async function getEffectiveScheduleForDay(
       period: weekly_schedule.period,
       time_slot: weekly_schedule.time_slot,
       duration: weekly_schedule.duration,
+      cycle_length: weekly_schedule.cycle_length,
+      cycle_position: weekly_schedule.cycle_position,
     })
     .from(weekly_schedule)
     .where(
@@ -44,6 +87,9 @@ export async function getEffectiveScheduleForDay(
       )
     )
     .all()
+
+  // Resolve rotation cycles: group by time_slot, keep only the active position
+  const resolvedRows = resolveRotationCycles(baseRows, weekNumber)
 
   // Fetch overrides for this specific week/day
   const overrideRows = database
@@ -74,8 +120,8 @@ export async function getEffectiveScheduleForDay(
   const seenTimeSlots = new Set<string>()
   const entries: EffectiveScheduleEntry[] = []
 
-  // Process base entries — apply override if one exists for the same time_slot
-  for (const base of baseRows) {
+  // Process resolved base entries — apply override if one exists for the same time_slot
+  for (const base of resolvedRows) {
     seenTimeSlots.add(base.time_slot)
     const override = overrideByTimeSlot.get(base.time_slot)
 
@@ -88,6 +134,8 @@ export async function getEffectiveScheduleForDay(
         duration: override.duration,
         is_override: true,
         override_group: override.override_group,
+        cycle_length: base.cycle_length,
+        cycle_position: base.cycle_position,
       })
     } else {
       entries.push({
@@ -98,6 +146,8 @@ export async function getEffectiveScheduleForDay(
         duration: base.duration,
         is_override: false,
         override_group: null,
+        cycle_length: base.cycle_length,
+        cycle_position: base.cycle_position,
       })
     }
   }
@@ -113,6 +163,8 @@ export async function getEffectiveScheduleForDay(
         duration: ov.duration,
         is_override: true,
         override_group: ov.override_group,
+        cycle_length: 1,
+        cycle_position: 1,
       })
     }
   }
