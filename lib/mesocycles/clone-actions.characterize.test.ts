@@ -1,5 +1,6 @@
-// Characterization test — captures current behavior for safe refactoring (T208 sync hooks)
-// Focuses on return shapes, revalidation timing, and absence of side effects beyond DB + cache
+// Characterization test — captures current behavior for safe refactoring (T208 sync hooks, T224 rotation clone)
+// Focuses on return shapes, revalidation timing, absence of side effects beyond DB + cache,
+// and exact weekly_schedule rotation field handling before T224 modifies clone logic
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { sql } from 'drizzle-orm'
 import * as schema from '@/lib/db/schema'
@@ -136,6 +137,97 @@ function seedSource() {
       period: 'morning',
       time_slot: '07:00',
       duration: 90,
+    })
+    .run()
+
+  return { mesoId: meso.id, tmplId: tmpl.id }
+}
+
+// Seeds a mesocycle whose Monday 07:00 slot has a 3-cycle rotation (positions 1, 2, 3)
+function seedSourceWithRotation() {
+  const meso = testDb
+    .insert(schema.mesocycles)
+    .values({
+      name: 'Rotation Source',
+      start_date: '2026-03-01',
+      end_date: '2026-03-28',
+      work_weeks: 4,
+      has_deload: false,
+      status: 'active',
+    })
+    .returning({ id: schema.mesocycles.id })
+    .get()
+
+  const tmplA = testDb
+    .insert(schema.workout_templates)
+    .values({ mesocycle_id: meso.id, name: 'Push A', canonical_name: 'push-a', modality: 'resistance' })
+    .returning({ id: schema.workout_templates.id })
+    .get()
+  const tmplB = testDb
+    .insert(schema.workout_templates)
+    .values({ mesocycle_id: meso.id, name: 'Push B', canonical_name: 'push-b', modality: 'resistance' })
+    .returning({ id: schema.workout_templates.id })
+    .get()
+  const tmplC = testDb
+    .insert(schema.workout_templates)
+    .values({ mesocycle_id: meso.id, name: 'Push C', canonical_name: 'push-c', modality: 'resistance' })
+    .returning({ id: schema.workout_templates.id })
+    .get()
+
+  // Three rotation positions on the same slot (day 0, 07:00, normal)
+  for (const [pos, tmplId] of [[1, tmplA.id], [2, tmplB.id], [3, tmplC.id]] as [number, number][]) {
+    testDb
+      .insert(schema.weekly_schedule)
+      .values({
+        mesocycle_id: meso.id,
+        day_of_week: 0,
+        template_id: tmplId,
+        week_type: 'normal',
+        period: 'morning',
+        time_slot: '07:00',
+        duration: 90,
+        cycle_length: 3,
+        cycle_position: pos,
+      })
+      .run()
+  }
+
+  return { mesoId: meso.id, tmplIds: [tmplA.id, tmplB.id, tmplC.id] }
+}
+
+// Seeds a mesocycle with cycle_length=3 but only position 1 (partial rotation data)
+function seedSourceWithCycleLengthOnly() {
+  const meso = testDb
+    .insert(schema.mesocycles)
+    .values({
+      name: 'CycleLen Source',
+      start_date: '2026-03-01',
+      end_date: '2026-03-28',
+      work_weeks: 4,
+      has_deload: false,
+      status: 'active',
+    })
+    .returning({ id: schema.mesocycles.id })
+    .get()
+
+  const tmpl = testDb
+    .insert(schema.workout_templates)
+    .values({ mesocycle_id: meso.id, name: 'Pull A', canonical_name: 'pull-a', modality: 'resistance' })
+    .returning({ id: schema.workout_templates.id })
+    .get()
+
+  testDb
+    .insert(schema.weekly_schedule)
+    .values({
+      mesocycle_id: meso.id,
+      day_of_week: 1,
+      template_id: tmpl.id,
+      week_type: 'normal',
+      period: 'morning',
+      time_slot: '07:00',
+      duration: 90,
+      cycle_length: 3,
+      cycle_position: 1,
     })
     .run()
 
@@ -329,6 +421,163 @@ describe('cloneMesocycle — characterize for T208', () => {
         .all()
         .find((m: { id: number }) => m.id === mesoId)
       expect(sourceAfter).toEqual(sourceBefore)
+    })
+  })
+})
+
+describe('cloneMesocycle — characterize for T224 (rotation fields)', () => {
+  // Captures CURRENT behavior before rotation-aware clone logic is introduced.
+  // These tests document what happens to cycle_length / cycle_position during clone.
+  // T224 will change this behavior — update these tests after the refactor.
+
+  describe('non-rotation schedule row (cycle_length=1, cycle_position=1)', () => {
+    it('cloned row has cycle_length=1', async () => {
+      const { mesoId } = seedSource()
+      const result = await cloneMesocycle({
+        source_id: mesoId,
+        name: 'Clone',
+        start_date: '2026-04-01',
+      })
+      if (!result.success) throw new Error('unexpected failure')
+
+      const rows = testDb
+        .select()
+        .from(schema.weekly_schedule)
+        .all()
+        .filter((r: { mesocycle_id: number }) => r.mesocycle_id === result.id)
+      expect(rows).toHaveLength(1)
+      // cycle_length is not written by clone — falls back to column default
+      expect(rows[0].cycle_length).toBe(1)
+    })
+
+    it('cloned row has cycle_position=1', async () => {
+      const { mesoId } = seedSource()
+      const result = await cloneMesocycle({
+        source_id: mesoId,
+        name: 'Clone',
+        start_date: '2026-04-01',
+      })
+      if (!result.success) throw new Error('unexpected failure')
+
+      const rows = testDb
+        .select()
+        .from(schema.weekly_schedule)
+        .all()
+        .filter((r: { mesocycle_id: number }) => r.mesocycle_id === result.id)
+      expect(rows[0].cycle_position).toBe(1)
+    })
+  })
+
+  describe('single-row with cycle_length=3 (rotation declared but only one position seeded)', () => {
+    it('clone succeeds', async () => {
+      const { mesoId } = seedSourceWithCycleLengthOnly()
+      const result = await cloneMesocycle({
+        source_id: mesoId,
+        name: 'Clone',
+        start_date: '2026-04-01',
+      })
+      expect(result.success).toBe(true)
+    })
+
+    it('cloned row preserves cycle_length=3 from source (T224 fix)', async () => {
+      const { mesoId } = seedSourceWithCycleLengthOnly()
+      const result = await cloneMesocycle({
+        source_id: mesoId,
+        name: 'Clone',
+        start_date: '2026-04-01',
+      })
+      if (!result.success) throw new Error('unexpected failure')
+
+      const rows = testDb
+        .select()
+        .from(schema.weekly_schedule)
+        .all()
+        .filter((r: { mesocycle_id: number }) => r.mesocycle_id === result.id)
+      expect(rows).toHaveLength(1)
+      // T224: cycle_length now preserved from source
+      expect(rows[0].cycle_length).toBe(3)
+    })
+
+    it('cloned row has cycle_position=1', async () => {
+      const { mesoId } = seedSourceWithCycleLengthOnly()
+      const result = await cloneMesocycle({
+        source_id: mesoId,
+        name: 'Clone',
+        start_date: '2026-04-01',
+      })
+      if (!result.success) throw new Error('unexpected failure')
+
+      const rows = testDb
+        .select()
+        .from(schema.weekly_schedule)
+        .all()
+        .filter((r: { mesocycle_id: number }) => r.mesocycle_id === result.id)
+      expect(rows[0].cycle_position).toBe(1)
+    })
+  })
+
+  describe('full rotation (cycle_length=3, positions 1/2/3 on same slot)', () => {
+    it('clone succeeds with all rotation positions preserved (T224 fix)', async () => {
+      // T224: cycle_position now preserved, so unique index is not violated
+      const { mesoId } = seedSourceWithRotation()
+      const result = await cloneMesocycle({
+        source_id: mesoId,
+        name: 'Clone',
+        start_date: '2026-04-01',
+      })
+      expect(result.success).toBe(true)
+      if (!result.success) throw new Error('clone failed')
+
+      const rows = testDb
+        .select()
+        .from(schema.weekly_schedule)
+        .all()
+        .filter((r: { mesocycle_id: number }) => r.mesocycle_id === result.id)
+      expect(rows).toHaveLength(3)
+      expect(rows.map((r: { cycle_position: number }) => r.cycle_position).sort()).toEqual([1, 2, 3])
+      expect(rows.every((r: { cycle_length: number }) => r.cycle_length === 3)).toBe(true)
+    })
+
+    it('source mesocycle is unchanged after clone', async () => {
+      const { mesoId } = seedSourceWithRotation()
+      const sourceBefore = testDb
+        .select()
+        .from(schema.mesocycles)
+        .all()
+        .find((m: { id: number }) => m.id === mesoId)
+
+      await cloneMesocycle({
+        source_id: mesoId,
+        name: 'Clone',
+        start_date: '2026-04-01',
+      })
+
+      const sourceAfter = testDb
+        .select()
+        .from(schema.mesocycles)
+        .all()
+        .find((m: { id: number }) => m.id === mesoId)
+      expect(sourceAfter).toEqual(sourceBefore)
+    })
+  })
+
+  describe('template ID remapping with rotation rows', () => {
+    it('cloned single-position rotation row points to new template, not source template', async () => {
+      const { mesoId, tmplId: srcTmplId } = seedSourceWithCycleLengthOnly()
+      const result = await cloneMesocycle({
+        source_id: mesoId,
+        name: 'Clone',
+        start_date: '2026-04-01',
+      })
+      if (!result.success) throw new Error('unexpected failure')
+
+      const rows = testDb
+        .select()
+        .from(schema.weekly_schedule)
+        .all()
+        .filter((r: { mesocycle_id: number }) => r.mesocycle_id === result.id)
+      expect(rows[0].template_id).not.toBe(srcTmplId)
+      expect(typeof rows[0].template_id).toBe('number')
     })
   })
 })
