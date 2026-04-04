@@ -45,6 +45,7 @@ type TemplateWeekGridProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   title: string
+  activeWeeks?: number[]
 } & (
   | { modality: 'running'; runningBase: RunningBase; mmaBase?: never }
   | { modality: 'mma'; mmaBase: MmaBase; runningBase?: never }
@@ -82,11 +83,16 @@ function initWeeks(
   hasDeload: boolean,
   modality: 'running' | 'mma',
   runningBase?: RunningBase,
-  mmaBase?: MmaBase
+  mmaBase?: MmaBase,
+  activeWeeks?: number[]
 ): WeekState[] {
   const weeks: WeekState[] = []
 
-  for (let w = 1; w <= workWeeks; w++) {
+  const weekNumbers = activeWeeks
+    ? activeWeeks.filter((w) => w >= 1 && w <= workWeeks)
+    : Array.from({ length: workWeeks }, (_, i) => i + 1)
+
+  for (const w of weekNumbers) {
     weeks.push({
       weekNumber: w,
       isDeload: false,
@@ -177,6 +183,7 @@ export function TemplateWeekGrid(props: TemplateWeekGridProps) {
     onOpenChange,
     modality,
     title,
+    activeWeeks,
   } = props
 
   const runningBase = modality === 'running' ? props.runningBase : undefined
@@ -187,7 +194,7 @@ export function TemplateWeekGrid(props: TemplateWeekGridProps) {
   const [isPending, startTransition] = useTransition()
   const [saveError, setSaveError] = useState('')
   const [weeks, setWeeks] = useState<WeekState[]>(() =>
-    initWeeks(workWeeks, hasDeload, modality, runningBase, mmaBase)
+    initWeeks(workWeeks, hasDeload, modality, runningBase, mmaBase, activeWeeks)
   )
 
   const runBase = buildRunningValues(runningBase)
@@ -312,6 +319,7 @@ export function TemplateWeekGrid(props: TemplateWeekGridProps) {
           {weeks.map((week) => (
             <div
               key={week.isDeload ? 'deload' : week.weekNumber}
+              data-testid={week.isDeload ? 'week-row-deload' : `week-row-${week.weekNumber}`}
               className={cn(
                 'grid gap-2 rounded-lg px-2 py-1.5 items-center',
                 modality === 'running'
