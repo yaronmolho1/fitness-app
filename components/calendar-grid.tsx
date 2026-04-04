@@ -6,7 +6,7 @@ import { Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { CalendarDay } from '@/lib/calendar/queries'
 import { DayDetailPanel } from '@/components/day-detail-panel'
 import { SectionHeading } from '@/components/layout/section-heading'
-import { getModalityClasses, getModalityBadgeClasses, getModalityAccentClass } from '@/lib/ui/modality-colors'
+import { getModalityAccentClass } from '@/lib/ui/modality-colors'
 import { DAY_LABELS } from '@/lib/day-mapping'
 
 const DAY_HEADERS = DAY_LABELS
@@ -48,13 +48,6 @@ function sortChronologically(entries: CalendarDay[]): CalendarDay[] {
     if (aSlot !== bSlot) return aSlot.localeCompare(bSlot)
     return (a.template_name ?? '').localeCompare(b.template_name ?? '')
   })
-}
-
-// Format pill prefix: prefer time_slot, fall back to period label
-function pillPrefix(entry: CalendarDay): string {
-  if (entry.time_slot) return entry.time_slot
-  if (entry.period) return PERIOD_LABELS[entry.period] ?? ''
-  return ''
 }
 
 // Group flat CalendarDay[] into one group per unique date, preserving order
@@ -180,7 +173,6 @@ export function CalendarGrid({ initialMonth, refreshKey }: CalendarGridProps = {
           const first = entries[0]
           const hasWorkouts = entries.some((e) => e.template_name !== null)
           const hasCompleted = entries.some((e) => e.status === 'completed')
-          const isRest = !hasWorkouts
           const deloadClass = first.is_deload ? DELOAD_CLASS : ''
 
           // Status: use first entry for data attribute (backward compat)

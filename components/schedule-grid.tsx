@@ -3,7 +3,7 @@
 import { useState, useTransition, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Pencil, Trash2 } from 'lucide-react'
@@ -23,6 +23,21 @@ const PERIOD_LABELS: Record<string, string> = {
 
 const DEFAULT_TIME_SLOT = '07:00'
 const DEFAULT_DURATION = 90
+
+// Time options: every 30 min from 05:00 to 22:00
+const TIME_OPTIONS = Array.from({ length: 35 }, (_, i) => {
+  const totalMin = 300 + i * 30 // start at 05:00
+  const h = String(Math.floor(totalMin / 60)).padStart(2, '0')
+  const m = String(totalMin % 60).padStart(2, '0')
+  return `${h}:${m}`
+})
+
+// Duration options: every 15 min from 15 to 300 min (5h)
+const DURATION_OPTIONS = Array.from({ length: 20 }, (_, i) => {
+  const mins = (i + 1) * 15
+  const label = mins >= 60 ? `${Math.floor(mins / 60)}h${mins % 60 ? ` ${mins % 60}m` : ''}` : `${mins}m`
+  return { value: String(mins), label }
+})
 
 type Props = {
   mesocycleId: number
@@ -66,11 +81,17 @@ type RotationGroup = {
   entries: ScheduleEntry[]
 }
 
+// Snap to nearest 15-min increment, clamped to 15–300
+function snapDuration(mins: number): number {
+  const snapped = Math.round(mins / 15) * 15
+  return Math.max(15, Math.min(300, snapped))
+}
+
 // Get duration from template fields
 function getTemplateDuration(tmpl: TemplateOption): number {
-  if (tmpl.estimated_duration) return tmpl.estimated_duration
-  if (tmpl.target_duration) return tmpl.target_duration
-  if (tmpl.planned_duration) return tmpl.planned_duration
+  if (tmpl.estimated_duration) return snapDuration(tmpl.estimated_duration)
+  if (tmpl.target_duration) return snapDuration(tmpl.target_duration)
+  if (tmpl.planned_duration) return snapDuration(tmpl.planned_duration)
   return DEFAULT_DURATION
 }
 
@@ -284,7 +305,7 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
       entryId: entry.id,
       day: entry.day_of_week,
       timeSlot: entry.time_slot,
-      duration: String(entry.duration),
+      duration: String(snapDuration(entry.duration)),
     })
   }
 
@@ -409,29 +430,36 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
                       <div className="rounded-md border bg-background p-2 shadow-md space-y-2" data-testid="edit-form">
                         <p className="text-xs font-semibold">{entry.template_name}</p>
                         <div>
-                          <label htmlFor={`edit-time-${entry.id}`} className="text-xs text-muted-foreground">
-                            Time
-                          </label>
-                          <Input
-                            id={`edit-time-${entry.id}`}
-                            type="time"
+                          <label className="text-xs text-muted-foreground">Time</label>
+                          <Select
                             value={editForm.timeSlot}
-                            onChange={(e) => setEditForm({ ...editForm, timeSlot: e.target.value })}
-                            className="h-8 text-xs"
-                          />
+                            onValueChange={(v) => setEditForm({ ...editForm, timeSlot: v })}
+                          >
+                            <SelectTrigger className="h-8 text-xs" aria-label="Time" data-testid={`edit-time-${entry.id}`}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {TIME_OPTIONS.map((t) => (
+                                <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                         <div>
-                          <label htmlFor={`edit-duration-${entry.id}`} className="text-xs text-muted-foreground">
-                            Duration (min)
-                          </label>
-                          <Input
-                            id={`edit-duration-${entry.id}`}
-                            type="number"
-                            min={1}
+                          <label className="text-xs text-muted-foreground">Duration</label>
+                          <Select
                             value={editForm.duration}
-                            onChange={(e) => setEditForm({ ...editForm, duration: e.target.value })}
-                            className="h-8 text-xs"
-                          />
+                            onValueChange={(v) => setEditForm({ ...editForm, duration: v })}
+                          >
+                            <SelectTrigger className="h-8 text-xs" aria-label="Duration" data-testid={`edit-duration-${entry.id}`}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {DURATION_OPTIONS.map((d) => (
+                                <SelectItem key={d.value} value={d.value} className="text-xs">{d.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                         {editError && (
                           <p className="text-xs text-destructive">{editError}</p>
@@ -605,31 +633,37 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
                       </p>
 
                       <div>
-                        <label htmlFor={`time-${internalDay}`} className="text-xs text-muted-foreground">
-                          Time
-                        </label>
-                        <Input
-                          id={`time-${internalDay}`}
-                          type="text"
-                          placeholder="HH:MM"
+                        <label className="text-xs text-muted-foreground">Time</label>
+                        <Select
                           value={form.timeSlot}
-                          onChange={(e) => setForm({ ...form, timeSlot: e.target.value })}
-                          className="h-8 text-xs"
-                        />
+                          onValueChange={(v) => setForm({ ...form, timeSlot: v })}
+                        >
+                          <SelectTrigger className="h-8 text-xs" aria-label="Time" data-testid={`time-${internalDay}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TIME_OPTIONS.map((t) => (
+                              <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
 
                       <div>
-                        <label htmlFor={`duration-${internalDay}`} className="text-xs text-muted-foreground">
-                          Duration (min)
-                        </label>
-                        <Input
-                          id={`duration-${internalDay}`}
-                          type="number"
-                          min={1}
+                        <label className="text-xs text-muted-foreground">Duration</label>
+                        <Select
                           value={form.duration}
-                          onChange={(e) => setForm({ ...form, duration: e.target.value })}
-                          className="h-8 text-xs"
-                        />
+                          onValueChange={(v) => setForm({ ...form, duration: v })}
+                        >
+                          <SelectTrigger className="h-8 text-xs" aria-label="Duration" data-testid={`duration-${internalDay}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {DURATION_OPTIONS.map((d) => (
+                              <SelectItem key={d.value} value={d.value} className="text-xs">{d.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
 
                       {/* Form validation error */}
