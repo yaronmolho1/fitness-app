@@ -116,7 +116,7 @@ function resetTables() {
     cycle_length INTEGER NOT NULL DEFAULT 1,
     cycle_position INTEGER NOT NULL DEFAULT 1,
     created_at INTEGER,
-    UNIQUE(mesocycle_id, day_of_week, week_type, time_slot, template_id)
+    UNIQUE(mesocycle_id, day_of_week, week_type, time_slot, cycle_position)
   )`)
   testDb.run(sql`CREATE TABLE logged_workouts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

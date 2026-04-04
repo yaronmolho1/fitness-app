@@ -381,7 +381,7 @@ describe('assignTemplate — time-first API', () => {
       expect(rows).toHaveLength(1)
     })
 
-    it('different templates at same time create separate rows', async () => {
+    it('different templates at same time upsert (cycle_position-based key)', async () => {
       const meso = seedMesocycle()
       const tmpl1 = seedTemplate(meso.id, 'Push A')
       const tmpl2 = seedTemplate(meso.id, 'Pull A')
@@ -395,7 +395,9 @@ describe('assignTemplate — time-first API', () => {
         time_slot: '07:00', duration: 60,
       })
       const rows = testDb.select().from(schema.weekly_schedule).all()
-      expect(rows).toHaveLength(2)
+      // Same slot + default cycle_position=1 → upsert replaces template
+      expect(rows).toHaveLength(1)
+      expect(rows[0].template_id).toBe(tmpl2.id)
     })
 
     it('same template at different time creates separate rows', async () => {

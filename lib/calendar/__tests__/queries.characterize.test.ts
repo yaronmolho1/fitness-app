@@ -345,10 +345,10 @@ describe('getCalendarProjection — characterization', () => {
         VALUES (1, 1, 'Push A', 'push-a', 'resistance');
         INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
         VALUES (2, 1, 'Pull A', 'pull-a', 'resistance');
-        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-        VALUES (1, 0, 1, 'normal', 'morning');
-        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-        VALUES (1, 0, 2, 'normal', 'evening');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot, cycle_position)
+        VALUES (1, 0, 1, 'normal', 'morning', '07:00', 1);
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot, cycle_position)
+        VALUES (1, 0, 2, 'normal', 'evening', '18:00', 1);
         INSERT INTO logged_workouts (template_id, canonical_name, log_date, logged_at, template_snapshot)
         VALUES (1, 'push-a', '2026-03-02', 1740900000, '{"version":1}');
       `)
@@ -372,12 +372,12 @@ describe('getCalendarProjection — characterization', () => {
         VALUES (2, 1, 'B', 'b', 'running');
         INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
         VALUES (3, 1, 'C', 'c', 'mma');
-        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-        VALUES (1, 0, 3, 'normal', 'evening');
-        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-        VALUES (1, 0, 1, 'normal', 'morning');
-        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-        VALUES (1, 0, 2, 'normal', 'afternoon');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+        VALUES (1, 0, 3, 'normal', 'evening', '18:00');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+        VALUES (1, 0, 1, 'normal', 'morning', '07:00');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+        VALUES (1, 0, 2, 'normal', 'afternoon', '14:00');
       `)
       const result = await getCalendarProjection(db, '2026-03')
       const entries = result.days.filter((d) => d.date === '2026-03-02')
@@ -402,10 +402,10 @@ describe('getCalendarProjection — characterization', () => {
       `)
       // Force insert with non-enum period (SQLite doesn't enforce enums)
       sqlite.exec(`
-        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-        VALUES (1, 0, 2, 'normal', 'night');
-        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-        VALUES (1, 0, 1, 'normal', 'morning');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+        VALUES (1, 0, 2, 'normal', 'night', '22:00');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+        VALUES (1, 0, 1, 'normal', 'morning', '07:00');
       `)
       const result = await getCalendarProjection(db, '2026-03')
       const entries = result.days.filter((d) => d.date === '2026-03-02')

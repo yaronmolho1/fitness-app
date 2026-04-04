@@ -259,7 +259,7 @@ describe('assignTemplate — upsert conflict target', () => {
     expect(rows[0].period).toBe('morning') // derived from 07:00
   })
 
-  it('different template_id at same time_slot → separate rows', async () => {
+  it('different template_id at same time_slot → upsert replaces (cycle_position-based key)', async () => {
     const meso = seedMesocycle()
     const tmpl1 = seedTemplate(meso.id, 'Push')
     const tmpl2 = seedTemplate(meso.id, 'Pull')
@@ -272,7 +272,9 @@ describe('assignTemplate — upsert conflict target', () => {
       time_slot: '07:00', duration: 60,
     })
     const rows = testDb.select().from(schema.weekly_schedule).all()
-    expect(rows).toHaveLength(2)
+    // Same slot + default cycle_position=1 → upsert replaces template
+    expect(rows).toHaveLength(1)
+    expect(rows[0].template_id).toBe(tmpl2.id)
   })
 
   it('same template different day_of_week → separate rows', async () => {

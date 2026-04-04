@@ -270,10 +270,10 @@ describe('getDayDetail — schedule resolution baseline (T184 characterize)', ()
       VALUES (2, 1, 'Evening Run', 'evening-run', 'running');
       INSERT INTO exercise_slots (template_id, exercise_id, sets, reps, "order", is_main)
       VALUES (1, 1, 3, '8', 1, 1);
-      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-      VALUES (1, 0, 1, 'normal', 'morning');
-      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-      VALUES (1, 0, 2, 'normal', 'evening');
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+      VALUES (1, 0, 1, 'normal', 'morning', '07:00');
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+      VALUES (1, 0, 2, 'normal', 'evening', '18:00');
     `)
 
     const results = await getDayDetail(db, '2026-03-02')

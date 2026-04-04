@@ -619,10 +619,10 @@ describe('getDayDetail', () => {
       VALUES (2, 1, 'Evening Run', 'evening-run', 'running', 30);
       INSERT INTO exercise_slots (template_id, exercise_id, sets, reps, "order", is_main)
       VALUES (1, 1, 4, '6-8', 1, 1);
-      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-      VALUES (1, 0, 1, 'normal', 'morning');
-      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-      VALUES (1, 0, 2, 'normal', 'evening');
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+      VALUES (1, 0, 1, 'normal', 'morning', '07:00');
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+      VALUES (1, 0, 2, 'normal', 'evening', '18:00');
     `)
 
     const results = await getDayDetail(db, '2026-03-02')
@@ -652,10 +652,10 @@ describe('getDayDetail', () => {
       VALUES (1, 1, 'Push A', 'push-a', 'resistance');
       INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
       VALUES (2, 1, 'Easy Run', 'easy-run', 'running');
-      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-      VALUES (1, 0, 1, 'normal', 'morning');
-      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-      VALUES (1, 0, 2, 'normal', 'evening');
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+      VALUES (1, 0, 1, 'normal', 'morning', '07:00');
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+      VALUES (1, 0, 2, 'normal', 'evening', '18:00');
       INSERT INTO logged_workouts (id, template_id, canonical_name, log_date, logged_at, template_snapshot)
       VALUES (1, 1, 'push-a', '2026-03-02', 1740900000, '${snapshot1}');
       INSERT INTO logged_workouts (id, template_id, canonical_name, log_date, logged_at, template_snapshot)
@@ -678,10 +678,10 @@ describe('getDayDetail', () => {
       VALUES (1, 1, 'Push A', 'push-a', 'resistance');
       INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
       VALUES (2, 1, 'Easy Run', 'easy-run', 'running');
-      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-      VALUES (1, 0, 1, 'normal', 'morning');
-      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-      VALUES (1, 0, 2, 'normal', 'evening');
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+      VALUES (1, 0, 1, 'normal', 'morning', '07:00');
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+      VALUES (1, 0, 2, 'normal', 'evening', '18:00');
       INSERT INTO logged_workouts (id, template_id, canonical_name, log_date, logged_at, template_snapshot)
       VALUES (1, 1, 'push-a', '2026-03-02', 1740900000, '${snapshot}');
     `)
@@ -718,12 +718,12 @@ describe('getDayDetail', () => {
       VALUES (2, 1, 'Afternoon BJJ', 'afternoon-bjj', 'mma');
       INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
       VALUES (3, 1, 'Evening Run', 'evening-run', 'running');
-      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-      VALUES (1, 0, 1, 'normal', 'morning');
-      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-      VALUES (1, 0, 2, 'normal', 'afternoon');
-      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-      VALUES (1, 0, 3, 'normal', 'evening');
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+      VALUES (1, 0, 1, 'normal', 'morning', '07:00');
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+      VALUES (1, 0, 2, 'normal', 'afternoon', '14:00');
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+      VALUES (1, 0, 3, 'normal', 'evening', '18:00');
     `)
 
     const results = await getDayDetail(db, '2026-03-02')
