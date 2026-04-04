@@ -72,7 +72,6 @@ export async function POST(request: NextRequest) {
           seen.add(slot.exercise_id)
 
           const result = await getProgressionData(db, {
-            canonicalName: template.canonical_name,
             exerciseId: slot.exercise_id,
           })
           if (result.data.length > 0) {
