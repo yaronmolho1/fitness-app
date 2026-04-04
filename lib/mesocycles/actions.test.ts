@@ -178,7 +178,7 @@ describe('createMesocycle', () => {
         .from(schema.mesocycles)
         .all()
       expect(rows).toHaveLength(1)
-      expect(rows[0].status).toBe('planned')
+      expect(rows[0].status).toBe('draft')
       expect(rows[0].name).toBe('Hypertrophy Block')
     })
 

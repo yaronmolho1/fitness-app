@@ -361,7 +361,7 @@ describe('cloneMesocycle — characterize for T208', () => {
   })
 
   describe('cloned mesocycle properties', () => {
-    it('creates mesocycle with status "planned" regardless of source status', async () => {
+    it('creates mesocycle with status "draft" regardless of source status', async () => {
       const { mesoId } = seedSource()
       const result = await cloneMesocycle({
         source_id: mesoId,
@@ -375,7 +375,7 @@ describe('cloneMesocycle — characterize for T208', () => {
         .from(schema.mesocycles)
         .all()
         .find((m: { id: number }) => m.id === result.id)
-      expect(cloned!.status).toBe('planned')
+      expect(cloned!.status).toBe('draft')
     })
 
     it('uses provided work_weeks override', async () => {

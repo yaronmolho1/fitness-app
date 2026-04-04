@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 vi.mock('@/lib/mesocycles/actions', () => ({
   activateMesocycle: vi.fn(),
   completeMesocycle: vi.fn(),
+  planMesocycle: vi.fn(),
 }))
 
 import { activateMesocycle, completeMesocycle } from '@/lib/mesocycles/actions'
