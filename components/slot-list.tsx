@@ -50,6 +50,7 @@ type SlotListProps = {
   modality?: 'resistance' | 'running' | 'mma'
   workWeeks?: number
   hasDeload?: boolean
+  activeWeeks?: number[]
 }
 
 function getGroupLabel(count: number): string {
@@ -98,7 +99,7 @@ function groupSlots(slots: SlotWithExercise[]): GroupedItem[] {
   return items
 }
 
-export function SlotList({ slots, templateId, exercises, isCompleted, sectionId, modality, workWeeks, hasDeload }: SlotListProps) {
+export function SlotList({ slots, templateId, exercises, isCompleted, sectionId, modality, workWeeks, hasDeload, activeWeeks }: SlotListProps) {
   const router = useRouter()
   const [showPicker, setShowPicker] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -457,6 +458,7 @@ export function SlotList({ slots, templateId, exercises, isCompleted, sectionId,
               onDeferredSave={handleDeferredSave}
               workWeeks={workWeeks}
               hasDeload={hasDeload}
+              activeWeeks={activeWeeks}
             />
           )
         }
@@ -493,6 +495,7 @@ export function SlotList({ slots, templateId, exercises, isCompleted, sectionId,
                 onDeferredSave={handleDeferredSave}
                 workWeeks={workWeeks}
                 hasDeload={hasDeload}
+                activeWeeks={activeWeeks}
               />
             </div>
           </div>
@@ -584,13 +587,14 @@ type SupersetGroupProps = {
   onDeferredSave: (slot: SlotWithExercise, diff: Record<string, unknown>) => void
   workWeeks?: number
   hasDeload?: boolean
+  activeWeeks?: number[]
 }
 
 function SupersetGroup({
   groupId, slots, groupRestSeconds, templateId, isCompleted,
   onUpdated, onBreak, canDrag, dragIndex, dropIndex, allSlots,
   onDragStart, onDragOver, onDragEnd, onTouchStart, onTouchMove, onTouchEnd,
-  isEdited, getPendingDiff, onDeferredSave, workWeeks, hasDeload,
+  isEdited, getPendingDiff, onDeferredSave, workWeeks, hasDeload, activeWeeks,
 }: SupersetGroupProps) {
   const [editingRest, setEditingRest] = useState(false)
   const [restInput, setRestInput] = useState(String(groupRestSeconds))
@@ -691,6 +695,7 @@ function SupersetGroup({
             workWeeks={workWeeks}
             hasDeload={hasDeload}
             groupSlotIds={slots.map(s => s.id)}
+            activeWeeks={activeWeeks}
           />
         )
       })}
@@ -729,6 +734,7 @@ type SlotRowProps = {
   workWeeks?: number
   hasDeload?: boolean
   groupSlotIds?: number[]
+  activeWeeks?: number[]
 }
 
 function SlotRow({
@@ -739,6 +745,7 @@ function SlotRow({
   hasPendingEdit, pendingDiff, onDeferredSave,
   workWeeks, hasDeload,
   groupSlotIds,
+  activeWeeks,
 }: SlotRowProps) {
   const [mode, setMode] = useState<'display' | 'edit' | 'confirm-remove' | 'cascade-params' | 'cascade-remove'>('display')
   const [showWeekGrid, setShowWeekGrid] = useState(false)
@@ -1242,6 +1249,7 @@ function SlotRow({
           isCompleted={isCompleted}
           open={showWeekGrid}
           onOpenChange={setShowWeekGrid}
+          activeWeeks={activeWeeks}
         />
       )}
 

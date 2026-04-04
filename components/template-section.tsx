@@ -34,9 +34,10 @@ type Props = {
   sectionsByTemplate?: Record<number, TemplateSectionRow[]>
   workWeeks: number
   hasDeload: boolean
+  activeWeeksByTemplate?: Record<number, number[] | undefined>
 }
 
-export function TemplateSection({ mesocycleId, templates, exercises, slotsByTemplate, isCompleted, browseTemplates = [], sectionsByTemplate = {}, workWeeks, hasDeload }: Props) {
+export function TemplateSection({ mesocycleId, templates, exercises, slotsByTemplate, isCompleted, browseTemplates = [], sectionsByTemplate = {}, workWeeks, hasDeload, activeWeeksByTemplate = {} }: Props) {
   const router = useRouter()
   const [formType, setFormType] = useState<'resistance' | 'running' | 'mma' | 'mixed' | null>(null)
   const [resistanceName, setResistanceName] = useState('')
@@ -129,6 +130,7 @@ export function TemplateSection({ mesocycleId, templates, exercises, slotsByTemp
               sections={sectionsByTemplate[t.id] ?? []}
               workWeeks={workWeeks}
               hasDeload={hasDeload}
+              activeWeeks={activeWeeksByTemplate[t.id]}
             />
           ))}
         </div>
@@ -238,6 +240,7 @@ type TemplateRowProps = {
   sections: TemplateSectionRow[]
   workWeeks: number
   hasDeload: boolean
+  activeWeeks?: number[]
 }
 
 const RUN_TYPES = [
@@ -344,7 +347,7 @@ function MmaFields({ idPrefix, plannedDuration, setPlannedDuration, disabled }: 
   )
 }
 
-function TemplateRow({ template, slots, exercises, isCompleted, onUpdated, sections, workWeeks, hasDeload }: TemplateRowProps) {
+function TemplateRow({ template, slots, exercises, isCompleted, onUpdated, sections, workWeeks, hasDeload, activeWeeks }: TemplateRowProps) {
   const [editing, setEditing] = useState(false)
   const [cascading, setCascading] = useState(false)
   const [confirming, setConfirming] = useState(false)
@@ -663,6 +666,7 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated, secti
             isCompleted={isCompleted}
             workWeeks={workWeeks}
             hasDeload={hasDeload}
+            activeWeeks={activeWeeks}
           />
         </div>
       )}
@@ -707,6 +711,7 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated, secti
                 interval_rest: template.interval_rest ?? null,
               }}
               title={template.name}
+              activeWeeks={activeWeeks}
             />
           )}
         </div>
@@ -745,6 +750,7 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated, secti
               modality="mma"
               mmaBase={{ planned_duration: template.planned_duration ?? null }}
               title={template.name}
+              activeWeeks={activeWeeks}
             />
           )}
         </div>
@@ -763,6 +769,7 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated, secti
               onUpdated={onUpdated}
               workWeeks={workWeeks}
               hasDeload={hasDeload}
+              activeWeeks={activeWeeks}
             />
           ))}
         </div>
@@ -784,9 +791,10 @@ type MixedSectionRowProps = {
   onUpdated: () => void
   workWeeks: number
   hasDeload: boolean
+  activeWeeks?: number[]
 }
 
-function MixedSectionRow({ section, slots, exercises, templateId, isCompleted, onUpdated, workWeeks, hasDeload }: MixedSectionRowProps) {
+function MixedSectionRow({ section, slots, exercises, templateId, isCompleted, onUpdated, workWeeks, hasDeload, activeWeeks }: MixedSectionRowProps) {
   const [expanded, setExpanded] = useState(false)
   const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
@@ -922,6 +930,7 @@ function MixedSectionRow({ section, slots, exercises, templateId, isCompleted, o
             modality={section.modality}
             workWeeks={workWeeks}
             hasDeload={hasDeload}
+            activeWeeks={activeWeeks}
           />
         </div>
       )}
@@ -1073,6 +1082,7 @@ function MixedSectionRow({ section, slots, exercises, templateId, isCompleted, o
                 interval_rest: section.interval_rest ?? null,
               }}
               title={section.section_name}
+              activeWeeks={activeWeeks}
             />
           )}
         </div>
@@ -1121,6 +1131,7 @@ function MixedSectionRow({ section, slots, exercises, templateId, isCompleted, o
               modality="mma"
               mmaBase={{ planned_duration: section.planned_duration ?? null }}
               title={section.section_name}
+              activeWeeks={activeWeeks}
             />
           )}
         </div>
