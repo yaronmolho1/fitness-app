@@ -3,6 +3,10 @@ import { render, screen, cleanup, waitFor, within } from '@testing-library/react
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, afterEach } from 'vitest'
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}))
+
 vi.mock('@/lib/schedule/actions', () => ({
   assignTemplate: vi.fn(),
   removeAssignment: vi.fn(),

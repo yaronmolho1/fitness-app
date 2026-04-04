@@ -17,16 +17,16 @@ vi.mock('@/lib/db/index', () => ({
   db: testDb,
 }))
 
-import { getScheduleForMesocycle, getTemplatesForMesocycle } from './queries'
+import { getScheduleForMesocycle, getTemplatesForMesocycle, getActiveWeeksForTemplate } from './queries'
 
-function seedMesocycle(name = 'Test Meso') {
+function seedMesocycle(name = 'Test Meso', workWeeks = 4) {
   return testDb
     .insert(schema.mesocycles)
     .values({
       name,
       start_date: '2026-03-01',
       end_date: '2026-03-28',
-      work_weeks: 4,
+      work_weeks: workWeeks,
       has_deload: 0,
       status: 'planned',
     })
@@ -48,7 +48,15 @@ function seedTemplate(mesocycleId: number, name = 'Push A') {
     .get()
 }
 
-function seedScheduleRow(mesoId: number, day: number, templateId: number, weekType = 'normal') {
+function seedScheduleRow(
+  mesoId: number,
+  day: number,
+  templateId: number,
+  weekType = 'normal',
+  cycleLength = 1,
+  cyclePosition = 1,
+  timeSlot = '07:00'
+) {
   return testDb
     .insert(schema.weekly_schedule)
     .values({
@@ -56,6 +64,33 @@ function seedScheduleRow(mesoId: number, day: number, templateId: number, weekTy
       day_of_week: day,
       template_id: templateId,
       week_type: weekType,
+      cycle_length: cycleLength,
+      cycle_position: cyclePosition,
+      time_slot: timeSlot,
+      created_at: new Date(),
+    })
+    .returning()
+    .get()
+}
+
+function seedOverride(
+  mesoId: number,
+  weekNumber: number,
+  day: number,
+  templateId: number | null,
+  overrideGroup: string,
+  timeSlot = '07:00'
+) {
+  return testDb
+    .insert(schema.schedule_week_overrides)
+    .values({
+      mesocycle_id: mesoId,
+      week_number: weekNumber,
+      day_of_week: day,
+      period: 'morning',
+      template_id: templateId,
+      override_group: overrideGroup,
+      time_slot: timeSlot,
       created_at: new Date(),
     })
     .returning()
@@ -63,6 +98,7 @@ function seedScheduleRow(mesoId: number, day: number, templateId: number, weekTy
 }
 
 beforeEach(() => {
+  testDb.run(sql`DROP TABLE IF EXISTS schedule_week_overrides`)
   testDb.run(sql`DROP TABLE IF EXISTS weekly_schedule`)
   testDb.run(sql`DROP TABLE IF EXISTS workout_templates`)
   testDb.run(sql`DROP TABLE IF EXISTS mesocycles`)
@@ -114,6 +150,23 @@ beforeEach(() => {
   `)
   testDb.run(
     sql`CREATE UNIQUE INDEX weekly_schedule_meso_day_type_timeslot_position_idx ON weekly_schedule(mesocycle_id, day_of_week, week_type, time_slot, cycle_position)`
+  )
+  testDb.run(sql`
+    CREATE TABLE schedule_week_overrides (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      mesocycle_id INTEGER NOT NULL REFERENCES mesocycles(id) ON DELETE CASCADE,
+      week_number INTEGER NOT NULL,
+      day_of_week INTEGER NOT NULL,
+      period TEXT NOT NULL DEFAULT 'morning',
+      template_id INTEGER REFERENCES workout_templates(id),
+      time_slot TEXT NOT NULL DEFAULT '07:00',
+      duration INTEGER NOT NULL DEFAULT 90,
+      override_group TEXT NOT NULL,
+      created_at INTEGER
+    )
+  `)
+  testDb.run(
+    sql`CREATE UNIQUE INDEX schedule_week_overrides_meso_week_day_timeslot_template_idx ON schedule_week_overrides(mesocycle_id, week_number, day_of_week, time_slot, template_id)`
   )
 })
 
@@ -244,5 +297,156 @@ describe('getTemplatesForMesocycle', () => {
     const result = await getTemplatesForMesocycle(meso.id)
     expect(result[0].target_distance).toBeNull()
     expect(result[0].target_duration).toBeNull()
+  })
+})
+
+describe('getActiveWeeksForTemplate', () => {
+  // AC3: Non-rotating template (cycle_length=1) appears every work week
+  it('returns all work weeks for non-rotating template', async () => {
+    const meso = seedMesocycle('Test', 12)
+    const tmpl = seedTemplate(meso.id, 'Push A')
+    seedScheduleRow(meso.id, 0, tmpl.id, 'normal', 1, 1)
+
+    const result = await getActiveWeeksForTemplate(tmpl.id, meso.id)
+    expect(result).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+  })
+
+  // AC1: Rotating template cycle_length=4, position=1, 12-week meso → [1, 5, 9]
+  it('returns correct weeks for rotating template', async () => {
+    const meso = seedMesocycle('Test', 12)
+    const tmpl = seedTemplate(meso.id, 'Push A')
+    seedScheduleRow(meso.id, 0, tmpl.id, 'normal', 4, 1)
+
+    const result = await getActiveWeeksForTemplate(tmpl.id, meso.id)
+    expect(result).toEqual([1, 5, 9])
+  })
+
+  // AC2: Template in positions 1 AND 3 of 4-week rotation, 12-week meso → [1, 3, 5, 7, 9, 11]
+  it('returns union of weeks for template in multiple positions', async () => {
+    const meso = seedMesocycle('Test', 12)
+    const tmpl = seedTemplate(meso.id, 'Push A')
+    seedScheduleRow(meso.id, 0, tmpl.id, 'normal', 4, 1)
+    seedScheduleRow(meso.id, 0, tmpl.id, 'normal', 4, 3, '09:00')
+
+    const result = await getActiveWeeksForTemplate(tmpl.id, meso.id)
+    expect(result).toEqual([1, 3, 5, 7, 9, 11])
+  })
+
+  // Template in multiple slots on different days → union
+  it('returns union of weeks across different day slots', async () => {
+    const meso = seedMesocycle('Test', 8)
+    const tmpl = seedTemplate(meso.id, 'Push A')
+    // Day 0: cycle_length=4, position=1 → weeks 1,5
+    seedScheduleRow(meso.id, 0, tmpl.id, 'normal', 4, 1)
+    // Day 3: cycle_length=4, position=2 → weeks 2,6
+    seedScheduleRow(meso.id, 3, tmpl.id, 'normal', 4, 2)
+
+    const result = await getActiveWeeksForTemplate(tmpl.id, meso.id)
+    expect(result).toEqual([1, 2, 5, 6])
+  })
+
+  // AC4: Template in both rotating and non-rotating slots → all work weeks
+  it('returns all weeks when template is in both rotating and non-rotating slots', async () => {
+    const meso = seedMesocycle('Test', 8)
+    const tmpl = seedTemplate(meso.id, 'Push A')
+    // Non-rotating slot
+    seedScheduleRow(meso.id, 0, tmpl.id, 'normal', 1, 1)
+    // Rotating slot
+    seedScheduleRow(meso.id, 3, tmpl.id, 'normal', 4, 1)
+
+    const result = await getActiveWeeksForTemplate(tmpl.id, meso.id)
+    expect(result).toEqual([1, 2, 3, 4, 5, 6, 7, 8])
+  })
+
+  // Template not in schedule → empty array
+  it('returns empty array when template is not in schedule', async () => {
+    const meso = seedMesocycle('Test', 8)
+    const tmpl = seedTemplate(meso.id, 'Push A')
+
+    const result = await getActiveWeeksForTemplate(tmpl.id, meso.id)
+    expect(result).toEqual([])
+  })
+
+  // AC5: Override replaces template for specific week → that week excluded
+  it('excludes week where override replaces template', async () => {
+    const meso = seedMesocycle('Test', 12)
+    const tmplA = seedTemplate(meso.id, 'Push A')
+    const tmplB = seedTemplate(meso.id, 'Push B')
+    // Push A on day 0 every week
+    seedScheduleRow(meso.id, 0, tmplA.id, 'normal', 1, 1)
+    // Override week 5: replace Push A with Push B
+    seedOverride(meso.id, 5, 0, tmplB.id, 'day0-07:00')
+
+    const result = await getActiveWeeksForTemplate(tmplA.id, meso.id)
+    expect(result).not.toContain(5)
+    expect(result).toEqual([1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12])
+  })
+
+  // AC6: Override adds template to week where it wouldn't normally appear
+  it('includes week where override adds template', async () => {
+    const meso = seedMesocycle('Test', 8)
+    const tmplA = seedTemplate(meso.id, 'Push A')
+    // Push A in cycle_length=4, position=1 → weeks 1,5
+    seedScheduleRow(meso.id, 0, tmplA.id, 'normal', 4, 1)
+    // Override adds Push A to week 3 (where it wouldn't appear)
+    seedOverride(meso.id, 3, 0, tmplA.id, 'day0-07:00')
+
+    const result = await getActiveWeeksForTemplate(tmplA.id, meso.id)
+    expect(result).toEqual([1, 3, 5])
+  })
+
+  // Override removes template (null) for a week
+  it('excludes week where override sets template to null (rest)', async () => {
+    const meso = seedMesocycle('Test', 4)
+    const tmpl = seedTemplate(meso.id, 'Push A')
+    seedScheduleRow(meso.id, 0, tmpl.id, 'normal', 1, 1)
+    // Override week 2 to rest (null template)
+    seedOverride(meso.id, 2, 0, null, 'day0-07:00')
+
+    const result = await getActiveWeeksForTemplate(tmpl.id, meso.id)
+    expect(result).toEqual([1, 3, 4])
+  })
+
+  // AC15/16: cycle_length > work_weeks
+  it('handles cycle_length greater than work_weeks', async () => {
+    const meso = seedMesocycle('Test', 3)
+    const tmpl = seedTemplate(meso.id, 'Push A')
+    // 4-week cycle, position 1 → only week 1 fits (position 1 maps to week 1)
+    seedScheduleRow(meso.id, 0, tmpl.id, 'normal', 4, 1)
+
+    const result = await getActiveWeeksForTemplate(tmpl.id, meso.id)
+    expect(result).toEqual([1])
+  })
+
+  // AC16: 13-week meso, cycle_length=4, position=1 → [1, 5, 9, 13]
+  it('wraps cycle correctly in 13-week meso', async () => {
+    const meso = seedMesocycle('Test', 13)
+    const tmpl = seedTemplate(meso.id, 'Push A')
+    seedScheduleRow(meso.id, 0, tmpl.id, 'normal', 4, 1)
+
+    const result = await getActiveWeeksForTemplate(tmpl.id, meso.id)
+    expect(result).toEqual([1, 5, 9, 13])
+  })
+
+  // AC17: 2 positions in 4-week cycle, 8-week meso → 4 weeks
+  it('returns correct count for multi-position rotation', async () => {
+    const meso = seedMesocycle('Test', 8)
+    const tmpl = seedTemplate(meso.id, 'Push A')
+    seedScheduleRow(meso.id, 0, tmpl.id, 'normal', 4, 1)
+    seedScheduleRow(meso.id, 0, tmpl.id, 'normal', 4, 3, '09:00')
+
+    const result = await getActiveWeeksForTemplate(tmpl.id, meso.id)
+    expect(result).toEqual([1, 3, 5, 7])
+    expect(result).toHaveLength(4)
+  })
+
+  // Only considers normal week_type, not deload
+  it('ignores deload schedule entries', async () => {
+    const meso = seedMesocycle('Test', 4)
+    const tmpl = seedTemplate(meso.id, 'Push A')
+    seedScheduleRow(meso.id, 0, tmpl.id, 'deload', 1, 1)
+
+    const result = await getActiveWeeksForTemplate(tmpl.id, meso.id)
+    expect(result).toEqual([])
   })
 })

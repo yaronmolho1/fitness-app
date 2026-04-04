@@ -1,6 +1,6 @@
 import { eq, and, asc } from 'drizzle-orm'
 import { db } from '@/lib/db/index'
-import { weekly_schedule, workout_templates } from '@/lib/db/schema'
+import { weekly_schedule, workout_templates, schedule_week_overrides, mesocycles } from '@/lib/db/schema'
 
 export type ScheduleEntry = {
   id: number
@@ -92,4 +92,88 @@ export async function getTemplatesForMesocycle(
     .from(workout_templates)
     .where(eq(workout_templates.mesocycle_id, mesocycleId))
     .all() as TemplateOption[]
+}
+
+// Computes which mesocycle weeks a template is active, factoring in rotation cycles and overrides
+export async function getActiveWeeksForTemplate(
+  templateId: number,
+  mesocycleId: number
+): Promise<number[]> {
+  const meso = await db
+    .select({ work_weeks: mesocycles.work_weeks })
+    .from(mesocycles)
+    .where(eq(mesocycles.id, mesocycleId))
+    .get()
+
+  if (!meso) return []
+
+  const { work_weeks: workWeeks } = meso
+
+  const slots = await db
+    .select({
+      id: weekly_schedule.id,
+      day_of_week: weekly_schedule.day_of_week,
+      time_slot: weekly_schedule.time_slot,
+      cycle_length: weekly_schedule.cycle_length,
+      cycle_position: weekly_schedule.cycle_position,
+    })
+    .from(weekly_schedule)
+    .where(
+      and(
+        eq(weekly_schedule.mesocycle_id, mesocycleId),
+        eq(weekly_schedule.template_id, templateId),
+        eq(weekly_schedule.week_type, 'normal')
+      )
+    )
+    .all()
+
+  if (slots.length === 0) return []
+
+  // Build base active weeks from rotation cycles
+  const activeWeeks = new Set<number>()
+  // Track which (day, timeSlot) combos the template occupies for override resolution
+  const slotKeys = new Set<string>()
+
+  for (const slot of slots) {
+    const key = `${slot.day_of_week}:${slot.time_slot}`
+    slotKeys.add(key)
+
+    for (let week = 1; week <= workWeeks; week++) {
+      const activePosition = ((week - 1) % slot.cycle_length) + 1
+      if (activePosition === slot.cycle_position) {
+        activeWeeks.add(week)
+      }
+    }
+  }
+
+  // Fetch overrides for relevant day/time_slot combos
+  const overrides = await db
+    .select({
+      week_number: schedule_week_overrides.week_number,
+      day_of_week: schedule_week_overrides.day_of_week,
+      time_slot: schedule_week_overrides.time_slot,
+      template_id: schedule_week_overrides.template_id,
+    })
+    .from(schedule_week_overrides)
+    .where(eq(schedule_week_overrides.mesocycle_id, mesocycleId))
+    .all()
+
+  for (const override of overrides) {
+    const key = `${override.day_of_week}:${override.time_slot}`
+
+    if (slotKeys.has(key)) {
+      if (override.template_id === templateId) {
+        // Override adds this template to a week
+        activeWeeks.add(override.week_number)
+      } else {
+        // Override replaces this template with something else (or null/rest)
+        activeWeeks.delete(override.week_number)
+      }
+    } else if (override.template_id === templateId) {
+      // Override adds this template to a slot it doesn't normally occupy
+      activeWeeks.add(override.week_number)
+    }
+  }
+
+  return Array.from(activeWeeks).sort((a, b) => a - b)
 }
