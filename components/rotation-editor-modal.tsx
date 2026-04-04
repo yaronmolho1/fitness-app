@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useTransition, useCallback } from 'react'
+import { useState, useTransition, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import {
@@ -57,8 +57,29 @@ function buildPositions(length: number, existing?: ExistingRotationPosition[]): 
   })
 }
 
-export function RotationEditorModal({
-  open,
+export function RotationEditorModal({ open, onOpenChange, ...rest }: Props) {
+  // Increment key each time dialog opens to remount form with fresh state
+  const [formKey, setFormKey] = useState(0)
+
+  const handleOpenChange = useCallback((nextOpen: boolean) => {
+    if (nextOpen) setFormKey(k => k + 1)
+    onOpenChange(nextOpen)
+  }, [onOpenChange])
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <RotationForm key={formKey} onOpenChange={handleOpenChange} {...rest} />
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+type FormProps = Omit<Props, 'open'> & {
+  onOpenChange: (open: boolean) => void
+}
+
+function RotationForm({
   onOpenChange,
   mesocycleId,
   dayOfWeek,
@@ -67,7 +88,7 @@ export function RotationEditorModal({
   duration,
   existingRotation,
   templates,
-}: Props) {
+}: FormProps) {
   const defaultLength = existingRotation?.length ?? 4
   const [cycleLength, setCycleLength] = useState(defaultLength)
   const [positions, setPositions] = useState<PositionEntry[]>(() =>
@@ -76,22 +97,11 @@ export function RotationEditorModal({
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
-  // Reset state when dialog opens
-  useEffect(() => {
-    if (open) {
-      const len = existingRotation?.length ?? 4
-      setCycleLength(len)
-      setPositions(buildPositions(len, existingRotation))
-      setError(null)
-    }
-  }, [open, existingRotation])
-
   const handleCycleLengthChange = useCallback((value: string) => {
     const newLen = Number(value)
     setCycleLength(newLen)
     setPositions(prev => {
       if (newLen > prev.length) {
-        // Extend with empty slots
         return [
           ...prev,
           ...Array.from({ length: newLen - prev.length }, (_, i) => ({
@@ -100,7 +110,6 @@ export function RotationEditorModal({
           })),
         ]
       }
-      // Trim
       return prev.slice(0, newLen)
     })
   }, [])
@@ -142,38 +151,40 @@ export function RotationEditorModal({
   }, [allFilled, positions, mesocycleId, dayOfWeek, weekType, timeSlot, duration, onOpenChange])
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>
-            {existingRotation ? 'Edit Rotation' : 'Assign Rotation'}
-          </DialogTitle>
-          <DialogDescription className="sr-only">
-            Configure a rotating template cycle for this schedule slot
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <DialogHeader>
+        <DialogTitle>
+          {existingRotation ? 'Edit Rotation' : 'Assign Rotation'}
+        </DialogTitle>
+        <DialogDescription className="sr-only">
+          Configure a rotating template cycle for this schedule slot
+        </DialogDescription>
+      </DialogHeader>
 
-        {error && (
-          <p className="text-sm text-destructive" role="alert">{error}</p>
-        )}
+      {error && (
+        <p className="text-sm text-destructive" role="alert">{error}</p>
+      )}
 
-        <div className="space-y-4">
-          {/* Cycle length selector */}
-          <div className="space-y-1.5">
-            <Label htmlFor="cycle-length">Cycle length (weeks)</Label>
-            <Select value={String(cycleLength)} onValueChange={handleCycleLengthChange}>
-              <SelectTrigger id="cycle-length">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {CYCLE_LENGTHS.map(n => (
-                  <SelectItem key={n} value={String(n)}>{n}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      <div className="space-y-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="cycle-length">Cycle length (weeks)</Label>
+          <Select value={String(cycleLength)} onValueChange={handleCycleLengthChange}>
+            <SelectTrigger id="cycle-length">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {CYCLE_LENGTHS.map(n => (
+                <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-          {/* Position rows */}
+        {templates.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-2">
+            No running templates in this mesocycle
+          </p>
+        ) : (
           <div className="space-y-2">
             {positions.map(pos => (
               <div key={pos.cycle_position} className="flex items-center gap-3">
@@ -196,23 +207,17 @@ export function RotationEditorModal({
               </div>
             ))}
           </div>
+        )}
+      </div>
 
-          {templates.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-2">
-              No running templates in this mesocycle
-            </p>
-          )}
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={!allFilled || isPending}>
-            {isPending ? 'Saving...' : 'Save'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      <DialogFooter>
+        <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
+          Cancel
+        </Button>
+        <Button onClick={handleSave} disabled={!allFilled || isPending}>
+          {isPending ? 'Saving...' : 'Save'}
+        </Button>
+      </DialogFooter>
+    </>
   )
 }
