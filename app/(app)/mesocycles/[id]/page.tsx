@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getMesocycleById, getMesocycleCascadeSummary } from '@/lib/mesocycles/queries'
-import { getScheduleForMesocycle, getTemplatesForMesocycle } from '@/lib/schedule/queries'
+import { getScheduleForMesocycle, getTemplatesForMesocycle, getActiveWeeksForTemplate } from '@/lib/schedule/queries'
 import { getExercises } from '@/lib/exercises/queries'
 import { getSlotsByTemplate } from '@/lib/templates/slot-queries'
 import { getSectionsForTemplate } from '@/lib/templates/section-queries'
@@ -42,14 +42,24 @@ export default async function MesocycleDetailPage({
     meso.status !== 'completed' ? getBrowseTemplates(numericId) : Promise.resolve([]),
   ])
 
-  // Fetch slots and sections for each template
+  // Fetch slots, sections, and active weeks for each template
   const slotsByTemplate: Record<number, Awaited<ReturnType<typeof getSlotsByTemplate>>> = {}
   const sectionsByTemplate: Record<number, Awaited<ReturnType<typeof getSectionsForTemplate>>> = {}
+  const activeWeeksByTemplate: Record<number, number[] | undefined> = {}
   for (const t of templates) {
     slotsByTemplate[t.id] = getSlotsByTemplate(t.id)
     if (t.modality === 'mixed') {
       sectionsByTemplate[t.id] = getSectionsForTemplate(t.id)
     }
+  }
+  const activeWeeksResults = await Promise.all(
+    templates.map(async (t) => {
+      const weeks = await getActiveWeeksForTemplate(t.id, numericId)
+      return { id: t.id, weeks }
+    })
+  )
+  for (const { id, weeks } of activeWeeksResults) {
+    activeWeeksByTemplate[id] = weeks.length > 0 ? weeks : undefined
   }
 
   return (
@@ -104,6 +114,7 @@ export default async function MesocycleDetailPage({
           browseTemplates={browseTemplates}
           workWeeks={meso.work_weeks}
           hasDeload={meso.has_deload}
+          activeWeeksByTemplate={activeWeeksByTemplate}
         />
 
         <ScheduleTabs
