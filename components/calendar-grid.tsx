@@ -6,7 +6,7 @@ import { Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { CalendarDay } from '@/lib/calendar/queries'
 import { DayDetailPanel } from '@/components/day-detail-panel'
 import { SectionHeading } from '@/components/layout/section-heading'
-import { getModalityClasses, getModalityBadgeClasses } from '@/lib/ui/modality-colors'
+import { getModalityClasses, getModalityBadgeClasses, getModalityAccentClass } from '@/lib/ui/modality-colors'
 import { DAY_LABELS } from '@/lib/day-mapping'
 
 const DAY_HEADERS = DAY_LABELS
@@ -179,12 +179,7 @@ export function CalendarGrid({ initialMonth, refreshKey }: CalendarGridProps = {
           const dayNum = parseInt(date.split('-')[2], 10)
           const first = entries[0]
           const hasWorkouts = entries.some((e) => e.template_name !== null)
-          const isMulti = entries.length > 1 && hasWorkouts
           const hasCompleted = entries.some((e) => e.status === 'completed')
-
-          // For single-workout days, preserve the original cell-level modality coloring
-          const singleEntry = !isMulti && hasWorkouts ? entries.find((e) => e.template_name !== null) : null
-          const modalityClass = singleEntry?.modality ? getModalityClasses(singleEntry.modality) : ''
           const isRest = !hasWorkouts
           const deloadClass = first.is_deload ? DELOAD_CLASS : ''
 
@@ -197,17 +192,17 @@ export function CalendarGrid({ initialMonth, refreshKey }: CalendarGridProps = {
             <div
               key={date}
               data-testid={`calendar-day-${date}`}
-              data-status={isMulti ? cellStatus : first.status}
+              data-status={cellStatus}
               data-deload={String(first.is_deload)}
               role="button"
               tabIndex={0}
               onClick={() => setSelectedDate(date)}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSelectedDate(date) }}
-              className={`bg-card min-h-[4.5rem] p-1.5 border cursor-pointer hover:bg-accent/50 transition-colors duration-150 ${isRest || isMulti ? 'border-transparent' : modalityClass} ${deloadClass}`.trim()}
+              className={`bg-card min-h-[5.5rem] p-1.5 border border-transparent cursor-pointer hover:bg-accent/50 transition-colors duration-150 ${deloadClass}`.trim()}
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium">{dayNum}</span>
-                {!isMulti && first.status === 'completed' && (
+                {hasCompleted && (
                   <span
                     data-testid="completed-marker"
                     className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-green-500 dark:bg-green-600"
@@ -217,38 +212,31 @@ export function CalendarGrid({ initialMonth, refreshKey }: CalendarGridProps = {
                 )}
               </div>
 
-              {/* Multi-workout: stacked pills */}
-              {isMulti && (
-                <div className="mt-0.5 flex flex-col gap-0.5">
-                  {entries.filter((e) => e.template_name !== null).map((entry, idx) => (
-                    <div
-                      key={`${entry.time_slot ?? entry.period ?? idx}`}
-                      data-testid="workout-pill"
-                      className={`rounded px-1 py-px text-[0.55rem] leading-tight truncate ${entry.modality ? getModalityBadgeClasses(entry.modality) : ''}`}
-                    >
-                      {pillPrefix(entry) && <span className="font-semibold">{pillPrefix(entry)}</span>}
-                      {pillPrefix(entry) ? ' ' : ''}
-                      {entry.template_name}
-                    </div>
-                  ))}
+              {hasWorkouts && (
+                <div className="mt-1 flex flex-col gap-0.5">
+                  {entries
+                    .filter((e) => e.template_name !== null)
+                    .map((entry, idx) => {
+                      const prefix = entry.time_slot
+                        ? entry.time_slot
+                        : entry.period
+                          ? PERIOD_LABELS[entry.period]
+                          : null
+                      return (
+                        <div
+                          key={entry.time_slot ?? entry.period ?? idx}
+                          data-testid="workout-pill"
+                          className={`border-l-2 pl-1.5 py-0.5 text-[0.65rem] leading-tight truncate ${
+                            entry.modality ? getModalityAccentClass(entry.modality) : ''
+                          }`}
+                        >
+                          {prefix && <span className="font-semibold">{prefix} </span>}
+                          {entry.template_name}
+                        </div>
+                      )
+                    })}
                 </div>
               )}
-
-              {/* Single workout: original template label + pill */}
-              {!isMulti && hasWorkouts && entries.filter((e) => e.template_name !== null).map((entry) => (
-                <div
-                  key={`${entry.time_slot ?? entry.period ?? 'single'}`}
-                  data-testid="workout-pill"
-                  className="mt-0.5"
-                >
-                  <p className="text-[0.65rem] leading-tight truncate">
-                    {pillPrefix(entry) ? (
-                      <span className="font-semibold">{pillPrefix(entry)} </span>
-                    ) : null}
-                    {entry.template_name}
-                  </p>
-                </div>
-              ))}
             </div>
           )
         })}

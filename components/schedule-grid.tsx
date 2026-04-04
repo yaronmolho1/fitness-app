@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Pencil, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { assignTemplate, removeAssignment, updateScheduleEntry } from '@/lib/schedule/actions'
 import type { ScheduleEntry, TemplateOption } from '@/lib/schedule/queries'
@@ -370,7 +371,7 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
               key={displayIdx}
               data-testid={`day-cell-${internalDay}`}
               className={cn(
-                'rounded-xl border p-3 transition-colors duration-150',
+                'rounded-xl border p-3 transition-colors duration-150 flex flex-col min-h-[8rem] md:min-h-[10rem]',
                 hasAssignments
                   ? 'border-primary/30 bg-primary/5'
                   : 'border-dashed border-muted-foreground/30 bg-muted/20'
@@ -487,26 +488,26 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
                         </div>
                         <p className="text-sm font-semibold">{entry.template_name}</p>
                         {!isCompleted && (
-                          <div className="flex gap-1">
+                          <div className="flex gap-0.5">
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-7 px-2 text-xs"
+                              className="h-6 w-6 p-0"
                               onClick={() => handleEditClick(entry)}
                               disabled={isPending}
                               aria-label="Edit assignment"
                             >
-                              Edit
+                              <Pencil className="h-3.5 w-3.5" />
                             </Button>
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+                              className="h-6 w-6 p-0 text-destructive hover:text-destructive"
                               onClick={() => handleRemove(entry)}
                               disabled={isPending}
                               aria-label="Remove assignment"
                             >
-                              Remove
+                              <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </div>
                         )}
@@ -523,7 +524,7 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
 
               {/* Single add button (unlimited per day) */}
               {!isCompleted && (
-                <div className="mt-1">
+                <div className="mt-auto pt-2">
                   <Button
                     variant="outline"
                     size="sm"
@@ -765,26 +766,26 @@ function RotationSlot({
               ))}
             </div>
             {!isCompleted && (
-              <div className="flex gap-1 pt-1 border-t">
+              <div className="flex gap-0.5 pt-1 border-t">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-7 px-2 text-xs"
+                  className="h-6 w-6 p-0"
                   onClick={onEdit}
                   disabled={isPending}
                   aria-label="Edit rotation"
                 >
-                  Edit Rotation
+                  <Pencil className="h-3.5 w-3.5" />
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+                  className="h-6 w-6 p-0 text-destructive hover:text-destructive"
                   onClick={onRemove}
                   disabled={isPending}
                   aria-label="Remove rotation"
                 >
-                  Remove
+                  <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
             )}
