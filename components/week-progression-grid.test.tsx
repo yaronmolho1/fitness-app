@@ -305,4 +305,81 @@ describe('WeekProgressionGrid', () => {
       expect(screen.getByText(/plan weeks/i)).toBeInTheDocument()
     })
   })
+
+  // T219: activeWeeks filter
+  describe('activeWeeks filter', () => {
+    it('shows all weeks when activeWeeks is not provided (backward compat)', async () => {
+      render(<WeekProgressionGrid {...defaultProps} workWeeks={4} />)
+      await waitFor(() => {
+        expect(screen.getByTestId('week-row-1')).toBeInTheDocument()
+        expect(screen.getByTestId('week-row-2')).toBeInTheDocument()
+        expect(screen.getByTestId('week-row-3')).toBeInTheDocument()
+        expect(screen.getByTestId('week-row-4')).toBeInTheDocument()
+      })
+    })
+
+    it('shows only specified weeks when activeWeeks is provided', async () => {
+      render(<WeekProgressionGrid {...defaultProps} workWeeks={6} activeWeeks={[1, 3, 5]} />)
+      await waitFor(() => {
+        expect(screen.getByTestId('week-row-1')).toBeInTheDocument()
+        expect(screen.getByTestId('week-row-3')).toBeInTheDocument()
+        expect(screen.getByTestId('week-row-5')).toBeInTheDocument()
+      })
+      expect(screen.queryByTestId('week-row-2')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('week-row-4')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('week-row-6')).not.toBeInTheDocument()
+    })
+
+    it('shows no week rows when activeWeeks is empty', async () => {
+      render(<WeekProgressionGrid {...defaultProps} workWeeks={4} activeWeeks={[]} />)
+      expect(screen.queryByTestId('week-row-1')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('week-row-2')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('week-row-3')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('week-row-4')).not.toBeInTheDocument()
+    })
+
+    it('preserves actual week numbers (not renumbered)', async () => {
+      render(<WeekProgressionGrid {...defaultProps} workWeeks={8} activeWeeks={[2, 5, 7]} />)
+      await waitFor(() => {
+        expect(screen.getByTestId('week-row-2')).toBeInTheDocument()
+        expect(screen.getByTestId('week-row-5')).toBeInTheDocument()
+        expect(screen.getByTestId('week-row-7')).toBeInTheDocument()
+      })
+      // Verify labels show actual week numbers
+      expect(screen.getByText('Week 2')).toBeInTheDocument()
+      expect(screen.getByText('Week 5')).toBeInTheDocument()
+      expect(screen.getByText('Week 7')).toBeInTheDocument()
+      // Not renumbered to 1,2,3
+      expect(screen.queryByTestId('week-row-1')).not.toBeInTheDocument()
+    })
+
+    it('shows deload row when hasDeload is true even with activeWeeks', async () => {
+      render(<WeekProgressionGrid {...defaultProps} workWeeks={8} activeWeeks={[1, 5]} hasDeload={true} />)
+      await waitFor(() => {
+        expect(screen.getByTestId('week-row-1')).toBeInTheDocument()
+        expect(screen.getByTestId('week-row-5')).toBeInTheDocument()
+        expect(screen.getByTestId('week-row-deload')).toBeInTheDocument()
+      })
+    })
+
+    it('hides deload row when hasDeload is false with activeWeeks', async () => {
+      render(<WeekProgressionGrid {...defaultProps} workWeeks={8} activeWeeks={[1, 5]} hasDeload={false} />)
+      await waitFor(() => {
+        expect(screen.getByTestId('week-row-1')).toBeInTheDocument()
+        expect(screen.getByTestId('week-row-5')).toBeInTheDocument()
+      })
+      expect(screen.queryByTestId('week-row-deload')).not.toBeInTheDocument()
+    })
+
+    it('pre-fills active weeks with base slot values', async () => {
+      const slot = makeSlot({ weight: 80, sets: 4, reps: '12', rpe: 7 })
+      render(<WeekProgressionGrid {...defaultProps} slot={slot} workWeeks={6} activeWeeks={[3]} />)
+      await waitFor(() => {
+        const row = screen.getByTestId('week-row-3')
+        expect(within(row).getByDisplayValue('80')).toBeInTheDocument()
+        expect(within(row).getByDisplayValue('12')).toBeInTheDocument()
+        expect(within(row).getByDisplayValue('4')).toBeInTheDocument()
+      })
+    })
+  })
 })
