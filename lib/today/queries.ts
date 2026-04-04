@@ -43,7 +43,7 @@ export type MesocycleInfo = {
   start_date: string
   end_date: string
   week_type: 'normal' | 'deload'
-  status: 'planned' | 'active' | 'completed'
+  status: 'draft' | 'planned' | 'active' | 'completed'
 }
 
 export type TemplateInfo = {
@@ -424,7 +424,7 @@ export async function getTodayWorkout(today: string): Promise<TodayResult[]> {
     start_date: activeMeso.start_date,
     end_date: activeMeso.end_date,
     week_type: weekType,
-    status: activeMeso.status as 'planned' | 'active' | 'completed',
+    status: activeMeso.status as 'draft' | 'planned' | 'active' | 'completed',
   }
 
   // Step 4: compute week number and resolve effective schedule (base + overrides)

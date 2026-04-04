@@ -74,7 +74,7 @@ export type TemplateSnapshot = {
   [key: string]: unknown
 }
 
-type MesocycleStatus = 'planned' | 'active' | 'completed'
+type MesocycleStatus = 'draft' | 'planned' | 'active' | 'completed'
 
 type RestResult = {
   type: 'rest'

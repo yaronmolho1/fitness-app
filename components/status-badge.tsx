@@ -2,9 +2,10 @@ import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import type { BadgeProps } from '@/components/ui/badge'
 
-type MesocycleStatus = 'planned' | 'active' | 'completed'
+type MesocycleStatus = 'draft' | 'planned' | 'active' | 'completed'
 
 const statusConfig: Record<MesocycleStatus, { label: string; variant: BadgeProps['variant']; className?: string }> = {
+  draft: { label: 'Draft', variant: 'outline', className: 'border-dashed' },
   planned: { label: 'Planned', variant: 'outline' },
   active: { label: 'Active', variant: 'default' },
   completed: { label: 'Completed', variant: 'secondary', className: 'opacity-70' },

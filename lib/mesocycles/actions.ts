@@ -56,7 +56,7 @@ export async function createMesocycle(formData: FormData): Promise<CreateResult>
       end_date: endDate,
       work_weeks: workWeeks,
       has_deload: hasDeload,
-      status: 'planned',
+      status: 'draft',
     })
     .returning({ id: mesocycles.id })
     .get()
@@ -216,6 +216,34 @@ export async function completeMesocycle(id: number): Promise<StatusResult> {
 
   db.update(mesocycles)
     .set({ status: 'completed' })
+    .where(eq(mesocycles.id, id))
+    .run()
+
+  revalidatePath('/mesocycles')
+  return { success: true }
+}
+
+export async function planMesocycle(id: number): Promise<StatusResult> {
+  if (!Number.isInteger(id) || id < 1) {
+    return { success: false, error: 'Invalid mesocycle ID' }
+  }
+
+  const meso = db
+    .select({ id: mesocycles.id, status: mesocycles.status })
+    .from(mesocycles)
+    .where(eq(mesocycles.id, id))
+    .get()
+
+  if (!meso) {
+    return { success: false, error: 'Mesocycle not found' }
+  }
+
+  if (meso.status !== 'draft') {
+    return { success: false, error: `Cannot plan a mesocycle with status "${meso.status}"` }
+  }
+
+  db.update(mesocycles)
+    .set({ status: 'planned' })
     .where(eq(mesocycles.id, id))
     .run()
 
