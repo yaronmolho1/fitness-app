@@ -111,44 +111,48 @@ describe('CalendarGrid', () => {
     expect(day1Cell).not.toHaveTextContent('Sparring')
   })
 
-  it('applies resistance modality color class', async () => {
+  it('applies resistance modality accent on workout pill', async () => {
     render(<CalendarGrid initialMonth="2026-03" />)
 
     await waitFor(() => {
       expect(screen.getByTestId('calendar-day-2026-03-02')).toBeInTheDocument()
     })
 
-    expect(screen.getByTestId('calendar-day-2026-03-02').className).toMatch(/resistance/)
+    const pill = screen.getByTestId('calendar-day-2026-03-02').querySelector('[data-testid="workout-pill"]')
+    expect(pill!.className).toMatch(/slate/)
   })
 
-  it('applies running modality color class', async () => {
+  it('applies running modality accent on workout pill', async () => {
     render(<CalendarGrid initialMonth="2026-03" />)
 
     await waitFor(() => {
       expect(screen.getByTestId('calendar-day-2026-03-04')).toBeInTheDocument()
     })
 
-    expect(screen.getByTestId('calendar-day-2026-03-04').className).toMatch(/running/)
+    const pill = screen.getByTestId('calendar-day-2026-03-04').querySelector('[data-testid="workout-pill"]')
+    expect(pill!.className).toMatch(/teal/)
   })
 
-  it('applies mma modality color class', async () => {
+  it('applies mma modality accent on workout pill', async () => {
     render(<CalendarGrid initialMonth="2026-03" />)
 
     await waitFor(() => {
       expect(screen.getByTestId('calendar-day-2026-03-06')).toBeInTheDocument()
     })
 
-    expect(screen.getByTestId('calendar-day-2026-03-06').className).toMatch(/mma/)
+    const pill = screen.getByTestId('calendar-day-2026-03-06').querySelector('[data-testid="workout-pill"]')
+    expect(pill!.className).toMatch(/rose/)
   })
 
-  it('rest days have no modality color class', async () => {
+  it('rest days have no workout pills', async () => {
     render(<CalendarGrid initialMonth="2026-03" />)
 
     await waitFor(() => {
       expect(screen.getByTestId('calendar-day-2026-03-01')).toBeInTheDocument()
     })
 
-    expect(screen.getByTestId('calendar-day-2026-03-01').className).not.toMatch(/resistance|running|mma/)
+    const pills = screen.getByTestId('calendar-day-2026-03-01').querySelectorAll('[data-testid="workout-pill"]')
+    expect(pills).toHaveLength(0)
   })
 
   it('navigates to previous month', async () => {
@@ -212,16 +216,16 @@ describe('CalendarGrid', () => {
     expect(screen.getByText(/loading/i)).toBeInTheDocument()
   })
 
-  it('three modality colors are visually distinct', async () => {
+  it('three modality accent colors are visually distinct', async () => {
     render(<CalendarGrid initialMonth="2026-03" />)
 
     await waitFor(() => {
       expect(screen.getByTestId('calendar-day-2026-03-02')).toBeInTheDocument()
     })
 
-    const resistance = screen.getByTestId('calendar-day-2026-03-02').className
-    const running = screen.getByTestId('calendar-day-2026-03-04').className
-    const mma = screen.getByTestId('calendar-day-2026-03-06').className
+    const resistance = screen.getByTestId('calendar-day-2026-03-02').querySelector('[data-testid="workout-pill"]')!.className
+    const running = screen.getByTestId('calendar-day-2026-03-04').querySelector('[data-testid="workout-pill"]')!.className
+    const mma = screen.getByTestId('calendar-day-2026-03-06').querySelector('[data-testid="workout-pill"]')!.className
 
     expect(resistance).not.toBe(running)
     expect(resistance).not.toBe(mma)
@@ -284,7 +288,7 @@ describe('CalendarGrid – status markers', () => {
     expect(day1.querySelector('[data-testid="completed-marker"]')).toBeNull()
   })
 
-  it('completed day retains modality color alongside marker', async () => {
+  it('completed day retains modality accent on pill alongside marker', async () => {
     render(<CalendarGrid initialMonth="2026-03" />)
 
     await waitFor(() => {
@@ -292,8 +296,9 @@ describe('CalendarGrid – status markers', () => {
     })
 
     const day2 = screen.getByTestId('calendar-day-2026-03-02')
-    // Has modality color
-    expect(day2.className).toMatch(/resistance/)
+    // Has modality accent on pill
+    const pill = day2.querySelector('[data-testid="workout-pill"]')
+    expect(pill!.className).toMatch(/slate/)
     // Has completed marker
     expect(day2.querySelector('[data-testid="completed-marker"]')).toBeInTheDocument()
   })
@@ -451,7 +456,9 @@ describe('CalendarGrid – deload week distinction', () => {
 
     const deloadDay = screen.getByTestId('calendar-day-2026-03-16')
     expect(deloadDay.className).toMatch(/deload/)
-    expect(deloadDay.className).toMatch(/resistance/)
+    // Modality accent is on the pill, not the cell
+    const pill = deloadDay.querySelector('[data-testid="workout-pill"]')
+    expect(pill!.className).toMatch(/slate/)
   })
 
   it('renders a legend identifying deload treatment', async () => {
@@ -501,26 +508,27 @@ describe('CalendarGrid – mixed modality (T123)', () => {
     mockFetch({ '2026-03': MIXED_DAYS })
   })
 
-  it('applies mixed modality color class to calendar cell', async () => {
+  it('applies mixed modality accent on workout pill', async () => {
     render(<CalendarGrid initialMonth="2026-03" />)
 
     await waitFor(() => {
       expect(screen.getByTestId('calendar-day-2026-03-02')).toBeInTheDocument()
     })
 
-    expect(screen.getByTestId('calendar-day-2026-03-02').className).toMatch(/mixed/)
+    const pill = screen.getByTestId('calendar-day-2026-03-02').querySelector('[data-testid="workout-pill"]')
+    expect(pill!.className).toMatch(/indigo/)
   })
 
-  it('mixed modality class is distinct from resistance', async () => {
+  it('mixed modality accent is distinct from resistance', async () => {
     render(<CalendarGrid initialMonth="2026-03" />)
 
     await waitFor(() => {
       expect(screen.getByTestId('calendar-day-2026-03-02')).toBeInTheDocument()
     })
 
-    const mixedClass = screen.getByTestId('calendar-day-2026-03-02').className
-    const resistanceClass = screen.getByTestId('calendar-day-2026-03-04').className
-    expect(mixedClass).not.toBe(resistanceClass)
+    const mixedPill = screen.getByTestId('calendar-day-2026-03-02').querySelector('[data-testid="workout-pill"]')!.className
+    const resistancePill = screen.getByTestId('calendar-day-2026-03-04').querySelector('[data-testid="workout-pill"]')!.className
+    expect(mixedPill).not.toBe(resistancePill)
   })
 
   it('displays template name for mixed modality day', async () => {
@@ -553,8 +561,8 @@ describe('CalendarGrid – mixed modality (T123)', () => {
     const dayCell = screen.getByTestId('calendar-day-2026-03-02')
     const pills = dayCell.querySelectorAll('[data-testid="workout-pill"]')
     expect(pills).toHaveLength(2)
-    // First pill (mixed) should not use gray fallback
-    expect(pills[0].className).not.toMatch(/gray/)
+    // First pill (mixed) should not use zinc fallback
+    expect(pills[0].className).not.toMatch(/zinc/)
   })
 })
 
@@ -674,7 +682,7 @@ describe('CalendarGrid – multi-workout pills (T115)', () => {
     const dayCell = screen.getByTestId('calendar-day-2026-03-02')
     const pills = dayCell.querySelectorAll('[data-testid="workout-pill"]')
     // Each pill should have its own modality class
-    expect(pills[0].className).toMatch(/blue/) // resistance
-    expect(pills[1].className).toMatch(/emerald/) // running
+    expect(pills[0].className).toMatch(/slate/) // resistance
+    expect(pills[1].className).toMatch(/teal/) // running
   })
 })

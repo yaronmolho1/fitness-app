@@ -9,31 +9,31 @@ type ModalityColorConfig = {
 
 export const MODALITY_COLORS: Record<string, ModalityColorConfig> = {
   resistance: {
-    cell: 'bg-blue-100 border-blue-300 text-blue-900 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-200 modality-resistance',
-    badge: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200',
-    accent: 'border-l-blue-500',
+    cell: 'bg-slate-50 border-slate-300 text-slate-900 dark:bg-slate-900/20 dark:border-slate-600 dark:text-slate-200 modality-resistance',
+    badge: 'bg-slate-100 text-slate-700 dark:bg-slate-800/50 dark:text-slate-300',
+    accent: 'border-l-slate-500 dark:border-l-slate-400',
   },
   running: {
-    cell: 'bg-emerald-100 border-emerald-300 text-emerald-900 dark:bg-emerald-900/30 dark:border-emerald-700 dark:text-emerald-200 modality-running',
-    badge: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200',
-    accent: 'border-l-emerald-500',
+    cell: 'bg-teal-50 border-teal-300 text-teal-900 dark:bg-teal-900/20 dark:border-teal-600 dark:text-teal-200 modality-running',
+    badge: 'bg-teal-100 text-teal-700 dark:bg-teal-800/50 dark:text-teal-300',
+    accent: 'border-l-teal-500 dark:border-l-teal-400',
   },
   mma: {
-    cell: 'bg-amber-100 border-amber-300 text-amber-900 dark:bg-amber-900/30 dark:border-amber-700 dark:text-amber-200 modality-mma',
-    badge: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200',
-    accent: 'border-l-amber-500',
+    cell: 'bg-rose-50 border-rose-300 text-rose-900 dark:bg-rose-900/20 dark:border-rose-600 dark:text-rose-200 modality-mma',
+    badge: 'bg-rose-100 text-rose-700 dark:bg-rose-800/50 dark:text-rose-300',
+    accent: 'border-l-rose-500 dark:border-l-rose-400',
   },
   mixed: {
-    cell: 'bg-violet-100 border-violet-300 text-violet-900 dark:bg-violet-900/30 dark:border-violet-700 dark:text-violet-200 modality-mixed',
-    badge: 'bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-200',
-    accent: 'border-l-violet-500',
+    cell: 'bg-indigo-50 border-indigo-300 text-indigo-900 dark:bg-indigo-900/20 dark:border-indigo-600 dark:text-indigo-200 modality-mixed',
+    badge: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-800/50 dark:text-indigo-300',
+    accent: 'border-l-indigo-500 dark:border-l-indigo-400',
   },
 }
 
 const FALLBACK: ModalityColorConfig = {
-  cell: 'bg-gray-100 border-gray-300 text-gray-900 dark:bg-gray-900/30 dark:border-gray-700 dark:text-gray-200 modality-unknown',
-  badge: 'bg-gray-100 text-gray-800 dark:bg-gray-900/40 dark:text-gray-200',
-  accent: 'border-l-gray-500',
+  cell: 'bg-zinc-50 border-zinc-300 text-zinc-900 dark:bg-zinc-900/20 dark:border-zinc-600 dark:text-zinc-200 modality-unknown',
+  badge: 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-400',
+  accent: 'border-l-zinc-400 dark:border-l-zinc-500',
 }
 
 function resolve(modality: string): ModalityColorConfig {
