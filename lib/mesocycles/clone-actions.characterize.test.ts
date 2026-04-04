@@ -1185,8 +1185,8 @@ describe('cloneMesocycle — T223 template value inheritance characterization', 
     return { mesoId: meso.id, tmplId: tmpl.id, secAId: secA.id, secBId: secB.id }
   }
 
-  describe('standalone running template — base values copied, override ignored', () => {
-    it('cloned template target_pace equals source base, not week-4 override', async () => {
+  describe('standalone running template — override values merged into cloned base (T223)', () => {
+    it('cloned template target_pace equals week-4 override', async () => {
       const { mesoId } = seedStandaloneRunningWithOverride()
       const result = await cloneMesocycle({
         source_id: mesoId,
@@ -1201,11 +1201,11 @@ describe('cloneMesocycle — T223 template value inheritance characterization', 
         .all()
         .find((t: { mesocycle_id: number }) => t.mesocycle_id === result.id)!
 
-      // Current behavior: base pace ('5:00'), not override pace ('4:45')
-      expect(clonedTmpl.target_pace).toBe('5:00')
+      // T223: override pace ('4:45') merged into base
+      expect(clonedTmpl.target_pace).toBe('4:45')
     })
 
-    it('cloned template interval_count equals source base, not week-4 override', async () => {
+    it('cloned template interval_count equals week-4 override', async () => {
       const { mesoId } = seedStandaloneRunningWithOverride()
       const result = await cloneMesocycle({
         source_id: mesoId,
@@ -1220,11 +1220,11 @@ describe('cloneMesocycle — T223 template value inheritance characterization', 
         .all()
         .find((t: { mesocycle_id: number }) => t.mesocycle_id === result.id)!
 
-      // Current behavior: base interval_count (4), not override (6)
-      expect(clonedTmpl.interval_count).toBe(4)
+      // T223: override interval_count (6) merged into base
+      expect(clonedTmpl.interval_count).toBe(6)
     })
 
-    it('cloned template interval_rest equals source base, not week-4 override', async () => {
+    it('cloned template interval_rest equals week-4 override', async () => {
       const { mesoId } = seedStandaloneRunningWithOverride()
       const result = await cloneMesocycle({
         source_id: mesoId,
@@ -1239,11 +1239,11 @@ describe('cloneMesocycle — T223 template value inheritance characterization', 
         .all()
         .find((t: { mesocycle_id: number }) => t.mesocycle_id === result.id)!
 
-      // Current behavior: base interval_rest (60), not override (45)
-      expect(clonedTmpl.interval_rest).toBe(60)
+      // T223: override interval_rest (45) merged into base
+      expect(clonedTmpl.interval_rest).toBe(45)
     })
 
-    it('cloned template planned_duration equals source base, not week-4 override', async () => {
+    it('cloned template planned_duration equals week-4 override', async () => {
       const { mesoId } = seedStandaloneRunningWithOverride()
       const result = await cloneMesocycle({
         source_id: mesoId,
@@ -1258,8 +1258,8 @@ describe('cloneMesocycle — T223 template value inheritance characterization', 
         .all()
         .find((t: { mesocycle_id: number }) => t.mesocycle_id === result.id)!
 
-      // Current behavior: base planned_duration (45), not override (50)
-      expect(clonedTmpl.planned_duration).toBe(45)
+      // T223: override planned_duration (50) merged into base
+      expect(clonedTmpl.planned_duration).toBe(50)
     })
   })
 
@@ -1302,8 +1302,8 @@ describe('cloneMesocycle — T223 template value inheritance characterization', 
     })
   })
 
-  describe('mixed template with section overrides — section base values copied, overrides ignored', () => {
-    it('cloned section A target_pace equals source base, not week-4 override', async () => {
+  describe('mixed template with section overrides — section override values merged (T223)', () => {
+    it('cloned section A target_pace equals week-4 override', async () => {
       const { mesoId } = seedMixedTemplateWithSectionOverrides()
       const result = await cloneMesocycle({
         source_id: mesoId,
@@ -1326,11 +1326,11 @@ describe('cloneMesocycle — T223 template value inheritance characterization', 
         .sort((a: { order: number }, b: { order: number }) => a.order - b.order)
 
       expect(clonedSections).toHaveLength(2)
-      // Current behavior: base pace ('6:00'), not override pace ('5:30')
-      expect(clonedSections[0].target_pace).toBe('6:00')
+      // T223: override pace ('5:30') merged into section base
+      expect(clonedSections[0].target_pace).toBe('5:30')
     })
 
-    it('cloned section A interval_count equals source base, not week-4 override', async () => {
+    it('cloned section A interval_count equals week-4 override', async () => {
       const { mesoId } = seedMixedTemplateWithSectionOverrides()
       const result = await cloneMesocycle({
         source_id: mesoId,
@@ -1352,11 +1352,11 @@ describe('cloneMesocycle — T223 template value inheritance characterization', 
         .filter((s: { template_id: number }) => s.template_id === clonedTmpl.id)
         .sort((a: { order: number }, b: { order: number }) => a.order - b.order)
 
-      // Current behavior: base interval_count (2), not override (3)
-      expect(clonedSections[0].interval_count).toBe(2)
+      // T223: override interval_count (3) merged into section base
+      expect(clonedSections[0].interval_count).toBe(3)
     })
 
-    it('cloned section A planned_duration equals source base, not week-4 override', async () => {
+    it('cloned section A planned_duration equals week-4 override', async () => {
       const { mesoId } = seedMixedTemplateWithSectionOverrides()
       const result = await cloneMesocycle({
         source_id: mesoId,
@@ -1378,11 +1378,11 @@ describe('cloneMesocycle — T223 template value inheritance characterization', 
         .filter((s: { template_id: number }) => s.template_id === clonedTmpl.id)
         .sort((a: { order: number }, b: { order: number }) => a.order - b.order)
 
-      // Current behavior: base planned_duration (15), not override (20)
-      expect(clonedSections[0].planned_duration).toBe(15)
+      // T223: override planned_duration (20) merged into section base
+      expect(clonedSections[0].planned_duration).toBe(20)
     })
 
-    it('cloned section B planned_duration equals source base, not week-4 override', async () => {
+    it('cloned section B planned_duration equals week-4 override', async () => {
       const { mesoId } = seedMixedTemplateWithSectionOverrides()
       const result = await cloneMesocycle({
         source_id: mesoId,
@@ -1404,8 +1404,8 @@ describe('cloneMesocycle — T223 template value inheritance characterization', 
         .filter((s: { template_id: number }) => s.template_id === clonedTmpl.id)
         .sort((a: { order: number }, b: { order: number }) => a.order - b.order)
 
-      // Current behavior: base planned_duration (30), not override (40)
-      expect(clonedSections[1].planned_duration).toBe(30)
+      // T223: override planned_duration (40) merged into section base
+      expect(clonedSections[1].planned_duration).toBe(40)
     })
   })
 
