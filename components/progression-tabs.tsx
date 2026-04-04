@@ -18,10 +18,9 @@ type Exercise = {
 type Props = {
   exercises: Exercise[]
   projectedData: ProjectedData | null
-  isCompleted: boolean
 }
 
-export function ProgressionTabs({ exercises, projectedData, isCompleted }: Props) {
+export function ProgressionTabs({ exercises, projectedData }: Props) {
   return (
     <Tabs defaultValue="projected">
       <TabsList>
@@ -36,13 +35,13 @@ export function ProgressionTabs({ exercises, projectedData, isCompleted }: Props
       </TabsList>
 
       <TabsContent value="projected" className="mt-6">
-        {projectedData ? (
-          <ProjectedTable data={projectedData} isCompleted={isCompleted} />
+        {projectedData && projectedData.length > 0 ? (
+          <ProjectedTable data={projectedData} />
         ) : (
           <div className="flex h-64 flex-col items-center justify-center gap-2 rounded-xl border bg-card text-muted-foreground shadow-sm">
             <CalendarDays className="h-10 w-10 opacity-30" />
-            <p>No active mesocycle</p>
-            <p className="text-sm">Activate a mesocycle to see projected progressions</p>
+            <p>No active or planned mesocycles</p>
+            <p className="text-sm">Create a mesocycle to see projected progressions</p>
           </div>
         )}
       </TabsContent>

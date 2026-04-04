@@ -8,6 +8,7 @@ import { TemplateWeekGrid } from '@/components/template-week-grid'
 import { Dumbbell, Footprints, Swords } from 'lucide-react'
 import type {
   ProjectedData,
+  MesocycleProjection,
   ResistanceGroup,
   RunningGroup,
   MmaGroup,
@@ -19,7 +20,15 @@ import type { SlotWithExercise } from '@/lib/templates/slot-queries'
 
 type Props = {
   data: ProjectedData
-  isCompleted: boolean
+}
+
+// Compute week start date from mesocycle start_date + week number
+function weekDate(startDate: string, weekNumber: number): string {
+  const d = new Date(startDate + 'T00:00:00')
+  d.setDate(d.getDate() + (weekNumber - 1) * 7)
+  const day = String(d.getDate()).padStart(2, '0')
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  return `${day}/${month}`
 }
 
 function formatResistanceCell(week: MergedResistanceWeek): string {
@@ -46,17 +55,17 @@ function formatMmaCell(week: MergedMmaWeek): string {
   return '—'
 }
 
-function WeekHeader({ workWeeks, hasDeload }: { workWeeks: number; hasDeload: boolean }) {
+function DateHeaders({ startDate, workWeeks, hasDeload }: { startDate: string; workWeeks: number; hasDeload: boolean }) {
   return (
     <>
       {Array.from({ length: workWeeks }, (_, i) => (
         <th key={i + 1} className="whitespace-nowrap px-3 py-2 text-center text-xs font-medium text-muted-foreground">
-          W{i + 1}
+          {weekDate(startDate, i + 1)}
         </th>
       ))}
       {hasDeload && (
         <th className="whitespace-nowrap px-3 py-2 text-center text-xs font-medium text-orange-500">
-          Deload
+          {weekDate(startDate, workWeeks + 1)}
         </th>
       )}
     </>
@@ -65,16 +74,18 @@ function WeekHeader({ workWeeks, hasDeload }: { workWeeks: number; hasDeload: bo
 
 function ResistanceSection({
   groups,
+  startDate,
   workWeeks,
   hasDeload,
   isCompleted,
   onSlotClick,
 }: {
   groups: ResistanceGroup[]
+  startDate: string
   workWeeks: number
   hasDeload: boolean
   isCompleted: boolean
-  onSlotClick: (slot: SlotWithExercise) => void
+  onSlotClick: (slot: SlotWithExercise, workWeeks: number, hasDeload: boolean, isCompleted: boolean) => void
 }) {
   if (groups.length === 0) return null
 
@@ -90,7 +101,7 @@ function ResistanceSection({
           <thead>
             <tr className="border-b bg-muted/50">
               <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-muted-foreground">Exercise</th>
-              <WeekHeader workWeeks={workWeeks} hasDeload={hasDeload} />
+              <DateHeaders startDate={startDate} workWeeks={workWeeks} hasDeload={hasDeload} />
             </tr>
           </thead>
           <tbody>
@@ -108,7 +119,7 @@ function ResistanceSection({
                       'border-b transition-colors',
                       !isCompleted && 'cursor-pointer hover:bg-muted/40'
                     )}
-                    onClick={() => !isCompleted && onSlotClick(slot)}
+                    onClick={() => !isCompleted && onSlotClick(slot, workWeeks, hasDeload, isCompleted)}
                   >
                     <td className="whitespace-nowrap px-3 py-2 font-medium">
                       {slot.exercise_name}
@@ -138,16 +149,18 @@ function ResistanceSection({
 
 function RunningSection({
   groups,
+  startDate,
   workWeeks,
   hasDeload,
   isCompleted,
   onRunningClick,
 }: {
   groups: RunningGroup[]
+  startDate: string
   workWeeks: number
   hasDeload: boolean
   isCompleted: boolean
-  onRunningClick: (group: RunningGroup) => void
+  onRunningClick: (group: RunningGroup, workWeeks: number, hasDeload: boolean, isCompleted: boolean) => void
 }) {
   if (groups.length === 0) return null
 
@@ -164,7 +177,7 @@ function RunningSection({
             <tr className="border-b bg-muted/50">
               <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-muted-foreground">Template</th>
               <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-muted-foreground">Type</th>
-              <WeekHeader workWeeks={workWeeks} hasDeload={hasDeload} />
+              <DateHeaders startDate={startDate} workWeeks={workWeeks} hasDeload={hasDeload} />
             </tr>
           </thead>
           <tbody>
@@ -175,7 +188,7 @@ function RunningSection({
                   'border-b transition-colors',
                   !isCompleted && 'cursor-pointer hover:bg-muted/40'
                 )}
-                onClick={() => !isCompleted && onRunningClick(group)}
+                onClick={() => !isCompleted && onRunningClick(group, workWeeks, hasDeload, isCompleted)}
               >
                 <td className="whitespace-nowrap px-3 py-2 font-medium">
                   {group.section.id === 0 ? group.template.name : group.section.section_name}
@@ -205,16 +218,18 @@ function RunningSection({
 
 function MmaSection({
   groups,
+  startDate,
   workWeeks,
   hasDeload,
   isCompleted,
   onMmaClick,
 }: {
   groups: MmaGroup[]
+  startDate: string
   workWeeks: number
   hasDeload: boolean
   isCompleted: boolean
-  onMmaClick: (group: MmaGroup) => void
+  onMmaClick: (group: MmaGroup, workWeeks: number, hasDeload: boolean, isCompleted: boolean) => void
 }) {
   if (groups.length === 0) return null
 
@@ -230,7 +245,7 @@ function MmaSection({
           <thead>
             <tr className="border-b bg-muted/50">
               <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-muted-foreground">Template</th>
-              <WeekHeader workWeeks={workWeeks} hasDeload={hasDeload} />
+              <DateHeaders startDate={startDate} workWeeks={workWeeks} hasDeload={hasDeload} />
             </tr>
           </thead>
           <tbody>
@@ -241,7 +256,7 @@ function MmaSection({
                   'border-b transition-colors',
                   !isCompleted && 'cursor-pointer hover:bg-muted/40'
                 )}
-                onClick={() => !isCompleted && onMmaClick(group)}
+                onClick={() => !isCompleted && onMmaClick(group, workWeeks, hasDeload, isCompleted)}
               >
                 <td className="whitespace-nowrap px-3 py-2 font-medium">
                   {group.section.id === 0 ? group.template.name : group.section.section_name}
@@ -266,18 +281,16 @@ function MmaSection({
   )
 }
 
-export function ProjectedTable({ data, isCompleted }: Props) {
+type SlotModalState = { slot: SlotWithExercise; workWeeks: number; hasDeload: boolean; isCompleted: boolean }
+type RunningModalState = { group: RunningGroup; workWeeks: number; hasDeload: boolean; isCompleted: boolean }
+type MmaModalState = { group: MmaGroup; workWeeks: number; hasDeload: boolean; isCompleted: boolean }
+
+export function ProjectedTable({ data }: Props) {
   const router = useRouter()
-  const { mesocycle, resistanceGroups, runningGroups, mmaGroups } = data
 
-  // Resistance modal state
-  const [selectedSlot, setSelectedSlot] = useState<SlotWithExercise | null>(null)
-
-  // Running modal state
-  const [selectedRunning, setSelectedRunning] = useState<RunningGroup | null>(null)
-
-  // MMA modal state
-  const [selectedMma, setSelectedMma] = useState<MmaGroup | null>(null)
+  const [selectedSlot, setSelectedSlot] = useState<SlotModalState | null>(null)
+  const [selectedRunning, setSelectedRunning] = useState<RunningModalState | null>(null)
+  const [selectedMma, setSelectedMma] = useState<MmaModalState | null>(null)
 
   const handleModalClose = (open: boolean) => {
     if (!open) {
@@ -288,97 +301,121 @@ export function ProjectedTable({ data, isCompleted }: Props) {
     }
   }
 
-  const hasNoData = resistanceGroups.length === 0 && runningGroups.length === 0 && mmaGroups.length === 0
+  const hasAnyData = data.some(
+    (p) => p.resistanceGroups.length > 0 || p.runningGroups.length > 0 || p.mmaGroups.length > 0
+  )
 
-  if (hasNoData) {
+  if (!hasAnyData) {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-2 rounded-xl border bg-card text-muted-foreground shadow-sm">
         <Dumbbell className="h-10 w-10 opacity-30" />
-        <p>No templates in {mesocycle.name}</p>
+        <p>No templates with exercises</p>
         <p className="text-sm">Add templates and exercises to see projected progressions</p>
       </div>
     )
   }
 
   return (
-    <div className="space-y-8">
-      <div className="text-sm text-muted-foreground">
-        {mesocycle.name} — {mesocycle.workWeeks} weeks{mesocycle.hasDeload ? ' + deload' : ''}
-      </div>
+    <div className="space-y-10">
+      {data.map((projection) => {
+        const { mesocycle, resistanceGroups, runningGroups, mmaGroups } = projection
+        const isCompleted = mesocycle.status === 'completed'
+        const hasData = resistanceGroups.length > 0 || runningGroups.length > 0 || mmaGroups.length > 0
 
-      <ResistanceSection
-        groups={resistanceGroups}
-        workWeeks={mesocycle.workWeeks}
-        hasDeload={mesocycle.hasDeload}
-        isCompleted={isCompleted}
-        onSlotClick={setSelectedSlot}
-      />
+        if (!hasData) return null
 
-      <RunningSection
-        groups={runningGroups}
-        workWeeks={mesocycle.workWeeks}
-        hasDeload={mesocycle.hasDeload}
-        isCompleted={isCompleted}
-        onRunningClick={setSelectedRunning}
-      />
+        return (
+          <div key={mesocycle.id} className="space-y-6">
+            <div className="flex items-center gap-3">
+              <h2 className="text-base font-semibold">{mesocycle.name}</h2>
+              <span className={cn(
+                'rounded-full px-2 py-0.5 text-xs font-medium',
+                mesocycle.status === 'active' && 'bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400',
+                mesocycle.status === 'planned' && 'bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400',
+              )}>
+                {mesocycle.status}
+              </span>
+              <span className="text-sm text-muted-foreground">
+                {mesocycle.workWeeks} weeks{mesocycle.hasDeload ? ' + deload' : ''}
+              </span>
+            </div>
 
-      <MmaSection
-        groups={mmaGroups}
-        workWeeks={mesocycle.workWeeks}
-        hasDeload={mesocycle.hasDeload}
-        isCompleted={isCompleted}
-        onMmaClick={setSelectedMma}
-      />
+            <ResistanceSection
+              groups={resistanceGroups}
+              startDate={mesocycle.startDate}
+              workWeeks={mesocycle.workWeeks}
+              hasDeload={mesocycle.hasDeload}
+              isCompleted={isCompleted}
+              onSlotClick={(slot, ww, hd, ic) => setSelectedSlot({ slot, workWeeks: ww, hasDeload: hd, isCompleted: ic })}
+            />
 
-      {/* Resistance edit modal */}
+            <RunningSection
+              groups={runningGroups}
+              startDate={mesocycle.startDate}
+              workWeeks={mesocycle.workWeeks}
+              hasDeload={mesocycle.hasDeload}
+              isCompleted={isCompleted}
+              onRunningClick={(group, ww, hd, ic) => setSelectedRunning({ group, workWeeks: ww, hasDeload: hd, isCompleted: ic })}
+            />
+
+            <MmaSection
+              groups={mmaGroups}
+              startDate={mesocycle.startDate}
+              workWeeks={mesocycle.workWeeks}
+              hasDeload={mesocycle.hasDeload}
+              isCompleted={isCompleted}
+              onMmaClick={(group, ww, hd, ic) => setSelectedMma({ group, workWeeks: ww, hasDeload: hd, isCompleted: ic })}
+            />
+          </div>
+        )
+      })}
+
       {selectedSlot && (
         <WeekProgressionGrid
-          slot={selectedSlot}
-          workWeeks={mesocycle.workWeeks}
-          hasDeload={mesocycle.hasDeload}
-          isCompleted={isCompleted}
+          slot={selectedSlot.slot}
+          workWeeks={selectedSlot.workWeeks}
+          hasDeload={selectedSlot.hasDeload}
+          isCompleted={selectedSlot.isCompleted}
           open={true}
           onOpenChange={handleModalClose}
         />
       )}
 
-      {/* Running edit modal */}
       {selectedRunning && (
         <TemplateWeekGrid
-          templateId={selectedRunning.template.id}
-          sectionId={selectedRunning.section.id === 0 ? null : selectedRunning.section.id}
-          workWeeks={mesocycle.workWeeks}
-          hasDeload={mesocycle.hasDeload}
-          isCompleted={isCompleted}
+          templateId={selectedRunning.group.template.id}
+          sectionId={selectedRunning.group.section.id === 0 ? null : selectedRunning.group.section.id}
+          workWeeks={selectedRunning.workWeeks}
+          hasDeload={selectedRunning.hasDeload}
+          isCompleted={selectedRunning.isCompleted}
           open={true}
           onOpenChange={handleModalClose}
-          title={selectedRunning.section.section_name}
+          title={selectedRunning.group.section.section_name}
           modality="running"
           runningBase={{
-            distance: selectedRunning.section.target_distance ?? selectedRunning.template.target_distance ?? null,
-            duration: selectedRunning.section.target_duration ?? selectedRunning.template.target_duration ?? null,
-            pace: selectedRunning.section.target_pace ?? selectedRunning.template.target_pace ?? null,
-            run_type: selectedRunning.section.run_type ?? selectedRunning.template.run_type ?? null,
-            interval_count: selectedRunning.section.interval_count ?? selectedRunning.template.interval_count ?? null,
-            interval_rest: selectedRunning.section.interval_rest ?? selectedRunning.template.interval_rest ?? null,
+            distance: selectedRunning.group.section.target_distance ?? selectedRunning.group.template.target_distance ?? null,
+            duration: selectedRunning.group.section.target_duration ?? selectedRunning.group.template.target_duration ?? null,
+            pace: selectedRunning.group.section.target_pace ?? selectedRunning.group.template.target_pace ?? null,
+            run_type: selectedRunning.group.section.run_type ?? selectedRunning.group.template.run_type ?? null,
+            interval_count: selectedRunning.group.section.interval_count ?? selectedRunning.group.template.interval_count ?? null,
+            interval_rest: selectedRunning.group.section.interval_rest ?? selectedRunning.group.template.interval_rest ?? null,
           }}
         />
       )}
 
-      {/* MMA edit modal */}
       {selectedMma && (
         <TemplateWeekGrid
-          templateId={selectedMma.template.id}
-          sectionId={selectedMma.section.id === 0 ? null : selectedMma.section.id}
-          workWeeks={mesocycle.workWeeks}
-          hasDeload={mesocycle.hasDeload}
-          isCompleted={isCompleted}
+          templateId={selectedMma.group.template.id}
+          sectionId={selectedMma.group.section.id === 0 ? null : selectedMma.group.section.id}
+          workWeeks={selectedMma.workWeeks}
+          hasDeload={selectedMma.hasDeload}
+          isCompleted={selectedMma.isCompleted}
           open={true}
           onOpenChange={handleModalClose}
-          title={selectedMma.section.section_name}
+          title={selectedMma.group.section.section_name}
           modality="mma"
           mmaBase={{
-            planned_duration: selectedMma.section.planned_duration ?? selectedMma.template.planned_duration ?? null,
+            planned_duration: selectedMma.group.section.planned_duration ?? selectedMma.group.template.planned_duration ?? null,
           }}
         />
       )}
