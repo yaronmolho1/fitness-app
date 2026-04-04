@@ -54,12 +54,14 @@ export type MmaGroup = {
   weeks: MergedMmaWeek[]
 }
 
-export type ProjectedData = {
-  mesocycle: { id: number; name: string; workWeeks: number; hasDeload: boolean }
+export type MesocycleProjection = {
+  mesocycle: { id: number; name: string; startDate: string; workWeeks: number; hasDeload: boolean; status: string }
   resistanceGroups: ResistanceGroup[]
   runningGroups: RunningGroup[]
   mmaGroups: MmaGroup[]
 }
+
+export type ProjectedData = MesocycleProjection[]
 
 async function buildResistanceSlotProjection(
   slot: SlotWithExercise,
@@ -221,13 +223,19 @@ async function buildMmaWeeks(
   return weeks
 }
 
-export async function getProjectedData(
-  mesocycleId: number,
-  mesocycleName: string,
-  workWeeks: number,
-  hasDeload: boolean
-): Promise<ProjectedData> {
-  const templates = await getTemplatesForMesocycle(mesocycleId)
+type MesocycleInput = {
+  id: number
+  name: string
+  start_date: string
+  work_weeks: number
+  has_deload: number | boolean
+  status: string
+}
+
+async function buildProjectionForMesocycle(meso: MesocycleInput): Promise<MesocycleProjection> {
+  const workWeeks = meso.work_weeks
+  const hasDeload = Boolean(meso.has_deload)
+  const templates = await getTemplatesForMesocycle(meso.id)
 
   const resistanceGroups: ResistanceGroup[] = []
   const runningGroups: RunningGroup[] = []
@@ -250,7 +258,6 @@ export async function getProjectedData(
           runningGroups.push({ template, section, weeks })
         }
       } else {
-        // Template-level running (no sections) — use a synthetic section
         const syntheticSection: TemplateSectionRow = {
           id: 0,
           section_name: template.name,
@@ -296,13 +303,11 @@ export async function getProjectedData(
         mmaGroups.push({ template, section: syntheticSection, weeks })
       }
     } else if (template.modality === 'mixed') {
-      // Mixed templates: split by section modality
       const sections = getSectionsForTemplate(template.id)
       const slots = getSlotsByTemplate(template.id)
 
-      // Resistance slots grouped by their section
       const resistanceSlots = slots.filter((s) => {
-        if (!s.section_id) return true // slots without section default to resistance
+        if (!s.section_id) return true
         const section = sections.find((sec) => sec.id === s.section_id)
         return !section || section.modality === 'resistance'
       })
@@ -314,7 +319,6 @@ export async function getProjectedData(
         resistanceGroups.push({ template, slots: slotProjections })
       }
 
-      // Running/MMA sections
       for (const section of sections) {
         if (section.modality === 'running') {
           const weeks = await buildRunningWeeks(template, section, workWeeks, hasDeload)
@@ -328,9 +332,26 @@ export async function getProjectedData(
   }
 
   return {
-    mesocycle: { id: mesocycleId, name: mesocycleName, workWeeks, hasDeload },
+    mesocycle: {
+      id: meso.id,
+      name: meso.name,
+      startDate: meso.start_date,
+      workWeeks,
+      hasDeload,
+      status: meso.status,
+    },
     resistanceGroups,
     runningGroups,
     mmaGroups,
   }
+}
+
+export async function getProjectedData(
+  mesocycles: MesocycleInput[]
+): Promise<ProjectedData> {
+  const projections: MesocycleProjection[] = []
+  for (const meso of mesocycles) {
+    projections.push(await buildProjectionForMesocycle(meso))
+  }
+  return projections
 }
