@@ -738,8 +738,8 @@ describe('cloneMesocycle — T222 slot value inheritance characterization', () =
     return { mesoId: meso.id, slotId: slot.id }
   }
 
-  describe('base slot values are copied as-is (overrides ignored)', () => {
-    it('cloned slot weight equals source base weight, not last-week override weight', async () => {
+  describe('slot values reflect last-week overrides (T222 behavior)', () => {
+    it('cloned slot weight equals last-week override weight', async () => {
       const { mesoId } = seedWithSlotAndOverride()
       const result = await cloneMesocycle({
         source_id: mesoId,
@@ -761,11 +761,11 @@ describe('cloneMesocycle — T222 slot value inheritance characterization', () =
         .filter((s: { template_id: number }) => s.template_id === clonedTmpl.id)
 
       expect(clonedSlots).toHaveLength(1)
-      // Current behavior: base weight (100), not override weight (110)
-      expect(clonedSlots[0].weight).toBe(100)
+      // T222: override weight (110) merged into cloned slot base
+      expect(clonedSlots[0].weight).toBe(110)
     })
 
-    it('cloned slot sets equals source base sets, not last-week override sets', async () => {
+    it('cloned slot sets equals last-week override sets', async () => {
       const { mesoId } = seedWithSlotAndOverride()
       const result = await cloneMesocycle({
         source_id: mesoId,
@@ -786,11 +786,11 @@ describe('cloneMesocycle — T222 slot value inheritance characterization', () =
         .all()
         .filter((s: { template_id: number }) => s.template_id === clonedTmpl.id)
 
-      // Current behavior: base sets (3), not override sets (4)
-      expect(clonedSlots[0].sets).toBe(3)
+      // T222: override sets (4) merged into cloned slot base
+      expect(clonedSlots[0].sets).toBe(4)
     })
 
-    it('cloned slot reps equals source base reps, not last-week override reps', async () => {
+    it('cloned slot reps equals last-week override reps', async () => {
       const { mesoId } = seedWithSlotAndOverride()
       const result = await cloneMesocycle({
         source_id: mesoId,
@@ -811,11 +811,11 @@ describe('cloneMesocycle — T222 slot value inheritance characterization', () =
         .all()
         .filter((s: { template_id: number }) => s.template_id === clonedTmpl.id)
 
-      // Current behavior: base reps ('10'), not override reps ('8')
-      expect(clonedSlots[0].reps).toBe('10')
+      // T222: override reps ('8') merged into cloned slot base
+      expect(clonedSlots[0].reps).toBe('8')
     })
 
-    it('cloned slot rpe equals source base rpe, not last-week override rpe', async () => {
+    it('cloned slot rpe equals last-week override rpe', async () => {
       const { mesoId } = seedWithSlotAndOverride()
       const result = await cloneMesocycle({
         source_id: mesoId,
@@ -836,8 +836,8 @@ describe('cloneMesocycle — T222 slot value inheritance characterization', () =
         .all()
         .filter((s: { template_id: number }) => s.template_id === clonedTmpl.id)
 
-      // Current behavior: base rpe (8), not override rpe (9)
-      expect(clonedSlots[0].rpe).toBe(8)
+      // T222: override rpe (9) merged into cloned slot base
+      expect(clonedSlots[0].rpe).toBe(9)
     })
   })
 
