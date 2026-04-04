@@ -68,6 +68,8 @@ type ScheduleRow = {
   period: string
   time_slot: string
   duration: number
+  cycle_length: number
+  cycle_position: number
 }
 
 type OverrideRow = {
@@ -80,6 +82,35 @@ type OverrideRow = {
   modality: string | null
   time_slot: string
   duration: number
+}
+
+// For each time_slot group with cycle_length > 1, keep only the row matching the active position
+function resolveCalendarRotation(rows: ScheduleRow[], weekNumber: number): ScheduleRow[] {
+  const groups = new Map<string, ScheduleRow[]>()
+  for (const row of rows) {
+    const existing = groups.get(row.time_slot)
+    if (existing) {
+      existing.push(row)
+    } else {
+      groups.set(row.time_slot, [row])
+    }
+  }
+
+  const resolved: ScheduleRow[] = []
+  for (const [, group] of groups) {
+    const cycleLength = group[0].cycle_length
+    if (cycleLength <= 1) {
+      resolved.push(...group)
+    } else {
+      const activePosition = ((weekNumber - 1) % cycleLength) + 1
+      const match = group.find((r) => r.cycle_position === activePosition)
+      if (match) {
+        resolved.push(match)
+      }
+    }
+  }
+
+  return resolved
 }
 
 export async function getCalendarProjection(
@@ -120,6 +151,8 @@ export async function getCalendarProjection(
         period: weekly_schedule.period,
         time_slot: weekly_schedule.time_slot,
         duration: weekly_schedule.duration,
+        cycle_length: weekly_schedule.cycle_length,
+        cycle_position: weekly_schedule.cycle_position,
       })
       .from(weekly_schedule)
       .leftJoin(workout_templates, eq(weekly_schedule.template_id, workout_templates.id))
@@ -211,7 +244,10 @@ export async function getCalendarProjection(
     // Look up base schedule entries for this day (may be multiple)
     const dow = isoDayOfWeek(date)
     const schedMap = scheduleLookup.get(meso.id)
-    const baseEntries = schedMap?.get(`${dow}-${weekType}`) ?? []
+    const allEntries = schedMap?.get(`${dow}-${weekType}`) ?? []
+
+    // Filter by rotation cycle position per time_slot group
+    const baseEntries = resolveCalendarRotation(allEntries, weekNumber)
 
     // Merge base schedule with per-week overrides (keyed by time_slot)
     type ResolvedEntry = { template_name: string | null; modality: string | null; period: string; time_slot: string; duration: number }

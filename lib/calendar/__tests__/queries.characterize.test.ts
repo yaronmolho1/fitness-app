@@ -601,11 +601,9 @@ describe('getCalendarProjection — characterization', () => {
       }
     })
 
-    it('multiple cycle_positions for same slot: current query returns ALL positions', async () => {
-      // Pre-T213: query does NOT filter by cycle_position.
-      // Two rows with same mesocycle_id/day_of_week/week_type/time_slot but
-      // different cycle_position both appear in baseEntries and both get rendered.
-      // T213 will change this to pick one based on week number.
+    it('multiple cycle_positions for same slot: T213 filters by active position per week', async () => {
+      // T213: query filters by cycle_position based on week number.
+      // 2-week rotation: week 1 -> position 1 (Push), week 2 -> position 2 (Pull)
       sqlite.exec(`
         INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
         VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
@@ -619,14 +617,14 @@ describe('getCalendarProjection — characterization', () => {
         VALUES (1, 0, 2, 'normal', 'morning', '07:00', 2, 2);
       `)
       const result = await getCalendarProjection(db, '2026-03')
-      // PRE-T213: both rotation positions are returned for every Monday
-      // because the query groups by dow-weekType key only and returns all matching rows
+      // W1 Mon (Mar 2): position 1 -> Push
       const mar2Entries = result.days.filter((d) => d.date === '2026-03-02')
-      expect(mar2Entries).toHaveLength(2)
-      // Both templates appear — order is by time_slot (same slot so insertion order preserved)
-      const names = mar2Entries.map((e) => e.template_name)
-      expect(names).toContain('Push')
-      expect(names).toContain('Pull')
+      expect(mar2Entries).toHaveLength(1)
+      expect(mar2Entries[0].template_name).toBe('Push')
+      // W2 Mon (Mar 9): position 2 -> Pull
+      const mar9Entries = result.days.filter((d) => d.date === '2026-03-09')
+      expect(mar9Entries).toHaveLength(1)
+      expect(mar9Entries[0].template_name).toBe('Pull')
     })
 
     it('different time_slots with cycle_positions: each slot independently groups', async () => {
