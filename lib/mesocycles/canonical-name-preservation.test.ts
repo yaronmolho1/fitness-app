@@ -30,6 +30,8 @@ import { cloneMesocycle } from './clone-actions'
 import { getCascadeTargets } from '@/lib/templates/cascade-queries'
 
 function resetTables() {
+  testDb.run(sql`DROP TABLE IF EXISTS template_week_overrides`)
+  testDb.run(sql`DROP TABLE IF EXISTS slot_week_overrides`)
   testDb.run(sql`DROP TABLE IF EXISTS logged_workouts`)
   testDb.run(sql`DROP TABLE IF EXISTS weekly_schedule`)
   testDb.run(sql`DROP TABLE IF EXISTS exercise_slots`)
@@ -127,6 +129,25 @@ function resetTables() {
     notes TEXT,
     template_snapshot TEXT NOT NULL,
     created_at INTEGER
+  )`)
+  testDb.run(sql`CREATE TABLE slot_week_overrides (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    exercise_slot_id INTEGER NOT NULL REFERENCES exercise_slots(id) ON DELETE CASCADE,
+    week_number INTEGER NOT NULL,
+    weight REAL, reps TEXT, sets INTEGER, rpe REAL,
+    distance REAL, duration INTEGER, pace TEXT, elevation_gain INTEGER,
+    is_deload INTEGER NOT NULL DEFAULT 0, created_at INTEGER,
+    UNIQUE(exercise_slot_id, week_number)
+  )`)
+  testDb.run(sql`CREATE TABLE template_week_overrides (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    template_id INTEGER NOT NULL REFERENCES workout_templates(id) ON DELETE CASCADE,
+    section_id INTEGER REFERENCES template_sections(id) ON DELETE CASCADE,
+    week_number INTEGER NOT NULL,
+    distance REAL, duration INTEGER, pace TEXT, planned_duration INTEGER,
+    interval_count INTEGER, interval_rest INTEGER, elevation_gain INTEGER,
+    is_deload INTEGER NOT NULL DEFAULT 0, created_at INTEGER,
+    UNIQUE(template_id, section_id, week_number)
   )`)
 }
 

@@ -10,6 +10,7 @@ import {
   weekly_schedule,
   template_sections,
   slot_week_overrides,
+  template_week_overrides,
 } from '@/lib/db/schema'
 import { calculateEndDate } from './utils'
 import { syncMesocycle } from '@/lib/google/sync'
@@ -28,6 +29,32 @@ type CloneResult =
   | { success: false; error: string }
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/
+
+// Override → template/section field mapping (override names differ from schema column names)
+const TEMPLATE_OVERRIDE_FIELD_MAP: Record<string, string> = {
+  pace: 'target_pace',
+  distance: 'target_distance',
+  duration: 'target_duration',
+  elevation_gain: 'target_elevation_gain',
+  interval_count: 'interval_count',
+  interval_rest: 'interval_rest',
+  planned_duration: 'planned_duration',
+}
+
+// Merge non-null override fields into a values object using the field mapping
+function applyTemplateOverride<T extends Record<string, unknown>>(
+  base: T,
+  override: Record<string, unknown> | null
+): T {
+  if (!override) return { ...base }
+  const merged = { ...base }
+  for (const [overrideKey, templateKey] of Object.entries(TEMPLATE_OVERRIDE_FIELD_MAP)) {
+    if (overrideKey in override && override[overrideKey] !== null && override[overrideKey] !== undefined) {
+      ;(merged as Record<string, unknown>)[templateKey] = override[overrideKey]
+    }
+  }
+  return merged
+}
 
 export async function cloneMesocycle(input: CloneInput): Promise<CloneResult> {
   const name = input.name.trim()
@@ -85,22 +112,43 @@ export async function cloneMesocycle(input: CloneInput): Promise<CloneResult> {
     const templateIdMap = new Map<number, number>()
 
     for (const tmpl of sourceTemplates) {
+      // T223: query template-level override at source's last work week (section_id IS NULL, non-deload)
+      const tmplOverride = source.work_weeks > 0
+        ? tx
+            .select()
+            .from(template_week_overrides)
+            .where(
+              and(
+                eq(template_week_overrides.template_id, tmpl.id),
+                eq(template_week_overrides.week_number, source.work_weeks),
+                eq(template_week_overrides.is_deload, 0)
+              )
+            )
+            .all()
+            .find((o) => o.section_id === null) ?? null
+        : null
+
+      const tmplBase = {
+        mesocycle_id: newMeso.id,
+        name: tmpl.name,
+        canonical_name: tmpl.canonical_name,
+        modality: tmpl.modality,
+        notes: tmpl.notes,
+        run_type: tmpl.run_type,
+        target_pace: tmpl.target_pace,
+        hr_zone: tmpl.hr_zone,
+        interval_count: tmpl.interval_count,
+        interval_rest: tmpl.interval_rest,
+        coaching_cues: tmpl.coaching_cues,
+        planned_duration: tmpl.planned_duration,
+        target_distance: tmpl.target_distance,
+        target_duration: tmpl.target_duration,
+        target_elevation_gain: tmpl.target_elevation_gain,
+      }
+
       const newTmpl = tx
         .insert(workout_templates)
-        .values({
-          mesocycle_id: newMeso.id,
-          name: tmpl.name,
-          canonical_name: tmpl.canonical_name,
-          modality: tmpl.modality,
-          notes: tmpl.notes,
-          run_type: tmpl.run_type,
-          target_pace: tmpl.target_pace,
-          hr_zone: tmpl.hr_zone,
-          interval_count: tmpl.interval_count,
-          interval_rest: tmpl.interval_rest,
-          coaching_cues: tmpl.coaching_cues,
-          planned_duration: tmpl.planned_duration,
-        })
+        .values(applyTemplateOverride(tmplBase, tmplOverride))
         .returning({ id: workout_templates.id })
         .get()
 
@@ -114,22 +162,44 @@ export async function cloneMesocycle(input: CloneInput): Promise<CloneResult> {
         .where(eq(template_sections.template_id, tmpl.id))
         .all()
 
+      // T223: batch-query per-section overrides at source's last work week
+      const sectionOverrides = source.work_weeks > 0
+        ? tx
+            .select()
+            .from(template_week_overrides)
+            .where(
+              and(
+                eq(template_week_overrides.template_id, tmpl.id),
+                eq(template_week_overrides.week_number, source.work_weeks),
+                eq(template_week_overrides.is_deload, 0)
+              )
+            )
+            .all()
+        : []
+
       for (const section of sections) {
+        const sectionOverride = sectionOverrides.find((o) => o.section_id === section.id) ?? null
+
+        const sectionBase = {
+          template_id: newTmpl.id,
+          modality: section.modality,
+          section_name: section.section_name,
+          order: section.order,
+          run_type: section.run_type,
+          target_pace: section.target_pace,
+          hr_zone: section.hr_zone,
+          interval_count: section.interval_count,
+          interval_rest: section.interval_rest,
+          coaching_cues: section.coaching_cues,
+          planned_duration: section.planned_duration,
+          target_distance: section.target_distance,
+          target_duration: section.target_duration,
+          target_elevation_gain: section.target_elevation_gain,
+        }
+
         const newSection = tx
           .insert(template_sections)
-          .values({
-            template_id: newTmpl.id,
-            modality: section.modality,
-            section_name: section.section_name,
-            order: section.order,
-            run_type: section.run_type,
-            target_pace: section.target_pace,
-            hr_zone: section.hr_zone,
-            interval_count: section.interval_count,
-            interval_rest: section.interval_rest,
-            coaching_cues: section.coaching_cues,
-            planned_duration: section.planned_duration,
-          })
+          .values(applyTemplateOverride(sectionBase, sectionOverride))
           .returning({ id: template_sections.id })
           .get()
 
