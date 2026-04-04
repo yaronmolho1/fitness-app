@@ -370,6 +370,8 @@ describe('ScheduleGrid', () => {
           period: 'morning',
           time_slot: '08:30',
           duration: 90,
+          cycle_length: 1,
+          cycle_position: 1,
           created_at: new Date(),
         },
       })
@@ -425,6 +427,8 @@ describe('ScheduleGrid', () => {
           period: 'morning',
           time_slot: '06:00',
           duration: 30,
+          cycle_length: 1,
+          cycle_position: 1,
           created_at: new Date(),
         },
       })
@@ -700,6 +704,8 @@ describe('ScheduleGrid', () => {
           period: 'morning',
           time_slot: '08:00',
           duration: 90,
+          cycle_length: 1,
+          cycle_position: 1,
           created_at: new Date(),
         },
       })
@@ -803,6 +809,8 @@ describe('ScheduleGrid', () => {
           period: 'evening',
           time_slot: '18:00',
           duration: 90,
+          cycle_length: 1,
+          cycle_position: 1,
           created_at: new Date(),
         },
       })

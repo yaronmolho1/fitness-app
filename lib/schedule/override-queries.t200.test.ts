@@ -49,10 +49,11 @@ function createTestDb() {
       period TEXT NOT NULL DEFAULT 'morning',
       time_slot TEXT NOT NULL DEFAULT '07:00',
       duration INTEGER NOT NULL DEFAULT 90,
+      cycle_length INTEGER NOT NULL DEFAULT 1,
+      cycle_position INTEGER NOT NULL DEFAULT 1,
       created_at INTEGER
     );
-    CREATE UNIQUE INDEX weekly_schedule_meso_day_type_timeslot_template_idx
-      ON weekly_schedule(mesocycle_id, day_of_week, week_type, time_slot, template_id);
+    CREATE UNIQUE INDEX weekly_schedule_meso_day_type_timeslot_position_idx ON weekly_schedule(mesocycle_id, day_of_week, week_type, time_slot, cycle_position);
     CREATE TABLE schedule_week_overrides (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       mesocycle_id INTEGER NOT NULL REFERENCES mesocycles(id) ON DELETE CASCADE,
@@ -226,10 +227,10 @@ describe('getEffectiveScheduleForDay — T200 time-first model', () => {
         INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks) VALUES (1, 'A', '2026-03-02', '2026-03-29', 4);
         INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality) VALUES (1, 1, 'Zebra', 'zebra', 'resistance');
         INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality) VALUES (2, 1, 'Alpha', 'alpha', 'resistance');
-        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
-        VALUES (1, 0, 1, 'normal', 'morning', '08:00');
-        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
-        VALUES (1, 0, 2, 'normal', 'morning', '08:00');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot, cycle_position)
+        VALUES (1, 0, 1, 'normal', 'morning', '08:00', 1);
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot, cycle_position)
+        VALUES (1, 0, 2, 'normal', 'morning', '08:00', 2);
       `)
 
       const result = await getEffectiveScheduleForDay(db, 1, 1, 0, 'normal')

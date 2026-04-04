@@ -82,6 +82,8 @@ function createAllTables() {
     period TEXT NOT NULL DEFAULT 'morning',
     time_slot TEXT NOT NULL DEFAULT '07:00',
     duration INTEGER NOT NULL DEFAULT 90,
+    cycle_length INTEGER NOT NULL DEFAULT 1,
+    cycle_position INTEGER NOT NULL DEFAULT 1,
     created_at INTEGER
   )`)
   testDb.run(sql`CREATE TABLE routine_items (

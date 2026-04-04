@@ -198,15 +198,17 @@ export const weekly_schedule = sqliteTable(
       .default('morning'),
     time_slot: text('time_slot').notNull().default('07:00'), // "HH:MM" format
     duration: integer('duration').notNull().default(90), // minutes
+    cycle_length: integer('cycle_length').notNull().default(1), // rotation cycle size (1 = no rotation)
+    cycle_position: integer('cycle_position').notNull().default(1), // position within cycle (1-based)
     created_at: integer('created_at', { mode: 'timestamp' }),
   },
   (t) => ({
-    uniq: uniqueIndex('weekly_schedule_meso_day_type_timeslot_template_idx').on(
+    uniq: uniqueIndex('weekly_schedule_meso_day_type_timeslot_position_idx').on(
       t.mesocycle_id,
       t.day_of_week,
       t.week_type,
       t.time_slot,
-      t.template_id
+      t.cycle_position
     ),
   })
 )

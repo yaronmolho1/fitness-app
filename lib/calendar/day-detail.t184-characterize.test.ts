@@ -73,9 +73,11 @@ function createTestDb() {
       period TEXT NOT NULL DEFAULT 'morning',
       time_slot TEXT NOT NULL DEFAULT '07:00',
       duration INTEGER NOT NULL DEFAULT 90,
+      cycle_length INTEGER NOT NULL DEFAULT 1,
+      cycle_position INTEGER NOT NULL DEFAULT 1,
       created_at INTEGER
     );
-    CREATE UNIQUE INDEX weekly_schedule_meso_day_type_timeslot_template_idx ON weekly_schedule(mesocycle_id, day_of_week, week_type, time_slot, template_id);
+    CREATE UNIQUE INDEX weekly_schedule_meso_day_type_timeslot_position_idx ON weekly_schedule(mesocycle_id, day_of_week, week_type, time_slot, cycle_position);
     CREATE TABLE schedule_week_overrides (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       mesocycle_id INTEGER NOT NULL REFERENCES mesocycles(id) ON DELETE CASCADE,
@@ -268,10 +270,10 @@ describe('getDayDetail — schedule resolution baseline (T184 characterize)', ()
       VALUES (2, 1, 'Evening Run', 'evening-run', 'running');
       INSERT INTO exercise_slots (template_id, exercise_id, sets, reps, "order", is_main)
       VALUES (1, 1, 3, '8', 1, 1);
-      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-      VALUES (1, 0, 1, 'normal', 'morning');
-      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-      VALUES (1, 0, 2, 'normal', 'evening');
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+      VALUES (1, 0, 1, 'normal', 'morning', '07:00');
+      INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+      VALUES (1, 0, 2, 'normal', 'evening', '18:00');
     `)
 
     const results = await getDayDetail(db, '2026-03-02')

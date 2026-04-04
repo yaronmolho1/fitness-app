@@ -95,7 +95,7 @@ erDiagram
 | `template_sections` | Ordered sections within a mixed-modality template; each section has its own modality (resistance/running/mma) and modality-specific fields |
 | `workout_templates` | Named workout plans (e.g. Push A, Easy Run) scoped to a mesocycle; carry a `canonical_name` slug for cross-phase linking |
 | `mesocycles` | Training phases: N work weeks + optional deload week; status lifecycle (planned → active → completed) |
-| `weekly_schedule` | Day-to-template assignment grid; keyed by `(mesocycle_id, day_of_week, week_type, time_slot, template_id)`; `time_slot` (HH:MM) + `duration` (minutes) are NOT NULL with defaults |
+| `weekly_schedule` | Day-to-template assignment grid; keyed by `(mesocycle_id, day_of_week, week_type, time_slot, cycle_position)`; `time_slot` (HH:MM) + `duration` (minutes) are NOT NULL with defaults; `cycle_length` (default 1 = no rotation) and `cycle_position` (1-based, default 1) support per-week template rotation |
 | `slot_week_overrides` | Per-week overrides for exercise slot targets (sets/reps/weight/RPE); enables week-by-week periodization within a mesocycle |
 | `schedule_week_overrides` | Per-week schedule overrides for moving/removing workouts on specific weeks; links source+target via `override_group`; null `template_id` = rest/removed |
 | `template_week_overrides` | Per-week overrides for template-level targets (distance/duration/pace/intervals); enables week-by-week periodization for running and mixed templates |

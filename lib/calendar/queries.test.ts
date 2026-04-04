@@ -49,9 +49,11 @@ function createTestDb() {
       period TEXT NOT NULL DEFAULT 'morning',
       time_slot TEXT NOT NULL DEFAULT '07:00',
       duration INTEGER NOT NULL DEFAULT 90,
+      cycle_length INTEGER NOT NULL DEFAULT 1,
+      cycle_position INTEGER NOT NULL DEFAULT 1,
       created_at INTEGER
     );
-    CREATE UNIQUE INDEX weekly_schedule_meso_day_type_timeslot_template_idx ON weekly_schedule(mesocycle_id, day_of_week, week_type, time_slot, template_id);
+    CREATE UNIQUE INDEX weekly_schedule_meso_day_type_timeslot_position_idx ON weekly_schedule(mesocycle_id, day_of_week, week_type, time_slot, cycle_position);
     CREATE TABLE logged_workouts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       template_id INTEGER,
@@ -485,10 +487,10 @@ describe('getCalendarProjection', () => {
         VALUES (1, 1, 'Strength + Cardio', 'strength-cardio', 'mixed');
         INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
         VALUES (2, 1, '5K Run', '5k-run', 'running');
-        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-        VALUES (1, 0, 1, 'normal', 'morning');
-        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-        VALUES (1, 0, 2, 'normal', 'evening');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+        VALUES (1, 0, 1, 'normal', 'morning', '07:00');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+        VALUES (1, 0, 2, 'normal', 'evening', '18:00');
       `)
 
       const result = await getCalendarProjection(db, '2026-03')
@@ -600,10 +602,10 @@ describe('getCalendarProjection', () => {
         VALUES (1, 1, 'Push A', 'push-a', 'resistance');
         INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
         VALUES (2, 1, '5K Run', '5k-run', 'running');
-        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-        VALUES (1, 0, 1, 'normal', 'morning');
-        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-        VALUES (1, 0, 2, 'normal', 'evening');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+        VALUES (1, 0, 1, 'normal', 'morning', '07:00');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+        VALUES (1, 0, 2, 'normal', 'evening', '18:00');
       `)
 
       const result = await getCalendarProjection(db, '2026-03')
@@ -620,10 +622,10 @@ describe('getCalendarProjection', () => {
         VALUES (1, 1, 'Push A', 'push-a', 'resistance');
         INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
         VALUES (2, 1, '5K Run', '5k-run', 'running');
-        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-        VALUES (1, 0, 1, 'normal', 'morning');
-        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period)
-        VALUES (1, 0, 2, 'normal', 'evening');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+        VALUES (1, 0, 1, 'normal', 'morning', '07:00');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot)
+        VALUES (1, 0, 2, 'normal', 'evening', '18:00');
         INSERT INTO logged_workouts (template_id, canonical_name, log_date, logged_at, template_snapshot)
         VALUES (1, 'push-a', '2026-03-02', 1740900000, '{"version":1}');
       `)
