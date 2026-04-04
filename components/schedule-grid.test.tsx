@@ -304,8 +304,8 @@ describe('ScheduleGrid', () => {
       // Click Push A (resistance, no duration fields)
       await user.click(within(form).getByText('Push A'))
 
-      const durationInput = within(form).getByLabelText(/duration/i) as HTMLInputElement
-      expect(durationInput.value).toBe('90')
+      const durationTrigger = within(form).getByLabelText(/duration/i)
+      expect(durationTrigger).toHaveTextContent('1h 30m')
     })
 
     it('selecting running template pre-fills target_duration', async () => {
@@ -327,8 +327,8 @@ describe('ScheduleGrid', () => {
       await user.click(within(form).getByText('Assign template'))
       await user.click(within(form).getByText('Easy Run'))
 
-      const durationInput = within(form).getByLabelText(/duration/i) as HTMLInputElement
-      expect(durationInput.value).toBe('45')
+      const durationTrigger = within(form).getByLabelText(/duration/i)
+      expect(durationTrigger).toHaveTextContent('45m')
     })
 
     it('selecting MMA template pre-fills planned_duration', async () => {
@@ -350,8 +350,8 @@ describe('ScheduleGrid', () => {
       await user.click(within(form).getByText('Assign template'))
       await user.click(within(form).getByText('MMA Sparring'))
 
-      const durationInput = within(form).getByLabelText(/duration/i) as HTMLInputElement
-      expect(durationInput.value).toBe('60')
+      const durationTrigger = within(form).getByLabelText(/duration/i)
+      expect(durationTrigger).toHaveTextContent('1h')
     })
 
     it('selecting resistance template with estimated_duration pre-fills it', async () => {
@@ -373,11 +373,11 @@ describe('ScheduleGrid', () => {
       await user.click(within(form).getByText('Assign template'))
       await user.click(within(form).getByText('Upper Body'))
 
-      const durationInput = within(form).getByLabelText(/duration/i) as HTMLInputElement
-      expect(durationInput.value).toBe('75')
+      const durationTrigger = within(form).getByLabelText(/duration/i)
+      expect(durationTrigger).toHaveTextContent('1h 15m')
     })
 
-    it('submits form with time and duration to assignTemplate', async () => {
+    it('submits form with default time and duration to assignTemplate', async () => {
       const user = userEvent.setup()
       vi.mocked(assignTemplate).mockResolvedValue({
         success: true,
@@ -388,7 +388,7 @@ describe('ScheduleGrid', () => {
           template_id: 1,
           week_type: 'normal',
           period: 'morning',
-          time_slot: '08:30',
+          time_slot: '07:00',
           duration: 90,
           cycle_length: 1,
           cycle_position: 1,
@@ -411,16 +411,12 @@ describe('ScheduleGrid', () => {
 
       const form = within(mondayCell).getByTestId('add-workout-form')
       await user.click(within(form).getByText('Assign template'))
-      // Select template
       await user.click(within(form).getByText('Push A'))
 
-      // Set time
-      const timeInput = within(form).getByLabelText(/time/i)
-      await user.clear(timeInput)
-      await user.type(timeInput, '08:30')
+      // Time defaults to 07:00, duration defaults to 90 (1h 30m) for resistance
+      expect(within(form).getByLabelText(/time/i)).toHaveTextContent('07:00')
+      expect(within(form).getByLabelText(/duration/i)).toHaveTextContent('1h 30m')
 
-      // Duration should be pre-filled to 90
-      // Submit
       await user.click(within(form).getByRole('button', { name: /confirm/i }))
 
       await waitFor(() => {
@@ -429,13 +425,13 @@ describe('ScheduleGrid', () => {
           day_of_week: 0,
           template_id: 1,
           week_type: 'normal',
-          time_slot: '08:30',
+          time_slot: '07:00',
           duration: 90,
         })
       })
     })
 
-    it('submits form with custom duration', async () => {
+    it('submits form with template default duration', async () => {
       const user = userEvent.setup()
       vi.mocked(assignTemplate).mockResolvedValue({
         success: true,
@@ -446,8 +442,8 @@ describe('ScheduleGrid', () => {
           template_id: 5,
           week_type: 'normal',
           period: 'morning',
-          time_slot: '06:00',
-          duration: 30,
+          time_slot: '07:00',
+          duration: 45,
           cycle_length: 1,
           cycle_position: 1,
           created_at: new Date(),
@@ -471,14 +467,8 @@ describe('ScheduleGrid', () => {
       await user.click(within(form).getByText('Assign template'))
       await user.click(within(form).getByText('Easy Run'))
 
-      const timeInput = within(form).getByLabelText(/time/i)
-      await user.clear(timeInput)
-      await user.type(timeInput, '06:00')
-
-      // Change duration from pre-filled 45 to 30
-      const durationInput = within(form).getByLabelText(/duration/i)
-      await user.clear(durationInput)
-      await user.type(durationInput, '30')
+      // Duration pre-filled from Easy Run's target_duration (45)
+      expect(within(form).getByLabelText(/duration/i)).toHaveTextContent('45m')
 
       await user.click(within(form).getByRole('button', { name: /confirm/i }))
 
@@ -488,8 +478,8 @@ describe('ScheduleGrid', () => {
           day_of_week: 0,
           template_id: 5,
           week_type: 'normal',
-          time_slot: '06:00',
-          duration: 30,
+          time_slot: '07:00',
+          duration: 45,
         })
       })
     })
@@ -517,10 +507,6 @@ describe('ScheduleGrid', () => {
       const form = within(mondayCell).getByTestId('add-workout-form')
       await user.click(within(form).getByText('Assign template'))
       await user.click(within(form).getByText('Push A'))
-
-      const timeInput = within(form).getByLabelText(/time/i)
-      await user.clear(timeInput)
-      await user.type(timeInput, '07:00')
 
       await user.click(within(form).getByRole('button', { name: /confirm/i }))
 
@@ -655,8 +641,10 @@ describe('ScheduleGrid', () => {
   })
 
   describe('overlap warning', () => {
-    it('shows overlap warning when new entry time range intersects existing', async () => {
+    it('shows overlap warning when new entry default time intersects existing', async () => {
       const user = userEvent.setup()
+      // Existing entry at 07:00 with 90min → occupies 07:00-08:30
+      // New entry defaults to 07:00 with 90min → overlaps
       const schedule = buildSchedule([
         { day_of_week: 0, template_id: 1, template_name: 'Push A', time_slot: '07:00', duration: 90 },
       ])
@@ -678,19 +666,16 @@ describe('ScheduleGrid', () => {
       await user.click(within(form).getByText('Assign template'))
       await user.click(within(form).getByText('Pull A'))
 
-      // Set time that overlaps with 07:00-08:30
-      const timeInput = within(form).getByLabelText(/time/i)
-      await user.clear(timeInput)
-      await user.type(timeInput, '08:00')
-
-      // Warning should appear
+      // Default time 07:00 overlaps with existing 07:00-08:30
       expect(within(form).getByTestId('overlap-warning')).toBeInTheDocument()
     })
 
     it('no overlap warning when time ranges do not intersect', async () => {
       const user = userEvent.setup()
+      // Existing entry at 10:00 with 60min → occupies 10:00-11:00
+      // New entry defaults to 07:00 with 90min → no overlap
       const schedule = buildSchedule([
-        { day_of_week: 0, template_id: 1, template_name: 'Push A', time_slot: '07:00', duration: 90 },
+        { day_of_week: 0, template_id: 1, template_name: 'Push A', time_slot: '10:00', duration: 60 },
       ])
 
       render(
@@ -709,10 +694,6 @@ describe('ScheduleGrid', () => {
       const form = within(mondayCell).getByTestId('add-workout-form')
       await user.click(within(form).getByText('Assign template'))
       await user.click(within(form).getByText('Pull A'))
-
-      const timeInput = within(form).getByLabelText(/time/i)
-      await user.clear(timeInput)
-      await user.type(timeInput, '10:00')
 
       expect(within(form).queryByTestId('overlap-warning')).not.toBeInTheDocument()
     })
@@ -728,7 +709,7 @@ describe('ScheduleGrid', () => {
           template_id: 2,
           week_type: 'normal',
           period: 'morning',
-          time_slot: '08:00',
+          time_slot: '07:00',
           duration: 90,
           cycle_length: 1,
           cycle_position: 1,
@@ -757,11 +738,8 @@ describe('ScheduleGrid', () => {
       await user.click(within(form).getByText('Assign template'))
       await user.click(within(form).getByText('Pull A'))
 
-      const timeInput = within(form).getByLabelText(/time/i)
-      await user.clear(timeInput)
-      await user.type(timeInput, '08:00')
-
-      // Confirm button should still be enabled
+      // Default time 07:00 overlaps — warning shows but confirm still enabled
+      expect(within(form).getByTestId('overlap-warning')).toBeInTheDocument()
       const confirmBtn = within(form).getByRole('button', { name: /confirm/i })
       expect(confirmBtn).not.toBeDisabled()
       await user.click(confirmBtn)
@@ -833,8 +811,8 @@ describe('ScheduleGrid', () => {
           day_of_week: 0,
           template_id: 2,
           week_type: 'normal',
-          period: 'evening',
-          time_slot: '18:00',
+          period: 'morning',
+          time_slot: '07:00',
           duration: 90,
           cycle_length: 1,
           cycle_position: 1,
@@ -843,7 +821,7 @@ describe('ScheduleGrid', () => {
       })
 
       const schedule = buildSchedule([
-        { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning', time_slot: '07:00' },
+        { day_of_week: 0, template_id: 1, template_name: 'Push A', period: 'morning', time_slot: '10:00' },
       ])
 
       render(
@@ -863,10 +841,7 @@ describe('ScheduleGrid', () => {
       await user.click(within(form).getByText('Assign template'))
       await user.click(within(form).getByText('Pull A'))
 
-      const timeInput = within(form).getByLabelText(/time/i)
-      await user.clear(timeInput)
-      await user.type(timeInput, '18:00')
-
+      // Uses default time 07:00
       await user.click(within(form).getByRole('button', { name: /confirm/i }))
 
       await waitFor(() => {
@@ -949,8 +924,8 @@ describe('ScheduleGrid', () => {
     })
   })
 
-  describe('client-side validation', () => {
-    it('shows error for invalid time format on confirm', async () => {
+  describe('select dropdowns prevent invalid input', () => {
+    it('time select defaults to valid HH:MM value', async () => {
       const user = userEvent.setup()
       render(
         <ScheduleGrid
@@ -969,18 +944,12 @@ describe('ScheduleGrid', () => {
       await user.click(within(form).getByText('Assign template'))
       await user.click(within(form).getByText('Push A'))
 
-      const timeInput = within(form).getByLabelText(/time/i)
-      await user.clear(timeInput)
-      await user.type(timeInput, 'abc')
-
-      await user.click(within(form).getByRole('button', { name: /confirm/i }))
-
-      expect(within(form).getByTestId('form-error')).toHaveTextContent('Invalid time format')
-      // Form stays open
-      expect(within(mondayCell).getByTestId('add-workout-form')).toBeInTheDocument()
+      // Select dropdowns always have valid values — no free-text entry possible
+      expect(within(form).getByLabelText(/time/i)).toHaveTextContent('07:00')
+      expect(within(form).getByLabelText(/duration/i)).toHaveTextContent('1h 30m')
     })
 
-    it('shows error for zero duration on confirm', async () => {
+    it('cancel button closes form without submitting', async () => {
       const user = userEvent.setup()
       render(
         <ScheduleGrid
@@ -998,74 +967,11 @@ describe('ScheduleGrid', () => {
       const form = within(mondayCell).getByTestId('add-workout-form')
       await user.click(within(form).getByText('Assign template'))
       await user.click(within(form).getByText('Push A'))
-
-      const durationInput = within(form).getByLabelText(/duration/i)
-      await user.clear(durationInput)
-      await user.type(durationInput, '0')
-
-      await user.click(within(form).getByRole('button', { name: /confirm/i }))
-
-      expect(within(form).getByTestId('form-error')).toHaveTextContent('Duration must be a positive number')
-      expect(within(mondayCell).getByTestId('add-workout-form')).toBeInTheDocument()
-    })
-
-    it('shows error for non-numeric duration on confirm', async () => {
-      const user = userEvent.setup()
-      render(
-        <ScheduleGrid
-          mesocycleId={1}
-          templates={mockTemplates}
-          schedule={[]}
-          isCompleted={false}
-          variant="normal"
-        />
-      )
-
-      const mondayCell = screen.getByTestId('day-cell-0')
-      await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
-
-      const form = within(mondayCell).getByTestId('add-workout-form')
-      await user.click(within(form).getByText('Assign template'))
-      await user.click(within(form).getByText('Push A'))
-
-      const durationInput = within(form).getByLabelText(/duration/i)
-      await user.clear(durationInput)
-      await user.type(durationInput, 'abc')
-
-      await user.click(within(form).getByRole('button', { name: /confirm/i }))
-
-      expect(within(form).getByTestId('form-error')).toHaveTextContent('Duration must be a positive number')
-    })
-
-    it('clears form error on cancel', async () => {
-      const user = userEvent.setup()
-      render(
-        <ScheduleGrid
-          mesocycleId={1}
-          templates={mockTemplates}
-          schedule={[]}
-          isCompleted={false}
-          variant="normal"
-        />
-      )
-
-      const mondayCell = screen.getByTestId('day-cell-0')
-      await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
-
-      const form = within(mondayCell).getByTestId('add-workout-form')
-      await user.click(within(form).getByText('Assign template'))
-      await user.click(within(form).getByText('Push A'))
-
-      const timeInput = within(form).getByLabelText(/time/i)
-      await user.clear(timeInput)
-      await user.type(timeInput, 'bad')
-      await user.click(within(form).getByRole('button', { name: /confirm/i }))
-
-      expect(within(form).getByTestId('form-error')).toBeInTheDocument()
 
       await user.click(within(form).getByRole('button', { name: /cancel/i }))
 
-      expect(screen.queryByTestId('form-error')).not.toBeInTheDocument()
+      expect(within(mondayCell).queryByTestId('add-workout-form')).not.toBeInTheDocument()
+      expect(assignTemplate).not.toHaveBeenCalled()
     })
   })
 })
