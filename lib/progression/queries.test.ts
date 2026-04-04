@@ -172,9 +172,9 @@ describe('getProgressionData', () => {
     sqlite?.close()
   })
 
-  it('returns empty array when no logs exist for canonical_name', async () => {
+  it('returns empty array when no logs exist for exercise_id', async () => {
     seedTwoMesocycles()
-    const result = await getProgressionData(db, { canonicalName: 'push-a' })
+    const result = await getProgressionData(db, { exerciseId: 10 })
     expect(result).toEqual({ data: [], phases: [] })
   })
 
@@ -236,7 +236,7 @@ describe('getProgressionData', () => {
       ],
     })
 
-    const result = await getProgressionData(db, { canonicalName: 'push-a' })
+    const result = await getProgressionData(db, { exerciseId: 10 })
     expect(result.data).toHaveLength(2)
 
     // Time-ordered
@@ -303,7 +303,7 @@ describe('getProgressionData', () => {
       ],
     })
 
-    const result = await getProgressionData(db, { canonicalName: 'push-a' })
+    const result = await getProgressionData(db, { exerciseId: 10 })
     expect(result.data).toHaveLength(2)
     expect(result.data[0].date).toBe('2026-01-10')
     expect(result.data[1].date).toBe('2026-02-10')
@@ -344,18 +344,12 @@ describe('getProgressionData', () => {
     })
 
     // Filter to Bench Press only
-    const result = await getProgressionData(db, {
-      canonicalName: 'push-a',
-      exerciseId: 10,
-    })
+    const result = await getProgressionData(db, { exerciseId: 10 })
     expect(result.data).toHaveLength(1)
     expect(result.data[0].actualWeight).toBe(80)
 
     // Filter to Squat only
-    const sqResult = await getProgressionData(db, {
-      canonicalName: 'push-a',
-      exerciseId: 20,
-    })
+    const sqResult = await getProgressionData(db, { exerciseId: 20 })
     expect(sqResult.data).toHaveLength(1)
     expect(sqResult.data[0].actualWeight).toBe(100)
   })
@@ -387,7 +381,7 @@ describe('getProgressionData', () => {
       ],
     })
 
-    const result = await getProgressionData(db, { canonicalName: 'push-a' })
+    const result = await getProgressionData(db, { exerciseId: 10 })
     // Planned weight should be 75 from snapshot, not 80 from live slot
     expect(result.data[0].plannedWeight).toBe(75)
     expect(result.data[0].actualWeight).toBe(80)
@@ -423,7 +417,7 @@ describe('getProgressionData', () => {
       ],
     })
 
-    const result = await getProgressionData(db, { canonicalName: 'push-a' })
+    const result = await getProgressionData(db, { exerciseId: 10 })
     expect(result.data[0].actualWeight).toBe(85) // heaviest set
   })
 
@@ -457,7 +451,7 @@ describe('getProgressionData', () => {
       ],
     })
 
-    const result = await getProgressionData(db, { canonicalName: 'push-a' })
+    const result = await getProgressionData(db, { exerciseId: 10 })
     // Volume = (8*80) + (8*80) + (7*80) = 640 + 640 + 560 = 1840
     expect(result.data[0].actualVolume).toBe(1840)
     // Planned volume = target_sets * target_reps * target_weight = 3 * 8 * 80 = 1920
@@ -490,14 +484,14 @@ describe('getProgressionData', () => {
       ],
     })
 
-    const result = await getProgressionData(db, { canonicalName: 'push-a' })
+    const result = await getProgressionData(db, { exerciseId: 10 })
     expect(result.data[0].plannedWeight).toBeNull()
     expect(result.data[0].actualWeight).toBe(80)
   })
 
-  it('returns empty for unknown canonical_name', async () => {
+  it('returns empty for unknown exercise_id', async () => {
     seedTwoMesocycles()
-    const result = await getProgressionData(db, { canonicalName: 'nonexistent' })
+    const result = await getProgressionData(db, { exerciseId: 99999 })
     expect(result.data).toEqual([])
   })
 
@@ -541,7 +535,7 @@ describe('getProgressionData', () => {
       ],
     })
 
-    const result = await getProgressionData(db, { canonicalName: 'push-a' })
+    const result = await getProgressionData(db, { exerciseId: 10 })
     expect(result.phases).toBeDefined()
     expect(result.phases).toHaveLength(2)
     expect(result.phases).toEqual([
@@ -572,14 +566,14 @@ describe('getProgressionData', () => {
       ],
     })
 
-    const result = await getProgressionData(db, { canonicalName: 'push-a' })
+    const result = await getProgressionData(db, { exerciseId: 10 })
     expect(result.phases).toHaveLength(1)
     expect(result.phases[0].mesocycleId).toBe(1)
   })
 
   it('phases empty when no data', async () => {
     seedTwoMesocycles()
-    const result = await getProgressionData(db, { canonicalName: 'push-a' })
+    const result = await getProgressionData(db, { exerciseId: 10 })
     expect(result.phases).toEqual([])
   })
 
@@ -609,7 +603,7 @@ describe('getProgressionData', () => {
       ],
     })
 
-    const result = await getProgressionData(db, { canonicalName: 'push-a' })
+    const result = await getProgressionData(db, { exerciseId: 10 })
     expect(result.data[0].mesocycleId).toBe(1)
     expect(result.data[0].mesocycleName).toBe('Block A')
   })

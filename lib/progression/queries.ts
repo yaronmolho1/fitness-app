@@ -3,8 +3,7 @@ import type { AppDb } from '@/lib/db'
 import { logged_workouts, logged_exercises, logged_sets, mesocycles, workout_templates } from '@/lib/db/schema'
 
 type ProgressionParams = {
-  canonicalName: string
-  exerciseId?: number
+  exerciseId: number
 }
 
 type ProgressionDataPoint = {
@@ -46,50 +45,44 @@ export async function getProgressionData(
   database: AppDb,
   params: ProgressionParams
 ): Promise<ProgressionResult> {
-  // Fetch all logged workouts matching canonical_name, ordered by date
-  const workouts = database
-    .select()
-    .from(logged_workouts)
-    .where(eq(logged_workouts.canonical_name, params.canonicalName))
+  // Query logged_exercises by exercise_id, join to logged_workouts for date/snapshot
+  const rows = database
+    .select({
+      exerciseId: logged_exercises.id,
+      exerciseName: logged_exercises.exercise_name,
+      loggedWorkoutId: logged_exercises.logged_workout_id,
+      logDate: logged_workouts.log_date,
+      templateId: logged_workouts.template_id,
+      templateSnapshot: logged_workouts.template_snapshot,
+    })
+    .from(logged_exercises)
+    .innerJoin(logged_workouts, eq(logged_exercises.logged_workout_id, logged_workouts.id))
+    .where(eq(logged_exercises.exercise_id, params.exerciseId))
     .orderBy(asc(logged_workouts.log_date))
     .all()
 
-  if (workouts.length === 0) {
+  if (rows.length === 0) {
     return { data: [], phases: [] }
   }
 
   const dataPoints: ProgressionDataPoint[] = []
 
-  for (const workout of workouts) {
-    // Get logged exercises for this workout, optionally filtered by exercise_id
-    const exercises = database
+  for (const row of rows) {
+    // Get sets for this logged exercise
+    const sets = database
       .select()
-      .from(logged_exercises)
-      .where(eq(logged_exercises.logged_workout_id, workout.id))
+      .from(logged_sets)
+      .where(eq(logged_sets.logged_exercise_id, row.exerciseId))
       .all()
-      .filter((ex) => (params.exerciseId ? ex.exercise_id === params.exerciseId : true))
-
-    if (exercises.length === 0) continue
-
-    // Collect all sets across matching exercises
-    const allSets: Array<{ actual_reps: number | null; actual_weight: number | null }> = []
-    for (const ex of exercises) {
-      const sets = database
-        .select()
-        .from(logged_sets)
-        .where(eq(logged_sets.logged_exercise_id, ex.id))
-        .all()
-      allSets.push(...sets)
-    }
 
     // Top-set weight: heaviest actual_weight across all sets
-    const weights = allSets
+    const weights = sets
       .map((s) => s.actual_weight)
       .filter((w): w is number => w !== null)
     const actualWeight = weights.length > 0 ? Math.max(...weights) : null
 
     // Actual volume: sum of (reps * weight) for each set
-    const actualVolume = allSets.reduce((sum, s) => {
+    const actualVolume = sets.reduce((sum, s) => {
       if (s.actual_reps !== null && s.actual_weight !== null) {
         return sum + s.actual_reps * s.actual_weight
       }
@@ -97,25 +90,21 @@ export async function getProgressionData(
     }, 0) ?? null
 
     // Extract planned data from template_snapshot
-    const snapshot = workout.template_snapshot as TemplateSnapshot
+    const snapshot = row.templateSnapshot as TemplateSnapshot
     let plannedWeight: number | null = null
     let plannedVolume: number | null = null
 
     if (snapshot?.slots) {
-      // If exercise_id filter is active, match by exercise name from logged_exercises
-      const exerciseNames = exercises.map((e) => e.exercise_name)
-      const matchingSlots = params.exerciseId
-        ? snapshot.slots.filter((s) => exerciseNames.includes(s.exercise_name))
-        : snapshot.slots
+      const matchingSlots = snapshot.slots.filter(
+        (s) => s.exercise_name === row.exerciseName
+      )
 
       if (matchingSlots.length > 0) {
-        // Planned weight: highest target_weight among matching slots
         const slotWeights = matchingSlots
           .map((s) => s.target_weight)
           .filter((w): w is number => w !== null)
         plannedWeight = slotWeights.length > 0 ? Math.max(...slotWeights) : null
 
-        // Planned volume: sum of (target_sets * target_reps * target_weight) for matching slots
         plannedVolume = matchingSlots.reduce((sum, s) => {
           if (s.target_weight !== null) {
             const reps = parseInt(s.target_reps, 10) || 0
@@ -126,15 +115,15 @@ export async function getProgressionData(
       }
     }
 
-    // Resolve mesocycle info via the template_id -> workout_templates -> mesocycles chain
+    // Resolve mesocycle info via template_id -> workout_templates -> mesocycles
     let mesocycleId: number | null = null
     let mesocycleName: string | null = null
 
-    if (workout.template_id) {
+    if (row.templateId) {
       const template = database
         .select({ mesocycle_id: workout_templates.mesocycle_id })
         .from(workout_templates)
-        .where(eq(workout_templates.id, workout.template_id))
+        .where(eq(workout_templates.id, row.templateId))
         .get()
 
       if (template) {
@@ -152,7 +141,7 @@ export async function getProgressionData(
     }
 
     dataPoints.push({
-      date: workout.log_date,
+      date: row.logDate,
       mesocycleId,
       mesocycleName,
       plannedWeight,
@@ -190,7 +179,6 @@ export async function getProgressionData(
     }
   }
 
-  // Sort by start date
   phases.sort((a, b) => a.startDate.localeCompare(b.startDate))
 
   return { data: dataPoints, phases }

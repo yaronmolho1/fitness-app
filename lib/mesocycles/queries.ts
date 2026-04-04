@@ -20,6 +20,14 @@ export async function getMesocycleById(id: number) {
     .get()
 }
 
+export async function getActiveMesocycle() {
+  return db
+    .select()
+    .from(mesocycles)
+    .where(eq(mesocycles.status, 'active'))
+    .get()
+}
+
 export async function getMesocycleCascadeSummary(id: number): Promise<CascadeSummary> {
   const [tplRow, schedRow, riRow] = [
     db.select({ c: count() }).from(workout_templates)

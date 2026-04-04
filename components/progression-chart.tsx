@@ -57,13 +57,6 @@ const PHASE_COLORS = [
   'var(--chart-5)',
 ]
 
-function toCanonicalName(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
-}
-
 type PhaseColorMap = Record<number, string>
 
 function buildPhaseColorMap(data: ProgressionDataPoint[]): PhaseColorMap {
@@ -118,11 +111,11 @@ export function ProgressionChart({ exercises }: ProgressionChartProps) {
   const [fetched, setFetched] = useState(false)
   const [view, setView] = useState<'weight' | 'volume'>('weight')
 
-  const fetchData = useCallback(async (canonicalName: string) => {
+  const fetchData = useCallback(async (exerciseId: string) => {
     setLoading(true)
     setFetched(false)
     try {
-      const res = await fetch(`/api/progression?canonical_name=${encodeURIComponent(canonicalName)}`)
+      const res = await fetch(`/api/progression?exercise_id=${exerciseId}`)
       const json = await res.json()
       setData(json.data ?? [])
       setPhases(json.phases ?? [])
@@ -137,12 +130,9 @@ export function ProgressionChart({ exercises }: ProgressionChartProps) {
 
   useEffect(() => {
     if (selectedExercise) {
-      const exercise = exercises.find((e) => String(e.id) === selectedExercise)
-      if (exercise) {
-        fetchData(toCanonicalName(exercise.name))
-      }
+      fetchData(selectedExercise)
     }
-  }, [selectedExercise, exercises, fetchData])
+  }, [selectedExercise, fetchData])
 
   const phaseColors = buildPhaseColorMap(data)
 

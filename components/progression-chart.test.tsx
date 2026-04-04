@@ -107,7 +107,7 @@ describe('ProgressionChart', () => {
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/progression?canonical_name=bench-press')
+        expect.stringContaining('/api/progression?exercise_id=1')
       )
     })
 
@@ -177,7 +177,7 @@ describe('ProgressionChart', () => {
     })
   })
 
-  it('converts exercise name to canonical_name in API call', async () => {
+  it('passes exercise_id in API call', async () => {
     render(<ProgressionChart exercises={exercises} />)
 
     const user = userEvent.setup()
@@ -187,7 +187,7 @@ describe('ProgressionChart', () => {
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('canonical_name=bench-press')
+        expect.stringContaining('exercise_id=1')
       )
     })
   })

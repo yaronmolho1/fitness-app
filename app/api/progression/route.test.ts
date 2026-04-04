@@ -21,11 +21,11 @@ describe('GET /api/progression', () => {
     vi.resetAllMocks()
   })
 
-  it('returns 400 when canonical_name is missing', async () => {
+  it('returns 400 when exercise_id is missing', async () => {
     const res = await GET(makeRequest())
     expect(res.status).toBe(400)
     const data = await res.json()
-    expect(data.error).toMatch(/canonical_name/)
+    expect(data.error).toMatch(/exercise_id/)
   })
 
   it('returns progression data as JSON', async () => {
@@ -44,48 +44,48 @@ describe('GET /api/progression', () => {
     }
     mockGetProgressionData.mockResolvedValue(mockData)
 
-    const res = await GET(makeRequest({ canonical_name: 'push-a' }))
+    const res = await GET(makeRequest({ exercise_id: '10' }))
     expect(res.status).toBe(200)
     const data = await res.json()
     expect(data.data).toHaveLength(1)
     expect(data.data[0].date).toBe('2026-01-08')
   })
 
-  it('passes exercise_id when provided', async () => {
+  it('passes exerciseId to query function', async () => {
     mockGetProgressionData.mockResolvedValue({ data: [] })
 
-    await GET(makeRequest({ canonical_name: 'push-a', exercise_id: '10' }))
+    await GET(makeRequest({ exercise_id: '10' }))
     expect(mockGetProgressionData).toHaveBeenCalledWith(
       expect.anything(),
-      { canonicalName: 'push-a', exerciseId: 10 }
+      { exerciseId: 10 }
     )
   })
 
-  it('returns empty data for unknown canonical_name', async () => {
+  it('returns empty data for unknown exercise_id', async () => {
     mockGetProgressionData.mockResolvedValue({ data: [] })
 
-    const res = await GET(makeRequest({ canonical_name: 'nonexistent' }))
+    const res = await GET(makeRequest({ exercise_id: '99999' }))
     expect(res.status).toBe(200)
     const data = await res.json()
     expect(data.data).toEqual([])
   })
 
   it('returns 400 when exercise_id is non-numeric', async () => {
-    const res = await GET(makeRequest({ canonical_name: 'push-a', exercise_id: 'abc' }))
+    const res = await GET(makeRequest({ exercise_id: 'abc' }))
     expect(res.status).toBe(400)
     const data = await res.json()
     expect(data.error).toMatch(/exercise_id/)
   })
 
   it('returns 400 when exercise_id is zero', async () => {
-    const res = await GET(makeRequest({ canonical_name: 'push-a', exercise_id: '0' }))
+    const res = await GET(makeRequest({ exercise_id: '0' }))
     expect(res.status).toBe(400)
     const data = await res.json()
     expect(data.error).toMatch(/exercise_id/)
   })
 
   it('returns 400 when exercise_id is negative', async () => {
-    const res = await GET(makeRequest({ canonical_name: 'push-a', exercise_id: '-5' }))
+    const res = await GET(makeRequest({ exercise_id: '-5' }))
     expect(res.status).toBe(400)
     const data = await res.json()
     expect(data.error).toMatch(/exercise_id/)
@@ -94,7 +94,7 @@ describe('GET /api/progression', () => {
   it('returns 500 on internal error', async () => {
     mockGetProgressionData.mockRejectedValue(new Error('DB failure'))
 
-    const res = await GET(makeRequest({ canonical_name: 'push-a' }))
+    const res = await GET(makeRequest({ exercise_id: '10' }))
     expect(res.status).toBe(500)
     const data = await res.json()
     expect(data.error).toBe('Internal server error')

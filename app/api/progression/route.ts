@@ -5,26 +5,24 @@ import { getProgressionData } from '@/lib/progression/queries'
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
-    const canonicalName = searchParams.get('canonical_name')
+    const exerciseIdParam = searchParams.get('exercise_id')
 
-    if (!canonicalName) {
+    if (!exerciseIdParam) {
       return NextResponse.json(
-        { error: 'canonical_name query parameter is required' },
+        { error: 'exercise_id query parameter is required' },
         { status: 400 }
       )
     }
 
-    const exerciseIdParam = searchParams.get('exercise_id')
-    const exerciseId = exerciseIdParam ? parseInt(exerciseIdParam, 10) : undefined
-
-    if (exerciseIdParam && (isNaN(exerciseId!) || exerciseId! < 1)) {
+    const exerciseId = parseInt(exerciseIdParam, 10)
+    if (isNaN(exerciseId) || exerciseId < 1) {
       return NextResponse.json(
         { error: 'exercise_id must be a positive integer' },
         { status: 400 }
       )
     }
 
-    const result = await getProgressionData(db, { canonicalName, exerciseId })
+    const result = await getProgressionData(db, { exerciseId })
     return NextResponse.json(result)
   } catch {
     return NextResponse.json(

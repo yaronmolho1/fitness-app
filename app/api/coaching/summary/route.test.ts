@@ -212,8 +212,8 @@ describe('POST /api/coaching/summary', () => {
     // Bench Press (id 100) queried once from push-a, skipped in push-b (dedup by exercise_id)
     // OHP (id 101) queried once from push-a
     expect(mockGetProgressionData).toHaveBeenCalledTimes(2)
-    expect(mockGetProgressionData.mock.calls[0][1]).toEqual({ canonicalName: 'push-a', exerciseId: 100 })
-    expect(mockGetProgressionData.mock.calls[1][1]).toEqual({ canonicalName: 'push-a', exerciseId: 101 })
+    expect(mockGetProgressionData.mock.calls[0][1]).toEqual({ exerciseId: 100 })
+    expect(mockGetProgressionData.mock.calls[1][1]).toEqual({ exerciseId: 101 })
   })
 
   it('returns 500 on internal error', async () => {
