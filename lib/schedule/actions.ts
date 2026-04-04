@@ -89,7 +89,7 @@ export async function assignTemplate(input: {
     return { success: false, error: 'Template does not belong to this mesocycle' }
   }
 
-  // Upsert via unique index (mesocycle_id, day_of_week, week_type, time_slot, template_id)
+  // Upsert via unique index (mesocycle_id, day_of_week, week_type, time_slot, cycle_position)
   const row = db
     .insert(weekly_schedule)
     .values({
@@ -103,8 +103,8 @@ export async function assignTemplate(input: {
       created_at: new Date(),
     })
     .onConflictDoUpdate({
-      target: [weekly_schedule.mesocycle_id, weekly_schedule.day_of_week, weekly_schedule.week_type, weekly_schedule.time_slot, weekly_schedule.template_id],
-      set: { period, duration },
+      target: [weekly_schedule.mesocycle_id, weekly_schedule.day_of_week, weekly_schedule.week_type, weekly_schedule.time_slot, weekly_schedule.cycle_position],
+      set: { template_id, period, duration },
     })
     .returning()
     .get()

@@ -100,11 +100,13 @@ beforeEach(() => {
       period TEXT NOT NULL DEFAULT 'morning',
       time_slot TEXT NOT NULL DEFAULT '07:00',
       duration INTEGER NOT NULL DEFAULT 90,
+      cycle_length INTEGER NOT NULL DEFAULT 1,
+      cycle_position INTEGER NOT NULL DEFAULT 1,
       created_at INTEGER
     )
   `)
   testDb.run(
-    sql`CREATE UNIQUE INDEX weekly_schedule_meso_day_type_timeslot_template_idx ON weekly_schedule(mesocycle_id, day_of_week, week_type, time_slot, template_id)`
+    sql`CREATE UNIQUE INDEX weekly_schedule_meso_day_type_timeslot_position_idx ON weekly_schedule(mesocycle_id, day_of_week, week_type, time_slot, cycle_position)`
   )
 })
 
@@ -423,7 +425,7 @@ describe('assignTemplate', () => {
       expect(rows).toHaveLength(1)
     })
 
-    it('different templates on same day create separate rows', async () => {
+    it('different template on same slot replaces existing (single assignment)', async () => {
       const meso = seedMesocycle()
       const tmpl1 = seedTemplate(meso.id, 'Push A')
       const tmpl2 = seedTemplate(meso.id, 'Pull A')
@@ -432,7 +434,8 @@ describe('assignTemplate', () => {
       await assignTemplate({ mesocycle_id: meso.id, day_of_week: 0, template_id: tmpl2.id, time_slot: '07:00', duration: 60 })
 
       const rows = testDb.select().from(schema.weekly_schedule).all()
-      expect(rows).toHaveLength(2)
+      expect(rows).toHaveLength(1)
+      expect(rows[0].template_id).toBe(tmpl2.id)
     })
 
     it('keeps other days untouched on re-assign', async () => {

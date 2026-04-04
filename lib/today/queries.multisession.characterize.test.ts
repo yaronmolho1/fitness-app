@@ -125,11 +125,13 @@ function createTables() {
       period TEXT NOT NULL DEFAULT 'morning',
       time_slot TEXT NOT NULL DEFAULT '07:00',
       duration INTEGER NOT NULL DEFAULT 90,
+      cycle_length INTEGER NOT NULL DEFAULT 1,
+      cycle_position INTEGER NOT NULL DEFAULT 1,
       created_at INTEGER
     )
   `)
   testDb.run(
-    sql`CREATE UNIQUE INDEX weekly_schedule_meso_day_type_timeslot_template_idx ON weekly_schedule(mesocycle_id, day_of_week, week_type, time_slot, template_id)`
+    sql`CREATE UNIQUE INDEX weekly_schedule_meso_day_type_timeslot_position_idx ON weekly_schedule(mesocycle_id, day_of_week, week_type, time_slot, cycle_position)`
   )
   testDb.run(sql`
     CREATE TABLE schedule_week_overrides (
