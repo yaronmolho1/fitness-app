@@ -38,6 +38,7 @@ type WeekProgressionGridProps = {
   onOpenChange: (open: boolean) => void
   modality?: 'resistance' | 'running'
   runningBase?: RunningBase
+  activeWeeks?: number[]
 }
 
 type ResistanceValues = {
@@ -99,11 +100,16 @@ function initWeeks(
   workWeeks: number,
   hasDeload: boolean,
   slot: SlotWithExercise,
-  runningBase?: RunningBase
+  runningBase?: RunningBase,
+  activeWeeks?: number[]
 ): WeekState[] {
   const weeks: WeekState[] = []
 
-  for (let w = 1; w <= workWeeks; w++) {
+  const weekNumbers = activeWeeks
+    ? activeWeeks.filter((w) => w >= 1 && w <= workWeeks)
+    : Array.from({ length: workWeeks }, (_, i) => i + 1)
+
+  for (const w of weekNumbers) {
     weeks.push({
       weekNumber: w,
       isDeload: false,
@@ -197,12 +203,13 @@ export function WeekProgressionGrid({
   onOpenChange,
   modality = 'resistance',
   runningBase,
+  activeWeeks,
 }: WeekProgressionGridProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [saveError, setSaveError] = useState('')
   const [weeks, setWeeks] = useState<WeekState[]>(() =>
-    initWeeks(workWeeks, hasDeload, slot, runningBase)
+    initWeeks(workWeeks, hasDeload, slot, runningBase, activeWeeks)
   )
   const isDurationBased = slot.duration != null
   const resistanceBase = buildResistanceBase(slot)
