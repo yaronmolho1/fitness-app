@@ -479,7 +479,7 @@ describe('cloneMesocycle — characterize for T224 (rotation fields)', () => {
       expect(result.success).toBe(true)
     })
 
-    it('cloned row has cycle_length=1 (source cycle_length=3 is dropped)', async () => {
+    it('cloned row preserves cycle_length=3 from source (T224 fix)', async () => {
       const { mesoId } = seedSourceWithCycleLengthOnly()
       const result = await cloneMesocycle({
         source_id: mesoId,
@@ -494,8 +494,8 @@ describe('cloneMesocycle — characterize for T224 (rotation fields)', () => {
         .all()
         .filter((r: { mesocycle_id: number }) => r.mesocycle_id === result.id)
       expect(rows).toHaveLength(1)
-      // cycle_length is not forwarded — source had 3, clone gets default 1
-      expect(rows[0].cycle_length).toBe(1)
+      // T224: cycle_length now preserved from source
+      expect(rows[0].cycle_length).toBe(3)
     })
 
     it('cloned row has cycle_position=1', async () => {
@@ -517,20 +517,28 @@ describe('cloneMesocycle — characterize for T224 (rotation fields)', () => {
   })
 
   describe('full rotation (cycle_length=3, positions 1/2/3 on same slot)', () => {
-    it('clone fails due to unique index collision when all positions default to 1', async () => {
-      // Current behavior: clone does not pass cycle_position, so all 3 rotation rows
-      // are inserted with cycle_position=1, violating the unique index on
-      // (mesocycle_id, day_of_week, week_type, time_slot, cycle_position).
+    it('clone succeeds with all rotation positions preserved (T224 fix)', async () => {
+      // T224: cycle_position now preserved, so unique index is not violated
       const { mesoId } = seedSourceWithRotation()
       const result = await cloneMesocycle({
         source_id: mesoId,
         name: 'Clone',
         start_date: '2026-04-01',
       })
-      expect(result).toEqual({ success: false, error: 'Failed to clone mesocycle' })
+      expect(result.success).toBe(true)
+      if (!result.success) throw new Error('clone failed')
+
+      const rows = testDb
+        .select()
+        .from(schema.weekly_schedule)
+        .all()
+        .filter((r: { mesocycle_id: number }) => r.mesocycle_id === result.id)
+      expect(rows).toHaveLength(3)
+      expect(rows.map((r: { cycle_position: number }) => r.cycle_position).sort()).toEqual([1, 2, 3])
+      expect(rows.every((r: { cycle_length: number }) => r.cycle_length === 3)).toBe(true)
     })
 
-    it('source mesocycle is unchanged after failed clone', async () => {
+    it('source mesocycle is unchanged after clone', async () => {
       const { mesoId } = seedSourceWithRotation()
       const sourceBefore = testDb
         .select()
@@ -550,21 +558,6 @@ describe('cloneMesocycle — characterize for T224 (rotation fields)', () => {
         .all()
         .find((m: { id: number }) => m.id === mesoId)
       expect(sourceAfter).toEqual(sourceBefore)
-    })
-
-    it('no partial clone rows are left after failed clone (transaction rollback)', async () => {
-      const { mesoId } = seedSourceWithRotation()
-      const mesoCountBefore = testDb.select().from(schema.mesocycles).all().length
-
-      await cloneMesocycle({
-        source_id: mesoId,
-        name: 'Clone',
-        start_date: '2026-04-01',
-      })
-
-      const mesoCountAfter = testDb.select().from(schema.mesocycles).all().length
-      // Transaction rolled back — no new mesocycle row
-      expect(mesoCountAfter).toBe(mesoCountBefore)
     })
   })
 
