@@ -93,7 +93,18 @@ export async function assignTemplate(input: {
     return { success: false, error: 'Template does not belong to this mesocycle' }
   }
 
-  // Upsert via unique index (mesocycle_id, day_of_week, week_type, time_slot, cycle_position)
+  // Delete any existing rows for this slot (handles replacing a rotation with a single assignment)
+  db.delete(weekly_schedule)
+    .where(
+      and(
+        eq(weekly_schedule.mesocycle_id, mesocycle_id),
+        eq(weekly_schedule.day_of_week, day_of_week),
+        eq(weekly_schedule.week_type, week_type),
+        eq(weekly_schedule.time_slot, time_slot),
+      )
+    )
+    .run()
+
   const row = db
     .insert(weekly_schedule)
     .values({
@@ -104,11 +115,9 @@ export async function assignTemplate(input: {
       period,
       time_slot,
       duration,
+      cycle_length: 1,
+      cycle_position: 1,
       created_at: new Date(),
-    })
-    .onConflictDoUpdate({
-      target: [weekly_schedule.mesocycle_id, weekly_schedule.day_of_week, weekly_schedule.week_type, weekly_schedule.time_slot, weekly_schedule.cycle_position],
-      set: { template_id, period, duration },
     })
     .returning()
     .get()
@@ -133,9 +142,15 @@ export async function removeAssignment(input: {
 
   const { id } = parsed.data
 
-  // Look up the row to check mesocycle guard and capture day for sync
+  // Look up the full row to check mesocycle guard, rotation, and capture day for sync
   const entry = db
-    .select({ mesocycle_id: weekly_schedule.mesocycle_id, day_of_week: weekly_schedule.day_of_week })
+    .select({
+      mesocycle_id: weekly_schedule.mesocycle_id,
+      day_of_week: weekly_schedule.day_of_week,
+      week_type: weekly_schedule.week_type,
+      time_slot: weekly_schedule.time_slot,
+      cycle_length: weekly_schedule.cycle_length,
+    })
     .from(weekly_schedule)
     .where(eq(weekly_schedule.id, id))
     .get()
@@ -161,9 +176,23 @@ export async function removeAssignment(input: {
     return { success: false, error: 'Cannot modify schedule of a completed mesocycle' }
   }
 
-  db.delete(weekly_schedule)
-    .where(eq(weekly_schedule.id, id))
-    .run()
+  // If rotation (cycle_length > 1), delete all rows for this slot; otherwise just the one row
+  if (entry.cycle_length > 1) {
+    db.delete(weekly_schedule)
+      .where(
+        and(
+          eq(weekly_schedule.mesocycle_id, entry.mesocycle_id),
+          eq(weekly_schedule.day_of_week, entry.day_of_week),
+          eq(weekly_schedule.week_type, entry.week_type),
+          eq(weekly_schedule.time_slot, entry.time_slot),
+        )
+      )
+      .run()
+  } else {
+    db.delete(weekly_schedule)
+      .where(eq(weekly_schedule.id, id))
+      .run()
+  }
 
   revalidatePath('/mesocycles', 'layout')
 
@@ -257,7 +286,7 @@ function validateContiguousPositions(positions: { cycle_position: number }[]): b
   for (let i = 0; i < sorted.length; i++) {
     if (sorted[i].cycle_position !== i + 1) return false
   }
-  return new Set(positions.map(p => p.cycle_position)).size === positions.length
+  return true
 }
 
 export async function assignRotation(input: {
@@ -318,38 +347,41 @@ export async function assignRotation(input: {
   const period = derivePeriod(time_slot)
   const cycleLength = positions.length
 
-  // Delete existing rows for this slot, then insert new ones
-  db.delete(weekly_schedule)
-    .where(
-      and(
-        eq(weekly_schedule.mesocycle_id, mesocycle_id),
-        eq(weekly_schedule.day_of_week, day_of_week),
-        eq(weekly_schedule.week_type, week_type),
-        eq(weekly_schedule.time_slot, time_slot),
+  // Atomic delete + insert for rotation replacement
+  const rows = db.transaction((tx) => {
+    tx.delete(weekly_schedule)
+      .where(
+        and(
+          eq(weekly_schedule.mesocycle_id, mesocycle_id),
+          eq(weekly_schedule.day_of_week, day_of_week),
+          eq(weekly_schedule.week_type, week_type),
+          eq(weekly_schedule.time_slot, time_slot),
+        )
       )
-    )
-    .run()
+      .run()
 
-  const rows: ScheduleRow[] = []
-  for (const pos of positions) {
-    const row = db
-      .insert(weekly_schedule)
-      .values({
-        mesocycle_id,
-        day_of_week,
-        template_id: pos.template_id,
-        week_type,
-        period,
-        time_slot,
-        duration,
-        cycle_length: cycleLength,
-        cycle_position: pos.cycle_position,
-        created_at: new Date(),
-      })
-      .returning()
-      .get()
-    rows.push(row)
-  }
+    const inserted: ScheduleRow[] = []
+    for (const pos of positions) {
+      const row = tx
+        .insert(weekly_schedule)
+        .values({
+          mesocycle_id,
+          day_of_week,
+          template_id: pos.template_id,
+          week_type,
+          period,
+          time_slot,
+          duration,
+          cycle_length: cycleLength,
+          cycle_position: pos.cycle_position,
+          created_at: new Date(),
+        })
+        .returning()
+        .get()
+      inserted.push(row)
+    }
+    return inserted
+  })
 
   revalidatePath('/mesocycles', 'layout')
 
