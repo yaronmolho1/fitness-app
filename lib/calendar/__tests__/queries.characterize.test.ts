@@ -571,4 +571,101 @@ describe('getCalendarProjection — characterization', () => {
       expect(mar2.status).toBe('projected')
     })
   })
+
+  // ── Rotation cycle columns (pre-T213 behavior) ───────────────────────
+  // cycle_length and cycle_position exist in schema but are NOT read by the
+  // current query. These tests pin the current behavior as a safety net before
+  // T213 adds cycle-aware selection.
+  describe('rotation cycle columns (pre-T213 baseline)', () => {
+    it('cycle_length=1, cycle_position=1 (no rotation): single entry per slot', async () => {
+      // Standard case: no rotation, one template per day/time_slot
+      sqlite.exec(`
+        INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
+        VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
+        INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+        VALUES (1, 1, 'Push', 'push', 'resistance');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot, cycle_length, cycle_position)
+        VALUES (1, 0, 1, 'normal', 'morning', '07:00', 1, 1);
+      `)
+      const result = await getCalendarProjection(db, '2026-03')
+      const mar2Entries = result.days.filter((d) => d.date === '2026-03-02')
+      // One entry per day, same template every week
+      expect(mar2Entries).toHaveLength(1)
+      expect(mar2Entries[0].template_name).toBe('Push')
+      // All Mondays show the same template (no rotation)
+      const mondays = ['2026-03-02', '2026-03-09', '2026-03-16', '2026-03-23']
+      for (const d of mondays) {
+        const entries = result.days.filter((e) => e.date === d)
+        expect(entries).toHaveLength(1)
+        expect(entries[0].template_name).toBe('Push')
+      }
+    })
+
+    it('multiple cycle_positions for same slot: T213 filters by active position per week', async () => {
+      // T213: query filters by cycle_position based on week number.
+      // 2-week rotation: week 1 -> position 1 (Push), week 2 -> position 2 (Pull)
+      sqlite.exec(`
+        INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
+        VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
+        INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+        VALUES (1, 1, 'Push', 'push', 'resistance');
+        INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+        VALUES (2, 1, 'Pull', 'pull', 'resistance');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot, cycle_length, cycle_position)
+        VALUES (1, 0, 1, 'normal', 'morning', '07:00', 2, 1);
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot, cycle_length, cycle_position)
+        VALUES (1, 0, 2, 'normal', 'morning', '07:00', 2, 2);
+      `)
+      const result = await getCalendarProjection(db, '2026-03')
+      // W1 Mon (Mar 2): position 1 -> Push
+      const mar2Entries = result.days.filter((d) => d.date === '2026-03-02')
+      expect(mar2Entries).toHaveLength(1)
+      expect(mar2Entries[0].template_name).toBe('Push')
+      // W2 Mon (Mar 9): position 2 -> Pull
+      const mar9Entries = result.days.filter((d) => d.date === '2026-03-09')
+      expect(mar9Entries).toHaveLength(1)
+      expect(mar9Entries[0].template_name).toBe('Pull')
+    })
+
+    it('different time_slots with cycle_positions: each slot independently groups', async () => {
+      // Two different time_slots, each with a single cycle_position=1
+      // Should yield 2 entries per day (normal multi-session behavior)
+      sqlite.exec(`
+        INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
+        VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
+        INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+        VALUES (1, 1, 'AM Run', 'am-run', 'running');
+        INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+        VALUES (2, 1, 'PM Lift', 'pm-lift', 'resistance');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot, cycle_length, cycle_position)
+        VALUES (1, 0, 1, 'normal', 'morning', '06:00', 1, 1);
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot, cycle_length, cycle_position)
+        VALUES (1, 0, 2, 'normal', 'evening', '18:00', 1, 1);
+      `)
+      const result = await getCalendarProjection(db, '2026-03')
+      const mar2Entries = result.days.filter((d) => d.date === '2026-03-02')
+      // Two distinct time_slots → two entries, sorted by time_slot asc
+      expect(mar2Entries).toHaveLength(2)
+      expect(mar2Entries[0].time_slot).toBe('06:00')
+      expect(mar2Entries[0].template_name).toBe('AM Run')
+      expect(mar2Entries[1].time_slot).toBe('18:00')
+      expect(mar2Entries[1].template_name).toBe('PM Lift')
+    })
+
+    it('cycle_position column not fetched: output CalendarDay has no cycle fields', async () => {
+      // Verify that the output type does not expose cycle_length or cycle_position
+      sqlite.exec(`
+        INSERT INTO mesocycles (id, name, start_date, end_date, work_weeks, has_deload, status)
+        VALUES (1, 'Block A', '2026-03-02', '2026-03-29', 4, 0, 'active');
+        INSERT INTO workout_templates (id, mesocycle_id, name, canonical_name, modality)
+        VALUES (1, 1, 'Push', 'push', 'resistance');
+        INSERT INTO weekly_schedule (mesocycle_id, day_of_week, template_id, week_type, period, time_slot, cycle_length, cycle_position)
+        VALUES (1, 0, 1, 'normal', 'morning', '07:00', 3, 1);
+      `)
+      const result = await getCalendarProjection(db, '2026-03')
+      const day = result.days.find((d) => d.date === '2026-03-02')!
+      expect(day).not.toHaveProperty('cycle_length')
+      expect(day).not.toHaveProperty('cycle_position')
+    })
+  })
 })
