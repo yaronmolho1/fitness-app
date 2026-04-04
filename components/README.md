@@ -51,6 +51,7 @@ Shared React components — app-level UI and navigation.
 - `move-workout-modal.test.tsx` — unit tests for `MoveWorkoutModal` (time-first move flow)
 - `move-workout-modal.characterize.test.tsx` — characterization tests capturing pre-refactor behavior of `MoveWorkoutModal`
 - `week-progression-grid.tsx` — `WeekProgressionGrid` dialog with per-week override grid (rows = weeks + optional deload, columns = modality-specific fields); pre-fills base values, deload defaults (60% weight, 50% sets, RPE−2); saves via `upsertWeekOverrideAction`/`deleteWeekOverrideAction`; read-only when mesocycle is completed
+- `rotation-editor-modal.tsx` — `RotationEditorModal` dialog for editing per-day template rotation cycles; configures cycle length (1–8) and assigns a template to each cycle position; saves via `upsertRotationAction`; props: `mesocycleId`, `dayOfWeek`, `weekType`, `timeSlot`, `duration`, `existingRotation`, `templates`
 
 ## Subdirectories
 - `coaching/` — coaching summary UI: subjective state capture, coaching insights ([README](./coaching/README.md))

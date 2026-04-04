@@ -93,34 +93,36 @@ export async function assignTemplate(input: {
     return { success: false, error: 'Template does not belong to this mesocycle' }
   }
 
-  // Delete any existing rows for this slot (handles replacing a rotation with a single assignment)
-  db.delete(weekly_schedule)
-    .where(
-      and(
-        eq(weekly_schedule.mesocycle_id, mesocycle_id),
-        eq(weekly_schedule.day_of_week, day_of_week),
-        eq(weekly_schedule.week_type, week_type),
-        eq(weekly_schedule.time_slot, time_slot),
+  // Atomic delete + insert for slot replacement
+  const row = db.transaction((tx) => {
+    tx.delete(weekly_schedule)
+      .where(
+        and(
+          eq(weekly_schedule.mesocycle_id, mesocycle_id),
+          eq(weekly_schedule.day_of_week, day_of_week),
+          eq(weekly_schedule.week_type, week_type),
+          eq(weekly_schedule.time_slot, time_slot),
+        )
       )
-    )
-    .run()
+      .run()
 
-  const row = db
-    .insert(weekly_schedule)
-    .values({
-      mesocycle_id,
-      day_of_week,
-      template_id,
-      week_type,
-      period,
-      time_slot,
-      duration,
-      cycle_length: 1,
-      cycle_position: 1,
-      created_at: new Date(),
-    })
-    .returning()
-    .get()
+    return tx
+      .insert(weekly_schedule)
+      .values({
+        mesocycle_id,
+        day_of_week,
+        template_id,
+        week_type,
+        period,
+        time_slot,
+        duration,
+        cycle_length: 1,
+        cycle_position: 1,
+        created_at: new Date(),
+      })
+      .returning()
+      .get()
+  })
 
   revalidatePath('/mesocycles', 'layout')
 
