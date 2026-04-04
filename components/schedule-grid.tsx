@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -119,6 +120,7 @@ function isRotationGroup(item: ScheduleEntry | RotationGroup): item is RotationG
 }
 
 export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule, isCompleted, variant }: Props) {
+  const router = useRouter()
   const [schedule, setSchedule] = useState(initialSchedule)
   const [form, setForm] = useState<FormState>(null)
   const [editForm, setEditForm] = useState<EditFormState>(null)
@@ -269,10 +271,9 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
   const handleRotationModalClose = useCallback((open: boolean) => {
     if (!open) {
       setRotationModal(null)
-      // Trigger a page reload to pick up revalidated data from server action
-      window.location.reload()
+      router.refresh()
     }
-  }, [])
+  }, [router])
 
   function handleEditClick(entry: ScheduleEntry) {
     setError(null)
