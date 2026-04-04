@@ -213,3 +213,17 @@
 | T208 | Sync hooks in schedule actions | GC2 | [ ] | | | | |
 | T209 | Completion sync on workout logging | GC2 | [ ] | | | | |
 | T210 | Re-sync + sync status display | GC2 | [ ] | | | | |
+| T211 | Rotation cycle columns schema | ROT1.1 | [ ] | | | | |
+| T212 | Cycle-aware effective schedule resolution | ROT1.2 | [ ] | | | | |
+| T213 | Cycle-aware calendar projection | ROT1.2 | [ ] | | | | |
+| T214 | Assign rotation server action | ROT2 | [ ] | | | | |
+| T215 | Modify assignTemplate + removeAssignment for rotation | ROT2 | [ ] | | | | |
+| T216 | Rotation editor modal | ROT2 | [ ] | | | | |
+| T217 | Schedule grid rotation display + entry point | ROT2 | [ ] | | | | |
+| T218 | Active weeks query | ROT3 | [ ] | | | | |
+| T219 | WeekProgressionGrid active weeks filter | ROT3 | [ ] | | | | |
+| T220 | TemplateWeekGrid active weeks filter | ROT3 | [ ] | | | | |
+| T221 | Wire active weeks into template pages | ROT3 | [ ] | | | | |
+| T222 | Smart clone — slot value inheritance | ROT4 | [ ] | | | | |
+| T223 | Smart clone — template value inheritance | ROT4 | [ ] | | | | |
+| T224 | Smart clone — rotation preservation | ROT4 | [ ] | | | | |

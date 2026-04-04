@@ -1,7 +1,7 @@
 # Implementation Plan
 
-> 179 tasks across 37 waves. Completed waves (0–14, UI-1–3, R1–3, F1–F5) archived in [ARCHIVE_COMPLETED.md](ARCHIVE_COMPLETED.md).
-> Active: P1–P2, P3, CS, RL, EG, SW, AL, TS, GC waves below. Each task = one TDD cycle.
+> 193 tasks across 41 waves. Completed waves (0–14, UI-1–3, R1–3, F1–F5) archived in [ARCHIVE_COMPLETED.md](ARCHIVE_COMPLETED.md).
+> Active: P1–P2, P3, CS, RL, EG, SW, AL, TS, GC, ROT waves below. Each task = one TDD cycle.
 
 ## Archived Waves (134 tasks, all complete)
 
@@ -628,3 +628,96 @@ Estimated: M + M + L = ~12-18h
 | Medium | 9 (T197, T198, T199, T200, T202, T203, T206, T208, T209) | 3-6h | ~40h |
 | Large | 3 (T201, T204, T207) | 6-10h | ~24h |
 | **Total** | **15** (T196-T210) | | **~70h** |
+
+---
+
+## Wave ROT1: Template Rotation — Schema + Resolution
+
+> Schema migration for cycle columns + resolution logic update. Foundation for all rotation features. Depends on TS1 (T197) since it modifies `weekly_schedule` which TS1 also migrates. If TS1 hasn't shipped, merge into single migration.
+
+### Sub-wave ROT1.1 — Schema
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T211 | Rotation cycle columns: add `cycle_length INTEGER NOT NULL DEFAULT 1` and `cycle_position INTEGER NOT NULL DEFAULT 1` to `weekly_schedule`. Drop old unique index `weekly_schedule_meso_day_type_timeslot_template_idx`, create new `weekly_schedule_meso_day_type_timeslot_position_idx` on `(mesocycle_id, day_of_week, week_type, time_slot, cycle_position)`. All existing rows get defaults — zero behavior change. Generate + apply migration. | small | Template Rotation | T197 | schedule-rotation-cycle |
+
+### Sub-wave ROT1.2 — Resolution Logic
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T212 | Cycle-aware effective schedule resolution: modify `getEffectiveScheduleForDay()` in `lib/schedule/override-queries.ts`. After fetching base rows, group by `time_slot`. For each group with `cycle_length > 1`, compute `active_position = ((weekNumber - 1) % cycle_length) + 1`, keep only the matching row. For `cycle_length = 1`, keep as-is. Add `cycle_length` and `cycle_position` to `EffectiveScheduleEntry` type. Override merging unchanged — override wins over rotation-resolved template. | medium | Template Rotation | T211 | schedule-rotation-cycle |
+| T213 | Cycle-aware calendar projection: modify `getCalendarProjection()` in `lib/calendar/queries.ts`. In per-date loop, after looking up base entries from `scheduleLookup`, filter by cycle position using same formula as T212. No changes to override merging. | small | Template Rotation | T211 | schedule-rotation-cycle |
+
+## Wave ROT2: Template Rotation — Actions + UI
+
+> Schedule actions for creating/removing rotations + schedule grid UI. Depends on ROT1.
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T214 | Assign rotation server action: `assignRotation(input)` in `lib/schedule/actions.ts`. Input: mesocycle_id, day_of_week, week_type, time_slot, duration, positions (array of {cycle_position, template_id}). Validates: positions contiguous 1..N (2-8), all template_ids exist in mesocycle. Atomically deletes existing rows for same (meso, day, week_type, time_slot), inserts N rows with shared cycle_length. Revalidates paths. Fire-and-forget GCal sync if connected. | medium | Template Rotation | T212 | schedule-rotation-cycle |
+| T215 | Modify assignTemplate + removeAssignment for rotation: in `assignTemplate`, add `cycle_length=1, cycle_position=1` to insert values (no signature change). In `removeAssignment`, if removed row has `cycle_length > 1`, delete ALL rows sharing same (meso, day, week_type, time_slot) — full rotation removal, not partial. | small | Template Rotation | T211 | schedule-rotation-cycle |
+| T216 | Rotation editor modal: new `components/rotation-editor-modal.tsx`. Dialog with: cycle length selector (2-8, default 4), dynamic list of position rows (each with template picker filtered to running templates in this mesocycle). Same template selectable in multiple positions. Save calls `assignRotation` SA. Cancel discards. Edit mode: pre-fills from existing rotation rows. | medium | Template Rotation | T214 | schedule-rotation-cycle |
+| T217 | Schedule grid rotation display + entry point: in `components/schedule-grid.tsx`, for slots with `cycle_length > 1`, show rotation badge (e.g., "4-week cycle"). Clicking opens rotation summary (list of positions → templates) with "Edit Rotation" and "Remove" actions. "Assign Rotation" option added to slot assignment menu (alongside existing "Assign template"). Completed mesocycle: rotation visible but not editable. | medium | Template Rotation | T216, T215 | schedule-rotation-cycle |
+
+## Wave ROT3: Plan-Weeks Filtering
+
+> Active weeks query + grid component filtering. Depends on ROT1 for rotation data model.
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T218 | Active weeks query: `getActiveWeeksForTemplate(db, templateId, mesocycleId)` in `lib/schedule/queries.ts`. For each schedule entry referencing this template: compute which mesocycle weeks it appears in based on cycle_position + cycle_length + work_weeks. Union across all slots (same template may appear in multiple slots/positions). Factor in schedule_week_overrides: exclude weeks where override replaces this template, include weeks where override adds this template. Return sorted `number[]`. | medium | Template Rotation | T211 | plan-weeks-rotation-filter |
+| T219 | WeekProgressionGrid active weeks filter: add optional `activeWeeks?: number[]` prop to `components/week-progression-grid.tsx`. When provided, `initWeeks()` generates rows only for weeks in the array (preserving actual week numbers, not renumbering). Deload row shown only if template has a deload schedule entry. When absent, generates all weeks (backward compat). | small | Template Rotation | T218 | plan-weeks-rotation-filter |
+| T220 | TemplateWeekGrid active weeks filter: same `activeWeeks` prop pattern as T219, applied to `components/template-week-grid.tsx`. Running/MMA grids show only active weeks. Deload row logic same as T219. | small | Template Rotation | T218 | plan-weeks-rotation-filter |
+| T221 | Wire active weeks into template detail pages: in template detail/editing views, call `getActiveWeeksForTemplate()` and pass result as `activeWeeks` prop to WeekProgressionGrid and TemplateWeekGrid. For templates with no schedule assignments, pass undefined (show all weeks). | small | Template Rotation | T218, T219, T220 | plan-weeks-rotation-filter |
+
+## Wave ROT4: Smart Clone — Latest Value Inheritance
+
+> Independent of rotation UI. Depends on ROT1 for cycle columns in schema.
+
+| ID | Description | Scope | Epic | Deps | Spec |
+|----|-------------|-------|------|------|------|
+| T222 | Smart clone — slot value inheritance: modify `cloneMesocycle()` in `lib/mesocycles/clone-actions.ts`. For each source exercise slot, query `slot_week_overrides` at `week_number = source.work_weeks`. If found, merge with base using existing `mergeSlotWithOverride()` — use merged values (weight, reps, sets, rpe, distance, duration, pace) as new slot's base. If no override at last week, copy base as-is (current behavior). No slot_week_overrides created in new meso. | medium | Smart Clone | T211 | smart-clone-progression |
+| T223 | Smart clone — template value inheritance: in same `cloneMesocycle()`, for each source template, query `template_week_overrides` at `week_number = source.work_weeks` (with section_id=null for standalone, per-section for mixed). Merge non-null fields (distance, duration, pace, interval_count, interval_rest, planned_duration) into new template's base values. For mixed templates, also query per-section overrides and merge into cloned sections. | medium | Smart Clone | T211 | smart-clone-progression |
+| T224 | Smart clone — rotation preservation: in `cloneMesocycle()` schedule clone loop, copy `cycle_length` and `cycle_position` when cloning weekly_schedule rows. Template_id remapping via existing `templateIdMap` handles rotation positions correctly. | small | Smart Clone | T211 | smart-clone-progression |
+
+## Wave ROT Dependency Graph
+
+```
+T197 (TS1 schema) → T211 (rotation schema)
+                    ├── T212 (effective schedule resolution) → T214 (assignRotation SA) → T216 (rotation editor modal) → T217 (schedule grid display)
+                    ├── T213 (calendar projection filter)
+                    ├── T215 (assignTemplate + removeAssignment mods)                                                  ↗
+                    ├── T218 (active weeks query) → T219 (WeekProgressionGrid filter) ──┐
+                    │                             → T220 (TemplateWeekGrid filter) ──────┼── T221 (wire into template pages)
+                    ├── T222 (slot value inheritance)
+                    ├── T223 (template value inheritance)
+                    └── T224 (rotation preservation on clone)
+```
+
+## Wave ROT Critical Path
+
+T197 → T211 → T212 → T214 → T216 → T217 (schema → rotation schema → resolution → action → editor → grid display)
+Estimated: M + S + M + M + M + M = ~20-28h
+
+## Wave ROT Gap Analysis
+
+1. **TS1 dependency**: T211 depends on T197 (time scheduling schema migration). If T197 hasn't shipped, T211's migration can be combined into T197. If T197 is already applied, T211 is a standalone ALTER TABLE + index recreation.
+2. **Existing `assignTemplate` backward compat**: T215 adds `cycle_length=1, cycle_position=1` defaults. Existing callers don't pass these — Drizzle defaults handle it. No breaking change.
+3. **GCal sync**: No rotation-specific sync tasks needed. `syncMesocycle` already calls `getEffectiveScheduleForDay()` per date — once T212 makes that function cycle-aware, sync resolves rotation automatically.
+4. **`schedule_week_overrides` interaction**: T212 applies rotation filter BEFORE override merging — overrides always win. No change to override tables or actions needed.
+5. **Template deletion in rotation**: CASCADE DELETE on `weekly_schedule.template_id` FK removes affected rotation rows. Remaining positions may have gaps. No spec coverage for warning the user — flagged as minor UX gap, non-blocking.
+
+## Wave ROT Risk Areas
+
+- **T211 (schema)**: Unique index change is a breaking migration if done wrong. Must drop old index before creating new one. SQLite ALTER TABLE limitations — may need table recreation if Drizzle generates incompatible SQL.
+- **T212 (resolution)**: Hot path — `getEffectiveScheduleForDay` is called by today view, calendar projection, and GCal sync. Must ensure zero performance regression for `cycle_length=1` (the common case). Grouping by time_slot + filtering adds one loop iteration.
+- **T218 (active weeks query)**: Most complex query — must union across multiple schedule slots, factor in overrides. Edge cases: template in both rotating and non-rotating slots, override adding/removing template for specific weeks.
+- **T222-T223 (smart clone)**: Modifies the clone transaction which is already complex (3 nested ID maps). Must not break existing clone behavior when no overrides exist.
+
+## Wave ROT Scope Summary
+
+| Scope | Count | Est. Hours Each | Total |
+|-------|-------|-----------------|-------|
+| Small | 6 (T211, T213, T215, T219, T220, T224) | 1-3h | ~12h |
+| Medium | 8 (T212, T214, T216, T217, T218, T221, T222, T223) | 3-6h | ~36h |
+| **Total** | **14** (T211-T224) | | **~48h** |

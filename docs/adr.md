@@ -15,6 +15,7 @@ Architecture decisions for the fitness tracking app. Each ADR captures the conte
 | [009](adrs/009-time-slot-first-scheduling.md) | Time-Slot-First Scheduling (Replacing Period-Based Keying) | Accepted |
 | [010](adrs/010-google-calendar-one-way-push.md) | Google Calendar Integration — One-Way Push with OAuth | Accepted |
 | [011](adrs/011-exercise-slot-transfer.md) | Exercise Slot Transfer Between Templates | Proposed |
+| [012](adrs/012-per-week-template-rotation.md) | Per-Week Template Rotation on Schedule Slots | Proposed |
 
 ## Reading Order
 

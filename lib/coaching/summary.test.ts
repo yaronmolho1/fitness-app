@@ -8,6 +8,14 @@ import type { CurrentPlan } from './queries'
 import type { RecentSession } from './queries'
 import type { CalendarDay } from '@/lib/calendar/queries'
 
+// Relative dates so tests don't go stale
+function daysAgo(n: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() - n)
+  return d.toISOString().split('T')[0]
+}
+const RECENT_DATE = daysAgo(3) // always within 14-day resistance cutoff
+
 // Helpers to build test data
 function makeProfile(overrides: Partial<SummaryInput['profile']> = {}): SummaryInput['profile'] {
   return {
@@ -68,7 +76,7 @@ function makeCurrentPlan(overrides: Partial<CurrentPlan> = {}): CurrentPlan {
 function makeSession(overrides: Partial<RecentSession> = {}): RecentSession {
   return {
     id: 1,
-    logDate: '2026-03-20',
+    logDate: RECENT_DATE,
     rating: 4,
     notes: 'Felt strong',
     templateSnapshot: { version: 1, name: 'Push A' },
@@ -370,7 +378,8 @@ describe('generateCoachingSummary', () => {
     it('includes session date, template name, exercises with sets', () => {
       const md = generateCoachingSummary(makeFullInput())
 
-      expect(md).toContain('20/03/2026')
+      const [y, m, d] = RECENT_DATE.split('-')
+      expect(md).toContain(`${d}/${m}/${y}`)
       expect(md).toContain('Bench Press')
       expect(md).toContain('80') // weight
       expect(md).toContain('8') // reps
