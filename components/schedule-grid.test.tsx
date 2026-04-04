@@ -6,6 +6,11 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 vi.mock('@/lib/schedule/actions', () => ({
   assignTemplate: vi.fn(),
   removeAssignment: vi.fn(),
+  updateScheduleEntry: vi.fn(),
+}))
+
+vi.mock('@/components/rotation-editor-modal', () => ({
+  RotationEditorModal: () => null,
 }))
 
 import { ScheduleGrid } from './schedule-grid'
@@ -42,6 +47,8 @@ function buildSchedule(
     period: a.period ?? 'morning',
     time_slot: a.time_slot ?? '07:00',
     duration: a.duration ?? 90,
+    cycle_length: 1,
+    cycle_position: 1,
   }))
 }
 
@@ -257,9 +264,14 @@ describe('ScheduleGrid', () => {
       const mondayCell = screen.getByTestId('day-cell-0')
       await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
 
-      // Form should appear with template picker
+      // Form should appear with assignment type picker
       const form = within(mondayCell).getByTestId('add-workout-form')
       expect(form).toBeInTheDocument()
+      expect(within(form).getByText('Assign template')).toBeInTheDocument()
+      expect(within(form).getByText('Assign rotation')).toBeInTheDocument()
+
+      // Select "Assign template" to see template picker
+      await user.click(within(form).getByText('Assign template'))
       expect(within(form).getByText('Push A')).toBeInTheDocument()
 
       // Select template to see time/duration inputs
@@ -284,6 +296,7 @@ describe('ScheduleGrid', () => {
       await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
 
       const form = within(mondayCell).getByTestId('add-workout-form')
+      await user.click(within(form).getByText('Assign template'))
       // Click Push A (resistance, no duration fields)
       await user.click(within(form).getByText('Push A'))
 
@@ -307,6 +320,7 @@ describe('ScheduleGrid', () => {
       await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
 
       const form = within(mondayCell).getByTestId('add-workout-form')
+      await user.click(within(form).getByText('Assign template'))
       await user.click(within(form).getByText('Easy Run'))
 
       const durationInput = within(form).getByLabelText(/duration/i) as HTMLInputElement
@@ -329,6 +343,7 @@ describe('ScheduleGrid', () => {
       await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
 
       const form = within(mondayCell).getByTestId('add-workout-form')
+      await user.click(within(form).getByText('Assign template'))
       await user.click(within(form).getByText('MMA Sparring'))
 
       const durationInput = within(form).getByLabelText(/duration/i) as HTMLInputElement
@@ -351,6 +366,7 @@ describe('ScheduleGrid', () => {
       await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
 
       const form = within(mondayCell).getByTestId('add-workout-form')
+      await user.click(within(form).getByText('Assign template'))
       await user.click(within(form).getByText('Upper Body'))
 
       const durationInput = within(form).getByLabelText(/duration/i) as HTMLInputElement
@@ -390,6 +406,7 @@ describe('ScheduleGrid', () => {
       await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
 
       const form = within(mondayCell).getByTestId('add-workout-form')
+      await user.click(within(form).getByText('Assign template'))
       // Select template
       await user.click(within(form).getByText('Push A'))
 
@@ -447,6 +464,7 @@ describe('ScheduleGrid', () => {
       await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
 
       const form = within(mondayCell).getByTestId('add-workout-form')
+      await user.click(within(form).getByText('Assign template'))
       await user.click(within(form).getByText('Easy Run'))
 
       const timeInput = within(form).getByLabelText(/time/i)
@@ -493,6 +511,7 @@ describe('ScheduleGrid', () => {
       await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
 
       const form = within(mondayCell).getByTestId('add-workout-form')
+      await user.click(within(form).getByText('Assign template'))
       await user.click(within(form).getByText('Push A'))
 
       const timeInput = within(form).getByLabelText(/time/i)
@@ -526,6 +545,7 @@ describe('ScheduleGrid', () => {
 
       // Select a template first to get to the cancel button
       const form = within(mondayCell).getByTestId('add-workout-form')
+      await user.click(within(form).getByText('Assign template'))
       await user.click(within(form).getByText('Push A'))
 
       await user.click(within(mondayCell).getByRole('button', { name: /cancel/i }))
@@ -651,6 +671,7 @@ describe('ScheduleGrid', () => {
       await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
 
       const form = within(mondayCell).getByTestId('add-workout-form')
+      await user.click(within(form).getByText('Assign template'))
       await user.click(within(form).getByText('Pull A'))
 
       // Set time that overlaps with 07:00-08:30
@@ -682,6 +703,7 @@ describe('ScheduleGrid', () => {
       await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
 
       const form = within(mondayCell).getByTestId('add-workout-form')
+      await user.click(within(form).getByText('Assign template'))
       await user.click(within(form).getByText('Pull A'))
 
       const timeInput = within(form).getByLabelText(/time/i)
@@ -728,6 +750,7 @@ describe('ScheduleGrid', () => {
       await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
 
       const form = within(mondayCell).getByTestId('add-workout-form')
+      await user.click(within(form).getByText('Assign template'))
       await user.click(within(form).getByText('Pull A'))
 
       const timeInput = within(form).getByLabelText(/time/i)
@@ -833,6 +856,7 @@ describe('ScheduleGrid', () => {
       await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
 
       const form = within(mondayCell).getByTestId('add-workout-form')
+      await user.click(within(form).getByText('Assign template'))
       await user.click(within(form).getByText('Pull A'))
 
       const timeInput = within(form).getByLabelText(/time/i)
@@ -843,6 +867,7 @@ describe('ScheduleGrid', () => {
 
       await waitFor(() => {
         expect(within(mondayCell).getByText('Push A')).toBeInTheDocument()
+        // Pull A was added optimistically
         expect(within(mondayCell).getByText('Pull A')).toBeInTheDocument()
       })
     })
@@ -937,6 +962,7 @@ describe('ScheduleGrid', () => {
       await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
 
       const form = within(mondayCell).getByTestId('add-workout-form')
+      await user.click(within(form).getByText('Assign template'))
       await user.click(within(form).getByText('Push A'))
 
       const timeInput = within(form).getByLabelText(/time/i)
@@ -966,6 +992,7 @@ describe('ScheduleGrid', () => {
       await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
 
       const form = within(mondayCell).getByTestId('add-workout-form')
+      await user.click(within(form).getByText('Assign template'))
       await user.click(within(form).getByText('Push A'))
 
       const durationInput = within(form).getByLabelText(/duration/i)
@@ -994,6 +1021,7 @@ describe('ScheduleGrid', () => {
       await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
 
       const form = within(mondayCell).getByTestId('add-workout-form')
+      await user.click(within(form).getByText('Assign template'))
       await user.click(within(form).getByText('Push A'))
 
       const durationInput = within(form).getByLabelText(/duration/i)
@@ -1021,6 +1049,7 @@ describe('ScheduleGrid', () => {
       await user.click(within(mondayCell).getByRole('button', { name: /add workout/i }))
 
       const form = within(mondayCell).getByTestId('add-workout-form')
+      await user.click(within(form).getByText('Assign template'))
       await user.click(within(form).getByText('Push A'))
 
       const timeInput = within(form).getByLabelText(/time/i)

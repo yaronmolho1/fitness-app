@@ -176,6 +176,8 @@ describe('getScheduleForMesocycle — characterization', () => {
         period: 'afternoon',
         time_slot: '14:00',
         duration: 90,
+        cycle_length: 1,
+        cycle_position: 1,
       })
     })
   })
