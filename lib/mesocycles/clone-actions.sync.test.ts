@@ -36,6 +36,8 @@ vi.mock('@/lib/google/sync', () => ({
 import { cloneMesocycle } from './clone-actions'
 
 function resetTables() {
+  testDb.run(sql`DROP TABLE IF EXISTS template_week_overrides`)
+  testDb.run(sql`DROP TABLE IF EXISTS slot_week_overrides`)
   testDb.run(sql`DROP TABLE IF EXISTS weekly_schedule`)
   testDb.run(sql`DROP TABLE IF EXISTS exercise_slots`)
   testDb.run(sql`DROP TABLE IF EXISTS template_sections`)
@@ -103,6 +105,25 @@ function resetTables() {
   testDb.run(
     sql`CREATE UNIQUE INDEX weekly_schedule_meso_day_type_timeslot_position_idx ON weekly_schedule(mesocycle_id, day_of_week, week_type, time_slot, cycle_position)`
   )
+  testDb.run(sql`CREATE TABLE slot_week_overrides (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    exercise_slot_id INTEGER NOT NULL REFERENCES exercise_slots(id) ON DELETE CASCADE,
+    week_number INTEGER NOT NULL,
+    weight REAL, reps TEXT, sets INTEGER, rpe REAL,
+    distance REAL, duration INTEGER, pace TEXT, elevation_gain INTEGER,
+    is_deload INTEGER NOT NULL DEFAULT 0, created_at INTEGER,
+    UNIQUE(exercise_slot_id, week_number)
+  )`)
+  testDb.run(sql`CREATE TABLE template_week_overrides (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    template_id INTEGER NOT NULL REFERENCES workout_templates(id) ON DELETE CASCADE,
+    section_id INTEGER REFERENCES template_sections(id) ON DELETE CASCADE,
+    week_number INTEGER NOT NULL,
+    distance REAL, duration INTEGER, pace TEXT, planned_duration INTEGER,
+    interval_count INTEGER, interval_rest INTEGER, elevation_gain INTEGER,
+    is_deload INTEGER NOT NULL DEFAULT 0, created_at INTEGER,
+    UNIQUE(template_id, section_id, week_number)
+  )`)
 }
 
 function seedSource() {
