@@ -305,7 +305,7 @@ describe('ScheduleGrid', () => {
       await user.click(within(form).getByText('Push A'))
 
       const durationTrigger = within(form).getByLabelText(/duration/i)
-      expect(durationTrigger).toHaveTextContent('1h 30m')
+      expect(durationTrigger).toHaveValue('90')
     })
 
     it('selecting running template pre-fills target_duration', async () => {
@@ -328,7 +328,7 @@ describe('ScheduleGrid', () => {
       await user.click(within(form).getByText('Easy Run'))
 
       const durationTrigger = within(form).getByLabelText(/duration/i)
-      expect(durationTrigger).toHaveTextContent('45m')
+      expect(durationTrigger).toHaveValue('45')
     })
 
     it('selecting MMA template pre-fills planned_duration', async () => {
@@ -351,7 +351,7 @@ describe('ScheduleGrid', () => {
       await user.click(within(form).getByText('MMA Sparring'))
 
       const durationTrigger = within(form).getByLabelText(/duration/i)
-      expect(durationTrigger).toHaveTextContent('1h')
+      expect(durationTrigger).toHaveValue('60')
     })
 
     it('selecting resistance template with estimated_duration pre-fills it', async () => {
@@ -374,7 +374,7 @@ describe('ScheduleGrid', () => {
       await user.click(within(form).getByText('Upper Body'))
 
       const durationTrigger = within(form).getByLabelText(/duration/i)
-      expect(durationTrigger).toHaveTextContent('1h 15m')
+      expect(durationTrigger).toHaveValue('75')
     })
 
     it('submits form with default time and duration to assignTemplate', async () => {
@@ -414,8 +414,8 @@ describe('ScheduleGrid', () => {
       await user.click(within(form).getByText('Push A'))
 
       // Time defaults to 07:00, duration defaults to 90 (1h 30m) for resistance
-      expect(within(form).getByLabelText(/time/i)).toHaveTextContent('07:00')
-      expect(within(form).getByLabelText(/duration/i)).toHaveTextContent('1h 30m')
+      expect(within(form).getByLabelText(/time/i)).toHaveValue('07:00')
+      expect(within(form).getByLabelText(/duration/i)).toHaveValue('90')
 
       await user.click(within(form).getByRole('button', { name: /confirm/i }))
 
@@ -468,7 +468,7 @@ describe('ScheduleGrid', () => {
       await user.click(within(form).getByText('Easy Run'))
 
       // Duration pre-filled from Easy Run's target_duration (45)
-      expect(within(form).getByLabelText(/duration/i)).toHaveTextContent('45m')
+      expect(within(form).getByLabelText(/duration/i)).toHaveValue('45')
 
       await user.click(within(form).getByRole('button', { name: /confirm/i }))
 
@@ -945,8 +945,8 @@ describe('ScheduleGrid', () => {
       await user.click(within(form).getByText('Push A'))
 
       // Select dropdowns always have valid values — no free-text entry possible
-      expect(within(form).getByLabelText(/time/i)).toHaveTextContent('07:00')
-      expect(within(form).getByLabelText(/duration/i)).toHaveTextContent('1h 30m')
+      expect(within(form).getByLabelText(/time/i)).toHaveValue('07:00')
+      expect(within(form).getByLabelText(/duration/i)).toHaveValue('90')
     })
 
     it('cancel button closes form without submitting', async () => {
