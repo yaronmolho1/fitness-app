@@ -4,7 +4,8 @@ import { eq, and, ne } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { db } from '@/lib/db/index'
 import { mesocycles } from '@/lib/db/schema'
-import { calculateEndDate } from './utils'
+import { calculateEndDate, checkDateOverlap } from './utils'
+import { getNonCompletedMesocycles } from './queries'
 import { syncMesocycle } from '@/lib/google/sync'
 
 type CreateResult =
@@ -124,6 +125,15 @@ export async function updateMesocycle(id: number, formData: FormData): Promise<U
   const hasDeload = rawHasDeload === 'true'
   const endDate = calculateEndDate(startDate, workWeeks, hasDeload)
 
+  // Block overlapping dates for planned/active mesocycles
+  if (meso.status === 'planned' || meso.status === 'active') {
+    const plannedActive = await getNonCompletedMesocycles()
+    const overlap = checkDateOverlap(startDate, endDate, plannedActive, id)
+    if (overlap.overlapping) {
+      return { success: false, errors: { server: `Date range conflicts with "${overlap.conflictName}"` } }
+    }
+  }
+
   // Detect date range change for sync
   const dateRangeChanged =
     meso.start_date !== startDate ||
@@ -143,8 +153,8 @@ export async function updateMesocycle(id: number, formData: FormData): Promise<U
 
   revalidatePath('/mesocycles')
 
-  // Fire-and-forget: re-project events if date range changed
-  if (dateRangeChanged) {
+  // Fire-and-forget: re-project events if date range changed (skip drafts)
+  if (dateRangeChanged && (meso.status === 'planned' || meso.status === 'active')) {
     syncMesocycle(id).catch(() => {})
   }
 
@@ -229,7 +239,12 @@ export async function planMesocycle(id: number): Promise<StatusResult> {
   }
 
   const meso = db
-    .select({ id: mesocycles.id, status: mesocycles.status })
+    .select({
+      id: mesocycles.id,
+      status: mesocycles.status,
+      start_date: mesocycles.start_date,
+      end_date: mesocycles.end_date,
+    })
     .from(mesocycles)
     .where(eq(mesocycles.id, id))
     .get()
@@ -240,6 +255,12 @@ export async function planMesocycle(id: number): Promise<StatusResult> {
 
   if (meso.status !== 'draft') {
     return { success: false, error: `Cannot plan a mesocycle with status "${meso.status}"` }
+  }
+
+  const plannedActive = await getNonCompletedMesocycles()
+  const overlap = checkDateOverlap(meso.start_date, meso.end_date, plannedActive, id)
+  if (overlap.overlapping) {
+    return { success: false, error: `Date range conflicts with "${overlap.conflictName}"` }
   }
 
   db.update(mesocycles)
