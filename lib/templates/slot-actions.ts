@@ -5,6 +5,7 @@ import { eq, sql, asc, and } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '@/lib/db/index'
 import { exercise_slots, workout_templates, exercises, mesocycles, template_sections, slot_week_overrides } from '@/lib/db/schema'
+import { recomputeEstimatedDuration } from './recompute-duration'
 
 type SlotRow = typeof exercise_slots.$inferSelect
 
@@ -154,6 +155,7 @@ export async function addExerciseSlot(
     .returning()
     .get()
 
+  recomputeEstimatedDuration(template_id)
   revalidatePath('/mesocycles')
   return { success: true, data: created }
 }
@@ -237,6 +239,7 @@ export async function updateExerciseSlot(
       .run()
   }
 
+  recomputeEstimatedDuration(existing.template_id)
   revalidatePath('/mesocycles')
   return { success: true, data: updated }
 }
@@ -294,6 +297,7 @@ export async function removeExerciseSlot(slotId: number): Promise<RemoveResult> 
 
   db.delete(exercise_slots).where(eq(exercise_slots.id, slotId)).run()
 
+  recomputeEstimatedDuration(existing.template_id)
   revalidatePath('/mesocycles')
   return { success: true }
 }

@@ -23,9 +23,9 @@ const PERIOD_LABELS: Record<string, string> = {
 const DEFAULT_TIME_SLOT = '07:00'
 const DEFAULT_DURATION = 90
 
-// Time options: every 30 min from 05:00 to 22:00
-const TIME_OPTIONS = Array.from({ length: 35 }, (_, i) => {
-  const totalMin = 300 + i * 30 // start at 05:00
+// Time options: every 15 min from 05:00 to 22:00
+const TIME_OPTIONS = Array.from({ length: 69 }, (_, i) => {
+  const totalMin = 300 + i * 15 // start at 05:00
   const h = String(Math.floor(totalMin / 60)).padStart(2, '0')
   const m = String(totalMin % 60).padStart(2, '0')
   return `${h}:${m}`
@@ -280,6 +280,8 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
     const existing: ExistingRotationPosition[] = group.entries.map((e) => ({
       cycle_position: e.cycle_position,
       template_id: e.template_id,
+      time_slot: e.time_slot,
+      duration: e.duration,
     }))
     setRotationModal({
       day: group.day_of_week,
@@ -719,7 +721,13 @@ export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule
           timeSlot={rotationModal.timeSlot}
           duration={rotationModal.duration}
           existingRotation={rotationModal.existingRotation}
-          templates={templates.map((t) => ({ id: t.id, name: t.name }))}
+          templates={templates.map((t) => ({
+            id: t.id,
+            name: t.name,
+            estimated_duration: t.estimated_duration ?? null,
+            target_duration: t.target_duration ?? null,
+            planned_duration: t.planned_duration ?? null,
+          }))}
         />
       )}
     </div>

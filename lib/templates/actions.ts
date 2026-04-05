@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { db } from '@/lib/db/index'
 import { workout_templates, mesocycles, exercise_slots, weekly_schedule } from '@/lib/db/schema'
 import { generateCanonicalName } from './utils'
+import { estimateRunningDuration, estimateMmaDuration } from './estimate-duration'
 
 const createResistanceTemplateSchema = z.object({
   name: z.string().transform((s) => s.trim()).pipe(z.string().min(1, 'Name is required')),
@@ -272,6 +273,7 @@ export async function createMmaBjjTemplate(
         canonical_name: canonicalName,
         modality: 'mma',
         planned_duration,
+        estimated_duration: estimateMmaDuration(planned_duration),
         created_at: new Date(),
       })
       .returning()
@@ -376,6 +378,7 @@ export async function createRunningTemplate(
         target_distance,
         target_duration,
         target_elevation_gain,
+        estimated_duration: estimateRunningDuration(target_duration),
         created_at: new Date(),
       })
       .returning()

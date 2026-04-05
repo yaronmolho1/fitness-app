@@ -272,6 +272,8 @@ export async function updateScheduleEntry(input: {
 const rotationPositionSchema = z.object({
   cycle_position: z.number().int().positive(),
   template_id: z.number().int().positive(),
+  time_slot: timeSlotSchema.optional(),
+  duration: durationSchema.optional(),
 })
 
 const assignRotationSchema = z.object({
@@ -297,7 +299,7 @@ export async function assignRotation(input: {
   week_type?: 'normal' | 'deload'
   time_slot: string
   duration: number
-  positions: Array<{ cycle_position: number; template_id: number }>
+  positions: Array<{ cycle_position: number; template_id: number; time_slot?: string; duration?: number }>
 }): Promise<AssignRotationResult> {
   const parsed = assignRotationSchema.safeParse(input)
   if (!parsed.success) {
@@ -346,7 +348,6 @@ export async function assignRotation(input: {
     }
   }
 
-  const period = derivePeriod(time_slot)
   const cycleLength = positions.length
 
   // Atomic delete + insert for rotation replacement
@@ -364,6 +365,8 @@ export async function assignRotation(input: {
 
     const inserted: ScheduleRow[] = []
     for (const pos of positions) {
+      const posTimeSlot = pos.time_slot ?? time_slot
+      const posDuration = pos.duration ?? duration
       const row = tx
         .insert(weekly_schedule)
         .values({
@@ -371,9 +374,9 @@ export async function assignRotation(input: {
           day_of_week,
           template_id: pos.template_id,
           week_type,
-          period,
-          time_slot,
-          duration,
+          period: derivePeriod(posTimeSlot),
+          time_slot: posTimeSlot,
+          duration: posDuration,
           cycle_length: cycleLength,
           cycle_position: pos.cycle_position,
           created_at: new Date(),
