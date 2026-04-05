@@ -22,7 +22,68 @@ type Props = {
   data: ProjectedData
 }
 
-// Compute week start date from mesocycle start_date + week number
+// -- Column structure types --
+
+type ColumnGroup = {
+  mesocycle: MesocycleProjection['mesocycle']
+  weekCount: number
+  isCompleted: boolean
+}
+
+// -- Unified resistance types --
+
+type SlotCellData = {
+  slot: SlotWithExercise
+  weeks: MergedResistanceWeek[]
+  workWeeks: number
+  hasDeload: boolean
+  isCompleted: boolean
+}
+
+type UnifiedExerciseRow = {
+  exerciseId: number
+  exerciseName: string
+  isMain: boolean
+  cells: (SlotCellData | null)[]
+}
+
+type UnifiedTemplateGroup = {
+  templateName: string
+  canonicalName: string
+  exercises: UnifiedExerciseRow[]
+}
+
+// -- Unified running/mma types --
+
+type RunningCellData = {
+  group: RunningGroup
+  workWeeks: number
+  hasDeload: boolean
+  isCompleted: boolean
+}
+
+type UnifiedRunningRow = {
+  templateName: string
+  sectionName: string
+  runType: string | null
+  cells: (RunningCellData | null)[]
+}
+
+type MmaCellData = {
+  group: MmaGroup
+  workWeeks: number
+  hasDeload: boolean
+  isCompleted: boolean
+}
+
+type UnifiedMmaRow = {
+  templateName: string
+  sectionName: string
+  cells: (MmaCellData | null)[]
+}
+
+// -- Helpers --
+
 function weekDate(startDate: string, weekNumber: number): string {
   const d = new Date(startDate + 'T00:00:00')
   d.setDate(d.getDate() + (weekNumber - 1) * 7)
@@ -55,37 +116,224 @@ function formatMmaCell(week: MergedMmaWeek): string {
   return '—'
 }
 
-function DateHeaders({ startDate, workWeeks, hasDeload }: { startDate: string; workWeeks: number; hasDeload: boolean }) {
+// -- Data transformation --
+
+function buildColumnGroups(data: ProjectedData): ColumnGroup[] {
+  return data.map((p) => ({
+    mesocycle: p.mesocycle,
+    weekCount: p.mesocycle.workWeeks + (p.mesocycle.hasDeload ? 1 : 0),
+    isCompleted: p.mesocycle.status === 'completed',
+  }))
+}
+
+function buildUnifiedResistanceData(data: ProjectedData): UnifiedTemplateGroup[] {
+  const groups: UnifiedTemplateGroup[] = []
+  const seen = new Set<string>()
+
+  for (let mesoIdx = 0; mesoIdx < data.length; mesoIdx++) {
+    const projection = data[mesoIdx]
+    for (const rg of projection.resistanceGroups) {
+      const cn = rg.template.canonical_name
+      if (seen.has(cn)) continue
+      seen.add(cn)
+
+      // Collect this template across all mesocycles
+      const exerciseMap = new Map<number, UnifiedExerciseRow>()
+
+      for (let mi = 0; mi < data.length; mi++) {
+        const matchingGroup = data[mi].resistanceGroups.find(
+          (g) => g.template.canonical_name === cn
+        )
+        if (!matchingGroup) continue
+
+        for (const { slot, weeks } of matchingGroup.slots) {
+          let row = exerciseMap.get(slot.exercise_id)
+          if (!row) {
+            row = {
+              exerciseId: slot.exercise_id,
+              exerciseName: slot.exercise_name,
+              isMain: slot.is_main,
+              cells: Array(data.length).fill(null),
+            }
+            exerciseMap.set(slot.exercise_id, row)
+          }
+          row.cells[mi] = {
+            slot,
+            weeks,
+            workWeeks: data[mi].mesocycle.workWeeks,
+            hasDeload: data[mi].mesocycle.hasDeload,
+            isCompleted: data[mi].mesocycle.status === 'completed',
+          }
+        }
+      }
+
+      if (exerciseMap.size > 0) {
+        groups.push({
+          templateName: rg.template.name,
+          canonicalName: cn,
+          exercises: Array.from(exerciseMap.values()),
+        })
+      }
+    }
+  }
+
+  return groups
+}
+
+function buildUnifiedRunningData(data: ProjectedData): UnifiedRunningRow[] {
+  const rows: UnifiedRunningRow[] = []
+  const seen = new Set<string>()
+
+  for (let mesoIdx = 0; mesoIdx < data.length; mesoIdx++) {
+    for (const rg of data[mesoIdx].runningGroups) {
+      const key = `${rg.template.canonical_name}::${rg.section.id === 0 ? '__standalone__' : rg.section.section_name}`
+      if (seen.has(key)) continue
+      seen.add(key)
+
+      const cells: (RunningCellData | null)[] = data.map((p, mi) => {
+        const match = p.runningGroups.find(
+          (g) =>
+            g.template.canonical_name === rg.template.canonical_name &&
+            (rg.section.id === 0
+              ? g.section.id === 0
+              : g.section.section_name === rg.section.section_name)
+        )
+        if (!match) return null
+        return {
+          group: match,
+          workWeeks: p.mesocycle.workWeeks,
+          hasDeload: p.mesocycle.hasDeload,
+          isCompleted: p.mesocycle.status === 'completed',
+        }
+      })
+
+      rows.push({
+        templateName: rg.template.name,
+        sectionName: rg.section.id === 0 ? rg.template.name : rg.section.section_name,
+        runType: rg.section.run_type ?? rg.template.run_type ?? null,
+        cells,
+      })
+    }
+  }
+
+  return rows
+}
+
+function buildUnifiedMmaData(data: ProjectedData): UnifiedMmaRow[] {
+  const rows: UnifiedMmaRow[] = []
+  const seen = new Set<string>()
+
+  for (let mesoIdx = 0; mesoIdx < data.length; mesoIdx++) {
+    for (const mg of data[mesoIdx].mmaGroups) {
+      const key = `${mg.template.canonical_name}::${mg.section.id === 0 ? '__standalone__' : mg.section.section_name}`
+      if (seen.has(key)) continue
+      seen.add(key)
+
+      const cells: (MmaCellData | null)[] = data.map((p) => {
+        const match = p.mmaGroups.find(
+          (g) =>
+            g.template.canonical_name === mg.template.canonical_name &&
+            (mg.section.id === 0
+              ? g.section.id === 0
+              : g.section.section_name === mg.section.section_name)
+        )
+        if (!match) return null
+        return {
+          group: match,
+          workWeeks: p.mesocycle.workWeeks,
+          hasDeload: p.mesocycle.hasDeload,
+          isCompleted: p.mesocycle.status === 'completed',
+        }
+      })
+
+      rows.push({
+        templateName: mg.template.name,
+        sectionName: mg.section.id === 0 ? mg.template.name : mg.section.section_name,
+        cells,
+      })
+    }
+  }
+
+  return rows
+}
+
+// -- Table header components --
+
+function MesoHeaders({ columnGroups }: { columnGroups: ColumnGroup[] }) {
   return (
-    <>
-      {Array.from({ length: workWeeks }, (_, i) => (
-        <th key={i + 1} className="whitespace-nowrap px-3 py-2 text-center text-xs font-medium text-muted-foreground">
-          {weekDate(startDate, i + 1)}
+    <tr className="border-b">
+      <th
+        rowSpan={2}
+        className="sticky left-0 z-10 bg-muted/50 px-3 py-2 text-left text-xs font-medium text-muted-foreground"
+      >
+        Exercise
+      </th>
+      {columnGroups.map((g) => (
+        <th
+          key={g.mesocycle.id}
+          colSpan={g.weekCount}
+          className="border-l px-3 py-1.5 text-center text-xs font-semibold"
+        >
+          <span>{g.mesocycle.name}</span>
+          <span
+            className={cn(
+              'ml-2 inline-block rounded-full px-1.5 py-0.5 text-[10px] font-medium',
+              g.mesocycle.status === 'active' &&
+                'bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400',
+              g.mesocycle.status === 'planned' &&
+                'bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400',
+              g.mesocycle.status === 'draft' &&
+                'bg-muted text-muted-foreground'
+            )}
+          >
+            {g.mesocycle.status}
+          </span>
         </th>
       ))}
-      {hasDeload && (
-        <th className="whitespace-nowrap px-3 py-2 text-center text-xs font-medium text-orange-500">
-          {weekDate(startDate, workWeeks + 1)}
-        </th>
-      )}
-    </>
+    </tr>
   )
 }
 
-function ResistanceSection({
+function DateRow({ columnGroups }: { columnGroups: ColumnGroup[] }) {
+  return (
+    <tr className="border-b bg-muted/50">
+      {columnGroups.map((g) =>
+        Array.from({ length: g.mesocycle.workWeeks }, (_, i) => (
+          <th
+            key={`${g.mesocycle.id}-w${i + 1}`}
+            className="whitespace-nowrap border-l px-3 py-1.5 text-center text-xs font-medium text-muted-foreground first:border-l"
+          >
+            {weekDate(g.mesocycle.startDate, i + 1)}
+          </th>
+        )).concat(
+          g.mesocycle.hasDeload
+            ? [
+                <th
+                  key={`${g.mesocycle.id}-deload`}
+                  className="whitespace-nowrap px-3 py-1.5 text-center text-xs font-medium text-orange-500"
+                >
+                  {weekDate(g.mesocycle.startDate, g.mesocycle.workWeeks + 1)}
+                </th>,
+              ]
+            : []
+        )
+      )}
+    </tr>
+  )
+}
+
+// -- Section components --
+
+function UnifiedResistanceSection({
   groups,
-  startDate,
-  workWeeks,
-  hasDeload,
-  isCompleted,
+  columnGroups,
+  totalColumns,
   onSlotClick,
 }: {
-  groups: ResistanceGroup[]
-  startDate: string
-  workWeeks: number
-  hasDeload: boolean
-  isCompleted: boolean
-  onSlotClick: (slot: SlotWithExercise, workWeeks: number, hasDeload: boolean, isCompleted: boolean) => void
+  groups: UnifiedTemplateGroup[]
+  columnGroups: ColumnGroup[]
+  totalColumns: number
+  onSlotClick: (cell: SlotCellData) => void
 }) {
   if (groups.length === 0) return null
 
@@ -99,43 +347,60 @@ function ResistanceSection({
       <div className="overflow-x-auto rounded-lg border">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b bg-muted/50">
-              <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-muted-foreground">Exercise</th>
-              <DateHeaders startDate={startDate} workWeeks={workWeeks} hasDeload={hasDeload} />
-            </tr>
+            <MesoHeaders columnGroups={columnGroups} />
+            <DateRow columnGroups={columnGroups} />
           </thead>
           <tbody>
             {groups.map((group) => (
               <>
-                <tr key={`header-${group.template.id}`} className="bg-muted/30">
-                  <td colSpan={workWeeks + (hasDeload ? 2 : 1)} className="px-3 py-1.5 text-xs font-medium text-muted-foreground">
-                    {group.template.name}
+                <tr key={`hdr-${group.canonicalName}`} className="bg-muted/30">
+                  <td
+                    colSpan={totalColumns}
+                    className="px-3 py-1.5 text-xs font-medium text-muted-foreground"
+                  >
+                    {group.templateName}
                   </td>
                 </tr>
-                {group.slots.map(({ slot, weeks }) => (
-                  <tr
-                    key={slot.id}
-                    className={cn(
-                      'border-b transition-colors',
-                      !isCompleted && 'cursor-pointer hover:bg-muted/40'
-                    )}
-                    onClick={() => !isCompleted && onSlotClick(slot, workWeeks, hasDeload, isCompleted)}
-                  >
-                    <td className="whitespace-nowrap px-3 py-2 font-medium">
-                      {slot.exercise_name}
-                      {slot.is_main ? '' : <span className="ml-1 text-xs text-muted-foreground">(acc)</span>}
+                {group.exercises.map((exercise) => (
+                  <tr key={`${group.canonicalName}-${exercise.exerciseId}`} className="border-b">
+                    <td className="sticky left-0 z-10 whitespace-nowrap bg-background px-3 py-2 font-medium">
+                      {exercise.exerciseName}
+                      {exercise.isMain ? '' : (
+                        <span className="ml-1 text-xs text-muted-foreground">(acc)</span>
+                      )}
                     </td>
-                    {weeks.map((week) => (
-                      <td
-                        key={week.weekNumber}
-                        className={cn(
-                          'whitespace-nowrap px-3 py-2 text-center text-xs',
-                          week.isDeload && 'bg-orange-50 text-orange-700 dark:bg-orange-950/20 dark:text-orange-400'
-                        )}
-                      >
-                        {formatResistanceCell(week)}
-                      </td>
-                    ))}
+                    {exercise.cells.map((cell, mesoIdx) =>
+                      cell
+                        ? cell.weeks.map((week) => (
+                            <td
+                              key={`${columnGroups[mesoIdx].mesocycle.id}-w${week.weekNumber}`}
+                              className={cn(
+                                'whitespace-nowrap px-3 py-2 text-center text-xs transition-colors',
+                                mesoIdx > 0 && week.weekNumber === 1 && 'border-l',
+                                week.isDeload &&
+                                  'bg-orange-50 text-orange-700 dark:bg-orange-950/20 dark:text-orange-400',
+                                !cell.isCompleted && 'cursor-pointer hover:bg-muted/40'
+                              )}
+                              onClick={() => !cell.isCompleted && onSlotClick(cell)}
+                            >
+                              {formatResistanceCell(week)}
+                            </td>
+                          ))
+                        : Array.from(
+                            { length: columnGroups[mesoIdx].weekCount },
+                            (_, wi) => (
+                              <td
+                                key={`${columnGroups[mesoIdx].mesocycle.id}-empty-${wi}`}
+                                className={cn(
+                                  'whitespace-nowrap px-3 py-2 text-center text-xs text-muted-foreground',
+                                  mesoIdx > 0 && wi === 0 && 'border-l'
+                                )}
+                              >
+                                —
+                              </td>
+                            )
+                          )
+                    )}
                   </tr>
                 ))}
               </>
@@ -147,22 +412,18 @@ function ResistanceSection({
   )
 }
 
-function RunningSection({
-  groups,
-  startDate,
-  workWeeks,
-  hasDeload,
-  isCompleted,
+function UnifiedRunningSection({
+  rows,
+  columnGroups,
+  totalColumns,
   onRunningClick,
 }: {
-  groups: RunningGroup[]
-  startDate: string
-  workWeeks: number
-  hasDeload: boolean
-  isCompleted: boolean
-  onRunningClick: (group: RunningGroup, workWeeks: number, hasDeload: boolean, isCompleted: boolean) => void
+  rows: UnifiedRunningRow[]
+  columnGroups: ColumnGroup[]
+  totalColumns: number
+  onRunningClick: (cell: RunningCellData) => void
 }) {
-  if (groups.length === 0) return null
+  if (rows.length === 0) return null
 
   return (
     <div className="space-y-3">
@@ -174,39 +435,50 @@ function RunningSection({
       <div className="overflow-x-auto rounded-lg border">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b bg-muted/50">
-              <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-muted-foreground">Template</th>
-              <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-muted-foreground">Type</th>
-              <DateHeaders startDate={startDate} workWeeks={workWeeks} hasDeload={hasDeload} />
-            </tr>
+            <MesoHeaders columnGroups={columnGroups} />
+            <DateRow columnGroups={columnGroups} />
           </thead>
           <tbody>
-            {groups.map((group, idx) => (
-              <tr
-                key={`${group.template.id}-${group.section.id}-${idx}`}
-                className={cn(
-                  'border-b transition-colors',
-                  !isCompleted && 'cursor-pointer hover:bg-muted/40'
+            {rows.map((row, idx) => (
+              <tr key={idx} className="border-b">
+                <td className="sticky left-0 z-10 whitespace-nowrap bg-background px-3 py-2 font-medium">
+                  {row.sectionName}
+                  {row.runType && (
+                    <span className="ml-2 text-xs text-muted-foreground">{row.runType}</span>
+                  )}
+                </td>
+                {row.cells.map((cell, mesoIdx) =>
+                  cell
+                    ? cell.group.weeks.map((week) => (
+                        <td
+                          key={`${columnGroups[mesoIdx].mesocycle.id}-w${week.weekNumber}`}
+                          className={cn(
+                            'whitespace-nowrap px-3 py-2 text-center text-xs transition-colors',
+                            mesoIdx > 0 && week.weekNumber === 1 && 'border-l',
+                            week.isDeload &&
+                              'bg-orange-50 text-orange-700 dark:bg-orange-950/20 dark:text-orange-400',
+                            !cell.isCompleted && 'cursor-pointer hover:bg-muted/40'
+                          )}
+                          onClick={() => !cell.isCompleted && onRunningClick(cell)}
+                        >
+                          {formatRunningCell(week)}
+                        </td>
+                      ))
+                    : Array.from(
+                        { length: columnGroups[mesoIdx].weekCount },
+                        (_, wi) => (
+                          <td
+                            key={`${columnGroups[mesoIdx].mesocycle.id}-empty-${wi}`}
+                            className={cn(
+                              'whitespace-nowrap px-3 py-2 text-center text-xs text-muted-foreground',
+                              mesoIdx > 0 && wi === 0 && 'border-l'
+                            )}
+                          >
+                            —
+                          </td>
+                        )
+                      )
                 )}
-                onClick={() => !isCompleted && onRunningClick(group, workWeeks, hasDeload, isCompleted)}
-              >
-                <td className="whitespace-nowrap px-3 py-2 font-medium">
-                  {group.section.id === 0 ? group.template.name : group.section.section_name}
-                </td>
-                <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">
-                  {group.section.run_type ?? group.template.run_type ?? '—'}
-                </td>
-                {group.weeks.map((week) => (
-                  <td
-                    key={week.weekNumber}
-                    className={cn(
-                      'whitespace-nowrap px-3 py-2 text-center text-xs',
-                      week.isDeload && 'bg-orange-50 text-orange-700 dark:bg-orange-950/20 dark:text-orange-400'
-                    )}
-                  >
-                    {formatRunningCell(week)}
-                  </td>
-                ))}
               </tr>
             ))}
           </tbody>
@@ -216,22 +488,18 @@ function RunningSection({
   )
 }
 
-function MmaSection({
-  groups,
-  startDate,
-  workWeeks,
-  hasDeload,
-  isCompleted,
+function UnifiedMmaSection({
+  rows,
+  columnGroups,
+  totalColumns,
   onMmaClick,
 }: {
-  groups: MmaGroup[]
-  startDate: string
-  workWeeks: number
-  hasDeload: boolean
-  isCompleted: boolean
-  onMmaClick: (group: MmaGroup, workWeeks: number, hasDeload: boolean, isCompleted: boolean) => void
+  rows: UnifiedMmaRow[]
+  columnGroups: ColumnGroup[]
+  totalColumns: number
+  onMmaClick: (cell: MmaCellData) => void
 }) {
-  if (groups.length === 0) return null
+  if (rows.length === 0) return null
 
   return (
     <div className="space-y-3">
@@ -243,35 +511,47 @@ function MmaSection({
       <div className="overflow-x-auto rounded-lg border">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b bg-muted/50">
-              <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-muted-foreground">Template</th>
-              <DateHeaders startDate={startDate} workWeeks={workWeeks} hasDeload={hasDeload} />
-            </tr>
+            <MesoHeaders columnGroups={columnGroups} />
+            <DateRow columnGroups={columnGroups} />
           </thead>
           <tbody>
-            {groups.map((group, idx) => (
-              <tr
-                key={`${group.template.id}-${group.section.id}-${idx}`}
-                className={cn(
-                  'border-b transition-colors',
-                  !isCompleted && 'cursor-pointer hover:bg-muted/40'
-                )}
-                onClick={() => !isCompleted && onMmaClick(group, workWeeks, hasDeload, isCompleted)}
-              >
-                <td className="whitespace-nowrap px-3 py-2 font-medium">
-                  {group.section.id === 0 ? group.template.name : group.section.section_name}
+            {rows.map((row, idx) => (
+              <tr key={idx} className="border-b">
+                <td className="sticky left-0 z-10 whitespace-nowrap bg-background px-3 py-2 font-medium">
+                  {row.sectionName}
                 </td>
-                {group.weeks.map((week) => (
-                  <td
-                    key={week.weekNumber}
-                    className={cn(
-                      'whitespace-nowrap px-3 py-2 text-center text-xs',
-                      week.isDeload && 'bg-orange-50 text-orange-700 dark:bg-orange-950/20 dark:text-orange-400'
-                    )}
-                  >
-                    {formatMmaCell(week)}
-                  </td>
-                ))}
+                {row.cells.map((cell, mesoIdx) =>
+                  cell
+                    ? cell.group.weeks.map((week) => (
+                        <td
+                          key={`${columnGroups[mesoIdx].mesocycle.id}-w${week.weekNumber}`}
+                          className={cn(
+                            'whitespace-nowrap px-3 py-2 text-center text-xs transition-colors',
+                            mesoIdx > 0 && week.weekNumber === 1 && 'border-l',
+                            week.isDeload &&
+                              'bg-orange-50 text-orange-700 dark:bg-orange-950/20 dark:text-orange-400',
+                            !cell.isCompleted && 'cursor-pointer hover:bg-muted/40'
+                          )}
+                          onClick={() => !cell.isCompleted && onMmaClick(cell)}
+                        >
+                          {formatMmaCell(week)}
+                        </td>
+                      ))
+                    : Array.from(
+                        { length: columnGroups[mesoIdx].weekCount },
+                        (_, wi) => (
+                          <td
+                            key={`${columnGroups[mesoIdx].mesocycle.id}-empty-${wi}`}
+                            className={cn(
+                              'whitespace-nowrap px-3 py-2 text-center text-xs text-muted-foreground',
+                              mesoIdx > 0 && wi === 0 && 'border-l'
+                            )}
+                          >
+                            —
+                          </td>
+                        )
+                      )
+                )}
               </tr>
             ))}
           </tbody>
@@ -281,9 +561,13 @@ function MmaSection({
   )
 }
 
+// -- Modal state types --
+
 type SlotModalState = { slot: SlotWithExercise; workWeeks: number; hasDeload: boolean; isCompleted: boolean }
 type RunningModalState = { group: RunningGroup; workWeeks: number; hasDeload: boolean; isCompleted: boolean }
 type MmaModalState = { group: MmaGroup; workWeeks: number; hasDeload: boolean; isCompleted: boolean }
+
+// -- Main component --
 
 export function ProjectedTable({ data }: Props) {
   const router = useRouter()
@@ -301,9 +585,14 @@ export function ProjectedTable({ data }: Props) {
     }
   }
 
-  const hasAnyData = data.some(
-    (p) => p.resistanceGroups.length > 0 || p.runningGroups.length > 0 || p.mmaGroups.length > 0
-  )
+  const columnGroups = buildColumnGroups(data)
+  const totalColumns = 1 + columnGroups.reduce((sum, g) => sum + g.weekCount, 0)
+
+  const resistanceGroups = buildUnifiedResistanceData(data)
+  const runningRows = buildUnifiedRunningData(data)
+  const mmaRows = buildUnifiedMmaData(data)
+
+  const hasAnyData = resistanceGroups.length > 0 || runningRows.length > 0 || mmaRows.length > 0
 
   if (!hasAnyData) {
     return (
@@ -316,59 +605,48 @@ export function ProjectedTable({ data }: Props) {
   }
 
   return (
-    <div className="space-y-10">
-      {data.map((projection) => {
-        const { mesocycle, resistanceGroups, runningGroups, mmaGroups } = projection
-        const isCompleted = mesocycle.status === 'completed'
-        const hasData = resistanceGroups.length > 0 || runningGroups.length > 0 || mmaGroups.length > 0
+    <div className="space-y-8">
+      <UnifiedResistanceSection
+        groups={resistanceGroups}
+        columnGroups={columnGroups}
+        totalColumns={totalColumns}
+        onSlotClick={(cell) =>
+          setSelectedSlot({
+            slot: cell.slot,
+            workWeeks: cell.workWeeks,
+            hasDeload: cell.hasDeload,
+            isCompleted: cell.isCompleted,
+          })
+        }
+      />
 
-        if (!hasData) return null
+      <UnifiedRunningSection
+        rows={runningRows}
+        columnGroups={columnGroups}
+        totalColumns={totalColumns}
+        onRunningClick={(cell) =>
+          setSelectedRunning({
+            group: cell.group,
+            workWeeks: cell.workWeeks,
+            hasDeload: cell.hasDeload,
+            isCompleted: cell.isCompleted,
+          })
+        }
+      />
 
-        return (
-          <div key={mesocycle.id} className="space-y-6">
-            <div className="flex items-center gap-3">
-              <h2 className="text-base font-semibold">{mesocycle.name}</h2>
-              <span className={cn(
-                'rounded-full px-2 py-0.5 text-xs font-medium',
-                mesocycle.status === 'active' && 'bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400',
-                mesocycle.status === 'planned' && 'bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400',
-              )}>
-                {mesocycle.status}
-              </span>
-              <span className="text-sm text-muted-foreground">
-                {mesocycle.workWeeks} weeks{mesocycle.hasDeload ? ' + deload' : ''}
-              </span>
-            </div>
-
-            <ResistanceSection
-              groups={resistanceGroups}
-              startDate={mesocycle.startDate}
-              workWeeks={mesocycle.workWeeks}
-              hasDeload={mesocycle.hasDeload}
-              isCompleted={isCompleted}
-              onSlotClick={(slot, ww, hd, ic) => setSelectedSlot({ slot, workWeeks: ww, hasDeload: hd, isCompleted: ic })}
-            />
-
-            <RunningSection
-              groups={runningGroups}
-              startDate={mesocycle.startDate}
-              workWeeks={mesocycle.workWeeks}
-              hasDeload={mesocycle.hasDeload}
-              isCompleted={isCompleted}
-              onRunningClick={(group, ww, hd, ic) => setSelectedRunning({ group, workWeeks: ww, hasDeload: hd, isCompleted: ic })}
-            />
-
-            <MmaSection
-              groups={mmaGroups}
-              startDate={mesocycle.startDate}
-              workWeeks={mesocycle.workWeeks}
-              hasDeload={mesocycle.hasDeload}
-              isCompleted={isCompleted}
-              onMmaClick={(group, ww, hd, ic) => setSelectedMma({ group, workWeeks: ww, hasDeload: hd, isCompleted: ic })}
-            />
-          </div>
-        )
-      })}
+      <UnifiedMmaSection
+        rows={mmaRows}
+        columnGroups={columnGroups}
+        totalColumns={totalColumns}
+        onMmaClick={(cell) =>
+          setSelectedMma({
+            group: cell.group,
+            workWeeks: cell.workWeeks,
+            hasDeload: cell.hasDeload,
+            isCompleted: cell.isCompleted,
+          })
+        }
+      />
 
       {selectedSlot && (
         <WeekProgressionGrid
