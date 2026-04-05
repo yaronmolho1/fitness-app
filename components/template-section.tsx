@@ -1019,7 +1019,7 @@ function MixedSectionRow({ section, slots, exercises, templateId, isCompleted, o
   return (
     <div className="rounded-lg border">
       <div
-        className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-muted/50"
+        className="group flex cursor-pointer items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-muted/50"
         onClick={() => setExpanded(!expanded)}
       >
         <span className="inline-flex shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
@@ -1037,18 +1037,22 @@ function MixedSectionRow({ section, slots, exercises, templateId, isCompleted, o
             disabled={isPending}
           />
         ) : (
-          <span
-            className="font-medium"
-            onClick={(e) => {
-              if (!isCompleted) {
-                e.stopPropagation()
-                setEditingName(true)
-              }
-            }}
-            title={isCompleted ? undefined : 'Click to rename'}
-          >
-            {section.section_name}
-          </span>
+          <>
+            <span className="font-medium">{section.section_name}</span>
+            {!isCompleted && (
+              <button
+                type="button"
+                className="ml-1 opacity-0 group-hover:opacity-100 p-0.5 text-muted-foreground hover:text-foreground transition-opacity"
+                onClick={(e) => { e.stopPropagation(); setEditingName(true) }}
+                aria-label="Rename section"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+              </button>
+            )}
+          </>
         )}
         {section.modality === 'resistance' && (
           <span className="text-xs text-muted-foreground">
