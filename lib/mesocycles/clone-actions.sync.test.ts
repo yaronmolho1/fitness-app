@@ -173,7 +173,7 @@ beforeEach(() => {
 })
 
 describe('cloneMesocycle — sync hooks (T208)', () => {
-  it('AC16: calls syncMesocycle(newMesoId) after successful clone', async () => {
+  it('AC16: does NOT call syncMesocycle for draft clones', async () => {
     const { mesoId } = seedSource()
     const result = await cloneMesocycle({
       source_id: mesoId,
@@ -182,21 +182,7 @@ describe('cloneMesocycle — sync hooks (T208)', () => {
     })
 
     expect(result.success).toBe(true)
-    if (result.success) {
-      expect(mockSyncMesocycle).toHaveBeenCalledTimes(1)
-      expect(mockSyncMesocycle).toHaveBeenCalledWith(result.id)
-    }
-  })
-
-  it('AC19: sync failure does not affect clone result', async () => {
-    mockSyncMesocycle.mockRejectedValueOnce(new Error('API failed'))
-    const { mesoId } = seedSource()
-    const result = await cloneMesocycle({
-      source_id: mesoId,
-      name: 'Clone',
-      start_date: '2026-04-01',
-    })
-    expect(result.success).toBe(true)
+    expect(mockSyncMesocycle).not.toHaveBeenCalled()
   })
 
   it('does NOT call syncMesocycle on clone failure', async () => {
