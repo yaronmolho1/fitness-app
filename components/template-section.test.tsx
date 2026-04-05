@@ -43,9 +43,37 @@ vi.mock('@/components/cascade-scope-selector', () => ({
 vi.mock('@/components/layout/section-heading', () => ({
   SectionHeading: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
 }))
+vi.mock('@dnd-kit/core', () => ({
+  DndContext: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  closestCenter: vi.fn(),
+  PointerSensor: vi.fn(),
+  KeyboardSensor: vi.fn(),
+  useSensor: vi.fn(() => ({})),
+  useSensors: vi.fn(() => []),
+}))
+vi.mock('@dnd-kit/sortable', () => ({
+  SortableContext: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  verticalListSortingStrategy: vi.fn(),
+  useSortable: vi.fn(() => ({
+    attributes: {},
+    listeners: {},
+    setNodeRef: vi.fn(),
+    transform: null,
+    transition: undefined,
+    isDragging: false,
+  })),
+  sortableKeyboardCoordinates: vi.fn(),
+  arrayMove: vi.fn((arr: unknown[], from: number, to: number) => {
+    const a = [...arr]; a.splice(to, 0, ...a.splice(from, 1)); return a
+  }),
+}))
+vi.mock('@dnd-kit/utilities', () => ({
+  CSS: { Transform: { toString: vi.fn(() => '') } },
+}))
 vi.mock('@/lib/templates/actions', () => ({
   createResistanceTemplate: vi.fn(),
   deleteTemplate: vi.fn(),
+  reorderTemplates: vi.fn(),
 }))
 vi.mock('@/lib/templates/copy-actions', () => ({
   copyTemplateToMesocycle: vi.fn(),

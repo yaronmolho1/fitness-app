@@ -64,7 +64,7 @@ function resetTables() {
     target_distance REAL,
     target_duration INTEGER,
     target_elevation_gain INTEGER,
-    planned_duration INTEGER, estimated_duration INTEGER,
+    planned_duration INTEGER, estimated_duration INTEGER, display_order INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER
   )`)
   testDb.run(sql`CREATE TABLE template_sections (

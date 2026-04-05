@@ -64,6 +64,7 @@ export const workout_templates = sqliteTable('workout_templates', {
   // MMA/BJJ-specific (null for non-mma templates)
   planned_duration: integer('planned_duration'),
   estimated_duration: integer('estimated_duration'), // minutes, nullable — computed from modality
+  display_order: integer('display_order').notNull().default(0),
   created_at: integer('created_at', { mode: 'timestamp' }),
 })
 

@@ -51,7 +51,7 @@ describe('slot_week_overrides schema', () => {
         target_distance REAL,
         target_duration INTEGER,
     target_elevation_gain INTEGER,
-        planned_duration INTEGER, estimated_duration INTEGER,
+        planned_duration INTEGER, estimated_duration INTEGER, display_order INTEGER NOT NULL DEFAULT 0,
         created_at INTEGER
       );
       CREATE TABLE IF NOT EXISTS exercise_slots (
@@ -381,7 +381,7 @@ describe('slot_week_overrides relations', () => {
         target_distance REAL,
         target_duration INTEGER,
     target_elevation_gain INTEGER,
-        planned_duration INTEGER, estimated_duration INTEGER,
+        planned_duration INTEGER, estimated_duration INTEGER, display_order INTEGER NOT NULL DEFAULT 0,
         created_at INTEGER
       );
       CREATE TABLE IF NOT EXISTS exercise_slots (

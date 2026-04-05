@@ -93,8 +93,8 @@ erDiagram
 | `exercises` | Global exercise library — reference data shared across all mesocycles and templates |
 | `exercise_slots` | Junction table placing an exercise into a template with set/rep/weight/RPE targets and ordering; optional `section_id` FK for mixed templates |
 | `template_sections` | Ordered sections within a mixed-modality template; each section has its own modality (resistance/running/mma) and modality-specific fields |
-| `workout_templates` | Named workout plans (e.g. Push A, Easy Run) scoped to a mesocycle; carry a `canonical_name` slug for cross-phase linking |
-| `mesocycles` | Training phases: N work weeks + optional deload week; status lifecycle (planned → active → completed) |
+| `workout_templates` | Named workout plans (e.g. Push A, Easy Run) scoped to a mesocycle; carry a `canonical_name` slug for cross-phase linking; `display_order` controls user-defined sort order within a mesocycle |
+| `mesocycles` | Training phases: N work weeks + optional deload week; status lifecycle (draft → planned → active → completed) |
 | `weekly_schedule` | Day-to-template assignment grid; keyed by `(mesocycle_id, day_of_week, week_type, time_slot, cycle_position)`; `time_slot` (HH:MM) + `duration` (minutes) are NOT NULL with defaults; `cycle_length` (default 1 = no rotation) and `cycle_position` (1-based, default 1) support per-week template rotation |
 | `slot_week_overrides` | Per-week overrides for exercise slot targets (sets/reps/weight/RPE); enables week-by-week periodization within a mesocycle |
 | `schedule_week_overrides` | Per-week schedule overrides for moving/removing workouts on specific weeks; links source+target via `override_group`; null `template_id` = rest/removed |

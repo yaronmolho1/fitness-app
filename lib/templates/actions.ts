@@ -1,12 +1,21 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { eq, and } from 'drizzle-orm'
+import { eq, and, asc, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '@/lib/db/index'
 import { workout_templates, mesocycles, exercise_slots, weekly_schedule } from '@/lib/db/schema'
 import { generateCanonicalName } from './utils'
 import { estimateRunningDuration, estimateMmaDuration } from './estimate-duration'
+
+function getNextDisplayOrder(mesocycleId: number): number {
+  const row = db
+    .select({ max: sql<number>`coalesce(max(${workout_templates.display_order}), -1)` })
+    .from(workout_templates)
+    .where(eq(workout_templates.mesocycle_id, mesocycleId))
+    .get()
+  return (row?.max ?? -1) + 1
+}
 
 const createResistanceTemplateSchema = z.object({
   name: z.string().transform((s) => s.trim()).pipe(z.string().min(1, 'Name is required')),
@@ -82,6 +91,7 @@ export async function createResistanceTemplate(
         name,
         canonical_name: canonicalName,
         modality: 'resistance',
+        display_order: getNextDisplayOrder(mesocycle_id),
         created_at: new Date(),
       })
       .returning()
@@ -274,6 +284,7 @@ export async function createMmaBjjTemplate(
         modality: 'mma',
         planned_duration,
         estimated_duration: estimateMmaDuration(planned_duration),
+        display_order: getNextDisplayOrder(mesocycle_id),
         created_at: new Date(),
       })
       .returning()
@@ -379,6 +390,7 @@ export async function createRunningTemplate(
         target_duration,
         target_elevation_gain,
         estimated_duration: estimateRunningDuration(target_duration),
+        display_order: getNextDisplayOrder(mesocycle_id),
         created_at: new Date(),
       })
       .returning()
@@ -573,6 +585,87 @@ export async function deleteTemplate(id: number): Promise<DeleteTemplateResult> 
   }
 
   db.delete(workout_templates).where(eq(workout_templates.id, id)).run()
+
+  revalidatePath('/mesocycles')
+  return { success: true }
+}
+
+// ============================================================================
+// Reorder templates within a mesocycle
+// ============================================================================
+
+const reorderTemplatesSchema = z.object({
+  mesocycle_id: z.number().int().positive(),
+  template_ids: z.array(z.number().int().positive()).min(1),
+})
+
+type ReorderTemplatesInput = {
+  mesocycle_id: number
+  template_ids: number[]
+}
+
+type ReorderTemplatesResult =
+  | { success: true; noop?: boolean }
+  | { success: false; error: string }
+
+export async function reorderTemplates(
+  input: ReorderTemplatesInput
+): Promise<ReorderTemplatesResult> {
+  const parsed = reorderTemplatesSchema.safeParse(input)
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message }
+  }
+
+  const { mesocycle_id, template_ids } = parsed.data
+
+  const meso = db
+    .select({ status: mesocycles.status })
+    .from(mesocycles)
+    .where(eq(mesocycles.id, mesocycle_id))
+    .get()
+
+  if (!meso) {
+    return { success: false, error: 'Mesocycle not found' }
+  }
+
+  if (meso.status === 'completed') {
+    return { success: false, error: 'Cannot reorder templates on a completed mesocycle' }
+  }
+
+  const current = db
+    .select({ id: workout_templates.id, display_order: workout_templates.display_order })
+    .from(workout_templates)
+    .where(eq(workout_templates.mesocycle_id, mesocycle_id))
+    .orderBy(asc(workout_templates.display_order), asc(workout_templates.id))
+    .all()
+
+  const currentIds = new Set(current.map((t) => t.id))
+  const inputIds = new Set(template_ids)
+
+  if (
+    currentIds.size !== inputIds.size ||
+    ![...currentIds].every((id) => inputIds.has(id))
+  ) {
+    return {
+      success: false,
+      error: 'Template IDs mismatch: must include all mesocycle templates',
+    }
+  }
+
+  const currentOrder = current.map((t) => t.id)
+  const isUnchanged = template_ids.every((id, i) => id === currentOrder[i])
+  if (isUnchanged) {
+    return { success: true, noop: true }
+  }
+
+  db.transaction((tx) => {
+    for (let i = 0; i < template_ids.length; i++) {
+      tx.update(workout_templates)
+        .set({ display_order: i })
+        .where(eq(workout_templates.id, template_ids[i]))
+        .run()
+    }
+  })
 
   revalidatePath('/mesocycles')
   return { success: true }

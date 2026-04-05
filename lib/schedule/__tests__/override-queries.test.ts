@@ -42,7 +42,9 @@ function createTestDb() {
       target_elevation_gain INTEGER,
       planned_duration INTEGER,
       estimated_duration INTEGER,
+      display_order INTEGER NOT NULL DEFAULT 0,
       created_at INTEGER
+
     );
     CREATE TABLE weekly_schedule (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
