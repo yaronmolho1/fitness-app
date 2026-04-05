@@ -269,6 +269,72 @@ export async function updateScheduleEntry(input: {
   return { success: true, data: row }
 }
 
+type CopyResult =
+  | { success: true; count: number }
+  | { success: false; error: string }
+
+export async function copyNormalToDeload(
+  mesocycleId: number
+): Promise<CopyResult> {
+  const meso = db
+    .select()
+    .from(mesocycles)
+    .where(eq(mesocycles.id, mesocycleId))
+    .get()
+
+  if (!meso) return { success: false, error: 'Mesocycle not found' }
+  if (meso.status === 'completed') return { success: false, error: 'Cannot modify completed mesocycle' }
+  if (!meso.has_deload) return { success: false, error: 'Mesocycle has no deload week' }
+
+  const normalEntries = db
+    .select()
+    .from(weekly_schedule)
+    .where(
+      and(
+        eq(weekly_schedule.mesocycle_id, mesocycleId),
+        eq(weekly_schedule.week_type, 'normal')
+      )
+    )
+    .all()
+
+  if (normalEntries.length === 0) return { success: false, error: 'No normal schedule to copy' }
+
+  const count = db.transaction((tx) => {
+    // Clear existing deload schedule
+    tx.delete(weekly_schedule)
+      .where(
+        and(
+          eq(weekly_schedule.mesocycle_id, mesocycleId),
+          eq(weekly_schedule.week_type, 'deload')
+        )
+      )
+      .run()
+
+    // Copy normal entries as deload
+    for (const entry of normalEntries) {
+      tx.insert(weekly_schedule)
+        .values({
+          mesocycle_id: mesocycleId,
+          day_of_week: entry.day_of_week,
+          template_id: entry.template_id,
+          week_type: 'deload' as const,
+          period: entry.period,
+          time_slot: entry.time_slot,
+          duration: entry.duration,
+          cycle_length: entry.cycle_length,
+          cycle_position: entry.cycle_position,
+          created_at: new Date(),
+        })
+        .run()
+    }
+
+    return normalEntries.length
+  })
+
+  revalidatePath('/mesocycles', 'layout')
+  return { success: true, count }
+}
+
 const rotationPositionSchema = z.object({
   cycle_position: z.number().int().positive(),
   template_id: z.number().int().positive(),

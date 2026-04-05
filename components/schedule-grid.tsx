@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useCallback } from 'react'
+import { useState, useEffect, useTransition, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -143,6 +143,7 @@ function isRotationGroup(item: ScheduleEntry | RotationGroup): item is RotationG
 export function ScheduleGrid({ mesocycleId, templates, schedule: initialSchedule, isCompleted, variant }: Props) {
   const router = useRouter()
   const [schedule, setSchedule] = useState(initialSchedule)
+  useEffect(() => { setSchedule(initialSchedule) }, [initialSchedule])
   const [form, setForm] = useState<FormState>(null)
   const [editForm, setEditForm] = useState<EditFormState>(null)
   const [error, setError] = useState<string | null>(null)
@@ -796,6 +797,7 @@ function RotationSlot({
                     Week {entry.cycle_position}
                   </span>
                   <span className="font-medium truncate">{entry.template_name}</span>
+                  <span className="shrink-0 text-muted-foreground">{formatDuration(entry.duration)}</span>
                 </div>
               ))}
             </div>

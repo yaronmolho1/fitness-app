@@ -255,13 +255,19 @@ export async function getCalendarContext() {
   return { creds, calendarApi, calendarId: creds.calendar_id, timezone, appUrl }
 }
 
-// Compute week-specific duration for a template, factoring in overrides
+// Compute week-specific duration for a template, factoring in overrides.
+// Running/MMA: use the schedule entry's explicit duration (user sets it directly).
+// Resistance/mixed: estimate from exercises × sets × rest (varies by week overrides).
 async function computeWeekDuration(
   templateId: number,
   templateData: { modality: string; target_duration: number | null; planned_duration: number | null },
   weekNumber: number,
   fallbackDuration: number,
 ): Promise<number> {
+  if (templateData.modality === 'running' || templateData.modality === 'mma') {
+    return fallbackDuration
+  }
+
   const slots: SlotWithId[] = await db
     .select({
       id: exercise_slots.id,
