@@ -11,6 +11,7 @@ import {
   exercise_slots,
 } from '@/lib/db/schema'
 import { generateCanonicalName } from './utils'
+import { recomputeEstimatedDuration } from './recompute-duration'
 
 type TemplateRow = typeof workout_templates.$inferSelect
 type SectionRow = typeof template_sections.$inferSelect
@@ -204,6 +205,7 @@ export async function createMixedTemplate(
     return { template, sections: createdSections }
   })
 
+  recomputeEstimatedDuration(result.template.id)
   revalidatePath('/mesocycles')
   return { success: true, data: result }
 }
@@ -327,6 +329,7 @@ export async function addSection(
     .returning()
     .get()
 
+  recomputeEstimatedDuration(template_id)
   revalidatePath('/mesocycles')
   return { success: true, data: created }
 }
@@ -395,6 +398,7 @@ export async function removeSection(sectionId: number): Promise<RemoveResult> {
       .run()
   })
 
+  recomputeEstimatedDuration(section.template_id)
   revalidatePath('/mesocycles')
   return { success: true }
 }
@@ -539,6 +543,7 @@ export async function updateSection(
     .where(eq(template_sections.id, sectionId))
     .run()
 
+  recomputeEstimatedDuration(section.template_id)
   revalidatePath('/mesocycles')
   return { success: true }
 }

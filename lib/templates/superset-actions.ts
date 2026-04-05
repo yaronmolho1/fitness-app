@@ -5,6 +5,7 @@ import { eq, and, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '@/lib/db/index'
 import { exercise_slots, workout_templates, mesocycles } from '@/lib/db/schema'
+import { recomputeEstimatedDuration } from './recompute-duration'
 
 type ActionResult =
   | { success: true }
@@ -122,6 +123,7 @@ export async function createSuperset(
     }
   })
 
+  recomputeEstimatedDuration(templateId)
   revalidatePath('/mesocycles')
   return { success: true }
 }
@@ -178,6 +180,7 @@ export async function breakSuperset(
     }
   })
 
+  recomputeEstimatedDuration(template_id)
   revalidatePath('/mesocycles')
   return { success: true }
 }
@@ -236,6 +239,7 @@ export async function updateGroupRest(
     }
   })
 
+  recomputeEstimatedDuration(template_id)
   revalidatePath('/mesocycles')
   return { success: true }
 }

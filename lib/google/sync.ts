@@ -1,6 +1,6 @@
 import { google } from 'googleapis'
 import type { calendar_v3 } from 'googleapis'
-import { eq, and, ne } from 'drizzle-orm'
+import { eq, and, ne, sql, inArray } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import {
   google_calendar_events,
@@ -9,12 +9,25 @@ import {
   workout_templates,
   exercise_slots,
   exercises,
+  template_sections,
+  slot_week_overrides,
+  template_week_overrides,
 } from '@/lib/db/schema'
 import { getAuthenticatedClient } from './client'
 import { getGoogleCredentials, getEventsByMesocycle, getAthleteTimezone } from './queries'
 import { getEndTime } from '@/lib/schedule/time-utils'
 import { getEffectiveScheduleForDay } from '@/lib/schedule/override-queries'
 import type { GCalEventParams, SyncResult, SyncAction, GCalEventBody } from './types'
+import {
+  estimateTemplateDuration,
+  applySlotOverrides,
+  applyTemplateOverrides,
+  applySectionOverrides,
+  type SlotWithId,
+  type SectionForEstimate,
+  type SlotForEstimate,
+  type TemplateForEstimate,
+} from '@/lib/templates/estimate-duration'
 
 // Google Calendar event color IDs by modality
 export const MODALITY_COLORS: Record<string, string> = {
@@ -242,6 +255,89 @@ export async function getCalendarContext() {
   return { creds, calendarApi, calendarId: creds.calendar_id, timezone, appUrl }
 }
 
+// Compute week-specific duration for a template, factoring in overrides
+async function computeWeekDuration(
+  templateId: number,
+  templateData: { modality: string; target_duration: number | null; planned_duration: number | null },
+  weekNumber: number,
+  fallbackDuration: number,
+): Promise<number> {
+  const slots: SlotWithId[] = await db
+    .select({
+      id: exercise_slots.id,
+      sets: exercise_slots.sets,
+      rest_seconds: exercise_slots.rest_seconds,
+      group_id: exercise_slots.group_id,
+      group_rest_seconds: exercise_slots.group_rest_seconds,
+      section_id: exercise_slots.section_id,
+    })
+    .from(exercise_slots)
+    .where(eq(exercise_slots.template_id, templateId))
+    .all()
+
+  const slotIds = slots.map(s => s.id)
+  const slotOverrides = slotIds.length > 0
+    ? await db
+      .select()
+      .from(slot_week_overrides)
+      .where(and(
+        eq(slot_week_overrides.week_number, weekNumber),
+        inArray(slot_week_overrides.exercise_slot_id, slotIds),
+      ))
+      .all()
+    : []
+
+  const tplOverrides = await db
+    .select()
+    .from(template_week_overrides)
+    .where(and(
+      eq(template_week_overrides.template_id, templateId),
+      eq(template_week_overrides.week_number, weekNumber),
+    ))
+    .all()
+
+  const template: TemplateForEstimate = applyTemplateOverrides(templateData, tplOverrides)
+  const adjustedSlots = applySlotOverrides(slots, slotOverrides)
+
+  let estimated: number | null = null
+
+  if (template.modality === 'mixed') {
+    const sections = await db
+      .select({
+        id: template_sections.id,
+        modality: template_sections.modality,
+        target_duration: template_sections.target_duration,
+        planned_duration: template_sections.planned_duration,
+      })
+      .from(template_sections)
+      .where(eq(template_sections.template_id, templateId))
+      .all()
+
+    const sectionIds = sections.map(s => s.id)
+    const sectionsForEstimate: SectionForEstimate[] = applySectionOverrides(
+      sections.map(s => ({ modality: s.modality, target_duration: s.target_duration, planned_duration: s.planned_duration })),
+      sectionIds,
+      tplOverrides,
+    )
+
+    const slotsBySection = new Map<number, SlotForEstimate[]>()
+    for (let i = 0; i < slots.length; i++) {
+      const slot = slots[i]
+      if (slot.section_id != null) {
+        const list = slotsBySection.get(slot.section_id) ?? []
+        list.push(adjustedSlots[i])
+        slotsBySection.set(slot.section_id, list)
+      }
+    }
+
+    estimated = estimateTemplateDuration(template, adjustedSlots, sectionsForEstimate, sectionIds, slotsBySection)
+  } else {
+    estimated = estimateTemplateDuration(template, adjustedSlots)
+  }
+
+  return estimated ?? fallbackDuration
+}
+
 /**
  * Push all projected workouts for a mesocycle to Google Calendar.
  * Batch-inserts up to 50 events at a time.
@@ -288,8 +384,9 @@ export async function syncMesocycle(mesoId: number): Promise<SyncResult> {
   // Build all event params using effective schedule (base + overrides) per date
   const totalWeeks = meso.work_weeks + (meso.has_deload ? 1 : 0)
   const allParams: GCalEventParams[] = []
-  const templateCache = new Map<number, { name: string; modality: string }>()
+  const templateCache = new Map<number, { name: string; modality: string; target_duration: number | null; planned_duration: number | null }>()
   const exerciseCache = new Map<number, string[]>()
+  const durationCache = new Map<string, number>()
 
   const startDate = new Date(meso.start_date + 'T00:00:00Z')
   const endDate = new Date(meso.end_date + 'T00:00:00Z')
@@ -315,7 +412,7 @@ export async function syncMesocycle(mesoId: number): Promise<SyncResult> {
           .from(workout_templates)
           .where(eq(workout_templates.id, entry.template_id))
           .get()
-        if (t) templateCache.set(t.id, { name: t.name, modality: t.modality })
+        if (t) templateCache.set(t.id, { name: t.name, modality: t.modality, target_duration: t.target_duration, planned_duration: t.planned_duration })
       }
       const template = templateCache.get(entry.template_id)
       if (!template) continue
@@ -324,12 +421,19 @@ export async function syncMesocycle(mesoId: number): Promise<SyncResult> {
         exerciseCache.set(entry.template_id, await getExerciseNames(entry.template_id))
       }
 
+      // Per-week duration: compute from template + overrides, cached by (template, week)
+      const durationKey = `${entry.template_id}-${weekNum}`
+      if (!durationCache.has(durationKey)) {
+        const computed = await computeWeekDuration(entry.template_id, template, weekNum, entry.duration)
+        durationCache.set(durationKey, computed)
+      }
+
       allParams.push({
         templateName: template.name,
         modality: template.modality,
         date: dateStr,
         timeSlot: entry.time_slot,
-        duration: entry.duration,
+        duration: durationCache.get(durationKey)!,
         weekNumber: weekNum,
         timezone: ctx.timezone,
         appUrl: ctx.appUrl,
@@ -424,12 +528,19 @@ export async function syncScheduleChange(
 
         const exerciseNames = await getExerciseNames(template.id)
 
+        const weekDuration = await computeWeekDuration(
+          template.id,
+          { modality: template.modality, target_duration: template.target_duration, planned_duration: template.planned_duration },
+          weekNum,
+          entry.duration,
+        )
+
         await createEvent(ctx.calendarApi, ctx.calendarId, {
           templateName: template.name,
           modality: template.modality,
           date,
           timeSlot: entry.time_slot,
-          duration: entry.duration,
+          duration: weekDuration,
           weekNumber: weekNum,
           timezone: ctx.timezone,
           appUrl: ctx.appUrl,
