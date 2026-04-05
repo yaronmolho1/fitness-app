@@ -23,8 +23,8 @@ for (const entry of journal.entries) {
   if (applied.has(entry.tag)) continue;
   const sql = fs.readFileSync(path.join('./lib/db/migrations', entry.tag + '.sql'), 'utf8');
   const stmts = sql.split('--> statement-breakpoint').map(s => s.trim()).filter(Boolean);
-  const tx = db.transaction(() => { for (const s of stmts) db.exec(s); db.prepare('INSERT INTO __drizzle_migrations (hash, created_at) VALUES (?, ?)').run(entry.tag, Date.now()); });
-  tx();
+  for (const s of stmts) db.exec(s);
+  db.prepare('INSERT INTO __drizzle_migrations (hash, created_at) VALUES (?, ?)').run(entry.tag, Date.now());
   console.log('Applied: ' + entry.tag);
 }
 db.close();
