@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { cloneMesocycle } from '@/lib/mesocycles/clone-actions'
-import { calculateEndDate } from '@/lib/mesocycles/utils'
+import { calculateEndDate, checkDateOverlap, type MesocycleDateRange } from '@/lib/mesocycles/utils'
 import { formatDateDisplay } from '@/lib/date-format'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -28,7 +28,7 @@ function formatDuration(workWeeks: number, hasDeload: boolean): string {
   return `${parts.join(' + ')} = ${totalDays} days`
 }
 
-export function CloneMesocycleForm({ source }: { source: CloneSource }) {
+export function CloneMesocycleForm({ source, existingMesocycles = [] }: { source: CloneSource; existingMesocycles?: MesocycleDateRange[] }) {
   const router = useRouter()
   const [name, setName] = useState('')
   const [startDate, setStartDate] = useState('')
@@ -42,6 +42,10 @@ export function CloneMesocycleForm({ source }: { source: CloneSource }) {
     DATE_REGEX.test(startDate) && Number.isInteger(workWeeksNum) && workWeeksNum >= 1
   const endDate = canComputeEndDate
     ? calculateEndDate(startDate, workWeeksNum, hasDeload)
+    : null
+
+  const overlap = endDate
+    ? checkDateOverlap(startDate, endDate, existingMesocycles)
     : null
 
   async function handleSubmit(e: React.FormEvent) {
@@ -159,6 +163,12 @@ export function CloneMesocycleForm({ source }: { source: CloneSource }) {
           </p>
         )}
       </div>
+
+      {overlap?.overlapping && (
+        <div className="rounded-md border border-yellow-500 bg-yellow-500/10 p-3 text-sm text-yellow-700 dark:text-yellow-400">
+          Date range conflicts with &ldquo;{overlap.conflictName}&rdquo; — you can resolve this before marking as planned
+        </div>
+      )}
 
       <Button type="submit" className="w-full" disabled={submitting}>
         {submitting ? 'Cloning...' : 'Clone Mesocycle'}

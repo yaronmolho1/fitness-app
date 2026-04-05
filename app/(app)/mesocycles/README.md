@@ -7,4 +7,4 @@ List and detail pages for mesocycle management.
 
 ## Subdirectories
 - `[id]/` — detail page: fetches mesocycle, schedule, templates, and exercise slots; renders `ScheduleTabs` (normal/deload `ScheduleGrid`), `TemplateSection` (with `SlotList`); 404 on missing/invalid ID
-- `new/` — create page: renders `MesocycleForm`, breadcrumb back to list
+- `new/` — create page: fetches non-completed mesocycles for overlap detection, renders `MesocycleForm`, breadcrumb back to list

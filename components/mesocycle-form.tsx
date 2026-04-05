@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createMesocycle, updateMesocycle } from '@/lib/mesocycles/actions'
-import { calculateEndDate } from '@/lib/mesocycles/utils'
+import { calculateEndDate, checkDateOverlap, type MesocycleDateRange } from '@/lib/mesocycles/utils'
 import { formatDateDisplay } from '@/lib/date-format'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -30,9 +30,11 @@ type MesocycleFormProps = {
     work_weeks: number
     has_deload: boolean
   }
+  existingMesocycles?: MesocycleDateRange[]
+  currentStatus?: string
 }
 
-export function MesocycleForm({ mode = 'create', initialData }: MesocycleFormProps) {
+export function MesocycleForm({ mode = 'create', initialData, existingMesocycles = [], currentStatus }: MesocycleFormProps) {
   const router = useRouter()
   const [name, setName] = useState(initialData?.name ?? '')
   const [startDate, setStartDate] = useState(initialData?.start_date ?? '')
@@ -48,6 +50,11 @@ export function MesocycleForm({ mode = 'create', initialData }: MesocycleFormPro
   const endDate = canComputeEndDate
     ? calculateEndDate(startDate, workWeeksNum, hasDeload)
     : null
+
+  const overlap = endDate
+    ? checkDateOverlap(startDate, endDate, existingMesocycles, initialData?.id)
+    : null
+  const isBlockingOverlap = overlap?.overlapping && (currentStatus === 'planned' || currentStatus === 'active')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -166,7 +173,16 @@ export function MesocycleForm({ mode = 'create', initialData }: MesocycleFormPro
         )}
       </div>
 
-      <Button type="submit" className="w-full" disabled={submitting}>
+      {overlap?.overlapping && (
+        <div className={`rounded-md border p-3 text-sm ${isBlockingOverlap ? 'border-destructive bg-destructive/10 text-destructive' : 'border-yellow-500 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400'}`}>
+          Date range conflicts with &ldquo;{overlap.conflictName}&rdquo;
+          {isBlockingOverlap
+            ? ' — resolve the conflict before saving'
+            : ' — you can resolve this before marking as planned'}
+        </div>
+      )}
+
+      <Button type="submit" className="w-full" disabled={submitting || !!isBlockingOverlap}>
         {submitting
           ? (mode === 'edit' ? 'Saving...' : 'Creating...')
           : (mode === 'edit' ? 'Save Changes' : 'Create Mesocycle')}

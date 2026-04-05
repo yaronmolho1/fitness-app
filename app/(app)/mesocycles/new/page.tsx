@@ -2,8 +2,13 @@ import Link from 'next/link'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
 import { MesocycleForm } from '@/components/mesocycle-form'
+import { getAllNonCompletedMesocycles } from '@/lib/mesocycles/queries'
 
-export default function NewMesocyclePage() {
+export const dynamic = 'force-dynamic'
+
+export default async function NewMesocyclePage() {
+  const existing = await getAllNonCompletedMesocycles()
+
   return (
     <PageContainer variant="narrow">
       <div className="space-y-6">
@@ -16,7 +21,7 @@ export default function NewMesocyclePage() {
           }
         />
 
-        <MesocycleForm />
+        <MesocycleForm existingMesocycles={existing} />
       </div>
     </PageContainer>
   )

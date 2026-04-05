@@ -51,11 +51,11 @@ export async function getCascadeTargets(
     canonical_name: workout_templates.canonical_name,
   }
 
-  // For this-and-future, look up the source mesocycle's created_at
-  let sourceCreatedAt: number | undefined
+  // For this-and-future, look up the source mesocycle's start_date
+  let sourceStartDate: string | undefined
   if (scope === 'this-and-future') {
     const sourceMeso = db
-      .select({ created_at: mesocycles.created_at })
+      .select({ start_date: mesocycles.start_date })
       .from(mesocycles)
       .where(eq(mesocycles.id, source.mesocycle_id))
       .get()
@@ -63,7 +63,7 @@ export async function getCascadeTargets(
     if (!sourceMeso) {
       return { success: false, error: 'Source mesocycle not found' }
     }
-    sourceCreatedAt = sourceMeso.created_at?.getTime() ?? 0
+    sourceStartDate = sourceMeso.start_date
   }
 
   let siblings: TemplateTarget[]
@@ -89,7 +89,7 @@ export async function getCascadeTargets(
         and(
           eq(workout_templates.canonical_name, source.canonical_name),
           ne(mesocycles.status, 'completed'),
-          gte(mesocycles.created_at, new Date(sourceCreatedAt!))
+          gte(mesocycles.start_date, sourceStartDate!)
         )
       )
       .all()
@@ -104,7 +104,7 @@ export async function getCascadeTargets(
     : and(
         eq(workout_templates.canonical_name, source.canonical_name),
         eq(mesocycles.status, 'completed'),
-        gte(mesocycles.created_at, new Date(sourceCreatedAt!))
+        gte(mesocycles.start_date, sourceStartDate!)
       )
 
   const completedCount = db

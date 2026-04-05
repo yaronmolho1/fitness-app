@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { getMesocycleById } from '@/lib/mesocycles/queries'
+import { getMesocycleById, getAllNonCompletedMesocycles } from '@/lib/mesocycles/queries'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
 import { CloneMesocycleForm } from '@/components/clone-mesocycle-form'
@@ -16,7 +16,10 @@ export default async function CloneMesocyclePage({
   const numericId = Number(id)
   if (Number.isNaN(numericId)) notFound()
 
-  const meso = await getMesocycleById(numericId)
+  const [meso, existing] = await Promise.all([
+    getMesocycleById(numericId),
+    getAllNonCompletedMesocycles(),
+  ])
   if (!meso) notFound()
 
   return (
@@ -38,6 +41,7 @@ export default async function CloneMesocyclePage({
             work_weeks: meso.work_weeks,
             has_deload: meso.has_deload,
           }}
+          existingMesocycles={existing}
         />
       </div>
     </PageContainer>

@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { getMesocycleById } from '@/lib/mesocycles/queries'
+import { getMesocycleById, getAllNonCompletedMesocycles } from '@/lib/mesocycles/queries'
 import { PageContainer } from '@/components/layout/page-container'
 import { PageHeader } from '@/components/layout/page-header'
 import { MesocycleForm } from '@/components/mesocycle-form'
@@ -16,7 +16,10 @@ export default async function EditMesocyclePage({
   const numericId = Number(id)
   if (Number.isNaN(numericId)) notFound()
 
-  const meso = await getMesocycleById(numericId)
+  const [meso, existing] = await Promise.all([
+    getMesocycleById(numericId),
+    getAllNonCompletedMesocycles(),
+  ])
   if (!meso) notFound()
 
   if (meso.status === 'completed') {
@@ -43,6 +46,8 @@ export default async function EditMesocyclePage({
             work_weeks: meso.work_weeks,
             has_deload: meso.has_deload,
           }}
+          existingMesocycles={existing}
+          currentStatus={meso.status}
         />
       </div>
     </PageContainer>

@@ -29,6 +29,8 @@ function seedMesocycle(
     id: number
     name: string
     status: string
+    start_date: string
+    end_date: string
     created_at: Date
   }> = {}
 ) {
@@ -176,8 +178,8 @@ describe('cascadeUpdateTemplates', () => {
 
   describe('all-phases scope', () => {
     it('updates all sibling templates in active/planned mesocycles', async () => {
-      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', start_date: '2026-02-01', end_date: '2026-02-28' })
 
       const t1 = seedTemplate(meso1.id)
       const t2 = seedTemplate(meso2.id)
@@ -201,9 +203,9 @@ describe('cascadeUpdateTemplates', () => {
 
   describe('this-and-future scope', () => {
     it('updates source + future sibling templates only', async () => {
-      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
-      const meso3 = seedMesocycle({ name: 'Phase 3', status: 'planned', created_at: new Date(3000) })
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', start_date: '2026-02-01', end_date: '2026-02-28' })
+      const meso3 = seedMesocycle({ name: 'Phase 3', status: 'planned', start_date: '2026-03-01', end_date: '2026-03-28' })
 
       const t1 = seedTemplate(meso1.id)
       const t2 = seedTemplate(meso2.id)
@@ -230,9 +232,9 @@ describe('cascadeUpdateTemplates', () => {
 
   describe('skipping logged templates', () => {
     it('skips templates with logged workouts and reports skipped count', async () => {
-      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
-      const meso3 = seedMesocycle({ name: 'Phase 3', status: 'planned', created_at: new Date(3000) })
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', start_date: '2026-02-01', end_date: '2026-02-28' })
+      const meso3 = seedMesocycle({ name: 'Phase 3', status: 'planned', start_date: '2026-03-01', end_date: '2026-03-28' })
 
       const t1 = seedTemplate(meso1.id)
       const t2 = seedTemplate(meso2.id)
@@ -281,8 +283,8 @@ describe('cascadeUpdateTemplates', () => {
 
   describe('atomicity', () => {
     it('rolls back all changes if an error occurs mid-transaction', async () => {
-      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', start_date: '2026-02-01', end_date: '2026-02-28' })
 
       const t1 = seedTemplate(meso1.id)
       seedTemplate(meso2.id)
@@ -317,10 +319,10 @@ describe('cascadeUpdateTemplates', () => {
     })
 
     it('returns correct counts with mixed update/skip', async () => {
-      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
-      const meso3 = seedMesocycle({ name: 'Phase 3', status: 'planned', created_at: new Date(3000) })
-      const meso4 = seedMesocycle({ name: 'Phase 4', status: 'planned', created_at: new Date(4000) })
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', start_date: '2026-02-01', end_date: '2026-02-28' })
+      const meso3 = seedMesocycle({ name: 'Phase 3', status: 'planned', start_date: '2026-03-01', end_date: '2026-03-28' })
+      const meso4 = seedMesocycle({ name: 'Phase 4', status: 'planned', start_date: '2026-04-01', end_date: '2026-04-28' })
 
       const t1 = seedTemplate(meso1.id)
       const t2 = seedTemplate(meso2.id)
@@ -346,9 +348,9 @@ describe('cascadeUpdateTemplates', () => {
 
   describe('skipping completed mesocycles', () => {
     it('reports skippedCompleted count in summary for all-phases', async () => {
-      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'completed', created_at: new Date(2000) })
-      const meso3 = seedMesocycle({ name: 'Phase 3', status: 'planned', created_at: new Date(3000) })
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'completed', start_date: '2026-02-01', end_date: '2026-02-28' })
+      const meso3 = seedMesocycle({ name: 'Phase 3', status: 'planned', start_date: '2026-03-01', end_date: '2026-03-28' })
 
       const t1 = seedTemplate(meso1.id)
       const tCompleted = seedTemplate(meso2.id)
@@ -374,9 +376,9 @@ describe('cascadeUpdateTemplates', () => {
     })
 
     it('reports skippedCompleted count in summary for this-and-future', async () => {
-      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'completed', created_at: new Date(2000) })
-      const meso3 = seedMesocycle({ name: 'Phase 3', status: 'completed', created_at: new Date(3000) })
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'completed', start_date: '2026-02-01', end_date: '2026-02-28' })
+      const meso3 = seedMesocycle({ name: 'Phase 3', status: 'completed', start_date: '2026-03-01', end_date: '2026-03-28' })
 
       const t1 = seedTemplate(meso1.id)
       seedTemplate(meso2.id)
@@ -396,8 +398,8 @@ describe('cascadeUpdateTemplates', () => {
     })
 
     it('reports skippedCompleted=0 when no completed mesocycles in scope', async () => {
-      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', start_date: '2026-02-01', end_date: '2026-02-28' })
 
       const t1 = seedTemplate(meso1.id)
       seedTemplate(meso2.id)
@@ -415,10 +417,10 @@ describe('cascadeUpdateTemplates', () => {
     })
 
     it('reports both skipped (logged) and skippedCompleted in mixed scenario', async () => {
-      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'completed', created_at: new Date(2000) })
-      const meso3 = seedMesocycle({ name: 'Phase 3', status: 'planned', created_at: new Date(3000) })
-      const meso4 = seedMesocycle({ name: 'Phase 4', status: 'planned', created_at: new Date(4000) })
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'completed', start_date: '2026-02-01', end_date: '2026-02-28' })
+      const meso3 = seedMesocycle({ name: 'Phase 3', status: 'planned', start_date: '2026-03-01', end_date: '2026-03-28' })
+      const meso4 = seedMesocycle({ name: 'Phase 4', status: 'planned', start_date: '2026-04-01', end_date: '2026-04-28' })
 
       const t1 = seedTemplate(meso1.id)
       seedTemplate(meso2.id) // completed — skippedCompleted
@@ -496,8 +498,8 @@ describe('cascadeUpdateTemplates', () => {
 
   describe('running field cascade', () => {
     it('cascades run_type update across phases', async () => {
-      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', start_date: '2026-02-01', end_date: '2026-02-28' })
 
       const t1 = seedTemplate(meso1.id, {
         name: 'Tempo Run', canonical_name: 'tempo-run', modality: 'running',
@@ -521,8 +523,8 @@ describe('cascadeUpdateTemplates', () => {
     })
 
     it('cascades multiple running fields at once', async () => {
-      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', start_date: '2026-02-01', end_date: '2026-02-28' })
 
       const t1 = seedTemplate(meso1.id, {
         name: 'Intervals', canonical_name: 'intervals', modality: 'running',
@@ -563,8 +565,8 @@ describe('cascadeUpdateTemplates', () => {
     })
 
     it('skips logged templates when cascading running fields', async () => {
-      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', start_date: '2026-02-01', end_date: '2026-02-28' })
 
       const t1 = seedTemplate(meso1.id, {
         name: 'Easy Run', canonical_name: 'easy-run', modality: 'running',
@@ -614,8 +616,8 @@ describe('cascadeUpdateTemplates', () => {
 
   describe('MMA planned_duration cascade', () => {
     it('cascades planned_duration update across phases', async () => {
-      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', start_date: '2026-02-01', end_date: '2026-02-28' })
 
       const t1 = seedTemplate(meso1.id, {
         name: 'BJJ Gi', canonical_name: 'bjj-gi', modality: 'mma',
@@ -658,8 +660,8 @@ describe('cascadeUpdateTemplates', () => {
 
   describe('notes cascade', () => {
     it('cascades notes update across phases', async () => {
-      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', start_date: '2026-02-01', end_date: '2026-02-28' })
 
       const t1 = seedTemplate(meso1.id)
       const t2 = seedTemplate(meso2.id)
@@ -694,8 +696,8 @@ describe('cascadeUpdateTemplates', () => {
     })
 
     it('cascades name + notes together', async () => {
-      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', start_date: '2026-02-01', end_date: '2026-02-28' })
 
       const t1 = seedTemplate(meso1.id)
       const t2 = seedTemplate(meso2.id)
@@ -716,8 +718,8 @@ describe('cascadeUpdateTemplates', () => {
 
   describe('distance/duration cascade', () => {
     it('cascades target_distance update across phases', async () => {
-      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', start_date: '2026-02-01', end_date: '2026-02-28' })
 
       const t1 = seedTemplate(meso1.id, {
         name: 'Easy Run', canonical_name: 'easy-run', modality: 'running',
@@ -741,8 +743,8 @@ describe('cascadeUpdateTemplates', () => {
     })
 
     it('cascades target_duration update across phases', async () => {
-      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', start_date: '2026-02-01', end_date: '2026-02-28' })
 
       const t1 = seedTemplate(meso1.id, {
         name: 'Tempo Run', canonical_name: 'tempo-run', modality: 'running',
@@ -766,8 +768,8 @@ describe('cascadeUpdateTemplates', () => {
     })
 
     it('cascades both distance and duration together', async () => {
-      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', start_date: '2026-02-01', end_date: '2026-02-28' })
 
       const t1 = seedTemplate(meso1.id, {
         name: 'Race', canonical_name: 'race', modality: 'running',
@@ -808,8 +810,8 @@ describe('cascadeUpdateTemplates', () => {
     })
 
     it('skips logged templates when cascading distance/duration', async () => {
-      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', start_date: '2026-02-01', end_date: '2026-02-28' })
 
       const t1 = seedTemplate(meso1.id, {
         name: 'Easy Run', canonical_name: 'easy-run', modality: 'running',
@@ -838,8 +840,8 @@ describe('cascadeUpdateTemplates', () => {
 
   describe('mixed field updates', () => {
     it('cascades running fields + name together', async () => {
-      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', start_date: '2026-02-01', end_date: '2026-02-28' })
 
       const t1 = seedTemplate(meso1.id, {
         name: 'Easy Run', canonical_name: 'easy-run', modality: 'running',

@@ -37,6 +37,15 @@ export async function getNonCompletedMesocycles() {
     .all()
 }
 
+export async function getAllNonCompletedMesocycles() {
+  return db
+    .select()
+    .from(mesocycles)
+    .where(inArray(mesocycles.status, ['draft', 'planned', 'active']))
+    .orderBy(asc(mesocycles.start_date))
+    .all()
+}
+
 export async function getMesocycleCascadeSummary(id: number): Promise<CascadeSummary> {
   const [tplRow, schedRow, riRow] = [
     db.select({ c: count() }).from(workout_templates)

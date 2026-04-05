@@ -13,7 +13,6 @@ import {
   template_week_overrides,
 } from '@/lib/db/schema'
 import { calculateEndDate } from './utils'
-import { syncMesocycle } from '@/lib/google/sync'
 import { mergeSlotWithOverride } from '@/lib/progression/week-overrides'
 
 type CloneInput = {
@@ -290,9 +289,6 @@ export async function cloneMesocycle(input: CloneInput): Promise<CloneResult> {
   }
 
   revalidatePath('/mesocycles')
-
-  // Fire-and-forget: push events for cloned mesocycle to Google Calendar
-  syncMesocycle(result.id).catch(() => {})
 
   return result
 }
