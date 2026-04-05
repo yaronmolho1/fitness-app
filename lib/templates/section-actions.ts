@@ -162,6 +162,14 @@ export async function createMixedTemplate(
     }
   }
 
+  // Compute next display_order
+  const maxOrder = db
+    .select({ max: sql<number>`coalesce(max(${workout_templates.display_order}), -1)` })
+    .from(workout_templates)
+    .where(eq(workout_templates.mesocycle_id, mesocycle_id))
+    .get()
+  const nextDisplayOrder = (maxOrder?.max ?? -1) + 1
+
   // Create template + sections atomically
   const result = db.transaction((tx) => {
     const template = tx
@@ -171,6 +179,7 @@ export async function createMixedTemplate(
         name,
         canonical_name: canonicalName,
         modality: 'mixed',
+        display_order: nextDisplayOrder,
         created_at: new Date(),
       })
       .returning()

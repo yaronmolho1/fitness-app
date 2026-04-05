@@ -65,6 +65,7 @@ export type TemplateOption = {
   planned_duration?: number | null
   // Resistance estimated duration
   estimated_duration?: number | null
+  display_order?: number
 }
 
 // Fetches templates belonging to a mesocycle (for the picker)
@@ -88,9 +89,11 @@ export async function getTemplatesForMesocycle(
       target_duration: workout_templates.target_duration,
       planned_duration: workout_templates.planned_duration,
       estimated_duration: workout_templates.estimated_duration,
+      display_order: workout_templates.display_order,
     })
     .from(workout_templates)
     .where(eq(workout_templates.mesocycle_id, mesocycleId))
+    .orderBy(asc(workout_templates.display_order), asc(workout_templates.id))
     .all() as TemplateOption[]
 }
 

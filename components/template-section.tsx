@@ -1,7 +1,25 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useEffect, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { GripVertical } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { NumericInput } from '@/components/ui/numeric-input'
@@ -15,7 +33,7 @@ import { CascadeScopeSelector } from '@/components/cascade-scope-selector'
 import { SectionHeading } from '@/components/layout/section-heading'
 import { TemplateAddPicker, type PickerSelection } from '@/components/template-add-picker'
 import { TemplateBrowseDialog } from '@/components/template-browse-dialog'
-import { createResistanceTemplate, deleteTemplate } from '@/lib/templates/actions'
+import { createResistanceTemplate, deleteTemplate, reorderTemplates } from '@/lib/templates/actions'
 import { copyTemplateToMesocycle } from '@/lib/templates/copy-actions'
 import { updateSection } from '@/lib/templates/section-actions'
 import type { TemplateOption } from '@/lib/schedule/queries'
@@ -45,6 +63,39 @@ export function TemplateSection({ mesocycleId, templates, exercises, slotsByTemp
   const [isPending, startTransition] = useTransition()
   const [browseOpen, setBrowseOpen] = useState(false)
   const [copyPending, setCopyPending] = useState(false)
+  const [orderedTemplates, setOrderedTemplates] = useState(templates)
+
+  useEffect(() => { setOrderedTemplates(templates) }, [templates])
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const oldIndex = orderedTemplates.findIndex(t => t.id === active.id)
+    const newIndex = orderedTemplates.findIndex(t => t.id === over.id)
+    if (oldIndex === -1 || newIndex === -1) return
+
+    const newOrder = arrayMove(orderedTemplates, oldIndex, newIndex)
+    setOrderedTemplates(newOrder)
+
+    startTransition(async () => {
+      const result = await reorderTemplates({
+        mesocycle_id: mesocycleId,
+        template_ids: newOrder.map(t => t.id),
+      })
+      if (!result.success) {
+        setOrderedTemplates(templates)
+        setError(result.error)
+      } else {
+        router.refresh()
+      }
+    })
+  }
 
   function handleCreated() {
     setFormType(null)
@@ -113,27 +164,38 @@ export function TemplateSection({ mesocycleId, templates, exercises, slotsByTemp
         error={browseOpen ? error : ''}
       />
 
-      {templates.length === 0 && formType === null && (
+      {orderedTemplates.length === 0 && formType === null && (
         <p className="text-sm text-muted-foreground">No templates yet.</p>
       )}
 
-      {templates.length > 0 && (
-        <div className="space-y-2">
-          {templates.map((t) => (
-            <TemplateRow
-              key={t.id}
-              template={t}
-              slots={slotsByTemplate[t.id] ?? []}
-              exercises={exercises}
-              isCompleted={isCompleted}
-              onUpdated={() => router.refresh()}
-              sections={sectionsByTemplate[t.id] ?? []}
-              workWeeks={workWeeks}
-              hasDeload={hasDeload}
-              activeWeeks={activeWeeksByTemplate[t.id]}
-            />
-          ))}
-        </div>
+      {orderedTemplates.length > 0 && (
+        <DndContext
+          sensors={isCompleted ? [] : sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={orderedTemplates.map(t => t.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="space-y-2">
+              {orderedTemplates.map((t) => (
+                <SortableTemplateRow
+                  key={t.id}
+                  template={t}
+                  slots={slotsByTemplate[t.id] ?? []}
+                  exercises={exercises}
+                  isCompleted={isCompleted}
+                  onUpdated={() => router.refresh()}
+                  sections={sectionsByTemplate[t.id] ?? []}
+                  workWeeks={workWeeks}
+                  hasDeload={hasDeload}
+                  activeWeeks={activeWeeksByTemplate[t.id]}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
 
       {formType === 'resistance' && (
@@ -241,6 +303,30 @@ type TemplateRowProps = {
   workWeeks: number
   hasDeload: boolean
   activeWeeks?: number[]
+  dragHandleProps?: Record<string, unknown>
+}
+
+function SortableTemplateRow(props: Omit<TemplateRowProps, 'dragHandleProps'>) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: props.template.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <TemplateRow {...props} dragHandleProps={{ ...attributes, ...listeners }} />
+    </div>
+  )
 }
 
 const RUN_TYPES = [
@@ -347,7 +433,7 @@ function MmaFields({ idPrefix, plannedDuration, setPlannedDuration, disabled }: 
   )
 }
 
-function TemplateRow({ template, slots, exercises, isCompleted, onUpdated, sections, workWeeks, hasDeload, activeWeeks }: TemplateRowProps) {
+function TemplateRow({ template, slots, exercises, isCompleted, onUpdated, sections, workWeeks, hasDeload, activeWeeks, dragHandleProps }: TemplateRowProps) {
   const [editing, setEditing] = useState(false)
   const [cascading, setCascading] = useState(false)
   const [confirming, setConfirming] = useState(false)
@@ -603,6 +689,16 @@ function TemplateRow({ template, slots, exercises, isCompleted, onUpdated, secti
         className="flex cursor-pointer items-start justify-between px-4 py-3 transition-colors duration-150 hover:bg-muted/50"
         onClick={() => setExpanded(!expanded)}
       >
+        {dragHandleProps && !isCompleted && (
+          <button
+            type="button"
+            className="mr-1 touch-none p-1 text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing"
+            onClick={(e) => e.stopPropagation()}
+            {...dragHandleProps}
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
+        )}
         <div className="min-w-0 flex-1">
           <span className="text-sm font-medium">{template.name}</span>
           {isResistance && (
@@ -799,6 +895,8 @@ function MixedSectionRow({ section, slots, exercises, templateId, isCompleted, o
   const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
   const [showSectionWeekGrid, setShowSectionWeekGrid] = useState(false)
+  const [editingName, setEditingName] = useState(false)
+  const [sectionName, setSectionName] = useState(section.section_name)
   // Running fields
   const [runType, setRunType] = useState<RunType | ''>(section.run_type as RunType ?? '')
   const [targetPace, setTargetPace] = useState(section.target_pace ?? '')
@@ -825,6 +923,34 @@ function MixedSectionRow({ section, slots, exercises, templateId, isCompleted, o
     setCoachingCues(section.coaching_cues ?? '')
     setPlannedDuration(section.planned_duration?.toString() ?? '')
     setError('')
+  }
+
+  function handleNameSave() {
+    const trimmed = sectionName.trim()
+    if (!trimmed || trimmed === section.section_name) {
+      setSectionName(section.section_name)
+      setEditingName(false)
+      return
+    }
+    startTransition(async () => {
+      const result = await updateSection(section.id, { section_name: trimmed })
+      if (result.success) {
+        setEditingName(false)
+        onUpdated()
+      } else {
+        setError(result.error)
+      }
+    })
+  }
+
+  function handleNameKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleNameSave()
+    } else if (e.key === 'Escape') {
+      setSectionName(section.section_name)
+      setEditingName(false)
+    }
   }
 
   function handleSectionSave() {
@@ -899,7 +1025,31 @@ function MixedSectionRow({ section, slots, exercises, templateId, isCompleted, o
         <span className="inline-flex shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
           {section.modality}
         </span>
-        <span className="font-medium">{section.section_name}</span>
+        {editingName ? (
+          <Input
+            value={sectionName}
+            onChange={(e) => setSectionName(e.target.value)}
+            onBlur={handleNameSave}
+            onKeyDown={handleNameKeyDown}
+            onClick={(e) => e.stopPropagation()}
+            className="h-6 w-40 text-sm font-medium"
+            autoFocus
+            disabled={isPending}
+          />
+        ) : (
+          <span
+            className="font-medium"
+            onClick={(e) => {
+              if (!isCompleted) {
+                e.stopPropagation()
+                setEditingName(true)
+              }
+            }}
+            title={isCompleted ? undefined : 'Click to rename'}
+          >
+            {section.section_name}
+          </span>
+        )}
         {section.modality === 'resistance' && (
           <span className="text-xs text-muted-foreground">
             {sectionSlotCount} exercise{sectionSlotCount !== 1 ? 's' : ''}

@@ -144,6 +144,7 @@ export async function cloneMesocycle(input: CloneInput): Promise<CloneResult> {
         target_distance: tmpl.target_distance,
         target_duration: tmpl.target_duration,
         target_elevation_gain: tmpl.target_elevation_gain,
+        display_order: tmpl.display_order,
       }
 
       const newTmpl = tx

@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { eq, and } from 'drizzle-orm'
+import { eq, and, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '@/lib/db/index'
 import {
@@ -81,6 +81,14 @@ export async function copyTemplateToMesocycle(
   }
 
   try {
+    // Compute next display_order for target mesocycle
+    const maxOrder = db
+      .select({ max: sql<number>`coalesce(max(${workout_templates.display_order}), -1)` })
+      .from(workout_templates)
+      .where(eq(workout_templates.mesocycle_id, validTargetId))
+      .get()
+    const nextDisplayOrder = (maxOrder?.max ?? -1) + 1
+
     const newTemplate = db.transaction((tx) => {
       // Copy template row
       const created = tx
@@ -100,6 +108,7 @@ export async function copyTemplateToMesocycle(
           target_distance: source.target_distance,
           target_duration: source.target_duration,
           planned_duration: source.planned_duration,
+          display_order: nextDisplayOrder,
           created_at: new Date(),
         })
         .returning()
