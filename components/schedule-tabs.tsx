@@ -1,8 +1,13 @@
 'use client'
 
+import { useTransition } from 'react'
+import { useRouter } from 'next/navigation'
+import { Copy } from 'lucide-react'
 import { SectionHeading } from '@/components/layout/section-heading'
 import { ScheduleGrid } from '@/components/schedule-grid'
+import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { copyNormalToDeload } from '@/lib/schedule/actions'
 import type { ScheduleEntry, TemplateOption } from '@/lib/schedule/queries'
 
 type Props = {
@@ -22,6 +27,20 @@ export function ScheduleTabs({
   hasDeload,
   isCompleted,
 }: Props) {
+  const [pending, startTransition] = useTransition()
+  const router = useRouter()
+
+  function handleCopyNormal() {
+    startTransition(async () => {
+      const result = await copyNormalToDeload(mesocycleId)
+      if (!result.success) {
+        alert(result.error)
+        return
+      }
+      router.refresh()
+    })
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-4">
@@ -50,6 +69,20 @@ export function ScheduleTabs({
           </TabsContent>
 
           <TabsContent value="deload">
+            {!isCompleted && normalSchedule.length > 0 && (
+              <div className="mb-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pending}
+                  onClick={handleCopyNormal}
+                  data-testid="copy-normal-to-deload"
+                >
+                  <Copy className="mr-2 h-4 w-4" />
+                  {pending ? 'Copying...' : 'Copy from Normal'}
+                </Button>
+              </div>
+            )}
             <ScheduleGrid
               mesocycleId={mesocycleId}
               templates={templates}
