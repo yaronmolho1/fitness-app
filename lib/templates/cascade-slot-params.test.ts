@@ -29,6 +29,8 @@ function seedMesocycle(
     id: number
     name: string
     status: string
+    start_date: string
+    end_date: string
     created_at: Date
   }> = {}
 ) {
@@ -244,8 +246,8 @@ describe('cascadeSlotParams', () => {
     })
 
     it('does not affect slots in sibling templates', async () => {
-      const meso1 = seedMesocycle({ status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ status: 'planned', created_at: new Date(2000) })
+      const meso1 = seedMesocycle({ status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ status: 'planned', start_date: '2026-02-01', end_date: '2026-02-28' })
       const t1 = seedTemplate(meso1.id)
       const t2 = seedTemplate(meso2.id)
       const bench = seedExercise('Bench Press')
@@ -266,8 +268,8 @@ describe('cascadeSlotParams', () => {
 
   describe('all-phases scope', () => {
     it('updates matching slots across all active/planned mesocycles', async () => {
-      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', start_date: '2026-02-01', end_date: '2026-02-28' })
       const t1 = seedTemplate(meso1.id)
       const t2 = seedTemplate(meso2.id)
       const bench = seedExercise('Bench Press')
@@ -295,8 +297,8 @@ describe('cascadeSlotParams', () => {
     })
 
     it('matches slots by exercise_id fallback when order differs', async () => {
-      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', start_date: '2026-02-01', end_date: '2026-02-28' })
       const t1 = seedTemplate(meso1.id)
       const t2 = seedTemplate(meso2.id)
       const bench = seedExercise('Bench Press')
@@ -327,8 +329,8 @@ describe('cascadeSlotParams', () => {
     })
 
     it('skips slots with no match in diverged templates', async () => {
-      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', start_date: '2026-02-01', end_date: '2026-02-28' })
       const t1 = seedTemplate(meso1.id)
       const t2 = seedTemplate(meso2.id)
       const bench = seedExercise('Bench Press')
@@ -364,9 +366,9 @@ describe('cascadeSlotParams', () => {
 
   describe('this-and-future scope', () => {
     it('updates source + future sibling slots, not past', async () => {
-      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
-      const meso3 = seedMesocycle({ name: 'Phase 3', status: 'planned', created_at: new Date(3000) })
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', start_date: '2026-02-01', end_date: '2026-02-28' })
+      const meso3 = seedMesocycle({ name: 'Phase 3', status: 'planned', start_date: '2026-03-01', end_date: '2026-03-28' })
       const t1 = seedTemplate(meso1.id)
       const t2 = seedTemplate(meso2.id)
       const t3 = seedTemplate(meso3.id)
@@ -398,9 +400,9 @@ describe('cascadeSlotParams', () => {
 
   describe('skipping logged templates', () => {
     it('skips slots in templates with logged workouts', async () => {
-      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
-      const meso3 = seedMesocycle({ name: 'Phase 3', status: 'planned', created_at: new Date(3000) })
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', start_date: '2026-02-01', end_date: '2026-02-28' })
+      const meso3 = seedMesocycle({ name: 'Phase 3', status: 'planned', start_date: '2026-03-01', end_date: '2026-03-28' })
       const t1 = seedTemplate(meso1.id)
       const t2 = seedTemplate(meso2.id)
       const t3 = seedTemplate(meso3.id)
@@ -455,9 +457,9 @@ describe('cascadeSlotParams', () => {
 
   describe('skipping completed mesocycles', () => {
     it('reports skippedCompleted count', async () => {
-      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'completed', created_at: new Date(2000) })
-      const meso3 = seedMesocycle({ name: 'Phase 3', status: 'planned', created_at: new Date(3000) })
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'completed', start_date: '2026-02-01', end_date: '2026-02-28' })
+      const meso3 = seedMesocycle({ name: 'Phase 3', status: 'planned', start_date: '2026-03-01', end_date: '2026-03-28' })
       const t1 = seedTemplate(meso1.id)
       seedTemplate(meso2.id)
       const t3 = seedTemplate(meso3.id)
@@ -479,10 +481,10 @@ describe('cascadeSlotParams', () => {
     })
 
     it('reports both skipped (logged) and skippedCompleted in mixed scenario', async () => {
-      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'completed', created_at: new Date(2000) })
-      const meso3 = seedMesocycle({ name: 'Phase 3', status: 'planned', created_at: new Date(3000) })
-      const meso4 = seedMesocycle({ name: 'Phase 4', status: 'planned', created_at: new Date(4000) })
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'completed', start_date: '2026-02-01', end_date: '2026-02-28' })
+      const meso3 = seedMesocycle({ name: 'Phase 3', status: 'planned', start_date: '2026-03-01', end_date: '2026-03-28' })
+      const meso4 = seedMesocycle({ name: 'Phase 4', status: 'planned', start_date: '2026-04-01', end_date: '2026-04-28' })
       const t1 = seedTemplate(meso1.id)
       seedTemplate(meso2.id) // completed — skippedCompleted
       const t3 = seedTemplate(meso3.id)
@@ -513,8 +515,8 @@ describe('cascadeSlotParams', () => {
 
   describe('multi-field updates', () => {
     it('cascades reps + weight together as a unit', async () => {
-      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', start_date: '2026-02-01', end_date: '2026-02-28' })
       const t1 = seedTemplate(meso1.id)
       const t2 = seedTemplate(meso2.id)
       const bench = seedExercise('Bench Press')
@@ -537,8 +539,8 @@ describe('cascadeSlotParams', () => {
     })
 
     it('cascades RPE and rest_seconds', async () => {
-      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', start_date: '2026-02-01', end_date: '2026-02-28' })
       const t1 = seedTemplate(meso1.id)
       const t2 = seedTemplate(meso2.id)
       const bench = seedExercise('Bench Press')
@@ -558,8 +560,8 @@ describe('cascadeSlotParams', () => {
     })
 
     it('cascades guidelines field', async () => {
-      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', start_date: '2026-02-01', end_date: '2026-02-28' })
       const t1 = seedTemplate(meso1.id)
       const t2 = seedTemplate(meso2.id)
       const bench = seedExercise('Bench Press')
@@ -578,8 +580,8 @@ describe('cascadeSlotParams', () => {
     })
 
     it('supports clearing nullable fields with null', async () => {
-      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', start_date: '2026-02-01', end_date: '2026-02-28' })
       const t1 = seedTemplate(meso1.id)
       const t2 = seedTemplate(meso2.id)
       const bench = seedExercise('Bench Press')
@@ -635,8 +637,8 @@ describe('cascadeSlotParams', () => {
 
   describe('edge cases', () => {
     it('handles template with no slots in target (empty template)', async () => {
-      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', start_date: '2026-02-01', end_date: '2026-02-28' })
       const t1 = seedTemplate(meso1.id)
       seedTemplate(meso2.id) // t2 has no slots
       const bench = seedExercise('Bench Press')
@@ -678,8 +680,8 @@ describe('cascadeSlotParams', () => {
     })
 
     it('diverged template: Bench cascades correctly, Squat skips Phase 2', async () => {
-      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', created_at: new Date(2000) })
+      const meso1 = seedMesocycle({ name: 'Phase 1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'Phase 2', status: 'planned', start_date: '2026-02-01', end_date: '2026-02-28' })
       const t1 = seedTemplate(meso1.id)
       const t2 = seedTemplate(meso2.id)
       const bench = seedExercise('Bench Press')
@@ -723,10 +725,10 @@ describe('cascadeSlotParams', () => {
     })
 
     it('handles multiple templates across 3+ mesocycles', async () => {
-      const meso1 = seedMesocycle({ name: 'P1', status: 'active', created_at: new Date(1000) })
-      const meso2 = seedMesocycle({ name: 'P2', status: 'planned', created_at: new Date(2000) })
-      const meso3 = seedMesocycle({ name: 'P3', status: 'planned', created_at: new Date(3000) })
-      const meso4 = seedMesocycle({ name: 'P4', status: 'planned', created_at: new Date(4000) })
+      const meso1 = seedMesocycle({ name: 'P1', status: 'active', start_date: '2026-01-01', end_date: '2026-01-28' })
+      const meso2 = seedMesocycle({ name: 'P2', status: 'planned', start_date: '2026-02-01', end_date: '2026-02-28' })
+      const meso3 = seedMesocycle({ name: 'P3', status: 'planned', start_date: '2026-03-01', end_date: '2026-03-28' })
+      const meso4 = seedMesocycle({ name: 'P4', status: 'planned', start_date: '2026-04-01', end_date: '2026-04-28' })
       const t1 = seedTemplate(meso1.id)
       const t2 = seedTemplate(meso2.id)
       const t3 = seedTemplate(meso3.id)
