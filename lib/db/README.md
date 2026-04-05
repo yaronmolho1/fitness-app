@@ -4,7 +4,7 @@ SQLite database via Drizzle ORM. WAL mode, foreign keys enforced.
 
 ## Files
 - `index.ts` — DB connection with PRAGMAs (WAL, busy_timeout, foreign_keys), exports `db`, `AppDb` type, and `sqlite`
-- `schema.ts` — 17 tables: 7 planning (mutable) + 2 progression (slot_week_overrides, schedule_week_overrides) + 1 profile (athlete_profile) + 4 logging (immutable) + 2 Google Calendar (google_credentials, google_calendar_events) + 1 config. Uses `defineRelations`-era column types. `weekly_schedule` includes `cycle_length`/`cycle_position` for per-slot rotation cycles
+- `schema.ts` — 17 tables: 7 planning (mutable) + 2 progression (slot_week_overrides, schedule_week_overrides) + 1 profile (athlete_profile) + 4 logging (immutable) + 2 Google Calendar (google_credentials, google_calendar_events) + 1 config. Uses `defineRelations`-era column types. `weekly_schedule` includes `cycle_length`/`cycle_position` for per-slot rotation cycles; `workout_templates` includes `display_order` for user-controlled template sort order
 - `athlete-profile-schema.test.ts` — Integration tests for athlete_profile table (insert, single-row constraint, nullable fields)
 - `rotation-cycle-schema.test.ts` — Integration tests for weekly_schedule cycle_length/cycle_position columns (T211)
 - `time-scheduling-migration.test.ts` — Integration tests for T197 3-phase migration (backfill, NOT NULL enforcement, unique indexes, Google Calendar tables)

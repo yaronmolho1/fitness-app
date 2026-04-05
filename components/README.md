@@ -17,7 +17,7 @@ Shared React components — app-level UI and navigation.
 - `status-transition-button.tsx` — `StatusTransitionButton` activates or completes a mesocycle via server actions, with confirmation dialog on complete
 - `cascade-toast.ts` — `fireCascadeToast()` and `fireBatchCascadeToast()` toast notifications after single or batch cascade operations; shows success/warning based on scope and skip count
 - `cascade-scope-selector.tsx` — `CascadeScopeSelector` 3-step cascade flow (scope select, confirm with preview, summary) for applying template changes across mesocycles; scope options: this-only, this+future, all-phases; skips templates with logged workouts
-- `template-section.tsx` — `TemplateSection` manages templates for a mesocycle: create (resistance/running/MMA-BJJ), edit name, delete, renders `SlotList` per template, and integrates `CascadeScopeSelector` for cascade edits
+- `template-section.tsx` — `TemplateSection` manages templates for a mesocycle: create (resistance/running/MMA-BJJ/mixed), drag-and-drop reorder (via `@dnd-kit`, optimistic updates), edit name, delete, renders `SlotList` per template, and integrates `CascadeScopeSelector` for cascade edits; `MixedSectionRow` supports inline section rename (click name to edit)
 - `edit-exercise-form.tsx` — `EditExerciseForm` inline edit form for exercises with name, modality, muscle group, equipment fields
 - `exercise-list-with-filters.tsx` — `ExerciseListWithFilters` searchable exercise list with modality filter, inline edit/delete via `EditExerciseForm`
 - `running-template-form.tsx` — `RunningTemplateForm` create form for running templates with run type, pace, HR zone, interval fields

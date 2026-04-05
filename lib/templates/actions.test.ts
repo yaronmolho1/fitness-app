@@ -84,7 +84,7 @@ describe('createResistanceTemplate', () => {
         interval_rest INTEGER,
         coaching_cues TEXT,
     target_distance REAL, target_duration INTEGER, target_elevation_gain INTEGER,
-        planned_duration INTEGER, estimated_duration INTEGER,
+        planned_duration INTEGER, estimated_duration INTEGER, display_order INTEGER NOT NULL DEFAULT 0,
         created_at INTEGER
       )
     `)
@@ -260,7 +260,7 @@ describe('createRunningTemplate', () => {
         interval_rest INTEGER,
         coaching_cues TEXT,
     target_distance REAL, target_duration INTEGER, target_elevation_gain INTEGER,
-        planned_duration INTEGER, estimated_duration INTEGER,
+        planned_duration INTEGER, estimated_duration INTEGER, display_order INTEGER NOT NULL DEFAULT 0,
         created_at INTEGER
       )
     `)
@@ -668,7 +668,7 @@ describe('createMmaBjjTemplate', () => {
         interval_rest INTEGER,
         coaching_cues TEXT,
     target_distance REAL, target_duration INTEGER, target_elevation_gain INTEGER,
-        planned_duration INTEGER, estimated_duration INTEGER,
+        planned_duration INTEGER, estimated_duration INTEGER, display_order INTEGER NOT NULL DEFAULT 0,
         created_at INTEGER
       )
     `)
@@ -874,7 +874,7 @@ describe('updateTemplate', () => {
         interval_rest INTEGER,
         coaching_cues TEXT,
     target_distance REAL, target_duration INTEGER, target_elevation_gain INTEGER,
-        planned_duration INTEGER, estimated_duration INTEGER,
+        planned_duration INTEGER, estimated_duration INTEGER, display_order INTEGER NOT NULL DEFAULT 0,
         created_at INTEGER
       )
     `)
@@ -956,7 +956,7 @@ describe('deleteTemplate', () => {
         interval_rest INTEGER,
         coaching_cues TEXT,
     target_distance REAL, target_duration INTEGER, target_elevation_gain INTEGER,
-        planned_duration INTEGER, estimated_duration INTEGER,
+        planned_duration INTEGER, estimated_duration INTEGER, display_order INTEGER NOT NULL DEFAULT 0,
         created_at INTEGER
       )
     `)
