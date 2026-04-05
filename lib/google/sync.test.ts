@@ -101,12 +101,29 @@ vi.mock('@/lib/db/schema', () => ({
     template_id: 'template_id', week_type: 'week_type', time_slot: 'time_slot',
     duration: 'duration', period: 'period',
   },
-  workout_templates: { id: 'id', name: 'name', modality: 'modality', mesocycle_id: 'mesocycle_id' },
-  exercise_slots: { id: 'id', template_id: 'template_id', exercise_id: 'exercise_id', order: 'order' },
+  workout_templates: {
+    id: 'id', name: 'name', modality: 'modality', mesocycle_id: 'mesocycle_id',
+    target_duration: 'target_duration', planned_duration: 'planned_duration',
+  },
+  exercise_slots: {
+    id: 'id', template_id: 'template_id', exercise_id: 'exercise_id', order: 'order',
+    sets: 'sets', rest_seconds: 'rest_seconds', group_id: 'group_id',
+    group_rest_seconds: 'group_rest_seconds', section_id: 'section_id',
+  },
   exercises: { id: 'id', name: 'name' },
   athlete_profile: { id: 'id', timezone: 'timezone' },
   schedule_week_overrides: {
     mesocycle_id: 'mesocycle_id', week_number: 'week_number', day_of_week: 'day_of_week',
+  },
+  slot_week_overrides: {
+    exercise_slot_id: 'exercise_slot_id', week_number: 'week_number',
+  },
+  template_week_overrides: {
+    template_id: 'template_id', section_id: 'section_id', week_number: 'week_number',
+  },
+  template_sections: {
+    id: 'id', template_id: 'template_id', modality: 'modality',
+    target_duration: 'target_duration', planned_duration: 'planned_duration',
   },
 }))
 
